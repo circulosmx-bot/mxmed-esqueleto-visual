@@ -110,6 +110,9 @@ class MedicalGroupsController
             if (!is_array($group)) {
                 return $this->error('not_found', 'medical group not found', ['group_id' => $groupId]);
             }
+            if (!$this->isMedicalGroup($group)) {
+                return $this->error('invalid_params', 'medical_group_type_required');
+            }
 
             $consultorio = $this->consultorios->getByDoctorConsultorio($doctorId, $consultorioId);
             if (!is_array($consultorio)) {
@@ -176,6 +179,10 @@ class MedicalGroupsController
         $doctorId = (string)$doctorScope['doctor_id'];
         $consultorioId = trim((string)($payload['consultorio_id'] ?? ''));
         $submittedGroupName = trim((string)($payload['submitted_group_name'] ?? ''));
+        if (array_key_exists('organization_type_key', $payload)
+            && $payload['organization_type_key'] !== 'MEDICAL_GROUP') {
+            return $this->error('invalid_params', 'medical_group_type_required');
+        }
         $submittedLogoUrl = $this->nullableText($payload['submitted_logo_url'] ?? null);
         $displayNameOverride = $this->nullableText($payload['display_name_override'] ?? null);
 
@@ -193,6 +200,7 @@ class MedicalGroupsController
             }
 
             $group = $this->groups->upsertGroup([
+                'organization_type_key' => 'MEDICAL_GROUP',
                 'display_name' => $submittedGroupName,
                 'status' => 'pending',
                 'source' => 'user_submitted',
@@ -296,6 +304,9 @@ class MedicalGroupsController
             if (!is_array($group)) {
                 return $this->error('not_found', 'medical group not found', ['group_id' => $groupId]);
             }
+            if (!$this->isMedicalGroup($group)) {
+                return $this->error('invalid_params', 'medical_group_type_required');
+            }
 
             $reviewedAt = date('Y-m-d H:i:s');
             $actorUserId = $this->resolveActorUserId($payload);
@@ -375,6 +386,9 @@ class MedicalGroupsController
             if (!is_array($group)) {
                 return $this->error('not_found', 'medical group not found', ['group_id' => $groupId]);
             }
+            if (!$this->isMedicalGroup($group)) {
+                return $this->error('invalid_params', 'medical_group_type_required');
+            }
 
             $reviewedAt = date('Y-m-d H:i:s');
             $actorUserId = $this->resolveActorUserId($payload);
@@ -444,9 +458,15 @@ class MedicalGroupsController
             if (!is_array($source)) {
                 return $this->error('not_found', 'source medical group not found', ['group_id' => $sourceGroupId]);
             }
+            if (!$this->isMedicalGroup($source)) {
+                return $this->error('invalid_params', 'medical_group_type_required');
+            }
             $target = $this->groups->findById($targetGroupId);
             if (!is_array($target)) {
                 return $this->error('not_found', 'target medical group not found', ['group_id' => $targetGroupId]);
+            }
+            if (!$this->isMedicalGroup($target)) {
+                return $this->error('invalid_params', 'medical_group_type_required');
             }
 
             $actorUserId = $this->resolveActorUserId($payload);
@@ -578,6 +598,11 @@ class MedicalGroupsController
         ];
     }
 
+    private function isMedicalGroup(array $group): bool
+    {
+        return ($group['organization_type_key'] ?? null) === 'MEDICAL_GROUP';
+    }
+
     private function runtimeError(\RuntimeException $e)
     {
         $message = trim((string)$e->getMessage());
@@ -588,6 +613,7 @@ class MedicalGroupsController
             || $message === 'group_id and action are required'
             || $message === 'display_name required'
             || $message === 'membership status is invalid'
+            || $message === 'medical_group_type_required'
             || $message === 'group_id and target_group_id are required') {
             return $this->error('invalid_params', $message);
         }

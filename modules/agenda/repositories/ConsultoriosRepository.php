@@ -71,6 +71,9 @@ class ConsultoriosRepository
     public function upsertConsultorio(array $payload): void
     {
         $this->ensureTable();
+        if (($payload['group_id_is_set'] ?? 1) && trim((string)($payload['group_id'] ?? '')) !== '') {
+            $this->assertMedicalGroup((string)$payload['group_id']);
+        }
         $groupIdIsSet = (int)($payload['group_id_is_set'] ?? 1);
         $tituloIsSet = (int)($payload['titulo_is_set'] ?? 1);
         $grupoNombreIsSet = (int)($payload['grupo_nombre_is_set'] ?? 1);
@@ -219,6 +222,9 @@ class ConsultoriosRepository
         ?string $logoUrl
     ): void {
         $this->ensureTable();
+        if ($groupId !== null && trim($groupId) !== '') {
+            $this->assertMedicalGroup($groupId);
+        }
         $existing = $this->getByDoctorConsultorio($doctorId, $consultorioId);
         if (!is_array($existing)) {
             throw new RuntimeException('consultorio_not_found');
@@ -249,6 +255,9 @@ class ConsultoriosRepository
         ?string $logoUrl
     ): int {
         $this->ensureTable();
+        if ($nextGroupId !== null && trim($nextGroupId) !== '') {
+            $this->assertMedicalGroup($nextGroupId);
+        }
         $groupId = trim($groupId);
         if ($groupId === '') {
             return 0;
@@ -286,6 +295,15 @@ class ConsultoriosRepository
         ]);
         $type = $stmt->fetchColumn();
         return is_string($type) ? trim($type) : '';
+    }
+
+    private function assertMedicalGroup(string $groupId): void
+    {
+        $stmt = $this->pdo->prepare("SELECT 1 FROM medical_groups WHERE group_id = :group_id AND organization_type_key = 'MEDICAL_GROUP' LIMIT 1");
+        $stmt->execute(['group_id' => trim($groupId)]);
+        if (!$stmt->fetchColumn()) {
+            throw new RuntimeException('medical_group_type_required');
+        }
     }
 
     private function columnExists(string $table, string $column): bool

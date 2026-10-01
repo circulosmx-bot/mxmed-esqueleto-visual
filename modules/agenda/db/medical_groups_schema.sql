@@ -7,6 +7,7 @@
 
 CREATE TABLE IF NOT EXISTS `medical_groups` (
   `group_id` VARCHAR(64) NOT NULL,
+  `organization_type_key` VARCHAR(48) NOT NULL,
   `canonical_name` VARCHAR(190) NOT NULL,
   `display_name` VARCHAR(190) NOT NULL,
   `logo_url_original` TEXT DEFAULT NULL,
@@ -22,13 +23,29 @@ CREATE TABLE IF NOT EXISTS `medical_groups` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`group_id`),
   KEY `idx_medical_groups_status` (`status`),
+  KEY `idx_medical_groups_type_status` (`organization_type_key`, `status`),
   KEY `idx_medical_groups_canonical_name` (`canonical_name`),
   KEY `idx_medical_groups_display_name` (`display_name`),
   KEY `idx_medical_groups_merged_into` (`merged_into_group_id`),
   CONSTRAINT `fk_medical_groups_merged_into`
     FOREIGN KEY (`merged_into_group_id`) REFERENCES `medical_groups` (`group_id`)
-    ON UPDATE CASCADE ON DELETE SET NULL
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT `ck_medical_groups_organization_type` CHECK (`organization_type_key` IN (
+    'MEDICAL_GROUP', 'LABORATORY', 'DIAGNOSTIC_CENTER', 'CLINIC',
+    'HOSPITAL', 'DENTAL_ORGANIZATION', 'OTHER_HEALTHCARE_ORGANIZATION'
+  ))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DELIMITER $$
+DROP TRIGGER IF EXISTS trg_medical_groups_type_immutable$$
+CREATE TRIGGER trg_medical_groups_type_immutable
+BEFORE UPDATE ON medical_groups FOR EACH ROW
+BEGIN
+  IF NOT (NEW.organization_type_key <=> OLD.organization_type_key) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ORGANIZATION_TYPE_IMMUTABLE';
+  END IF;
+END$$
+DELIMITER ;
 
 CREATE TABLE IF NOT EXISTS `medical_group_memberships` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -103,4 +120,3 @@ SET @sql_add_idx_group_id := IF(
 PREPARE stmt_add_idx_group_id FROM @sql_add_idx_group_id;
 EXECUTE stmt_add_idx_group_id;
 DEALLOCATE PREPARE stmt_add_idx_group_id;
-

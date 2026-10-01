@@ -1,8 +1,11 @@
 <?php
 namespace Agenda\Repositories;
 
+use Agenda\Contracts\HealthcareOrganizationType;
 use PDO;
 use RuntimeException;
+
+require_once __DIR__ . '/../contracts/HealthcareOrganizationType.php';
 
 class MedicalGroupsRepository
 {
@@ -18,7 +21,7 @@ class MedicalGroupsRepository
 
     public function ensureTable(): void
     {
-        if (!$this->tableExists('medical_groups')) {
+        if (!$this->tableExists('medical_groups') || !$this->columnExists('medical_groups', 'organization_type_key')) {
             throw new RuntimeException('schema_not_ready');
         }
     }
@@ -30,6 +33,17 @@ class MedicalGroupsRepository
         $groupId = trim((string)($payload['group_id'] ?? ''));
         if ($groupId === '') {
             $groupId = $this->generateGroupId();
+        }
+
+        $existing = $this->findById($groupId);
+        $type = array_key_exists('organization_type_key', $payload)
+            ? HealthcareOrganizationType::requireValid($payload['organization_type_key'])
+            : ($existing === null ? null : HealthcareOrganizationType::requireValid($existing['organization_type_key'] ?? null));
+        if ($type === null) {
+            throw new \InvalidArgumentException('organization_type_key_required');
+        }
+        if ($existing !== null && $type !== $existing['organization_type_key']) {
+            throw new \InvalidArgumentException('organization_type_key_immutable');
         }
 
         $displayName = trim((string)($payload['display_name'] ?? ''));
@@ -53,11 +67,11 @@ class MedicalGroupsRepository
         }
 
         $sql = 'INSERT INTO medical_groups (
-            group_id, canonical_name, display_name, logo_url_original, logo_url_approved,
+            group_id, organization_type_key, canonical_name, display_name, logo_url_original, logo_url_approved,
             status, source, created_by_user_id, reviewed_by_user_id, reviewed_at,
             rejection_reason, merged_into_group_id, updated_at
         ) VALUES (
-            :group_id, :canonical_name, :display_name, :logo_url_original, :logo_url_approved,
+            :group_id, :organization_type_key, :canonical_name, :display_name, :logo_url_original, :logo_url_approved,
             :status, :source, :created_by_user_id, :reviewed_by_user_id, :reviewed_at,
             :rejection_reason, :merged_into_group_id, NOW()
         )
@@ -77,6 +91,7 @@ class MedicalGroupsRepository
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             'group_id' => $groupId,
+            'organization_type_key' => $type,
             'canonical_name' => $canonicalName,
             'display_name' => $displayName,
             'logo_url_original' => $this->nullableText($payload['logo_url_original'] ?? null),
@@ -111,7 +126,7 @@ class MedicalGroupsRepository
     {
         $this->ensureTable();
         $limit = max(1, min(500, $limit));
-        $sql = "SELECT * FROM medical_groups WHERE status = 'pending' ORDER BY updated_at ASC LIMIT {$limit}";
+        $sql = "SELECT * FROM medical_groups WHERE organization_type_key = 'MEDICAL_GROUP' AND status = 'pending' ORDER BY updated_at ASC LIMIT {$limit}";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -121,14 +136,14 @@ class MedicalGroupsRepository
         $limit = max(1, min(100, $limit));
         $needle = trim($term);
         if ($needle === '') {
-            $sql = "SELECT * FROM medical_groups WHERE status = 'verified' ORDER BY display_name ASC LIMIT {$limit}";
+            $sql = "SELECT * FROM medical_groups WHERE organization_type_key = 'MEDICAL_GROUP' AND status = 'verified' ORDER BY display_name ASC LIMIT {$limit}";
             return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
 
         $stmt = $this->pdo->prepare(
             "SELECT *
                FROM medical_groups
-              WHERE status = 'verified'
+              WHERE organization_type_key = 'MEDICAL_GROUP' AND status = 'verified'
                 AND (
                   display_name LIKE :q_display
                   OR canonical_name LIKE :q_canonical
@@ -156,7 +171,7 @@ class MedicalGroupsRepository
             return [];
         }
 
-        $conditions = ["mg.status = 'verified'"];
+        $conditions = ["mg.organization_type_key = 'MEDICAL_GROUP'", "mg.status = 'verified'"];
         $params = [];
 
         if ($needle !== '') {
@@ -203,6 +218,13 @@ class MedicalGroupsRepository
             'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table'
         );
         $stmt->execute(['table' => $name]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = :table AND column_name = :column');
+        $stmt->execute(['table' => $table, 'column' => $column]);
         return (int)$stmt->fetchColumn() > 0;
     }
 

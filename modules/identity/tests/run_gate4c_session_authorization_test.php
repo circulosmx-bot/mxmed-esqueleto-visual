@@ -16,6 +16,7 @@ use Identity\Contracts\Clock;
 use Identity\Contracts\ReasonCode;
 use Identity\Contracts\SessionAccountStatePort;
 use Identity\Contracts\SessionCapabilityAuthorityPort;
+use Identity\Contracts\OrganizationTypeLookupPort;
 use Identity\Contracts\SessionPolicy;
 use Identity\Services\FailClosedAuthorizationService;
 use Identity\Services\SessionService;
@@ -51,6 +52,11 @@ final class Gate4CTestMemberships
 {
     public function __construct(public array $rows) {}
     public function activeForAccount(string $accountId): array { return $this->rows; }
+}
+final class Gate4CTestOrganizationTypes implements OrganizationTypeLookupPort
+{
+    public function __construct(private array $types) {}
+    public function typeForGroup(string $groupId): ?string { return $this->types[$groupId] ?? null; }
 }
 function gate4cAssert(bool $condition, string $message): void { if (!$condition) throw new RuntimeException($message); }
 
@@ -111,6 +117,43 @@ $noMembership = new FailClosedAuthorizationService(new Gate4CTestMemberships([])
 gate4cAssert(!$noMembership->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'patients', ['plan_code' => 'optimum', 'is_active' => true])->allowed(), 'plan cannot compensate missing membership');
 $throwing = new FailClosedAuthorizationService($memberships, new Gate4CTestThrowingCapabilityAuthority());
 gate4cAssert($throwing->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'agenda_appointments', ['plan_code' => 'standard', 'is_active' => true])->reasonCode() === ReasonCode::CAPABILITY_DENIED, 'capability exception denies fail closed');
+
+// PROV03A: an organization membership and a qualifying plan never provide
+// physician capabilities to a provider organization.
+$types = new Gate4CTestOrganizationTypes([
+    'group_medical' => 'MEDICAL_GROUP',
+    'group_laboratory' => 'LABORATORY',
+    'group_unknown' => 'UNKNOWN_TYPE',
+]);
+foreach (['owner', 'administrator', 'collaborator'] as $role) {
+    $groupMemberships = new Gate4CTestMemberships([[
+        'membership_id' => 'membership_' . $role,
+        'profile_doctor_id' => null,
+        'entity_group_id' => 'group_laboratory',
+        'role_code' => $role,
+        'scope_code' => 'organization',
+        'status' => 'active',
+    ]]);
+    $typed = new FailClosedAuthorizationService($groupMemberships, $realCapabilityAuthority, $types);
+    foreach (['patients', 'clinical_record', 'prescriptions', 'agenda_appointments'] as $capability) {
+        gate4cAssert(!$typed->authorize($access, 'medical_group', 'group_laboratory', $capability, ['plan_code' => 'professional', 'is_active' => true])->allowed(), $role . ' cannot get ' . $capability . ' from a paid plan');
+    }
+    gate4cAssert(!$typed->authorize($access, 'medical_group', 'group_laboratory', 'future_provider_capability', ['plan_code' => 'professional', 'is_active' => true])->allowed(), 'unknown provider capability denied');
+}
+$medicalMembership = new Gate4CTestMemberships([[
+    'membership_id' => 'membership_medical', 'profile_doctor_id' => null,
+    'entity_group_id' => 'group_medical', 'role_code' => 'owner',
+    'scope_code' => 'organization', 'status' => 'active',
+]]);
+$medicalAuth = new FailClosedAuthorizationService($medicalMembership, $realCapabilityAuthority, $types);
+gate4cAssert($medicalAuth->authorize($access, 'medical_group', 'group_medical', 'agenda_appointments', ['plan_code' => 'standard', 'is_active' => true])->allowed(), 'medical group legacy capability unchanged');
+gate4cAssert(!$medicalAuth->authorize($access, 'medical_group', 'group_medical', 'patients', ['plan_code' => 'basic', 'is_active' => true])->allowed(), 'medical group still requires qualifying plan');
+$unknownMembership = new Gate4CTestMemberships([[
+    'membership_id' => 'membership_unknown', 'profile_doctor_id' => null,
+    'entity_group_id' => 'group_unknown', 'role_code' => 'owner',
+    'scope_code' => 'organization', 'status' => 'active',
+]]);
+gate4cAssert(!(new FailClosedAuthorizationService($unknownMembership, $realCapabilityAuthority, $types))->authorize($access, 'medical_group', 'group_unknown', 'agenda_appointments', ['plan_code' => 'professional', 'is_active' => true])->allowed(), 'unknown organization type denied');
 
 $rejecting = new SessionService(new RejectingSessionStoreAdapter(), new SessionTokenCodec('gate4c-test-pepper-never-production'), $clock, new SessionPolicy(), $state);
 gate4cAssert($rejecting->create($candidate)->reasonCode() === ReasonCode::SESSION_STORE_UNAVAILABLE, 'store outage fails closed');

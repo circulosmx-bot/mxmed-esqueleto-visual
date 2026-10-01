@@ -6,12 +6,18 @@ namespace Identity\Services;
 use Identity\Contracts\AuthenticatedAccessContext;
 use Identity\Contracts\AuthorizationDecision;
 use Identity\Contracts\MembershipRole;
+use Identity\Contracts\OrganizationTypeLookupPort;
 use Identity\Contracts\ReasonCode;
 use Identity\Contracts\SessionCapabilityAuthorityPort;
 
 final class FailClosedAuthorizationService
 {
-    public function __construct(private object $memberships, private SessionCapabilityAuthorityPort $capabilityAuthority) {}
+    public function __construct(
+        private object $memberships,
+        private SessionCapabilityAuthorityPort $capabilityAuthority,
+        private ?OrganizationTypeLookupPort $organizationTypes = null,
+        private ?OrganizationCapabilityPolicy $organizationPolicy = null
+    ) {}
 
     public function authorize(AuthenticatedAccessContext $context, string $targetType, string $targetId, string $capabilityId, array $capabilityContext = [], string $authMode = 'strict'): AuthorizationDecision
     {
@@ -33,8 +39,19 @@ final class FailClosedAuthorizationService
             break;
         }
         if ($match === null) return new AuthorizationDecision(false, ReasonCode::MEMBERSHIP_MISSING);
+        if ($targetType === 'medical_group') {
+            try {
+                $organizationType = $this->organizationTypes?->typeForGroup($targetId);
+                $policy = $this->organizationPolicy ?? new OrganizationCapabilityPolicy();
+                if (!is_string($organizationType) || !$policy->allows($organizationType, $match[1], $capabilityId)) {
+                    return new AuthorizationDecision(false, ReasonCode::CAPABILITY_DENIED, (string)$match[0]['membership_id'], $match[1], $match[2]);
+                }
+            } catch (\Throwable) {
+                return new AuthorizationDecision(false, ReasonCode::CAPABILITY_DENIED, (string)$match[0]['membership_id'], $match[1], $match[2]);
+            }
+        }
         try {
-            $capability = $this->capabilityAuthority->resolve($capabilityId, $capabilityContext + ['account_id' => $context->accountId(), 'entity_type' => $targetType, 'entity_id' => $targetId]);
+            $capability = $this->capabilityAuthority->resolve($capabilityId, array_merge($capabilityContext, ['account_id' => $context->accountId(), 'entity_type' => $targetType, 'entity_id' => $targetId]));
             if (!is_object($capability) || !method_exists($capability, 'available') || !$capability->available()) return new AuthorizationDecision(false, ReasonCode::CAPABILITY_DENIED, (string)$match[0]['membership_id'], $match[1], $match[2], is_object($capability) && method_exists($capability, 'toArray') ? $capability->toArray() : null);
             return new AuthorizationDecision(true, ReasonCode::ALLOWED, (string)$match[0]['membership_id'], $match[1], $match[2], method_exists($capability, 'toArray') ? $capability->toArray() : null);
         } catch (\Throwable) { return new AuthorizationDecision(false, ReasonCode::CAPABILITY_DENIED, (string)$match[0]['membership_id'], $match[1], $match[2]); }

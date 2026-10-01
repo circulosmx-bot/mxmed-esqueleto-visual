@@ -32,6 +32,7 @@ class MedicalGroupMembershipsRepository
         if ($doctorId === '' || $consultorioId === '' || $groupId === '') {
             throw new RuntimeException('doctor_id, consultorio_id and group_id are required');
         }
+        $this->assertMedicalGroup($groupId);
 
         $status = strtolower(trim((string)($payload['status'] ?? 'pending')));
         if (!in_array($status, self::STATUSES, true)) {
@@ -154,6 +155,15 @@ class MedicalGroupMembershipsRepository
         );
         $stmt->execute(['table' => $name]);
         return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function assertMedicalGroup(string $groupId): void
+    {
+        $stmt = $this->pdo->prepare("SELECT 1 FROM medical_groups WHERE group_id = :group_id AND organization_type_key = 'MEDICAL_GROUP' LIMIT 1");
+        $stmt->execute(['group_id' => $groupId]);
+        if (!$stmt->fetchColumn()) {
+            throw new RuntimeException('medical_group_type_required');
+        }
     }
 
     private function nullableText($value): ?string

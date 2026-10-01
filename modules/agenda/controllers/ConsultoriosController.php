@@ -226,6 +226,9 @@ class ConsultoriosController
             $this->repository->upsertConsultorio($record);
             $saved = $this->repository->getByDoctorConsultorio($doctorId, $consultorioId);
         } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'medical_group_type_required') {
+                return $this->error('invalid_params', 'medical_group_type_required');
+            }
             if ($e->getMessage() === 'consultorios table not ready') {
                 return $this->error('db_not_ready', 'consultorios table not ready');
             }

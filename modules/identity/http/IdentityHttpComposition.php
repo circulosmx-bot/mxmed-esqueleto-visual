@@ -29,6 +29,7 @@ use Identity\Repositories\AccountConsentRepository;
 use Identity\Repositories\AccountCredentialRepository;
 use Identity\Repositories\AccountMembershipRepository;
 use Identity\Repositories\IdentityAccountRepository;
+use Identity\Repositories\MedicalGroupTypeRepository;
 use Identity\Repositories\OneTimeTokenRepository;
 use Identity\Services\CredentialAuthenticationService;
 use Identity\Services\EmailVerificationService;
@@ -229,7 +230,7 @@ final class IdentityHttpComposition
         $recovery = new RecoveryService($pdo, $accounts, $credentials, $tokens, $rateLimits, $notifications, $clock);
         $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials));
         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
-        $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority);
+        $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority, new MedicalGroupTypeRepository($pdo));
         return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $identityAudit, $sessionAudit, $auditRequests, $auditActors);
     }
 
