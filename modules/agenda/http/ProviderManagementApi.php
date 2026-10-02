@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Agenda\Http;
 
 use Agenda\Services\HealthcareOrganizationDirectoryService as Directory;
+use Agenda\Services\HealthcareOrganizationMasterService as MasterServices;
 use Agenda\Services\HealthcareOrganizationManagementAuthorizationService as Policy;
 use Agenda\Services\HealthcareOrganizationTeamService as Team;
 use Agenda\Services\HealthcareProviderCoverageService as Coverage;
@@ -13,6 +14,7 @@ use RuntimeException;
 use Subscriptions\Services\ProviderCommercialEntitlementService as Entitlement;
 
 require_once __DIR__.'/../services/HealthcareOrganizationDirectoryService.php';
+require_once __DIR__.'/../services/HealthcareOrganizationMasterService.php';
 require_once __DIR__.'/../services/HealthcareOrganizationTeamService.php';
 require_once __DIR__.'/../services/HealthcareProviderCoverageService.php';
 require_once __DIR__.'/../services/HealthcareOrganizationInviteeResolutionService.php';
@@ -26,12 +28,13 @@ final class ProviderManagementHttpException extends RuntimeException {
 
 /** The HTTP entrypoint provides only a canonical session context, never a payload actor ID. */
 final class ProviderManagementApi {
-    private Policy $policy; private Directory $directory; private Coverage $coverage; private Team $team; private Entitlement $entitlements; private InviteeResolution $invitees;
+    private Policy $policy; private Directory $directory; private MasterServices $masters; private Coverage $coverage; private Team $team; private Entitlement $entitlements; private InviteeResolution $invitees;
     private const LOCATION_FIELDS=['branch_name','street','exterior_number','interior_number','postal_code','colonia','municipality','state_name','latitude','longitude','coordinate_source','phone'];
-    private const OFFERING_FIELDS=['service_mode','requires_appointment','preparation_instructions'];
+    private const OFFERING_FIELDS=['service_mode','requires_appointment','preparation_instructions',
+        'requires_appointment_override','preparation_instructions_override','preparation_override_enabled'];
     public function __construct(private PDO $pdo) {
         $this->entitlements=new Entitlement($pdo); $this->policy=new Policy($pdo,$this->entitlements);
-        $this->directory=new Directory($pdo); $this->coverage=new Coverage($pdo); $this->team=new Team($pdo);
+        $this->directory=new Directory($pdo); $this->masters=new MasterServices($pdo); $this->coverage=new Coverage($pdo); $this->team=new Team($pdo);
         $this->invitees=new InviteeResolution($pdo);
     }
     /** @return array{int,array} */
@@ -52,6 +55,28 @@ final class ProviderManagementApi {
         if ($route===[] && $method==='GET') return [200,$this->context($actor,$group)];
         if ($route===['subscription'] && $method==='GET') return [200,$this->subscription($actor,$group)];
         if ($route===['study-types'] && $method==='GET') { $this->requireProviderMember($actor,$group); return [200,\clinical_study_catalog_read($this->pdo,$query)]; }
+        if ($route===['master-services']) {
+            $this->permit($actor,$group,Policy::OFFERINGS);
+            if ($method==='GET') return [200,['master_services'=>$this->masters->list($group)]];
+            if ($method==='POST') {
+                $key=$this->submission($body);unset($body['submission_key']);
+                $study=$this->id($body['study_type_id']??null);unset($body['study_type_id']);
+                return [201,$this->retry($actor,$group,'master_service_create',$key,['study_type_id'=>$study]+$body,
+                    fn()=> $this->masters->create($group,$study,$body))];
+            }
+        }
+        if (($route[0]??'')==='master-services' && count($route)>=2) {
+            $this->permit($actor,$group,Policy::OFFERINGS);
+            $uuid=$route[1];
+            if (count($route)===2) {
+                if ($method==='GET') return [200,$this->masters->read($group,$uuid)];
+                if ($method==='PATCH') return [200,$this->masters->update($group,$uuid,$body)];
+            }
+            if (count($route)===3 && $route[2]==='state' && $method==='PATCH') {
+                $this->exactState($body);return [200,$this->masters->update($group,$uuid,$body)];
+            }
+            $this->fail(404,'NOT_FOUND');
+        }
         if ($route===['team'] && $method==='GET') { $this->permit($actor,$group,Policy::TEAM);return [200,['members'=>array_map($this->publicMember(...),$this->team->listMembers($actor,$group))]]; }
         if ($route===['invitations'] && $method==='GET') { $this->permit($actor,$group,Policy::TEAM);return [200,['invitations'=>array_map($this->publicInvitation(...),$this->team->listPendingInvitations($actor,$group))]]; }
         if ($route===['invitee-resolution'] && $method==='POST') {

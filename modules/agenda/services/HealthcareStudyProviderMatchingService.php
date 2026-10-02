@@ -267,9 +267,10 @@ final class HealthcareStudyProviderMatchingService
               AND l.operational_state='ACTIVE' AND l.verification_state='VERIFIED'
               AND EXISTS (SELECT 1 FROM healthcare_organization_location_study_offerings o
                 JOIN clinical_study_types s ON s.study_type_id=o.study_type_id
+                JOIN healthcare_organization_master_services master ON master.master_service_id=o.master_service_id AND master.group_id=l.group_id AND master.study_type_id=o.study_type_id
                 WHERE o.location_id=l.location_id AND o.study_type_id IN (".$idsSql.")
                   AND o.operational_state='ACTIVE' AND o.verification_state='VERIFIED'
-                  AND s.is_active=1 AND o.service_mode=:mode AND ".$geo.")
+                  AND master.operational_state='ACTIVE' AND s.is_active=1 AND o.service_mode=:mode AND ".$geo.")
             ORDER BY mg.display_name,mg.group_id,l.branch_name,l.location_uuid
             LIMIT :limit OFFSET :offset";
         $stmt = $this->pdo->prepare($sql);
@@ -296,9 +297,10 @@ final class HealthcareStudyProviderMatchingService
         $sql = "SELECT o.location_id,o.study_type_id FROM healthcare_organization_location_study_offerings o
             JOIN healthcare_organization_locations l ON l.location_id=o.location_id
             JOIN clinical_study_types s ON s.study_type_id=o.study_type_id
+            JOIN healthcare_organization_master_services master ON master.master_service_id=o.master_service_id AND master.group_id=l.group_id AND master.study_type_id=o.study_type_id
             WHERE o.location_id IN (".$locationSql.") AND o.study_type_id IN (".$studySql.")
               AND o.operational_state='ACTIVE' AND o.verification_state='VERIFIED'
-              AND s.is_active=1 AND o.service_mode=:mode AND ".$geo;
+              AND master.operational_state='ACTIVE' AND s.is_active=1 AND o.service_mode=:mode AND ".$geo;
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($locationParams + $studyParams + $regionParams + ['mode' => $mode]);
         $covered = [];

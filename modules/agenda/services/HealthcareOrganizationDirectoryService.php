@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Agenda\Services;
 
+require_once __DIR__.'/HealthcareOrganizationMasterService.php';
+
 use InvalidArgumentException;
 use PDO;
 use PDOException;
@@ -123,10 +125,17 @@ final class HealthcareOrganizationDirectoryService
             if ((int)$active !== 1) {
                 throw new InvalidArgumentException('study_type_inactive');
             }
+            $master=(new HealthcareOrganizationMasterService($this->pdo))->resolveOrCreate($groupId,$studyTypeId);
+            if (array_key_exists('requires_appointment',$fields)) $fields['requires_appointment_override']=$fields['requires_appointment'];
+            if (array_key_exists('preparation_instructions',$fields)) {
+                $fields['preparation_instructions_override']=$fields['preparation_instructions'];
+                $fields['preparation_override_enabled']=1;
+            }
             $sql = 'INSERT INTO healthcare_organization_location_study_offerings
-                (location_id,study_type_id,'.implode(',', array_keys($fields)).')
-                VALUES (:location_id,:study_type_id,'.implode(',', array_map(static fn ($key) => ':'.$key, array_keys($fields))).')';
-            $this->pdo->prepare($sql)->execute(['location_id' => $location['location_id'], 'study_type_id' => $studyTypeId] + $fields);
+                (location_id,group_id,study_type_id,master_service_id,'.implode(',', array_keys($fields)).')
+                VALUES (:location_id,:group_id,:study_type_id,:master_service_id,'.implode(',', array_map(static fn ($key) => ':'.$key, array_keys($fields))).')';
+            $this->pdo->prepare($sql)->execute(['location_id' => $location['location_id'], 'group_id'=>$groupId,
+                'study_type_id' => $studyTypeId,'master_service_id'=>$master] + $fields);
             if ($ownsTransaction) {
                 $this->pdo->commit();
             }
@@ -151,6 +160,11 @@ final class HealthcareOrganizationDirectoryService
     {
         $this->requireOffering($groupId, $locationUuid, $studyTypeId);
         $fields = $this->offeringFields($data, false);
+        if (array_key_exists('requires_appointment',$fields)) $fields['requires_appointment_override']=$fields['requires_appointment'];
+        if (array_key_exists('preparation_instructions',$fields)) {
+            $fields['preparation_instructions_override']=$fields['preparation_instructions'];
+            $fields['preparation_override_enabled']=1;
+        }
         $this->updateScoped('healthcare_organization_location_study_offerings', $fields,
             'location_id IN (SELECT location_id FROM healthcare_organization_locations WHERE group_id=:group_id AND location_uuid=:location_uuid) AND study_type_id=:study_type_id',
             ['group_id' => $groupId, 'location_uuid' => $locationUuid, 'study_type_id' => $studyTypeId]);
@@ -189,13 +203,17 @@ final class HealthcareOrganizationDirectoryService
         $stmt->execute(['group_id' => $groupId]);
         $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($locations as &$location) {
-            $stmt = $this->pdo->prepare('SELECT o.offering_id,o.study_type_id,s.study_type_key,s.display_name_es,s.category_key,
+            $stmt = $this->pdo->prepare('SELECT o.offering_id,o.study_type_id,m.master_service_uuid,m.operational_state AS master_operational_state,s.study_type_key,s.display_name_es,s.category_key,
                 s.is_active AS study_type_active,o.operational_state,o.verification_state,o.service_mode,
-                o.requires_appointment,o.preparation_instructions
+                COALESCE(o.requires_appointment_override,m.default_requires_appointment) AS requires_appointment,
+                IF(o.preparation_override_enabled=1,o.preparation_instructions_override,m.default_preparation_instructions) AS preparation_instructions,
+                IF(o.requires_appointment_override IS NULL,\'MASTER\',\'LOCATION_OVERRIDE\') AS requires_appointment_source,
+                IF(o.preparation_override_enabled=1,\'LOCATION_OVERRIDE\',\'MASTER\') AS preparation_instructions_source
                 FROM healthcare_organization_location_study_offerings o
                 JOIN clinical_study_types s ON s.study_type_id=o.study_type_id
+                JOIN healthcare_organization_master_services m ON m.master_service_id=o.master_service_id AND m.group_id=:group_id
                 WHERE o.location_id=:location_id ORDER BY o.study_type_id');
-            $stmt->execute(['location_id' => $location['location_id']]);
+            $stmt->execute(['location_id' => $location['location_id'],'group_id'=>$groupId]);
             $location['offerings'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($location['offerings'] as &$offering) {
                 $areas = $this->pdo->prepare('SELECT service_area_id,scope_type,region_key,operational_state,verification_state
@@ -317,7 +335,15 @@ final class HealthcareOrganizationDirectoryService
 
     private function offeringFields(array $data, bool $creating): array
     {
-        $this->assertKeys($data, ['operational_state','service_mode','requires_appointment','preparation_instructions']);
+        $this->assertKeys($data, ['operational_state','service_mode','requires_appointment','preparation_instructions',
+            'requires_appointment_override','preparation_instructions_override','preparation_override_enabled']);
+        if (array_key_exists('requires_appointment',$data) && array_key_exists('requires_appointment_override',$data)) {
+            throw new InvalidArgumentException('ambiguous_appointment_override');
+        }
+        if (array_key_exists('preparation_instructions',$data)
+            && (array_key_exists('preparation_instructions_override',$data)||array_key_exists('preparation_override_enabled',$data))) {
+            throw new InvalidArgumentException('ambiguous_preparation_override');
+        }
         $fields = [];
         if (array_key_exists('operational_state', $data)) {
             $fields['operational_state'] = $this->state($data['operational_state']);
@@ -334,8 +360,24 @@ final class HealthcareOrganizationDirectoryService
             }
             $fields['requires_appointment'] = $data['requires_appointment'] ? 1 : 0;
         }
+        if (array_key_exists('requires_appointment_override',$data)) {
+            if ($data['requires_appointment_override']!==null && !is_bool($data['requires_appointment_override'])) {
+                throw new InvalidArgumentException('invalid_requires_appointment_override');
+            }
+            $fields['requires_appointment_override']=$data['requires_appointment_override']===null
+                ? null : ($data['requires_appointment_override']?1:0);
+        }
         if (array_key_exists('preparation_instructions', $data)) {
             $fields['preparation_instructions'] = $this->text($data['preparation_instructions'], 2000, false);
+        }
+        if (array_key_exists('preparation_instructions_override',$data)) {
+            $fields['preparation_instructions_override']=$this->text($data['preparation_instructions_override'],2000,false);
+            $fields['preparation_override_enabled']=1;
+        }
+        if (array_key_exists('preparation_override_enabled',$data)) {
+            if (!is_bool($data['preparation_override_enabled'])) throw new InvalidArgumentException('invalid_preparation_override_enabled');
+            $fields['preparation_override_enabled']=$data['preparation_override_enabled']?1:0;
+            if (!$data['preparation_override_enabled']) $fields['preparation_instructions_override']=null;
         }
         if ($creating && $fields === []) {
             $fields['service_mode'] = 'ON_SITE';

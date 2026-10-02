@@ -8,6 +8,34 @@ Este plan maestro NO duplica ese mapa completo; lo usa como referencia operativa
 
 La gobernanza detallada de la reforma del Expediente Clínico se mantiene en el [Plan de reforma del Expediente Clínico](clinical/PLAN_REFORMA_EXPEDIENTE_CLINICO.md). Este Plan Maestro conserva la autoridad global; el plan clínico documenta el workstream sin duplicarlo aquí.
 
+## CORECLOSE01 · Cierre de fundamento B3 y pausa de producto (2026-10-01)
+
+**Estado:** `PAUSED_PROVIDER_PRODUCT` · `FOUNDATION_READY` · `B3_PRODUCT_INCOMPLETE`. Se congela el producto visual del Perfil Proveedor tras SHELLCLONE02. La prioridad vuelve a **Perfil Médico > Pacientes > Órdenes y resultados**. La vista de revisión local puede seguir disponible en `http://127.0.0.1:18149/provider/`. La reanudación requiere conjuntamente `AFTER_PHYSICIAN_PLATFORM_CORE_IS_OPERATIONAL` y `WHEN_PROVIDER_PRODUCT_DEVELOPMENT_IS_REACTIVATED`.
+
+### Fundamentos terminados y reutilizables
+
+Identidad canónica de organizaciones de salud; reclamos gobernados; membresías e invitaciones; acceso comercial; sucursales; ofertas locales; áreas de servicio; matching exacto sin semántica de recomendación; API de administración; identidad universal de estudios; órdenes médicas y `order_item_id`; cobertura de resultados vinculados; linaje documental y binarios privados; impresión/PDF de órdenes. Al reanudar B3 se **reutilizan estas autoridades, sin reemplazarlas**.
+
+Una orden clínica del médico es válida con **cero proveedores, cero perfiles de proveedor, cero candidatos de matching y cero referidos**. El paciente puede imprimir o descargar la orden y elegir cualquier proveedor. La red de proveedores nunca bloquea la emisión de la orden médica.
+
+Jerarquía canónica: `clinical_study_types` identifica universalmente el estudio; `healthcare_organization_master_services` define su configuración comercial/operativa por organización; `healthcare_organization_location_study_offerings` define disponibilidad, modo, verificación, área y overrides explícitos por sucursal. Una organización tiene un único maestro vigente por estudio. Todos los flujos posteriores de orden, proveedor, referencia y resultado conservan el mismo `study_type_id` canónico. Precio público predeterminado es configuración: no es importe de factura, cotización aceptada, garantía de referido ni valor clínico de la orden. Una futura orden/cotización de servicio tomará su propia instantánea comercial.
+
+El maestro usa identidad interna y UUID estable; `ACTIVE`/`INACTIVE`; estudio inmutable; importes `DECIMAL(12,2)` en MXN; sin verificación clínica adicional. La verificación de la oferta local sigue siendo autoridad para matching. Migración: por cada par organización/estudio de ofertas existentes se crea un maestro con costo/precio/preparación nulos, visibilidad falsa y cita predeterminada falsa; cada valor local anterior se conserva como override explícito. La creación legada por `study_type_id` resuelve o crea el maestro conservador en la transacción de la oferta. La lectura del servidor devuelve valor efectivo y fuente `MASTER` o `LOCATION_OVERRIDE` para cita y preparación. El maestro `ACTIVE` es requisito adicional de matching; el maestro solo no produce matching.
+
+### Deuda B3 diferida
+
+| Grupo | Pendiente |
+|---|---|
+| Perfil / organización | Datos del centro; información sanitaria; Responsable Sanitario; medios e instalaciones; perfil público; opiniones y reseñas. |
+| Catálogo maestro / comercial | UI de catálogo maestro; overrides locales de precios; paquetes y check-ups; visibilidad y configuración comercial; plantillas de resultado estructurado, unidades de analito y rangos de referencia. |
+| Operación | Órdenes de servicio del proveedor; recepción; cotizaciones y carrito; folios de sucursal; trazabilidad de muestras; etiquetas de barras/QR; eventos de custodia; DICOM; fotografía intraoral. |
+| Resultados | Captura estructurada; unidades, rangos y banderas; revisión técnica; validación por profesional responsable; liberación y firma; correcciones; entrega; avisos al paciente y al médico. |
+| Módulos | Agenda del proveedor; Pacientes limitados al alcance autorizado del proveedor; empresas/instituciones B2B; facturación; promoción/difusión; notificaciones; reportes. |
+| Acceso operativo | Responsable Sanitario; recepción; capturista de resultados; operador de marketing; permisos operativos por sucursal. |
+| Entorno / QA | `ORDPRINT02B_LINUX_RUNTIME_GATE=PENDING_ENVIRONMENT`; `PROV04E_REAL_VALKEY_RUNTIME_GATE=PENDING_ENVIRONMENT`; `PREEXISTING_ORDER_FIXTURE_QA_DEBT=true`; QA del portal con autenticación y runtime reales. |
+
+El siguiente tramo arquitectónico es `B3-INTEROP01`: preparar el ciclo bidireccional médico ↔ proveedor sin crear dependencia de proveedor para órdenes médicas. Ninguna operación, resultado estructurado, paquete o módulo visual diferido se considera completado por este cierre.
+
 ## A. Propósito y principios (Etapa 1 = perfil médico)
 
 ### Propósito
