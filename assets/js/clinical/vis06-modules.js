@@ -78,7 +78,6 @@
   }
   const views = new Map();
   let rows=[], patient='', professional='', generation=0, ordersRequest=0, ordersItems=[], ordersCursor=null, ordersHasMore=false, ordersPageLoading=false;
-  const orderTitleCache=new Map();
   async function get(path) {
     const response=await fetch(`/api/clinical/index.php/${path}`,{credentials:'same-origin',headers:{Accept:'application/json'}});
     const result=await response.json();
@@ -173,10 +172,39 @@
   function markProjectedSelection(view) {
     view.list.querySelectorAll('[data-or-list-id]').forEach(card=>card.setAttribute('aria-pressed',String(card.dataset.orListId===view.selectedListId)));
   }
-  function resolveOrderTitle(id) {
-    if(orderTitleCache.has(id))return orderTitleCache.get(id);
-    const request=get(`doctors/${encodeURIComponent(professional)}/documents/${encodeURIComponent(id)}`).then(order=>String(order?.title||'').trim()).catch(()=>'');
-    orderTitleCache.set(id,request);return request;
+  const resultIsHistorical = row => row.result_order_relationship === 'PREDECESSOR_VERSION';
+  const hasExactSourceModel = row => Object.prototype.hasOwnProperty.call(row,'result_source_order_document_id');
+  const resultSourceRef = row => row.result_source_order_document_uuid || row.result_source_order_document_id ||
+    (!hasExactSourceModel(row) ? row.related_order_document_id : null);
+  function resultSourceOrder(row,item) {
+    const id=Number(row.result_source_order_document_id||(!hasExactSourceModel(row)&&row.related_order_document_id)),uuid=String(row.result_source_order_document_uuid||'');
+    const order=item.kind==='ORDER'?item.order:ordersItems.find(candidate=>candidate.kind==='ORDER'&&(
+      Number(candidate.order.id)===Number(row.order_lineage_head_document_id)||
+      candidate.order.document_uuid===row.order_lineage_head_document_uuid||
+      (!hasExactSourceModel(row)&&Number(candidate.order.id)===Number(row.related_order_document_id))))?.order;
+    if(!order)return null;
+    return [order,...(order.versions||[])].find(version=>Number(version.id)===id||(uuid&&version.document_uuid===uuid))||null;
+  }
+  async function inspectResultSource(row,trigger,view) {
+    const ref=resultSourceRef(row),ownerPatient=selectedPatient(),ownerDoctor=professional;
+    if(!ref)return;
+    trigger.disabled=true;
+    try {
+      const response=await get(`doctors/${encodeURIComponent(ownerDoctor)}/documents/${encodeURIComponent(ref)}`);
+      const full=response?.document||response;
+      if(selectedPatient()!==ownerPatient||professional!==ownerDoctor)return;
+      if(String(full?.document_id)!==String(row.result_source_order_document_uuid)||Number(full?.document_db_id)!==Number(row.result_source_order_document_id))throw new Error('La versión de origen cambió.');
+      const dialog=document.createElement('dialog');dialog.className='tax03c-dialog vis06-source-dialog';
+      dialog.innerHTML='<header><h4>Orden donde se solicitó</h4><button type="button" class="btn btn-link" aria-label="Cerrar">×</button></header><div data-tax03c-host></div><footer><button type="button" class="btn btn-outline-primary">Cerrar</button></footer>';
+      const body=dialog.querySelector('[data-tax03c-host]'),payload=full?.content?.payload||{};
+      body.append(node('h5',full.title||'Orden de estudios'),node('p',`Versión ${row.result_source_order_version}`));
+      const studies=Array.isArray(payload.order_items)&&payload.order_items.length?payload.order_items.map(item=>item.study_display_name):payload.requested_studies||[];
+      if(studies.length){const list=node('ul','','vis06-study-list');studies.forEach(name=>list.append(node('li',String(name))));body.append(list);}
+      dialog.querySelectorAll('button').forEach(control=>control.addEventListener('click',()=>dialog.close()));
+      dialog.addEventListener('close',()=>{dialog.remove();trigger.focus({preventScroll:true});},{once:true});
+      document.body.append(dialog);dialog.showModal();dialog.querySelector('header button').focus();
+    }catch(_){view.notice.textContent='No se pudo abrir la versión de origen de la orden.';}
+    finally{trigger.disabled=false;}
   }
   function selectProjected(row,item,view,listId,trigger=null) {
     const request=++view.detailRequest,seen=generation;
@@ -228,7 +256,9 @@
       if(!item.result_count){const empty=node('div','','vis06-no-results');empty.append(symbol('description'),node('strong','Aún no se han recibido resultados para esta orden.'),node('p','Los resultados se mostrarán aquí cuando estén disponibles.'));linked.append(empty);}
       else item.results.forEach(result=>{
         const entry=node('button','','vis06-result-entry');entry.type='button';entry.append(symbol('description'));
-        const copy=node('span','','vis06-result-entry-copy');copy.append(node('strong',result.title||projectionLabel(result)),node('small',`Registrado ${longDay(result.created_at||result.chronology_at)}`));entry.append(copy,symbol('chevron_right'));
+        const copy=node('span','','vis06-result-entry-copy');copy.append(node('strong',result.title||projectionLabel(result)),node('small',`Registrado ${longDay(result.created_at||result.chronology_at)}`));
+        if(resultIsHistorical(result))copy.append(node('small','Versión anterior','vis06-historical-marker'));
+        entry.append(copy,symbol('chevron_right'));
         entry.addEventListener('click',()=>selectProjected(result,item,view,listId,entry));linked.append(entry);
       });
       view.detail.append(linked);
@@ -236,25 +266,44 @@
       const data=projectedSection('Detalle del resultado','description');
       const facts=node('dl','','vis06-facts');facts.append(fact('Tipo de resultado',projectionLabel(row)),fact('Registrado en expediente',longDay(row.created_at||row.chronology_at)));
       data.append(facts);view.detail.append(data);
-      const origin=projectedSection('Origen','link');const originText=node('p',item.kind==='STANDALONE_RESULT'||row.result_origin==='sin_orden'?'Sin orden previa':!row.related_order_document_id?'Sin orden vinculada':'Orden vinculada');origin.append(originText);view.detail.append(origin);
-      if(row.related_order_document_id){
-        const linkedOrder=ordersItems.find(candidate=>candidate.kind==='ORDER'&&candidate.order.id===row.related_order_document_id)?.order || (item.kind==='ORDER'?item.order:null);
-        if(linkedOrder)originText.textContent=`Vinculado a orden: ${orderTitle(linkedOrder)}`;
-        else resolveOrderTitle(row.related_order_document_id).then(title=>{
-          if(request===view.detailRequest&&seen===generation&&title)originText.textContent=`Vinculado a orden: ${title}`;
-        });
-      }
+      const origin=projectedSection('Origen','link');const standalone=item.kind==='STANDALONE_RESULT'||row.result_origin==='sin_orden';
+      if(standalone)origin.append(node('p','Sin orden previa'));
+      else if(resultIsHistorical(row)){
+        origin.append(node('p','RESULTADO DE UNA VERSIÓN ANTERIOR','vis06-historical-marker'));
+        const versions=node('dl','','vis06-facts');
+        versions.append(fact('Orden donde se solicitó',`Versión ${row.result_source_order_version||'sin número'}`),
+          fact('Versión vigente',`Versión ${row.order_lineage_head_version||'sin número'}`));
+        origin.append(versions);
+        if(resultSourceRef(row))origin.append(button('Ver orden donde se solicitó',event=>inspectResultSource(row,event.currentTarget,view)));
+      }else if(!hasExactSourceModel(row)&&row.related_order_document_id){
+        const linked=resultSourceOrder(row,item);
+        const text=node('p',linked?`Vinculado a orden: ${orderTitle(linked)}`:'Vinculado a orden');origin.append(text);
+        if(!linked)get(`doctors/${encodeURIComponent(professional)}/documents/${encodeURIComponent(row.related_order_document_id)}`).then(response=>{
+          if(request!==view.detailRequest||seen!==generation)return;
+          const title=String((response?.document||response)?.title||'').trim();
+          if(title)text.textContent=`Vinculado a orden: ${title}`;
+        }).catch(()=>{});
+      }else origin.append(node('p',row.result_source_order_document_id?'Corresponde a esta orden':'Sin orden vinculada'));
+      view.detail.append(origin);
       if(row.has_private_binary==1){const file=projectedSection('Archivo / contenido','description');file.append(button('Abrir archivo',()=>privateRead(row,view)));view.detail.append(file);}
       const covered=projectedSection('CORRESPONDE A','science');const ids=Array.isArray(row.related_order_item_ids)?row.related_order_item_ids:[];
-      if(!ids.length)covered.append(node('p','Resultado general de la orden · Cobertura por estudio no especificada'));
+      if(!ids.length)covered.append(node('p',standalone?'Este resultado no está asociado a una orden.':'Este resultado no especifica a cuáles estudios de la orden corresponde.'));
       else {
-        const linkedOrder=item.kind==='ORDER'?item.order:ordersItems.find(candidate=>candidate.kind==='ORDER'&&candidate.order.id===row.related_order_document_id)?.order;
-        const studies=linkedOrder?.order_items||[];const names=ids.map(id=>studies.find(study=>study.order_item_id===id)?.study_display_name).filter(Boolean);
-        if(names.length===ids.length){const list=node('ul','','vis06-study-list');names.forEach(name=>list.append(node('li',name)));covered.append(list);}
-        else if(row.related_order_document_id){covered.append(node('p','Cargando estudios vinculados…'));get(`doctors/${encodeURIComponent(professional)}/documents/${encodeURIComponent(row.related_order_document_id)}`).then(full=>{
-          if(request!==view.detailRequest||seen!==generation)return;const payload=full?.content?.payload||{};const names=ids.map(id=>(payload.order_items||[]).find(study=>study.order_item_id===id)?.study_display_name).filter(Boolean);
-          covered.replaceChildren(node('h5','CORRESPONDE A'));if(names.length){const list=node('ul','','vis06-study-list');names.forEach(name=>list.append(node('li',name)));covered.append(list);}else covered.append(node('p','Cobertura por estudio no disponible.'));
-        }).catch(()=>{if(request===view.detailRequest&&seen===generation)covered.append(node('p','No se pudo cargar el detalle de estudios.'));});}
+        const source=resultSourceOrder(row,item),sourceRef=resultSourceRef(row);
+        const showStudies=studies=>{
+          const names=ids.map(id=>studies.find(study=>study.order_item_id===id)?.study_display_name).filter(Boolean);
+          if(names.length!==ids.length)return false;
+          const list=node('ul','','vis06-study-list');names.forEach(name=>list.append(node('li',name)));
+          covered.replaceChildren(covered.querySelector('.vis06-section-title'),list);return true;
+        };
+        if(!showStudies(source?.order_items||[])){
+          if(sourceRef){covered.append(node('p','Cargando estudios vinculados…'));get(`doctors/${encodeURIComponent(professional)}/documents/${encodeURIComponent(sourceRef)}`).then(full=>{
+            if(request!==view.detailRequest||seen!==generation)return;
+            const studies=(full?.document||full)?.content?.payload?.order_items||[];
+            if(!showStudies(studies))covered.replaceChildren(covered.querySelector('.vis06-section-title'),node('p','No se pudieron identificar los estudios de esta versión.'));
+          }).catch(()=>{if(request===view.detailRequest&&seen===generation)covered.replaceChildren(covered.querySelector('.vis06-section-title'),node('p','No se pudo cargar el detalle de estudios.'));});}
+          else covered.append(node('p','No se pudo identificar la orden donde se solicitaron estos estudios.'));
+        }
       }
       view.detail.append(covered);
     }
@@ -295,11 +344,12 @@
       const iconBox=node('span','','vis06-index-icon');iconBox.append(symbol(isOrder?orderIcon(row):'description'));
       const copy=node('span','','vis06-index-copy');
       if(item.kind==='STANDALONE_RESULT'||row.result_origin==='sin_orden')copy.append(node('small','RESULTADO SIN ORDEN PREVIA','vis06-index-eyebrow'));
-      else if(!isOrder&&!row.related_order_document_id)copy.append(node('small','SIN ORDEN VINCULADA','vis06-index-eyebrow'));
+      else if(!isOrder&&!resultSourceRef(row))copy.append(node('small','SIN ORDEN VINCULADA','vis06-index-eyebrow'));
       copy.append(node('strong',isOrder?orderTitle(row):(row.title||projectionLabel(row))),node('small',projectionLabel(row)));
       if(isOrder){const origin=orderOrigin(row);copy.append(node('small',`${origin?origin+' · ':''}${longDay(row.chronology_at)}`));}
-      else{if(row.related_order_document_id){const linked=ordersItems.find(candidate=>candidate.kind==='ORDER'&&candidate.order.id===row.related_order_document_id)?.order;const relationText=node('small',linked?`Vinculado a orden: ${orderTitle(linked)}`:'Vinculado a orden');copy.append(relationText);
-          if(!linked){const seen=ordersRequest;resolveOrderTitle(row.related_order_document_id).then(title=>{if(seen===ordersRequest&&title)relationText.textContent=`Vinculado a orden: ${title}`;});}}
+      else{if(resultIsHistorical(row))copy.append(node('small','Versión anterior','vis06-historical-marker'));
+        else if(row.result_source_order_document_id)copy.append(node('small','Corresponde a esta orden'));
+        else if(!hasExactSourceModel(row)&&row.related_order_document_id)copy.append(node('small','Vinculado a orden'));
         copy.append(node('small',`Registrado ${longDay(row.created_at||row.chronology_at)}`));}
       card.append(iconBox,copy);
       if(isOrder)card.append(node('span',item.result_count?resultCount(item.result_count):'Sin resultados',`vis06-count ${item.result_count?'has-results':''}`));
@@ -343,7 +393,7 @@
     const view=views.get('orders'),id=selectedPatient();if(!view||!id||!professional)return;
     if(append && (ordersPageLoading || !ordersHasMore || !ordersCursor))return;
     const seen=append?ordersRequest:++ordersRequest;
-    if(!append){orderTitleCache.clear();ordersItems=[];ordersCursor=null;ordersPageLoading=false;view.list.replaceChildren();}
+    if(!append){ordersItems=[];ordersCursor=null;ordersPageLoading=false;view.list.replaceChildren();}
     if(append)ordersPageLoading=true;
     view.notice.textContent='Consultando órdenes y resultados…';
     const query=new URLSearchParams({orders_results_mode:'1',limit:'25',filter:currentFilter(view)||'all',search:view.search.value.trim()});
@@ -361,7 +411,6 @@
   async function load() {
     const id=selectedPatient(),seen=++generation;
     if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders')setOrdersFilter(v,'all',false);else v.filter.value='';});
-    if(id!==patient)orderTitleCache.clear();
     patient=id;professional='';rows=[];ordersRequest++;ordersItems=[];ordersCursor=null;ordersHasMore=false;ordersPageLoading=false;
     views.forEach(v=>{v.list.replaceChildren();if(v.kind==='orders'){v.selectedListId='';v.selectedRowId='';v.workspace.classList.remove('is-detail-open');emptyDetail(v,false);}else v.detail.hidden=true;v.notice.textContent=id?'Consultando registros…':'Selecciona un paciente.';});
     if(!id)return;

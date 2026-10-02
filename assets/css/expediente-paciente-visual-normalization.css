@@ -4892,6 +4892,10 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #t-estudios .vis06-orders .vis06-result-entry-copy {display:flex;flex-direction:column;min-width:0}
 #p-expediente #t-estudios .vis06-orders .vis06-result-entry-copy strong {font-size:12px}
 #p-expediente #t-estudios .vis06-orders .vis06-result-entry-copy small {font-size:11px;color:#476783}
+#p-expediente #t-estudios .vis06-orders .vis06-historical-marker {color:#356b82;font-weight:600}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-section p.vis06-historical-marker {margin:0 0 5px;font-size:11px;line-height:1.25}
+.vis06-source-dialog[open] {display:flex;flex-direction:column}
+.vis06-source-dialog [data-tax03c-host] {overflow-y:auto}
 #p-expediente #t-estudios .vis06-orders .vis06-no-results {display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px;text-align:center;color:#123f60}
 #p-expediente #t-estudios .vis06-orders .vis06-no-results>.material-symbols-rounded {font-size:27px;color:#819ba5}
 #p-expediente #t-estudios .vis06-orders .vis06-no-results strong {font-size:13px}
