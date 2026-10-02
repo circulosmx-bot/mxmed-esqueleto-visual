@@ -244,6 +244,7 @@ status, response = match()
 check(status == 409 and response['error'] == 'order_replaced', 'QA_REVISION_SUCCESSOR_DENIED')
 sql('DELETE FROM healthcare_organization_location_study_service_areas;'
     'DELETE FROM healthcare_organization_location_study_offerings;'
+    'DELETE FROM healthcare_organization_master_services;'
     'DELETE FROM healthcare_organization_locations;'
     'DELETE FROM healthcare_organization_provider_status;'
     'DELETE FROM medical_groups')

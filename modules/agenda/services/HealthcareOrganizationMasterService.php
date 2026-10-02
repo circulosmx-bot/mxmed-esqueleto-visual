@@ -42,11 +42,14 @@ final class HealthcareOrganizationMasterService
             (master_service_uuid,group_id,study_type_id) VALUES (?,?,?)
             ON DUPLICATE KEY UPDATE master_service_id=LAST_INSERT_ID(master_service_id)')
             ->execute([self::uuid(),$group,$study]);
-        $id=(int)$this->pdo->lastInsertId();
-        $state=$this->pdo->prepare('SELECT operational_state FROM healthcare_organization_master_services WHERE master_service_id=? FOR UPDATE');
-        $state->execute([$id]);
-        if ($state->fetchColumn()!=='ACTIVE') throw new InvalidArgumentException('master_service_inactive');
-        return $id;
+        // A duplicate upsert may not update PDO::lastInsertId() on every MySQL runtime.
+        // The scoped pair is the canonical identity and is unique in the master table.
+        $state=$this->pdo->prepare('SELECT master_service_id,operational_state FROM healthcare_organization_master_services
+            WHERE group_id=? AND study_type_id=? FOR UPDATE');
+        $state->execute([$group,$study]);
+        $row=$state->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)||$row['operational_state']!=='ACTIVE') throw new InvalidArgumentException('master_service_inactive');
+        return (int)$row['master_service_id'];
     }
 
     public function create(string $group,int $study,array $data): array

@@ -8,6 +8,14 @@ Este plan maestro NO duplica ese mapa completo; lo usa como referencia operativa
 
 La gobernanza detallada de la reforma del Expediente Clínico se mantiene en el [Plan de reforma del Expediente Clínico](clinical/PLAN_REFORMA_EXPEDIENTE_CLINICO.md). Este Plan Maestro conserva la autoridad global; el plan clínico documenta el workstream sin duplicarlo aquí.
 
+## B3-INTEROP01 · Fundamento médico ↔ proveedor (2026-10-01)
+
+**Fundamento interoperable completado:** [contrato INTEROP01](contracts/healthcare_study_interop/README.md). Una orden médica continúa válida con cero proveedores. El referido digital transmite una versión exacta y un subconjunto de `order_item_id` a una sola sucursal; aceptación crea una orden operativa separada. Un servicio interno, condicionado a una futura autoridad clínica de liberación, publica el resultado en `clinical_documents` con binario privado y fuente de proveedor inmutable. OR02B conserva la procedencia de V1 aun si existe V2, con cobertura independiente por versión. No hay endpoint público de liberación ni acceso del proveedor al expediente completo.
+
+**Producto proveedor diferido:** personal operativo y Responsable Sanitario; captura y validación de resultados; muestras; Agenda y Pacientes de proveedor; recepción y órdenes de mostrador; cotizaciones, precios y folios; notificaciones y correcciones liberadas. Esos módulos deberán conectarse a la referencia, orden de servicio y servicio de publicación establecidos aquí, sin introducir dependencia de proveedor en las órdenes ni resultados del médico. La prioridad inmediata continúa en **Perfil Médico → Pacientes → Órdenes y resultados**.
+
+**Gates de entorno conservados:** `ORDPRINT02B_LINUX_RUNTIME_GATE=PENDING_ENVIRONMENT`; `PROV04E_REAL_VALKEY_RUNTIME_GATE=PENDING_ENVIRONMENT`; `PREEXISTING_ORDER_FIXTURE_QA_DEBT=true`.
+
 ## CORECLOSE01 · Cierre de fundamento B3 y pausa de producto (2026-10-01)
 
 **Estado:** `PAUSED_PROVIDER_PRODUCT` · `FOUNDATION_READY` · `B3_PRODUCT_INCOMPLETE`. Se congela el producto visual del Perfil Proveedor tras SHELLCLONE02. La prioridad vuelve a **Perfil Médico > Pacientes > Órdenes y resultados**. La vista de revisión local puede seguir disponible en `http://127.0.0.1:18149/provider/`. La reanudación requiere conjuntamente `AFTER_PHYSICIAN_PLATFORM_CORE_IS_OPERATIONAL` y `WHEN_PROVIDER_PRODUCT_DEVELOPMENT_IS_REACTIVATED`.
