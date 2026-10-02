@@ -225,7 +225,7 @@
         const control=categoryChoice(view,group.label,group.description,group.icon,()=>openGeneralOrder(control,group),true);
         view.primaryCategories.append(control);
       });
-      const resolved=navigation.resolve(profile||{});
+      const resolved=window.mxmedReviewClassification?.resolveNavigation(profile||{}) || navigation.resolve(profile||{});
       const shown=new Set();
       resolved.quick.forEach(key=>{
         const group=groups.quick[key];if(!group||shown.has(group.id)||!navigation.active(group,counts))return;
@@ -628,6 +628,9 @@
       search.addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadOrders(),250);});
       filter.addEventListener('click',event=>{const control=event.target.closest('button[data-filter]');if(!control)return;clearTimeout(searchTimer);setOrdersFilter(view,control.dataset.filter);});
       setOrderFlow(view,'HOME');
+      window.addEventListener('mxmed:review-classification-changed',()=>{
+        if(view.flow==='CATEGORY')loadOrderCategories(view);
+      });
     }else{
       search.addEventListener('input',()=>render(view));filter.addEventListener('change',()=>render(view));
     }
