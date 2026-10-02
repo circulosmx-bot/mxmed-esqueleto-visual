@@ -182,10 +182,10 @@
     view.flowBack.hidden=flow!=='PENDING'&&flow!=='HISTORY';
     view.categoryBack.hidden=flow!=='CATEGORY';
     const heading={HOME:['Órdenes y resultados','Selecciona lo que deseas hacer para este paciente.'],
-      CATEGORY:['Generar nueva orden','Selecciona una categoría para continuar.'],
+      CATEGORY:['Generar nueva orden',''],
       PENDING:['Revisar órdenes pendientes','Solicitudes que requieren seguimiento.'],
       HISTORY:['Ver resultados e historial','Resultados registrados y órdenes completas.']}[flow];
-    view.headTitle.textContent=heading[0];view.headCopy.textContent=heading[1];
+    view.headTitle.textContent=heading[0];view.headCopy.textContent=heading[1];view.headCopy.hidden=flow==='CATEGORY';
     view.search.placeholder=flow==='PENDING'?'Buscar orden o estudio':'Buscar resultado u orden';
     view.search.value='';view.selectedListId='';view.selectedRowId='';view.workspace.classList.remove('is-detail-open');
     view.list.replaceChildren();emptyDetail(view,false);view.notice.textContent='';
@@ -605,7 +605,7 @@
       view.flowBack.classList.add('vis06-flow-back');
       view.categoryBack=button('Volver a opciones',()=>setOrderFlow(view,'HOME'));
       view.categoryBack.classList.add('vis06-flow-back');
-      module.prepend(view.flowBack,view.categoryBack);
+      module.prepend(view.flowBack);head.prepend(view.categoryBack);
       view.home=node('div','','vis06-flow-home');view.home.setAttribute('aria-label','Opciones de órdenes y resultados');
       const options=[
         ['Solicitar estudios','Solicita nuevos estudios para este paciente.','science','Elegir estudios','CATEGORY'],
@@ -618,11 +618,9 @@
         view.home.append(card);
       });
       view.categoryScreen=node('div','','vis06-category-screen');
-      view.categoryScreen.append(node('h4','Estudios principales'));
       view.primaryCategories=node('div','','vis06-primary-categories');view.categoryScreen.append(view.primaryCategories);
       view.groupCategories=node('div','','vis06-group-categories');view.groupCategories.hidden=true;view.categoryScreen.append(view.groupCategories);
       view.secondarySection=node('section','','vis06-secondary-section');
-      view.secondarySection.append(node('h4','Otras categorías de estudios'));
       view.secondaryCategories=node('div','','vis06-secondary-categories');view.secondarySection.append(view.secondaryCategories);view.categoryScreen.append(view.secondarySection);
       view.categoryStatus=node('p','','vis06-category-status');view.categoryStatus.setAttribute('role','status');view.categoryScreen.append(view.categoryStatus);
       module.append(view.home,view.categoryScreen);
