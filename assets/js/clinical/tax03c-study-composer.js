@@ -47,6 +47,11 @@
     const priority=$('[data-tax03c-priority]'),indication=$('[data-tax03c-indication]');
     priority.value=options.priority==='Urgente'?'Urgente':'Rutinaria';
     indication.value=String(options.indication||'');
+    if(options.initialCategory&&categories[options.initialCategory]){
+      category.add(new Option(categories[options.initialCategory],options.initialCategory));
+      category.value=options.initialCategory;
+      $('[data-tax03c-all]').setAttribute('aria-pressed','false');
+    }
     Object.entries(categories).forEach(([key,label])=>$('[data-tax03c-custom-category]').add(new Option(label,key)));
     const notify=()=>options.onChange?.(clone(selected),priority.value,indication.value);
     function renderSelected(){
@@ -97,7 +102,9 @@
         $('[data-tax03c-more]').hidden=!hasMore;
       }catch(error){if(error.name==='AbortError'||destroyed||seen!==request)return;status.dataset.error='true';status.textContent='No se pudo cargar el catálogo. Puedes agregar otro estudio manualmente.';resultBox.replaceChildren();$('[data-tax03c-more]').hidden=true;}
     }
-    function openCustom(){custom.hidden=false;customName.value=search.value.trim();$('[data-tax03c-custom-error]').textContent='';customName.focus();}
+    function openCustom(){custom.hidden=false;customName.value=search.value.trim();$('[data-tax03c-custom-error]').textContent='';
+      if(options.initialCategory&&categories[options.initialCategory]&&!$('[data-tax03c-custom-category]').value)$('[data-tax03c-custom-category]').value=options.initialCategory;
+      customName.focus();}
     function addCustom(){
       const cat=$('[data-tax03c-custom-category]').value,name=customName.value.trim(),note=$('[data-tax03c-custom-note]').value.trim();
       if(!cat||!categories[cat]){$('[data-tax03c-custom-error]').textContent='Selecciona una categoría.';return;}

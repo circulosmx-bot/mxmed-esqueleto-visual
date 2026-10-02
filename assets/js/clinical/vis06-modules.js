@@ -39,20 +39,25 @@
     document.body.append(link);link.click();link.remove();
   };
   let orderComposerDialog=null;
-  function openGeneralOrder(trigger){
+  function openGeneralOrder(trigger,initialCategory=''){
     if(orderComposerDialog)return;
     const patientId=selectedPatient(),doctorId=professional;
     if(!patientId||!doctorId||!window.mxmedStudyComposer){views.get('orders').notice.textContent='Selecciona un paciente y un profesional antes de solicitar estudios.';return;}
     const dialog=document.createElement('dialog');dialog.className='tax03c-dialog';dialog.setAttribute('aria-label','Solicitar estudios');
-    dialog.innerHTML='<form><header><h4>Solicitar estudios</h4><button type="button" class="btn btn-link" data-tax03c-close aria-label="Cerrar">×</button></header><div data-tax03c-host></div><p data-tax03c-error role="alert"></p><footer><button type="button" class="btn btn-outline-secondary" data-tax03c-close>Cancelar</button><button type="submit" class="btn btn-primary" data-tax03c-submit>Solicitar estudios</button></footer></form>';
+    dialog.innerHTML='<form><header><h4>Solicitar estudios</h4><button type="button" class="btn btn-link" data-tax03c-close>Volver a categorías</button></header><div data-tax03c-host></div><p data-tax03c-error role="alert"></p><footer><button type="button" class="btn btn-outline-secondary" data-tax03c-close>Cancelar</button><button type="submit" class="btn btn-primary" data-tax03c-submit>Solicitar estudios</button></footer></form>';
     document.body.append(dialog);orderComposerDialog=dialog;
     let attemptKey=crypto.randomUUID(),attemptEvent='';
     const composer=window.mxmedStudyComposer.mount(dialog.querySelector('[data-tax03c-host]'),{
-      doctorId,onChange:()=>{attemptKey=crypto.randomUUID();attemptEvent='';}
+      doctorId,initialCategory,onChange:()=>{attemptKey=crypto.randomUUID();attemptEvent='';}
     });
     let busy=false;
-    const close=()=>{if(busy)return;composer.destroy();dialog.close();dialog.remove();orderComposerDialog=null;trigger?.focus({preventScroll:true});};
-    dialog.querySelectorAll('[data-tax03c-close]').forEach(control=>control.addEventListener('click',close));
+    const close=(saved=false)=>{
+      if(busy)return;
+      if(!saved&&(composer.selected().length||composer.indication().trim()||composer.priority()!=='Rutinaria')&&
+        !window.confirm('¿Volver a categorías? Los estudios seleccionados no se guardarán.'))return;
+      composer.destroy();dialog.close();dialog.remove();orderComposerDialog=null;trigger?.focus({preventScroll:true});
+    };
+    dialog.querySelectorAll('[data-tax03c-close]').forEach(control=>control.addEventListener('click',()=>close()));
     dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
     dialog.querySelector('form').addEventListener('submit',async event=>{
       event.preventDefault();if(busy)return;
@@ -69,9 +74,9 @@
         const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/documents`,{
           method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','Idempotency-Key':attemptKey},body:JSON.stringify(command)});
         const result=await response.json();if(!response.ok||result?.ok!==true)throw new Error(result?.message||'No se pudo guardar la orden.');
-        busy=false;close();
+        busy=false;close(true);
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:type,source:'tax03c_catalog_composer'}}));
-        loadOrders();
+        setOrderFlow(views.get('orders'),'PENDING');
       }catch(failure){error.textContent=failure?.message||'No se pudo guardar la orden. Intenta de nuevo.';busy=false;submit.disabled=false;submit.textContent='Solicitar estudios';}
     });
     dialog.showModal();dialog.querySelector('[data-tax03c-search]')?.focus();
@@ -149,6 +154,95 @@
   const orderTitle = row => row.title || row.requested_studies?.[0] || projectionLabel(row);
   const resultCount = count => count===1?'1 resultado':`${count} resultados`;
   const currentFilter = view => view.kind==='orders'?view.filter.dataset.value:view.filter.value;
+  const pendingOrder = item => item.kind==='ORDER' && item.order.status!=='voided' &&
+    item.order.coverage_state!=='ALL_ITEMS_HAVE_RESULTS';
+  function visibleOrderItems(view) {
+    const filter=currentFilter(view);
+    return ordersItems.filter(item=>{
+      if(view.flow==='PENDING')return pendingOrder(item)&&(
+        filter==='none' ? item.order.coverage_state==='NO_RESULTS'||item.result_count===0 :
+        filter==='partial' ? item.order.coverage_state==='PARTIAL_RESULTS' : true);
+      if(view.flow==='HISTORY')return filter==='complete'
+        ? item.kind==='ORDER'&&item.order.coverage_state==='ALL_ITEMS_HAVE_RESULTS'
+        : item.kind==='RESULT'||item.kind==='STANDALONE_RESULT'||item.kind==='UNRESOLVED_RESULT';
+      return true;
+    });
+  }
+  function flowFilters(view,options,selected) {
+    view.filter.replaceChildren();view.filter.dataset.value=selected;
+    options.forEach(([value,label])=>{
+      const control=node('button',label);control.type='button';control.dataset.filter=value;
+      control.setAttribute('aria-pressed',String(value===selected));view.filter.append(control);
+    });
+  }
+  function setOrderFlow(view,flow) {
+    if(!view)return;
+    view.flow=flow;view.module.dataset.orFlow=flow.toLowerCase();ordersRequest++;
+    view.home.hidden=flow!=='HOME';view.categoryScreen.hidden=flow!=='CATEGORY';
+    view.flowBack.hidden=flow!=='PENDING'&&flow!=='HISTORY';
+    view.categoryBack.hidden=flow!=='CATEGORY';
+    const heading={HOME:['Órdenes y resultados','Selecciona lo que deseas hacer para este paciente.'],
+      CATEGORY:['Generar nueva orden','Selecciona una categoría para continuar.'],
+      PENDING:['Revisar órdenes pendientes','Solicitudes que requieren seguimiento.'],
+      HISTORY:['Ver resultados e historial','Resultados registrados y órdenes completas.']}[flow];
+    view.headTitle.textContent=heading[0];view.headCopy.textContent=heading[1];
+    view.search.placeholder=flow==='PENDING'?'Buscar orden o estudio':'Buscar resultado u orden';
+    view.search.value='';view.selectedListId='';view.selectedRowId='';view.workspace.classList.remove('is-detail-open');
+    view.list.replaceChildren();emptyDetail(view,false);view.notice.textContent='';
+    if(flow==='PENDING')flowFilters(view,[['pending','TODAS'],['none','SIN RESULTADOS'],['partial','PARCIALES']],'pending');
+    if(flow==='HISTORY')flowFilters(view,[['results','RESULTADOS'],['complete','ÓRDENES COMPLETAS']],'results');
+    if(flow==='CATEGORY')loadOrderCategories(view);
+    if(flow==='PENDING'||flow==='HISTORY')loadOrders();
+    fitOrdersViewport(view);
+  }
+  const primaryStudyGroups=[
+    {label:'LABORATORIO',description:'Análisis clínicos y pruebas de laboratorio.',icon:'science',keys:['LABORATORIO']},
+    {label:'IMAGEN',description:'Estudios de imagenología y radiología.',icon:'image',keys:['IMAGEN']},
+    {label:'GABINETE',description:'Pruebas funcionales y neurofisiológicas.',icon:'monitor_heart',keys:['NEUROFISIOLOGIA','FUNCION_PULMONAR','SUENO']},
+    {label:'CARDIOLOGÍA',description:'Estudios cardiovasculares.',icon:'cardiology',keys:['CARDIOVASCULAR']}
+  ];
+  const categoryIcons={AUDIOLOGIA:'hearing',PATOLOGIA:'biotech',ENDOSCOPIA:'gastroenterology',GENETICA:'genetics',
+    NEUROFISIOLOGIA:'neurology',FUNCION_PULMONAR:'pulmonology',SUENO:'bedtime',OFTALMOLOGIA:'visibility',DENTAL:'dentistry',OTROS:'science'};
+  function categoryChoice(view,label,description,icon,action,primary=false) {
+    const control=button('',action);control.className=primary?'vis06-category-primary':'vis06-category-secondary';
+    control.append(symbol(icon),node('span',label,'vis06-category-label'));
+    if(description)control.append(node('small',description));
+    control.append(symbol('chevron_right','vis06-category-chevron'));
+    return control;
+  }
+  async function loadOrderCategories(view) {
+    const request=++view.categoryRequest,doctor=professional,patientId=selectedPatient();
+    view.categoryStatus.textContent='Cargando categorías de estudios…';view.primaryCategories.replaceChildren();view.secondaryCategories.replaceChildren();view.groupCategories.replaceChildren();view.groupCategories.hidden=true;
+    if(!doctor)return;
+    const context=`${doctor}:${patientId}`;view.categoryLoadingFor=context;
+    try {
+      const data=await get(`doctors/${encodeURIComponent(doctor)}/study-types?limit=1&offset=0`);
+      if(request!==view.categoryRequest||view.flow!=='CATEGORY'||doctor!==professional||patientId!==selectedPatient())return;
+      const active=(data.categories||[]).filter(category=>Number(category.active_count)>0);
+      const byKey=new Map(active.map(category=>[category.category_key,category]));
+      const primaryKeys=new Set(primaryStudyGroups.flatMap(group=>group.keys));
+      primaryStudyGroups.forEach(group=>{
+        const available=group.keys.filter(key=>byKey.has(key));if(!available.length)return;
+        const control=categoryChoice(view,group.label,group.description,group.icon,()=>{
+          if(available.length===1){openGeneralOrder(control,available[0]);return;}
+          view.groupCategories.replaceChildren();
+          view.groupCategories.append(node('h5','Elige un estudio de gabinete'));
+          available.forEach(key=>{const option=categoryChoice(view,byKey.get(key).label_es,'',categoryIcons[key]||'science',()=>openGeneralOrder(option,key));view.groupCategories.append(option);});
+          view.groupCategories.hidden=false;view.groupCategories.scrollIntoView({block:'nearest'});
+        },true);
+        view.primaryCategories.append(control);
+      });
+      active.filter(category=>!primaryKeys.has(category.category_key)).forEach(category=>{
+        const label=category.category_key==='OTROS'?'Otros estudios':category.label_es;
+        const control=categoryChoice(view,label,'',categoryIcons[category.category_key]||'science',()=>openGeneralOrder(control,category.category_key));
+        view.secondaryCategories.append(control);
+      });
+      view.secondarySection.hidden=!view.secondaryCategories.children.length;
+      view.categoryStatus.textContent=active.length?'':'No hay estudios activos en el catálogo.';
+      view.categoryContext=context;
+    }catch(_){if(request===view.categoryRequest)view.categoryStatus.textContent='No se pudieron cargar las categorías. Intenta de nuevo.';}
+    finally{if(request===view.categoryRequest)view.categoryLoadingFor='';}
+  }
   function setOrdersFilter(view,value,reload=true) {
     view.filter.dataset.value=value;
     view.filter.querySelectorAll('button').forEach(control=>control.setAttribute('aria-pressed',String(control.dataset.filter===value)));
@@ -370,15 +464,18 @@
   }
   function renderOrders(view,append=false) {
     const priorScroll=append?view.list.scrollTop:0;
+    const visibleItems=visibleOrderItems(view);
     view.list.replaceChildren();
-    view.notice.textContent=`${ordersItems.length} ${currentFilter(view)==='orders'?'orden(es)':currentFilter(view)==='results'?'resultado(s)':'registro(s)'} visibles${ordersHasMore?' · Hay más registros disponibles':''}.`;
-    if(!ordersItems.length){
+    view.notice.textContent=`${visibleItems.length} ${view.flow==='PENDING'||currentFilter(view)==='complete'?'orden(es)':'resultado(s)'} visibles${ordersHasMore?' · Hay más registros disponibles':''}.`;
+    if(!visibleItems.length){
       const empty=node('div','','vis06-orders-empty');empty.append(symbol('description','vis06-placeholder-icon'),
-        node('strong',view.search.value.trim()||currentFilter(view)!=='all'?'No hay coincidencias con estos filtros.':'Aún no hay órdenes ni resultados registrados para este paciente.'));
-      if(!view.search.value.trim()&&currentFilter(view)==='all')empty.append(node('p','Cuando solicites estudios, aparecerán aquí junto con sus resultados.'));
-      view.list.append(empty);view.selectedListId='';view.selectedRowId='';emptyDetail(view,!!view.search.value.trim()||currentFilter(view)!=='all');fitOrdersViewport(view);return;
+        node('strong',view.search.value.trim()?'No hay coincidencias con esta búsqueda.':view.flow==='PENDING'?'No hay órdenes pendientes en estos registros.':'No hay resultados u órdenes completas en estos registros.'));
+      if(ordersHasMore)empty.append(node('p','Puede haber más registros en la siguiente página.'));
+      view.list.append(empty);view.selectedListId='';view.selectedRowId='';emptyDetail(view,true);
+      if(ordersHasMore){const more=button('Mostrar más registros',()=>loadOrders(true));more.classList.add('vis06-more');view.list.append(more);}
+      fitOrdersViewport(view);return;
     }
-    ordersItems.forEach(item=>{
+    visibleItems.forEach(item=>{
       const row=item.order||item.result,listId=String(row.id),isOrder=item.kind==='ORDER';
       const card=node('button','','vis06-index-card');card.type='button';card.dataset.orListId=listId;card.setAttribute('aria-pressed','false');
       const iconBox=node('span','','vis06-index-icon');iconBox.append(symbol(isOrder?orderIcon(row):'description'));
@@ -386,7 +483,8 @@
       if(item.kind==='STANDALONE_RESULT'||row.result_origin==='sin_orden')copy.append(node('small','RESULTADO SIN ORDEN PREVIA','vis06-index-eyebrow'));
       else if(!isOrder&&!resultSourceRef(row))copy.append(node('small','SIN ORDEN VINCULADA','vis06-index-eyebrow'));
       copy.append(node('strong',isOrder?orderTitle(row):(row.title||projectionLabel(row))),node('small',projectionLabel(row)));
-      if(isOrder){const origin=orderOrigin(row);copy.append(node('small',`${origin?origin+' · ':''}${longDay(row.chronology_at)}`));}
+      if(isOrder){const origin=orderOrigin(row);copy.append(node('small',`${origin?origin+' · ':''}${longDay(row.chronology_at)}`));
+        if(view.flow==='PENDING')copy.append(node('small',coverageLabel(row.coverage_state)));}
       else{if(resultIsHistorical(row))copy.append(node('small','Versión anterior','vis06-historical-marker'));
         else if(row.result_source_order_document_id)copy.append(node('small','Corresponde a esta orden'));
         else if(!hasExactSourceModel(row)&&row.related_order_document_id)copy.append(node('small','Vinculado a orden'));
@@ -397,7 +495,7 @@
       card.addEventListener('click',()=>selectProjected(row,item,view,listId,card));view.list.append(card);
     });
     if(ordersHasMore){const more=button('Mostrar más registros',()=>loadOrders(true));more.classList.add('vis06-more');view.list.append(more);}
-    const previous=ordersItems.find(item=>String((item.order||item.result).id)===view.selectedListId);
+    const previous=visibleItems.find(item=>String((item.order||item.result).id)===view.selectedListId);
     if(previous){
       if(append)markProjectedSelection(view);
       else{
@@ -407,7 +505,7 @@
         selectProjected(current,previous,view,view.selectedListId);
       }
     }
-    else{const first=ordersItems[0];selectProjected(first.order||first.result,first,view,String((first.order||first.result).id));}
+    else{const first=visibleItems[0];selectProjected(first.order||first.result,first,view,String((first.order||first.result).id));}
     if(append)view.list.scrollTop=priorScroll;
     fitOrdersViewport(view);
   }
@@ -430,13 +528,14 @@
     requestAnimationFrame(()=>view.list.classList.toggle('is-scrollable',view.list.scrollHeight>view.list.clientHeight+1));
   }
   async function loadOrders(append=false) {
-    const view=views.get('orders'),id=selectedPatient();if(!view||!id||!professional)return;
+    const view=views.get('orders'),id=selectedPatient();if(!view||!id||!professional||!['PENDING','HISTORY'].includes(view.flow))return;
     if(append && (ordersPageLoading || !ordersHasMore || !ordersCursor))return;
     const seen=append?ordersRequest:++ordersRequest;
     if(!append){ordersItems=[];ordersCursor=null;ordersPageLoading=false;view.list.replaceChildren();}
     if(append)ordersPageLoading=true;
     view.notice.textContent='Consultando órdenes y resultados…';
-    const query=new URLSearchParams({orders_results_mode:'1',limit:'25',filter:currentFilter(view)||'all',search:view.search.value.trim()});
+    const filter=view.flow==='PENDING'||currentFilter(view)==='complete'?'orders':'results';
+    const query=new URLSearchParams({orders_results_mode:'1',limit:'25',filter,search:view.search.value.trim()});
     if(append&&ordersCursor)query.set('cursor',ordersCursor);
     try{
       const data=await get(`doctors/${encodeURIComponent(professional)}/patients/${encodeURIComponent(id)}/documents?${query}`);
@@ -450,7 +549,7 @@
   }
   async function load() {
     const id=selectedPatient(),seen=++generation;
-    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders')setOrdersFilter(v,'all',false);else v.filter.value='';});
+    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders')setOrderFlow(v,'HOME');else v.filter.value='';});
     patient=id;professional='';rows=[];ordersRequest++;ordersItems=[];ordersCursor=null;ordersHasMore=false;ordersPageLoading=false;
     views.forEach(v=>{v.list.replaceChildren();if(v.kind==='orders'){v.selectedListId='';v.selectedRowId='';v.workspace.classList.remove('is-detail-open');emptyDetail(v,false);}else v.detail.hidden=true;v.notice.textContent=id?'Consultando registros…':'Selecciona un paciente.';});
     if(!id)return;
@@ -459,7 +558,9 @@
       const doctor=String(active?.doctor_id || window.mxmedStore?.activeProfessionalContext?.doctor_id || window.mxmedStore?.doctor_id || '').trim();
       if(!doctor)throw new Error('No se pudo confirmar el contexto del profesional.');
       professional=doctor;
-      loadOrders();
+      const ordersView=views.get('orders');
+      if(ordersView?.flow==='CATEGORY'&&ordersView.categoryContext!==`${doctor}:${id}`&&ordersView.categoryLoadingFor!==`${doctor}:${id}`)loadOrderCategories(ordersView);
+      if(['PENDING','HISTORY'].includes(views.get('orders')?.flow))loadOrders();
       const data=await get(`doctors/${encodeURIComponent(doctor)}/patients/${encodeURIComponent(id)}/documents?limit=200`);
       if(seen!==generation||selectedPatient()!==id)return;
       rows=Array.isArray(data.items) ? data.items : [];views.forEach(v=>{if(v.kind!=='orders')render(v);});
@@ -497,18 +598,46 @@
       const index=node('div','','vis06-orders-index');index.append(notice,list);detail.tabIndex=-1;workspace.append(index,detail);module.append(head,back,controls,workspace);
     }else{detail.hidden=true;module.append(head,back,controls,notice,list,detail);}
     host.prepend(module);host.classList.add('vis06-ready');
-    const view={kind,settings,host,create,back,search,filter,notice,list,detail,workspace,lastTrigger:null,selectedListId:'',selectedRowId:'',detailRequest:0};views.set(kind,view);
+    const view={kind,settings,host,module,headTitle:copy.querySelector('h3'),headCopy:copy.querySelector('p'),create,back,search,filter,notice,list,detail,workspace,lastTrigger:null,selectedListId:'',selectedRowId:'',detailRequest:0};views.set(kind,view);
     if(kind==='orders'){
+      view.categoryRequest=0;
+      view.flowBack=button('Volver a opciones',()=>setOrderFlow(view,'HOME'));
+      view.flowBack.classList.add('vis06-flow-back');
+      view.categoryBack=button('Volver a opciones',()=>setOrderFlow(view,'HOME'));
+      view.categoryBack.classList.add('vis06-flow-back');
+      module.prepend(view.flowBack,view.categoryBack);
+      view.home=node('div','','vis06-flow-home');view.home.setAttribute('aria-label','Opciones de órdenes y resultados');
+      const options=[
+        ['Solicitar estudios','Solicita nuevos estudios para este paciente.','science','Elegir estudios','CATEGORY'],
+        ['Revisar órdenes pendientes','Consulta solicitudes sin resultados o con resultados parciales.','assignment','Ver órdenes pendientes','PENDING'],
+        ['Ver resultados e historial','Explora resultados previos y órdenes completas.','monitoring','Ver resultados','HISTORY']
+      ];
+      options.forEach(([title,description,icon,action,flow])=>{
+        const card=button('',()=>setOrderFlow(view,flow));card.className='vis06-intent-card';
+        card.append(symbol(icon),node('strong',title),node('span',description),node('span',`${action} →`,'vis06-intent-action'));
+        view.home.append(card);
+      });
+      view.categoryScreen=node('div','','vis06-category-screen');
+      view.categoryScreen.append(node('h4','Estudios principales'));
+      view.primaryCategories=node('div','','vis06-primary-categories');view.categoryScreen.append(view.primaryCategories);
+      view.groupCategories=node('div','','vis06-group-categories');view.groupCategories.hidden=true;view.categoryScreen.append(view.groupCategories);
+      view.secondarySection=node('section','','vis06-secondary-section');
+      view.secondarySection.append(node('h4','Otras categorías de estudios'));
+      view.secondaryCategories=node('div','','vis06-secondary-categories');view.secondarySection.append(view.secondaryCategories);view.categoryScreen.append(view.secondarySection);
+      view.categoryStatus=node('p','','vis06-category-status');view.categoryStatus.setAttribute('role','status');view.categoryScreen.append(view.categoryStatus);
+      module.append(view.home,view.categoryScreen);
       let searchTimer;
       search.addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadOrders(),250);});
       filter.addEventListener('click',event=>{const control=event.target.closest('button[data-filter]');if(!control)return;clearTimeout(searchTimer);setOrdersFilter(view,control.dataset.filter);});
-      emptyDetail(view,false);
+      setOrderFlow(view,'HOME');
     }else{
       search.addEventListener('input',()=>render(view));filter.addEventListener('change',()=>render(view));
     }
     if(kind==='documents'){const link=button('Ver órdenes y resultados',()=>pane.querySelector('[data-bs-target="#t-estudios"]')?.click());module.append(link);}
     if(kind==='prescriptions'){const link=button('Consultar medicación actual',()=>pane.querySelector('[data-bs-target="#t-medicamentos-longitudinal"]')?.click());module.append(link);}
-    pane.querySelector(`[data-bs-target="#${settings.target}"]`)?.addEventListener('shown.bs.tab',load);
+    pane.querySelector(`[data-bs-target="#${settings.target}"]`)?.addEventListener('shown.bs.tab',()=>{
+      if(kind==='orders')setOrderFlow(view,'HOME');load();
+    });
   }
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>window.addEventListener(name,load));
   window.addEventListener('mxmed:clinical-document-created',event=>{
