@@ -21,8 +21,13 @@
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
     let results=[],offset=0,hasMore=false,request=0,controller=null,timer=null,destroyed=false;
+    let navigationParts=Array.isArray(options.navigationGroup?.parts)?options.navigationGroup.parts
+      .filter(part=>categories[part.category]).map(part=>({category:part.category,
+        keys:Array.isArray(part.keys)?new Set(part.keys):null})):null;
+    let navigationPart=0,navigationOffset=0;
     host.innerHTML=`<div class="tax03c-composer" data-tax03c-composer>
       <label class="tax03c-search-label">Buscar estudio<input type="search" data-tax03c-search placeholder="Buscar estudio" autocomplete="off" aria-label="Buscar estudio"></label>
+      <p class="tax03c-navigation-scope" data-tax03c-navigation-scope></p>
       <div class="tax03c-filter"><button type="button" data-tax03c-all aria-pressed="true">Todas</button><label>Categorías<select data-tax03c-category aria-label="Filtrar estudios por categoría"><option value="">Todas las categorías</option></select></label></div>
       <p class="tax03c-status" data-tax03c-status role="status" aria-live="polite"></p>
       <div class="tax03c-results" data-tax03c-results role="list" aria-label="Resultados del catálogo"></div>
@@ -45,6 +50,12 @@
     const resultBox=$('[data-tax03c-results]'),selectedBox=$('[data-tax03c-selected]');
     const custom=$('[data-tax03c-custom]'),customName=$('[data-tax03c-custom-name]');
     const priority=$('[data-tax03c-priority]'),indication=$('[data-tax03c-indication]');
+    const navigationScope=$('[data-tax03c-navigation-scope]');
+    function renderNavigationScope(){
+      navigationScope.textContent=navigationParts?.length?`Explorando ${options.navigationGroup.label}. Puedes buscar en todo el catálogo o cambiar de categoría.`:'';
+      navigationScope.hidden=!navigationScope.textContent;
+    }
+    renderNavigationScope();
     priority.value=options.priority==='Urgente'?'Urgente':'Rutinaria';
     indication.value=String(options.indication||'');
     if(options.initialCategory&&categories[options.initialCategory]){
@@ -82,23 +93,48 @@
       const current=category.value;category.replaceChildren(new Option('Todas las categorías',''));
       (rows||[]).filter(row=>Number(row.active_count)>0).forEach(row=>category.add(new Option(categories[row.category_key]||row.label_es,row.category_key)));
       category.value=current;
-      $('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));
+      $('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value&&!navigationParts?.length));
     }
     async function load(append=false){
       if(destroyed||readonly)return;
       if(!doctorId){status.dataset.error='true';status.textContent='No se pudo confirmar el profesional para consultar el catálogo.';return;}
       if(controller)controller.abort();controller=new AbortController();const seen=++request;
-      if(!append){offset=0;results=[];renderResults();}
+      if(!append){offset=0;navigationPart=0;navigationOffset=0;results=[];renderResults();}
       status.dataset.error='false';status.textContent='Buscando estudios…';
-      const params=new URLSearchParams({limit:'30',offset:String(offset),search:search.value.trim()});
-      if(category.value)params.set('category',category.value);
       try{
-        const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/study-types?${params}`,{credentials:'same-origin',headers:{Accept:'application/json'},signal:controller.signal});
-        const body=await response.json();if(!response.ok||body?.ok!==true)throw new Error('CATALOG_UNAVAILABLE');
+        const fetchPage=async params=>{
+          const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/study-types?${params}`,{credentials:'same-origin',headers:{Accept:'application/json'},signal:controller.signal});
+          const body=await response.json();if(!response.ok||body?.ok!==true)throw new Error('CATALOG_UNAVAILABLE');
+          return body.data||{};
+        };
+        let page=[],categoriesFromServer=[];
+        if(navigationParts?.length&&!search.value.trim()&&!category.value){
+          const known=new Set(results.map(item=>String(item.study_type_id)));
+          while(page.length<30&&navigationPart<navigationParts.length){
+            const part=navigationParts[navigationPart];
+            const params=new URLSearchParams({limit:'30',offset:String(navigationOffset),search:'',category:part.category});
+            const data=await fetchPage(params);
+            if(destroyed||seen!==request)return;
+            categoriesFromServer=data.categories||categoriesFromServer;
+            const fetched=Array.isArray(data.items)?data.items:[];
+            fetched.filter(item=>!part.keys||part.keys.has(item.study_type_key)).forEach(item=>{
+              const id=String(item.study_type_id);if(!known.has(id)){known.add(id);page.push(item);}
+            });
+            if(data.has_more&&fetched.length)navigationOffset+=fetched.length;
+            else{navigationPart++;navigationOffset=0;}
+          }
+          hasMore=navigationPart<navigationParts.length;
+        }else{
+          const params=new URLSearchParams({limit:'30',offset:String(offset),search:search.value.trim()});
+          if(category.value)params.set('category',category.value);
+          const data=await fetchPage(params);
+          page=Array.isArray(data.items)?data.items:[];
+          categoriesFromServer=data.categories||[];
+          hasMore=!!data.has_more;
+        }
         if(destroyed||seen!==request)return;
-        const page=Array.isArray(body.data?.items)?body.data.items:[];
-        results=append?results.concat(page):page;offset=results.length;hasMore=!!body.data?.has_more;
-        renderCategories(body.data?.categories);status.textContent=results.length?`${results.length} estudio(s) disponibles.`:'';renderResults();
+        results=append?results.concat(page):page;offset=results.length;
+        renderCategories(categoriesFromServer);status.textContent=results.length?`${results.length} estudio(s) disponibles.`:'';renderResults();
         $('[data-tax03c-more]').hidden=!hasMore;
       }catch(error){if(error.name==='AbortError'||destroyed||seen!==request)return;status.dataset.error='true';status.textContent='No se pudo cargar el catálogo. Puedes agregar otro estudio manualmente.';resultBox.replaceChildren();$('[data-tax03c-more]').hidden=true;}
     }
@@ -125,10 +161,10 @@
       if(target.hasAttribute('data-tax03c-custom-cancel'))custom.hidden=true;
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
       if(target.hasAttribute('data-tax03c-more')&&hasMore)load(true);
-      if(target.hasAttribute('data-tax03c-all')){category.value='';target.setAttribute('aria-pressed','true');load();}
+      if(target.hasAttribute('data-tax03c-all')){navigationParts=null;renderNavigationScope();category.value='';target.setAttribute('aria-pressed','true');load();}
     });
     search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(),250);});
-    category.addEventListener('change',()=>{ $('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});
+    category.addEventListener('change',()=>{navigationParts=null;renderNavigationScope();$('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});
     priority.addEventListener('change',notify);indication.addEventListener('input',notify);
     renderSelected();if(readonly){host.querySelectorAll('input,select,textarea,button').forEach(control=>control.disabled=true);}else load();
     return {

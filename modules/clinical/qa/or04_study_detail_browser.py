@@ -112,6 +112,11 @@ with sync_playwright() as playwright:
             page.wait_for_timeout(850)
             page.locator('[data-bs-target="#t-estudios"]').first.click()
             pane = page.locator('#t-estudios')
+            if case == 'complete':
+                pane.get_by_role('button', name='Ver resultados e historial', exact=False).click()
+                pane.locator('.vis06-segments [data-filter="complete"]').click()
+            else:
+                pane.get_by_role('button', name='Revisar órdenes pendientes', exact=False).click()
             pane.locator('.vis06-index-card').first.wait_for()
             pane.locator('.vis06-index-card').first.click()
             detail = pane.locator('.vis06-detail')
@@ -195,6 +200,8 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(850)
     page.locator('[data-bs-target="#t-estudios"]').first.click()
     pane = page.locator('#t-estudios')
+    pane.get_by_role('button', name='Revisar órdenes pendientes', exact=False).click()
+    pane.locator('.vis06-index-card').first.wait_for()
     pane.locator('.vis06-index-card').first.click()
     pane.locator('.vis06-detail').get_by_role('button', name='REGISTRAR RESULTADO').click()
     dialog = page.locator('#res02a-linked-result')
