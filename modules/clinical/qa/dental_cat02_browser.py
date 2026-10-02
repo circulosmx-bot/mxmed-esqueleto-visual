@@ -137,12 +137,12 @@ with sync_playwright() as playwright:
  assert page.evaluate('mxmedStudyComposer.documentType(qaComposer.selected())')=='orders'
  print('QA_MIXED_CATEGORY_AND_UNIVERSAL_SEARCH=PASS')
  profiles={
-  'Dentista':['Radiología dental 2D','Escaneo y modelos','Cone Beam / CBCT','Registros ortodóncicos'],
+  'Dentista':['Radiología dental 2D','Cone Beam / CBCT','Escaneo y modelos'],
   'Ortodoncia':['Registros ortodóncicos','Radiología dental 2D','Escaneo y modelos','Cone Beam / CBCT'],
   'Implantología':['Cone Beam / CBCT','Radiología dental 2D','Escaneo y modelos'],
   'Endodoncia':['Radiología dental 2D','Cone Beam / CBCT'],
-  'Periodoncia':['Radiología dental 2D','Escaneo y modelos'],
-  'Cirugía Oral y Maxilofacial':['Cone Beam / CBCT','Radiología dental 2D','Escaneo y modelos'],
+  'Periodoncia':['Radiología dental 2D','Cone Beam / CBCT'],
+  'Cirugía Oral y Maxilofacial':['Cone Beam / CBCT','Radiología dental 2D'],
   'Odontopediatría':['Radiología dental 2D','Registros ortodóncicos','Escaneo y modelos'],
  }
  for specialty,expected in profiles.items():

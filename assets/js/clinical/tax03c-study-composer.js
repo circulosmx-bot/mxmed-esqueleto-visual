@@ -22,13 +22,19 @@
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
     let editingIndex=-1,activeDentalEditor=null;
     let results=[],offset=0,hasMore=false,request=0,controller=null,timer=null,destroyed=false;
+    const dentalScope=Array.isArray(options.dentalScope)?options.dentalScope
+      .filter(part=>categories[part.category]&&Array.isArray(part.keys)&&part.keys.length)
+      .map(part=>({category:part.category,keys:new Set(part.keys)})):null;
+    let globalCatalog=!!options.globalCatalog&&!!dentalScope?.length;
     let navigationParts=Array.isArray(options.navigationGroup?.parts)?options.navigationGroup.parts
       .filter(part=>categories[part.category]).map(part=>({category:part.category,
         keys:Array.isArray(part.keys)?new Set(part.keys):null})):null;
     let navigationPart=0,navigationOffset=0;
     host.innerHTML=`<div class="tax03c-composer" data-tax03c-composer>
       <label class="tax03c-search-label">Buscar estudio<input type="search" data-tax03c-search placeholder="Buscar estudio" autocomplete="off" aria-label="Buscar estudio"></label>
-      <p class="tax03c-navigation-scope" data-tax03c-navigation-scope></p>
+      <div class="tax03c-scope-bar"><p class="tax03c-navigation-scope" data-tax03c-navigation-scope></p>
+        <button type="button" class="tax03c-scope-link" data-tax03c-global hidden>Buscar en todo el catálogo</button>
+        <button type="button" class="tax03c-scope-link" data-tax03c-dental-back hidden>Volver a estudios dentales</button></div>
       <div class="tax03c-filter"><button type="button" data-tax03c-all aria-pressed="true">Todas</button><label>Categorías<select data-tax03c-category aria-label="Filtrar estudios por categoría"><option value="">Todas las categorías</option></select></label></div>
       <p class="tax03c-status" data-tax03c-status role="status" aria-live="polite"></p>
       <div class="tax03c-results" data-tax03c-results role="list" aria-label="Resultados del catálogo"></div>
@@ -53,8 +59,15 @@
     const priority=$('[data-tax03c-priority]'),indication=$('[data-tax03c-indication]');
     const navigationScope=$('[data-tax03c-navigation-scope]');
     function renderNavigationScope(){
-      navigationScope.textContent=navigationParts?.length?`Explorando ${options.navigationGroup.label}. Puedes buscar en todo el catálogo o cambiar de categoría.`:'';
+      if(dentalScope?.length){
+        navigationScope.textContent=globalCatalog?'Catálogo general':navigationParts?.length
+          ?`Estudios dentales · ${options.navigationGroup.label}`:'Estudios dentales';
+        $('[data-tax03c-global]').hidden=globalCatalog;
+        $('[data-tax03c-dental-back]').hidden=!globalCatalog;
+        $('[data-tax03c-all]').textContent=globalCatalog?'Todas':'Estudios dentales';
+      }else navigationScope.textContent=navigationParts?.length?`Explorando ${options.navigationGroup.label}. Puedes buscar en todo el catálogo o cambiar de categoría.`:'';
       navigationScope.hidden=!navigationScope.textContent;
+      navigationScope.parentElement.hidden=!navigationScope.textContent;
     }
     renderNavigationScope();
     priority.value=options.priority==='Urgente'?'Urgente':'Rutinaria';
@@ -109,7 +122,9 @@
     }
     function renderCategories(rows){
       const current=category.value;category.replaceChildren(new Option('Todas las categorías',''));
-      (rows||[]).filter(row=>Number(row.active_count)>0).forEach(row=>category.add(new Option(categories[row.category_key]||row.label_es,row.category_key)));
+      (rows||[]).filter(row=>Number(row.active_count)>0&&
+        (!dentalScope?.length||globalCatalog||dentalScope.some(part=>part.category===row.category_key)))
+        .forEach(row=>category.add(new Option(categories[row.category_key]||row.label_es,row.category_key)));
       category.value=current;
       $('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value&&!navigationParts?.length));
     }
@@ -126,11 +141,15 @@
           return body.data||{};
         };
         let page=[],categoriesFromServer=[];
-        if(navigationParts?.length&&!search.value.trim()&&!category.value){
+        const activeParts=dentalScope?.length&&!globalCatalog
+          ?navigationParts?.length&&!search.value.trim()&&!category.value?navigationParts:dentalScope
+          :navigationParts?.length&&!search.value.trim()&&!category.value?navigationParts:null;
+        if(activeParts?.length){
           const known=new Set(results.map(item=>String(item.study_type_id)));
-          while(page.length<30&&navigationPart<navigationParts.length){
-            const part=navigationParts[navigationPart];
-            const params=new URLSearchParams({limit:'30',offset:String(navigationOffset),search:'',category:part.category});
+          const relevant=category.value?activeParts.filter(part=>part.category===category.value):activeParts;
+          while(page.length<30&&navigationPart<relevant.length){
+            const part=relevant[navigationPart];
+            const params=new URLSearchParams({limit:'30',offset:String(navigationOffset),search:search.value.trim(),category:part.category});
             const data=await fetchPage(params);
             if(destroyed||seen!==request)return;
             categoriesFromServer=data.categories||categoriesFromServer;
@@ -141,7 +160,7 @@
             if(data.has_more&&fetched.length)navigationOffset+=fetched.length;
             else{navigationPart++;navigationOffset=0;}
           }
-          hasMore=navigationPart<navigationParts.length;
+          hasMore=navigationPart<relevant.length;
         }else{
           const params=new URLSearchParams({limit:'30',offset:String(offset),search:search.value.trim()});
           if(category.value)params.set('category',category.value);
@@ -183,6 +202,8 @@
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
       if(target.hasAttribute('data-tax03c-more')&&hasMore)load(true);
       if(target.hasAttribute('data-tax03c-all')){navigationParts=null;renderNavigationScope();category.value='';target.setAttribute('aria-pressed','true');load();}
+      if(target.hasAttribute('data-tax03c-global')&&dentalScope?.length){globalCatalog=true;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
+      if(target.hasAttribute('data-tax03c-dental-back')&&dentalScope?.length){globalCatalog=false;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
     });
     search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(),250);});
     category.addEventListener('change',()=>{navigationParts=null;renderNavigationScope();$('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});

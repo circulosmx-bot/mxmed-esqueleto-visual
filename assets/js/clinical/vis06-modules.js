@@ -38,11 +38,27 @@
     link.download='';
     document.body.append(link);link.click();link.remove();
   };
-  let orderComposerDialog=null;
-  function openGeneralOrder(trigger,initialNavigation=''){
-    if(orderComposerDialog)return;
+  let orderComposerDialog=null,openingOrderComposer=false;
+  async function resolveOrderNavigation(doctorId){
+    let profile={};
+    try{
+      const response=await fetch(`/api/profiles/index.php/private/doctor/${encodeURIComponent(doctorId)}`,{
+        credentials:'same-origin',headers:{Accept:'application/json'}});
+      const body=await response.json();
+      if(response.ok&&body?.ok===true&&body.data)profile=body.data;
+    }catch(_){}
+    return window.mxmedReviewClassification?.resolveNavigation(profile)||navigation.resolve(profile);
+  }
+  async function openGeneralOrder(trigger,initialNavigation='',dentalMode=null){
+    if(orderComposerDialog||openingOrderComposer)return;
     const patientId=selectedPatient(),doctorId=professional;
     if(!patientId||!doctorId||!window.mxmedStudyComposer){views.get('orders').notice.textContent='Selecciona un paciente y un profesional antes de solicitar estudios.';return;}
+    openingOrderComposer=true;
+    if(dentalMode===null&&initialNavigation===''){
+      try {if((await resolveOrderNavigation(doctorId)).family==='DENTAL')dentalMode={global:false};}
+      catch(_){views.get('orders').notice.textContent='No se pudo confirmar la clasificación profesional. Intenta de nuevo.';openingOrderComposer=false;return;}
+    }
+    if(orderComposerDialog||selectedPatient()!==patientId||professional!==doctorId){openingOrderComposer=false;return;}
     const dialog=document.createElement('dialog');dialog.className='tax03c-dialog';dialog.setAttribute('aria-label','Solicitar estudios');
     dialog.innerHTML='<form><header><h4>Solicitar estudios</h4><button type="button" class="btn btn-link" data-tax03c-close>Volver a categorías</button></header><div data-tax03c-host></div><p data-tax03c-error role="alert"></p><footer><button type="button" class="btn btn-outline-secondary" data-tax03c-close>Cancelar</button><button type="submit" class="btn btn-primary" data-tax03c-submit>Solicitar estudios</button></footer></form>';
     document.body.append(dialog);orderComposerDialog=dialog;
@@ -50,8 +66,10 @@
     const composer=window.mxmedStudyComposer.mount(dialog.querySelector('[data-tax03c-host]'),{
       doctorId,
       ...(typeof initialNavigation==='string'?{initialCategory:initialNavigation}:{navigationGroup:initialNavigation}),
+      ...(dentalMode?{dentalScope:navigation.dentalScope(),globalCatalog:!!dentalMode.global}:{}),
       onChange:()=>{attemptKey=crypto.randomUUID();attemptEvent='';}
     });
+    openingOrderComposer=false;
     let busy=false;
     const close=(saved=false)=>{
       if(busy)return;
@@ -198,6 +216,19 @@
     fitOrdersViewport(view);
   }
   const navigation=window.mxmedSpecialtyNavigationV1;
+  async function dentalActiveStudyKeys(doctor){
+    const keys=new Set();
+    for(const part of navigation.dentalScope()){
+      let offset=0,more=true;
+      while(more){
+        const data=await get(`doctors/${encodeURIComponent(doctor)}/study-types?${new URLSearchParams({limit:'100',offset:String(offset),category:part.category})}`);
+        const items=Array.isArray(data.items)?data.items:[];
+        items.forEach(item=>{if(part.keys.includes(item.study_type_key))keys.add(item.study_type_key);});
+        offset+=items.length;more=!!data.has_more&&items.length>0&&offset<=10000;
+      }
+    }
+    return keys;
+  }
   function categoryChoice(view,label,description,icon,action,primary=false) {
     const control=button('',action);control.className=primary?'vis06-category-primary':'vis06-category-secondary';
     control.append(symbol(icon),node('span',label,'vis06-category-label'));
@@ -212,33 +243,50 @@
     const context=`${doctor}:${patientId}`;view.categoryLoadingFor=context;
     try {
       if(!navigation)throw new Error('NAVIGATION_CONFIG_UNAVAILABLE');
-      const profilePath=`/api/profiles/index.php/private/doctor/${encodeURIComponent(doctor)}`;
-      const [data,profile]=await Promise.all([
+      const [data,resolved]=await Promise.all([
         get(`doctors/${encodeURIComponent(doctor)}/study-types?limit=1&offset=0`),
-        fetch(profilePath,{credentials:'same-origin',headers:{Accept:'application/json'}})
-          .then(response=>response.ok?response.json():null).then(body=>body?.ok===true?body.data:null).catch(()=>null)
+        resolveOrderNavigation(doctor)
       ]);
       if(request!==view.categoryRequest||view.flow!=='CATEGORY'||doctor!==professional||patientId!==selectedPatient())return;
       const counts=Object.fromEntries((data.categories||[]).map(row=>[row.category_key,Number(row.active_count)||0]));
       const groups=navigation.config.groups;
-      groups.primary.filter(group=>navigation.active(group,counts)).forEach(group=>{
-        const control=categoryChoice(view,group.label,group.description,group.icon,()=>openGeneralOrder(control,group),true);
-        view.primaryCategories.append(control);
-      });
-      const resolved=window.mxmedReviewClassification?.resolveNavigation(profile||{}) || navigation.resolve(profile||{});
-      const shown=new Set();
-      resolved.quick.forEach(key=>{
-        const group=groups.quick[key];if(!group||shown.has(group.id)||!navigation.active(group,counts))return;
-        shown.add(group.id);
-        const control=categoryChoice(view,group.label,'',group.icon,()=>openGeneralOrder(control,group));
-        view.secondaryCategories.append(control);
-      });
-      view.secondarySection.hidden=!view.secondaryCategories.children.length;
-      groups.lower.filter(group=>navigation.active(group,counts)&&!shown.has(group.id)).forEach(group=>{
-        const control=button(group.label,()=>openGeneralOrder(control,group));control.className='vis06-lower-link';view.lowerLinks.append(control);
-      });
-      const all=button('Todos los estudios',()=>openGeneralOrder(all));all.className='vis06-lower-link';view.lowerLinks.append(all);
-      view.categoryStatus.textContent=view.primaryCategories.children.length?'':'No hay estudios activos en el catálogo.';
+      if(resolved.family==='DENTAL'){
+        const activeKeys=await dentalActiveStudyKeys(doctor);
+        if(request!==view.categoryRequest||view.flow!=='CATEGORY'||doctor!==professional||patientId!==selectedPatient())return;
+        const shown=new Set();
+        (navigation.config.profiles[resolved.profile]?.quick||[]).forEach(key=>{
+          const group=groups.quick[key];if(!group||shown.has(group.id)||!navigation.active(group,counts,activeKeys))return;
+          shown.add(group.id);
+          const control=categoryChoice(view,group.label,'',group.icon,()=>openGeneralOrder(control,group,{global:false}),true);
+          view.primaryCategories.append(control);
+        });
+        view.module.dataset.orFamily='dental';
+        view.primaryCategories.style.setProperty('--dental-primary-count',String(view.primaryCategories.children.length||1));
+        view.secondarySection.hidden=true;
+        const all=button('Buscar en todo el catálogo',()=>openGeneralOrder(all,'',{global:true}));
+        all.className='vis06-lower-link';view.lowerLinks.append(all);
+      }else{
+        view.module.dataset.orFamily=resolved.family.toLowerCase();
+        view.primaryCategories.style.removeProperty('--dental-primary-count');
+        groups.primary.filter(group=>navigation.active(group,counts)).forEach(group=>{
+          const control=categoryChoice(view,group.label,group.description,group.icon,()=>openGeneralOrder(control,group),true);
+          view.primaryCategories.append(control);
+        });
+        const shown=new Set();
+        resolved.quick.forEach(key=>{
+          const group=groups.quick[key];if(!group||shown.has(group.id)||!navigation.active(group,counts))return;
+          shown.add(group.id);
+          const control=categoryChoice(view,group.label,'',group.icon,()=>openGeneralOrder(control,group));
+          view.secondaryCategories.append(control);
+        });
+        view.secondarySection.hidden=!view.secondaryCategories.children.length;
+        groups.lower.filter(group=>navigation.active(group,counts)&&!shown.has(group.id)).forEach(group=>{
+          const control=button(group.label,()=>openGeneralOrder(control,group));control.className='vis06-lower-link';view.lowerLinks.append(control);
+        });
+        const all=button('Todos los estudios',()=>openGeneralOrder(all));all.className='vis06-lower-link';view.lowerLinks.append(all);
+      }
+      view.categoryStatus.textContent=view.primaryCategories.children.length?'':resolved.family==='DENTAL'
+        ?'No hay estudios dentales activos en el catálogo.':'No hay estudios activos en el catálogo.';
       view.categoryContext=context;
     }catch(_){if(request===view.categoryRequest)view.categoryStatus.textContent='No se pudieron cargar las categorías. Intenta de nuevo.';}
     finally{if(request===view.categoryRequest){view.categoryLoadingFor='';fitOrdersViewport(view);}}

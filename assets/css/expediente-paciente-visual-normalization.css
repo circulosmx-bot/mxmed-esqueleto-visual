@@ -4985,6 +4985,13 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 .tax03c-dialog [data-tax03c-error] {color:#9d352f;margin:0 18px}.tax03c-dialog .btn {min-height:40px}
 .tax03c-composer {display:grid;gap:10px;min-width:0;color:#173e50}.tax03c-composer label {display:grid;gap:4px;margin:0;font-size:13px;font-weight:600;color:#07536e}
 .tax03c-navigation-scope {margin:0;color:#476783;font-size:12px}
+.tax03c-scope-bar {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px 12px}
+.tax03c-scope-bar[hidden] {display:none}
+.tax03c-scope-link {padding:0;border:0;background:transparent;color:#075d78;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.tax03c-scope-link:focus-visible {outline:2px solid #008c9b;outline-offset:3px}
+#p-expediente #t-estudios .vis06-orders[data-or-family="dental"] .vis06-primary-categories {grid-template-columns:repeat(var(--dental-primary-count,3),minmax(0,1fr))}
+@media(max-width:700px){#p-expediente #t-estudios .vis06-orders[data-or-family="dental"] .vis06-primary-categories {grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){#p-expediente #t-estudios .vis06-orders[data-or-family="dental"] .vis06-primary-categories {grid-template-columns:minmax(0,1fr)}}
 .tax03c-composer input,.tax03c-composer select,.tax03c-composer textarea {box-sizing:border-box;width:100%;min-width:0;min-height:38px;padding:8px 10px;border:1px solid #bdd8e4;border-radius:8px;background:#fff;color:#173e50;font-size:14px;font-weight:400}
 .tax03c-filter {display:flex;align-items:end;gap:10px}.tax03c-filter>[data-tax03c-all] {min-height:38px;padding:9px 10px;border:1px solid #bdd8e4;border-radius:8px;background:#fff;color:#07536e;font-size:13px}.tax03c-filter>[data-tax03c-all][aria-pressed=true] {background:#effafb;font-weight:700}.tax03c-filter label {min-width:0;flex:1}
 .tax03c-status {font-size:13px;color:#526976;margin:0}.tax03c-status[data-error=true] {color:#9d352f}

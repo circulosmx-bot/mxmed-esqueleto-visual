@@ -2,6 +2,8 @@
 
 **Audit snapshot:** 2026-10-02; source HEAD `9efa63adcdea68c70aa9f8f5cd03c7f18af9d48c`. This is a navigation proposal for Director review. No clinical catalog, API, writer, authorization rule, schema, or UI behavior was changed by this audit.
 
+**Implemented addendum — DENTAL-NAV01:** The figures and dental-empty observations below describe the original 183-study audit snapshot. CAT02 later added seven dental-related studies. The current `or05-specialty-navigation-v1.js` resolves dental family from explicit profile keys and uses dental groupers as its primary navigation. Its default browser and search are limited to keys linked by those groupers. “Buscar en todo el catálogo” is an explicit secondary escape, with a return to dental browsing; it does not prohibit a dental professional from ordering any active canonical study or a custom study. Medical and other professional navigation retain their previous behavior. The implemented contract is documented in [DENTAL_CAT02_DENTAL_STUDY_ORDER_V1_IMPLEMENTED.md](DENTAL_CAT02_DENTAL_STUDY_ORDER_V1_IMPLEMENTED.md).
+
 ## Authority and limits
 
 - Study authority: the 183 active rows of `mxmed_director_review_lon07c.clinical_study_types`, reconciled key-for-key with the 183 canonical entries of `modules/clinical/catalog/tax03b_source_curation.json`. There are 183 rows total, all active, IDs 1–183; 23 studies have aliases (32 aliases in all). The review database has zero `profiles_doctors` rows. This audit therefore cannot measure deployed clinician-label frequencies or find stored free-text variants.

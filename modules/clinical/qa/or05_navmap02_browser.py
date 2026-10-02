@@ -78,8 +78,9 @@ def make_page(browser, specialty, viewport=(1440, 900), title='', secondary=None
     page.goto(BASE + '/__or05_navmap02_qa__', wait_until='networkidle')
     expect(page.locator('.vis06-intent-card')).to_have_count(3)
     page.locator('.vis06-intent-card').first.click()
-    expect(page.locator('.vis06-category-primary')).to_have_count(4)
-    expect(page.locator('.vis06-lower-link')).to_have_text('Todos los estudios')
+    dental = specialty in {'Dentista','Ortodoncia','Implantología','Cirugía Oral y Maxilofacial'}
+    expect(page.locator('.vis06-category-primary')).to_have_count(0 if dental else 4)
+    expect(page.locator('.vis06-lower-link')).to_have_text('Buscar en todo el catálogo' if dental else 'Todos los estudios')
     return page, errors, writes, catalog_calls
 
 

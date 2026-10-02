@@ -262,15 +262,16 @@
       ]
     },
     "dental": {
-      "quick": ["D2","EM","CB","RO"],
+      "quick": ["D2","CB","EM"],
       "promoted": ["dental_panoramic_xray","dental_intraoral_scan","dental_cbct"]
     },
     "dental_ortho": {"quick":["RO","D2","EM","CB"],"promoted":["dental_panoramic_xray","dental_cephalometric_xray","dental_clinical_photographs","dental_intraoral_scan","dental_study_model"]},
     "dental_implant": {"quick":["CB","D2","EM"],"promoted":["dental_cbct","dental_panoramic_xray","dental_intraoral_scan","dental_study_model"]},
     "dental_endo": {"quick":["D2","CB"],"promoted":["dental_panoramic_xray"]},
-    "dental_perio": {"quick":["D2","EM"],"promoted":["dental_panoramic_xray","dental_clinical_photographs"]},
-    "dental_maxillofacial": {"quick":["CB","D2","EM"],"promoted":["dental_cbct","dental_panoramic_xray","tmj_comparative_xray"]},
-    "dental_prosthetic": {"quick":["EM","D2","RO"],"promoted":["dental_intraoral_scan","dental_study_model","dental_clinical_photographs"]},
+    "dental_perio": {"quick":["D2","CB"],"promoted":["dental_panoramic_xray","dental_clinical_photographs"]},
+    "dental_maxillofacial": {"quick":["CB","D2"],"promoted":["dental_cbct","dental_panoramic_xray","tmj_comparative_xray"]},
+    "dental_prosthetic": {"quick":["EM","D2"],"promoted":["dental_intraoral_scan","dental_study_model","dental_clinical_photographs"]},
+    "dental_aesthetic": {"quick":["EM","RO","D2"],"promoted":["dental_intraoral_scan","dental_clinical_photographs","dental_study_model"]},
     "dental_pathology": {"quick":["D2","CB"],"promoted":[]},
     "derm": {
       "quick": [],
@@ -686,7 +687,7 @@
     "Nutrición en Diabetes": "nutrition",
     "Nutriología": "nutrition",
     "Odontología": "dental",
-    "Odontología Estética": "dental_prosthetic",
+    "Odontología Estética": "dental_aesthetic",
     "Odontopediatría": "peds_dental",
     "Oftalmología": "ophthal",
     "Oncología": "oncology",
@@ -750,7 +751,11 @@
   },
   "aliases": {},
   "parentProfiles": {},
-  "generalProfile": "general_med"
+  "generalProfile": "general_med",
+  "families": {
+    "dental": ["dental","dental_ortho","dental_implant","dental_endo","dental_perio","dental_maxillofacial","dental_prosthetic","dental_aesthetic","dental_pathology","peds_dental"],
+    "other": ["clinical_lab","nursing","nutrition","psychology","physio","rehab","qfb","podiatry","other"]
+  }
 };
   const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
   const specialtyMap = new Map(Object.entries(config.specialties).map(([label, profile]) => [normalize(label), profile]));
@@ -780,10 +785,25 @@
       ...(Array.isArray(identity.specialty_secondary) ? identity.specialty_secondary : [])
     ];
     for (const label of secondary) { const profile = profileFor(label); if (profile) add(profile); }
-    return {profile: primary, quick, promoted: config.profiles[primary]?.promoted || [], source:
-      verifiedProfile ? 'verified_primary' : textProfile ? 'primary_text' : titleProfile ? 'professional_family' : 'general'};
+    const source=verifiedProfile ? 'verified_primary' : textProfile ? 'primary_text' : titleProfile ? 'professional_family' : 'general';
+    const family=config.families.dental.includes(primary)?'DENTAL':
+      config.families.other.includes(primary)||source==='general'?'OTHER':'MEDICAL';
+    return {profile: primary, family, quick, promoted: config.profiles[primary]?.promoted || [], source};
   }
-  const active = (group, counts) => (!group.id.startsWith('dental-') || Number(counts.DENTAL || 0) > 0) &&
-    group.parts.some(part => Number(counts[part.category] || 0) > 0);
-  window.mxmedSpecialtyNavigationV1 = Object.freeze({config, normalize, profileFor, resolve, active});
+  const active = (group, counts, activeStudyKeys=null) =>
+    activeStudyKeys instanceof Set && group.id.startsWith('dental-')
+      ? group.parts.some(part=>(part.keys||[]).some(key=>activeStudyKeys.has(key)))
+      : (!group.id.startsWith('dental-') || Number(counts.DENTAL || 0) > 0) &&
+        group.parts.some(part => Number(counts[part.category] || 0) > 0);
+  const dentalParts=Object.values(config.groups.quick).filter(group=>group.id.startsWith('dental-'))
+    .flatMap(group=>group.parts);
+  const dentalScope=()=>{
+    const byCategory=new Map();
+    dentalParts.forEach(part=>{
+      if(!byCategory.has(part.category))byCategory.set(part.category,new Set());
+      (part.keys||[]).forEach(key=>byCategory.get(part.category).add(key));
+    });
+    return [...byCategory].map(([category,keys])=>({category,keys:[...keys]}));
+  };
+  window.mxmedSpecialtyNavigationV1 = Object.freeze({config, normalize, profileFor, resolve, active, dentalScope});
 })();
