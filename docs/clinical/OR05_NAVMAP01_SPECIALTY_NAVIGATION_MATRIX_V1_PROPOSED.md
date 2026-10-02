@@ -63,10 +63,10 @@ The four primary routes cover every active study at least once. Six cardiovascul
 | `medico_general` | Médico General | Médica | Yes, singular title | No | Cardiología, Neurofisiología, Función pulmonar, Citología, Endoscopía, Sueño, Audiología, Genética | Todos los estudios | — | `general_med`; — |
 | `medico_cirujano_partero` | Médico Cirujano y Partero | Médica | Yes, singular title | No | Cardiología, Neurofisiología, Función pulmonar, Citología, Endoscopía, Sueño, Audiología, Genética | Todos los estudios | — | `general_med`; — |
 | `cirujano_dentista` | Cirujano Dentista | Dental | Yes, singular title | No | — | Todos los estudios | — | `dental`; sin estudios dentales activos |
-| `lic_nutricion` | Licenciado en Nutrición | Otra profesión | Yes, singular title | No | — | Todos los estudios | — | `nutrition`; sin afinidad fuerte en catálogo |
+| `lic_nutricion` | Licenciado en Nutrición | Otra profesión | Yes, singular title | No | — | Todos los estudios | `hba1c`, `chol_total`, `triglycerides` | `nutrition`; — |
 | `lic_psicologia` | Licenciado en Psicología | Otra profesión | Yes, singular title | No | — | Todos los estudios | — | `psychology`; sin afinidad fuerte en catálogo |
-| `lic_fisioterapia` | Licenciado en Fisioterapia | Otra profesión | Yes, singular title | No | Neurofisiología | Todos los estudios | — | `physio`; — |
-| `lic_rehabilitacion` | Licenciado en Rehabilitación | Otra profesión | Yes, singular title | No | Neurofisiología | Todos los estudios | — | `physio`; — |
+| `lic_fisioterapia` | Licenciado en Fisioterapia | Otra profesión | Yes, singular title | No | Neurofisiología | Todos los estudios | `emg_ncs`, `dexa` | `physio`; — |
+| `lic_rehabilitacion` | Licenciado en Rehabilitación | Otra profesión | Yes, singular title | No | Neurofisiología | Todos los estudios | `emg_ncs`, `dexa` | `physio`; — |
 | `qfb` | Químico Farmacobiólogo | Otra profesión | Yes, singular title | No | — | Todos los estudios | — | `qfb`; sin afinidad fuerte en catálogo |
 | `enfermeria` | Enfermería | Otra profesión | Yes, singular title | No | — | Todos los estudios | — | `nursing`; sin afinidad fuerte en catálogo |
 
