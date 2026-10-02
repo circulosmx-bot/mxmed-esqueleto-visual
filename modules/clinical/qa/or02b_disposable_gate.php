@@ -99,3 +99,89 @@ $ambiguous=$add('lab_result','Conflicting relationship',['related_order_document
 $unresolved=allPages($pdo,'all','Conflicting relationship');
 $check(count($unresolved)===1 && $unresolved[0]['kind']==='UNRESOLVED_RESULT' &&
     $unresolved[0]['result']['id']===$ambiguous,'QA_AMBIGUOUS_RELATION_NOT_FABRICATED');
+
+// REL01: a successor is the display head, never the immutable source of predecessor results.
+$v1Items=[];$v2Items=[];
+for ($i=1;$i<=3;$i++) {
+    $v1Items[]=['order_item_id'=>sprintf('00000000-0000-4000-8000-%012d',100+$i),'study_type_id'=>$i,'study_display_name'=>'Study '.$i];
+    $v2Items[]=['order_item_id'=>sprintf('00000000-0000-4000-8000-%012d',200+$i),'study_type_id'=>$i,'study_display_name'=>'Study '.$i];
+}
+$v1=$add('lab_order','REL01 V1',['order_payload_version'=>2,'order_items'=>$v1Items],null,null,null,null,null,1);
+$v1Uuid=$pdo->query("SELECT document_uuid FROM clinical_documents WHERE id={$v1}")->fetchColumn();
+$r1=$add('lab_result','REL01 R1',['related_order_document_uuid'=>$v1Uuid,
+    'related_order_item_ids'=>[$v1Items[0]['order_item_id']]]);
+$r2=$add('lab_result','REL01 R2',['related_order_document_id'=>(string)$v1,
+    'related_order_item_ids'=>[$v1Items[1]['order_item_id'],$v1Items[2]['order_item_id']]]);
+$v2=$add('lab_order','REL01 V2',['order_payload_version'=>2,'order_items'=>$v2Items],null,null,null,null,null,2);
+$v2Uuid=$pdo->query("SELECT document_uuid FROM clinical_documents WHERE id={$v2}")->fetchColumn();
+$rev->execute([$v1,$v1,$v2]);
+$after=$add('lab_result','REL01 R after successor',['related_order_document_uuid'=>$v1Uuid,
+    'related_order_item_ids'=>[$v1Items[0]['order_item_id']]]);
+$direct=$add('lab_result','REL01 V2 direct',['related_order_document_uuid'=>$v2Uuid,
+    'related_order_item_ids'=>[$v2Items[0]['order_item_id']]]);
+$relation=allPages($pdo,'all','REL01 V2');
+$check(count($relation)===1&&$relation[0]['order']['id']===$v2,'QA_REL01_LINEAGE_HEAD');
+$head=$relation[0]['order'];$children=array_column($relation[0]['results'],null,'id');
+$check(count($children)===4&&isset($children[$r1],$children[$r2],$children[$after],$children[$direct]),'QA_REL01_HISTORICAL_VISIBLE');
+foreach ([$r1,$r2,$after] as $resultId) {
+    $child=$children[$resultId];
+    $check($child['result_source_order_document_id']===$v1
+        && $child['result_source_order_document_uuid']===$v1Uuid
+        && $child['result_source_order_version']===1
+        && $child['order_lineage_head_document_id']===$v2
+        && $child['order_lineage_head_document_uuid']===$v2Uuid
+        && $child['result_order_relationship']==='PREDECESSOR_VERSION'
+        && $child['related_order_document_id']===$v2,'QA_REL01_SOURCE_'.$resultId);
+}
+$check($children[$r1]['related_order_item_ids']===[$v1Items[0]['order_item_id']]
+    && $children[$r2]['related_order_item_ids']===[$v1Items[1]['order_item_id'],$v1Items[2]['order_item_id']],
+    'QA_REL01_EXACT_SOURCE_ITEMS');
+$check($children[$direct]['result_source_order_document_id']===$v2
+    && $children[$direct]['result_order_relationship']==='DIRECT_CURRENT_VERSION','QA_REL01_DIRECT_V2');
+$versions=array_column($head['versions'],null,'id');
+$check($versions[$v1]['order_items'][0]['coverage_state']==='RESULT_AVAILABLE'
+    && $versions[$v1]['order_items'][1]['coverage_state']==='RESULT_AVAILABLE'
+    && $versions[$v1]['order_items'][2]['coverage_state']==='RESULT_AVAILABLE','QA_REL01_EXACT_V1_COVERAGE');
+$check($head['order_items'][0]['coverage_state']==='RESULT_AVAILABLE'
+    && $head['order_items'][1]['coverage_state']==='NO_RESULT'
+    && $head['order_items'][2]['coverage_state']==='NO_RESULT'
+    && $head['coverage_state']==='PARTIAL_RESULTS','QA_REL01_V2_INDEPENDENT_COVERAGE');
+$resultFilter=allPages($pdo,'results','REL01 R1');
+$check(count($resultFilter)===1&&$resultFilter[0]['result']['result_source_order_document_id']===$v1
+    && $resultFilter[0]['result']['related_order_document_id']===$v2,'QA_REL01_RESULT_FILTER_EXACT_SOURCE');
+$partialV1Items=[
+    ['order_item_id'=>'00000000-0000-4000-8000-000000000301','study_type_id'=>1,'study_display_name'=>'Same study'],
+    ['order_item_id'=>'00000000-0000-4000-8000-000000000302','study_type_id'=>2,'study_display_name'=>'Second study'],
+];
+$partialV2Items=[
+    ['order_item_id'=>'00000000-0000-4000-8000-000000000401','study_type_id'=>1,'study_display_name'=>'Same study'],
+    ['order_item_id'=>'00000000-0000-4000-8000-000000000402','study_type_id'=>2,'study_display_name'=>'Second study'],
+];
+$partialV1=$add('lab_order','REL01 partial V1',['order_payload_version'=>2,'order_items'=>$partialV1Items]);
+$partialUuid=$pdo->query("SELECT document_uuid FROM clinical_documents WHERE id={$partialV1}")->fetchColumn();
+$partialResult=$add('lab_result','REL01 partial result',['related_order_document_uuid'=>$partialUuid,
+    'related_order_item_ids'=>[$partialV1Items[0]['order_item_id']]]);
+$partialV2=$add('lab_order','REL01 partial V2',['order_payload_version'=>2,'order_items'=>$partialV2Items],null,null,null,null,null,2);
+$rev->execute([$partialV1,$partialV1,$partialV2]);
+$partialProjection=allPages($pdo,'all','REL01 partial V2')[0];
+$partialVersions=array_column($partialProjection['order']['versions'],null,'id');
+$check($partialVersions[$partialV1]['order_items'][0]['coverage_state']==='RESULT_AVAILABLE'
+    && $partialVersions[$partialV1]['order_items'][1]['coverage_state']==='NO_RESULT'
+    && $partialVersions[$partialV1]['coverage_state']==='PARTIAL_RESULTS','QA_REL01_V1_PARTIAL_EXACT_COVERAGE');
+$check($partialProjection['order']['coverage_state']==='NO_RESULTS'
+    && $partialProjection['order']['order_items'][0]['coverage_state']==='NO_RESULT'
+    && $partialProjection['order']['order_items'][1]['coverage_state']==='NO_RESULT'
+    && $partialProjection['results'][0]['result_source_order_document_id']===$partialV1
+    && $partialProjection['results'][0]['id']===$partialResult,'QA_REL01_NO_SUCCESSOR_REMAP_OR_UNKNOWN');
+$partialV3Items=[
+    ['order_item_id'=>'00000000-0000-4000-8000-000000000501','study_type_id'=>1,'study_display_name'=>'Same study'],
+    ['order_item_id'=>'00000000-0000-4000-8000-000000000502','study_type_id'=>2,'study_display_name'=>'Second study'],
+];
+$partialV3=$add('lab_order','REL01 partial V3',['order_payload_version'=>2,'order_items'=>$partialV3Items],null,null,null,null,null,3);
+$rev->execute([$partialV1,$partialV2,$partialV3]);
+$threeVersion=allPages($pdo,'all','REL01 partial V3')[0];
+$check($threeVersion['order']['id']===$partialV3
+    && $threeVersion['results'][0]['result_source_order_document_id']===$partialV1
+    && $threeVersion['results'][0]['order_lineage_head_document_id']===$partialV3
+    && $threeVersion['results'][0]['result_order_relationship']==='PREDECESSOR_VERSION'
+    && $threeVersion['order']['coverage_state']==='NO_RESULTS','QA_REL01_V1_V2_V3_EXACT_SOURCE');

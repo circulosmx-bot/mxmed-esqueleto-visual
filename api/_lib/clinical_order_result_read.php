@@ -74,11 +74,16 @@ function clinical_or_cte(PDO $pdo, string $patientId): string
         FROM current_results r JOIN JSON_TABLE(JSON_ARRAY({$refValues}), '$[*]' COLUMNS (ref VARCHAR(128) PATH '$')) j
         WHERE j.ref IS NOT NULL AND j.ref<>'' AND j.ref<>'null'
     ), result_links AS (
-        SELECT rr.result_id,CASE WHEN COUNT(DISTINCT ov.root_id)=1 THEN MIN(ov.root_id) ELSE NULL END AS root_id
-        FROM result_refs rr JOIN order_versions ov ON rr.ref COLLATE utf8mb4_unicode_ci=CAST(ov.id AS CHAR) COLLATE utf8mb4_unicode_ci OR rr.ref COLLATE utf8mb4_unicode_ci=ov.document_uuid COLLATE utf8mb4_unicode_ci
+        SELECT rr.result_id,
+          CASE WHEN COUNT(DISTINCT ov.id)=1 AND COUNT(DISTINCT CASE WHEN ov.id IS NULL THEN rr.ref END)=0
+            THEN MIN(ov.id) ELSE NULL END AS source_order_id,
+          CASE WHEN COUNT(DISTINCT ov.root_id)=1 AND COUNT(DISTINCT CASE WHEN ov.id IS NULL THEN rr.ref END)=0
+            THEN MIN(ov.root_id) ELSE NULL END AS root_id
+        FROM result_refs rr LEFT JOIN order_versions ov ON rr.ref COLLATE utf8mb4_unicode_ci=CAST(ov.id AS CHAR) COLLATE utf8mb4_unicode_ci OR rr.ref COLLATE utf8mb4_unicode_ci=ov.document_uuid COLLATE utf8mb4_unicode_ci
         GROUP BY rr.result_id
     ), result_relation AS (
-        SELECT r.id,r.sort_at,COUNT(rr.ref) AS ref_count,MIN(rl.root_id) AS root_id,MIN(co.id) AS order_id
+        SELECT r.id,r.sort_at,COUNT(DISTINCT rr.ref) AS ref_count,MIN(rl.root_id) AS root_id,
+          MIN(rl.source_order_id) AS source_order_id,MIN(co.id) AS order_id
         FROM current_results r LEFT JOIN result_refs rr ON rr.result_id=r.id
         LEFT JOIN result_links rl ON rl.result_id=r.id
         LEFT JOIN current_orders co ON co.root_id=rl.root_id
@@ -141,8 +146,50 @@ function clinical_or_document(array $row): array
         'related_order_item_ids' => !$isOrder && is_array($payload['related_order_item_ids'] ?? null)
             ? array_values(array_filter($payload['related_order_item_ids'], 'is_string')) : null,
         'result_origin' => !$isOrder && is_string($payload['result_origin'] ?? null) ? $payload['result_origin'] : null,
+        // related_order_document_id remains the legacy/display lineage head for OR02C.
         'related_order_document_id' => null,
+        'result_source_order_document_id' => null,'result_source_order_document_uuid' => null,
+        'result_source_order_version' => null,'order_lineage_head_document_id' => null,
+        'order_lineage_head_document_uuid' => null,'order_lineage_head_version' => null,
+        'result_order_relationship' => null,
     ];
+}
+
+/** Item coverage belongs to one exact order version, never its successor by inference. */
+function clinical_or_version_coverage(array $order, array $results, int $versionId): array
+{
+    $items = is_array($order['order_items'] ?? null) ? $order['order_items'] : [];
+    $total = count($items);
+    if ((int)($order['order_payload_version'] ?? 0) !== 2 || $total === 0) {
+        $order['coverage_state']='UNKNOWN_LEGACY';
+        $order['covered_item_count']=null;
+        $order['total_item_count']=count($order['requested_studies'] ?? []);
+        return $order;
+    }
+    $ids=[];
+    foreach ($items as $item) if (is_string($item['order_item_id'] ?? null)) $ids[$item['order_item_id']]=true;
+    $covered=[];$unknown=false;
+    foreach ($results as $result) {
+        if (($result['result_source_order_document_id'] ?? null) !== $versionId) continue;
+        if ($result['related_order_item_ids'] === null) {$unknown=true;continue;}
+        $matched=false;
+        foreach ($result['related_order_item_ids'] as $itemId) {
+            if (isset($ids[$itemId])) {$covered[$itemId]=true;$matched=true;}
+        }
+        if (!$matched) $unknown=true;
+    }
+    foreach ($items as &$item) {
+        $itemId=(string)($item['order_item_id'] ?? '');
+        $item['coverage_state']=isset($covered[$itemId])?'RESULT_AVAILABLE':($unknown?'UNKNOWN':'NO_RESULT');
+    }
+    unset($item);
+    $order['order_items']=$items;
+    $count=count($covered);
+    $order['coverage_state']=$count===$total?'ALL_ITEMS_HAVE_RESULTS'
+        :($unknown?'UNKNOWN_COVERAGE':($count>0?'PARTIAL_RESULTS':'NO_RESULTS'));
+    $order['covered_item_count']=$count;
+    $order['total_item_count']=$total;
+    return $order;
 }
 
 function clinical_or_list_fetch(PDO $pdo, string $patientId, int $limit, string $filter, string $search, ?array $cursor): array
@@ -191,28 +238,67 @@ function clinical_or_list_fetch(PDO $pdo, string $patientId, int $limit, string 
     foreach ($documentRows as $row) $docs[(int)$row['id']] = clinical_or_document($row);
     $roots = array_unique(array_column($docs, 'lineage_root_id'));
     $rootIn = implode(',', array_map('intval', $roots));
-    $versionRows = $pdo->query("SELECT d.id,d.document_uuid,d.title,d.version,d.status,d.event_datetime,d.created_at,
+    $versionRows = $pdo->query("SELECT d.id,d.document_uuid,d.document_type,d.title,d.version,d.status,d.event_datetime,d.created_at,
         COALESCE(v.original_document_id,d.id) AS root_id,
         EXISTS(SELECT 1 FROM clinical_document_binaries b WHERE b.document_id=d.id AND b.variant_role='ORIGINAL' AND b.variant_version=1) AS has_private_binary
         FROM clinical_documents d LEFT JOIN clinical_document_revisions v ON v.new_document_id=d.id
         WHERE d.patient_id=" . $pdo->quote($patientId) . " AND (d.id IN ({$rootIn}) OR v.original_document_id IN ({$rootIn}))
         ORDER BY d.id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $orderVersionIds=array_map('intval',array_column(array_filter($versionRows,
+        static fn(array $row):bool=>in_array($row['document_type'],clinical_or_order_types(),true)),'id'));
+    $orderVersionPayloads=[];
+    if ($orderVersionIds !== []) {
+        $payloadRows=$pdo->query('SELECT id,payload_json FROM clinical_documents WHERE id IN ('
+            .implode(',',$orderVersionIds).')')->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($payloadRows as $payloadRow) $orderVersionPayloads[(int)$payloadRow['id']]=$payloadRow['payload_json'];
+    }
     $versions = [];
     foreach ($versionRows as $version) {
-        $versions[(int)$version['root_id']][] = [
+        $entry = [
             'id'=>(int)$version['id'],'document_uuid'=>$version['document_uuid'],'title'=>$version['title'],
             'version'=>(int)$version['version'],'status'=>$version['status'],
             'event_datetime'=>$version['event_datetime'],'created_at'=>$version['created_at'],
             'has_private_binary'=>(int)$version['has_private_binary'],
         ];
+        if (in_array($version['document_type'],clinical_or_order_types(),true)) {
+            $payload=json_decode((string)($orderVersionPayloads[(int)$version['id']]??''),true);
+            $payload=is_array($payload)?$payload:[];
+            $entry['order_payload_version']=(int)($payload['order_payload_version']??1);
+            $entry['order_items']=$entry['order_payload_version']===2&&is_array($payload['order_items']??null)
+                ?array_values(array_filter($payload['order_items'],'is_array')):[];
+            $entry['requested_studies']=is_array($payload['requested_studies']??null)
+                ?array_values(array_filter($payload['requested_studies'],'is_string')):[];
+        }
+        $versions[(int)$version['root_id']][]=$entry;
     }
     foreach ($docs as &$doc) $doc['versions'] = $versions[$doc['lineage_root_id']] ?? [];
     unset($doc);
-    $resultOrder = [];
-    if ($filter === 'results') {
-        $resultIds = implode(',', array_map('intval', array_column($page, 'id')));
-        $links = $pdo->query("{$cte} SELECT id,order_id FROM result_relation WHERE id IN ({$resultIds})")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($links as $link) $resultOrder[(int)$link['id']] = $link['order_id'] === null ? null : (int)$link['order_id'];
+    $resultMeta=[];
+    $resultIds=array_keys(array_filter($docs,static fn(array $doc):bool=>in_array($doc['document_type'],clinical_or_result_types(),true)));
+    if ($resultIds !== []) {
+        $resultIdSql=implode(',',array_map('intval',$resultIds));
+        $links=$pdo->query("{$cte} SELECT rel.id,rel.ref_count,rel.source_order_id,rel.order_id,
+            source.document_uuid AS source_uuid,source.version AS source_version,
+            head.document_uuid AS head_uuid,head.version AS head_version
+            FROM result_relation rel
+            LEFT JOIN clinical_documents source ON source.id=rel.source_order_id
+            LEFT JOIN clinical_documents head ON head.id=rel.order_id
+            WHERE rel.id IN ({$resultIdSql})")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($links as $link) {
+            $sourceId=$link['source_order_id']===null?null:(int)$link['source_order_id'];
+            $headId=$link['order_id']===null?null:(int)$link['order_id'];
+            $resultMeta[(int)$link['id']]=[
+                'result_source_order_document_id'=>$sourceId,
+                'result_source_order_document_uuid'=>$link['source_uuid'],
+                'result_source_order_version'=>$link['source_version']===null?null:(int)$link['source_version'],
+                'order_lineage_head_document_id'=>$headId,
+                'order_lineage_head_document_uuid'=>$link['head_uuid'],
+                'order_lineage_head_version'=>$link['head_version']===null?null:(int)$link['head_version'],
+                'result_order_relationship'=>$sourceId===null
+                    ?((int)$link['ref_count']>0?'UNRESOLVED_EXACT_SOURCE':null)
+                    :($sourceId===$headId?'DIRECT_CURRENT_VERSION':'PREDECESSOR_VERSION'),
+            ];
+        }
     }
     $items = [];
     foreach ($page as $candidate) {
@@ -221,47 +307,23 @@ function clinical_or_list_fetch(PDO $pdo, string $patientId, int $limit, string 
             $results = [];
             foreach ($childIds[$id] ?? [] as $childId) {
                 $child = $docs[$childId];
+                $child = array_replace($child,$resultMeta[$childId]??[]);
                 $child['related_order_document_id'] = $id;
                 $results[] = $child;
             }
-            $order = $docs[$id];
-            $total = count($order['order_items']);
-            $currentIds = [];
-            foreach ($order['order_items'] as $studyItem) {
-                if (is_string($studyItem['order_item_id'] ?? null)) $currentIds[$studyItem['order_item_id']] = true;
-            }
-            $covered = [];
-            $unknown = false;
-            foreach ($results as $result) {
-                if ($result['related_order_item_ids'] === null) { $unknown = true; continue; }
-                $matched = false;
-                foreach ($result['related_order_item_ids'] as $itemId) {
-                    if (isset($currentIds[$itemId])) { $covered[$itemId] = true; $matched = true; }
+            $order=clinical_or_version_coverage($docs[$id],$results,$id);
+            foreach ($order['versions'] as &$version) {
+                if (array_key_exists('order_payload_version',$version)) {
+                    $version=clinical_or_version_coverage($version,$results,(int)$version['id']);
                 }
-                if (!$matched) $unknown = true;
             }
-            if ($order['order_payload_version'] === 2 && $total > 0) {
-                foreach ($order['order_items'] as &$studyItem) {
-                    $itemId = (string)($studyItem['order_item_id'] ?? '');
-                    $studyItem['coverage_state'] = isset($covered[$itemId]) ? 'RESULT_AVAILABLE' : ($unknown ? 'UNKNOWN' : 'NO_RESULT');
-                }
-                unset($studyItem);
-                $count = count($covered);
-                $order['coverage_state'] = $count === $total ? 'ALL_ITEMS_HAVE_RESULTS'
-                    : ($unknown ? 'UNKNOWN_COVERAGE' : ($count > 0 ? 'PARTIAL_RESULTS' : 'NO_RESULTS'));
-                $order['covered_item_count'] = $count;
-                $order['total_item_count'] = $total;
-            } else {
-                $order['coverage_state'] = 'UNKNOWN_LEGACY';
-                $order['covered_item_count'] = null;
-                $order['total_item_count'] = count($order['requested_studies']);
-            }
+            unset($version);
             $items[] = ['kind'=>'ORDER','order'=>$order,'result_count'=>count($results),'results'=>$results];
         } else {
-            $result = $docs[$id];
+            $result = array_replace($docs[$id],$resultMeta[$id]??[]);
             if ($candidate['kind'] === 'RESULT') {
                 // A linked result can also be opened directly in result-filter mode.
-                $result['related_order_document_id'] = $resultOrder[$id] ?? null;
+                $result['related_order_document_id'] = $result['order_lineage_head_document_id'];
             }
             $items[] = ['kind'=>$candidate['kind'],'result'=>$result];
         }
