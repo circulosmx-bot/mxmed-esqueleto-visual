@@ -1,6 +1,6 @@
 # DENTAL-CAT01 — catálogo diagnóstico odontológico V1
 
-**Estado: PROPOSED — NOT IMPLEMENTED.** Auditoría documental para revisión del Director. Corte: 2026-10-02; HEAD de origen `10e7f5e388845530ae38f28769c173050261c99d`. Ninguna fila, contrato, navegación, interfaz, migración ni base de datos se modifica aquí.
+**Estado: PARTIALLY_IMPLEMENTED.** CAT02 implementa siete estudios y el contrato de ubicación dental V1; el resto de esta propuesta conserva sus decisiones pendientes. Véase [DENTAL_CAT02_DENTAL_STUDY_ORDER_V1_IMPLEMENTED.md](DENTAL_CAT02_DENTAL_STUDY_ORDER_V1_IMPLEMENTED.md). Esta auditoría fue originalmente solo documental, con corte 2026-10-02 y HEAD `10e7f5e388845530ae38f28769c173050261c99d`; las cifras de catálogo siguientes describen ese corte histórico y no el catálogo después de CAT02.
 
 ## Autoridades, fuentes y método
 

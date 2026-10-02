@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_dental_location.php';
+
 /** TAX03A: document-payload study identity. No legacy payload is rewritten. */
 function clinical_study_categories(): array
 {
@@ -102,12 +104,17 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence): a
         $stmt->execute([$typeId,$system,$code,$version ?? '']);
         if ($stmt->fetchColumn() === false) throw new InvalidArgumentException('STUDY_EXTERNAL_CODE_UNVERIFIED');
     }
+    $dentalLocation = clinical_dental_validate_location($key, $input['dental_location'] ?? null);
     return [
         'order_item_id' => null, 'sequence' => $sequence,
         'study_type_id' => $typeId, 'study_type_key' => $key,
         'study_category' => $category, 'study_display_name' => $name,
         'external_code_system' => $system, 'external_code' => $code,
         'external_code_version' => $version, 'note' => $note,
+        ...($dentalLocation === null ? [] : [
+            'dental_location' => $dentalLocation,
+            'dental_location_label' => clinical_dental_location_summary($dentalLocation),
+        ]),
     ];
 }
 
@@ -143,7 +150,7 @@ function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, 
                 $old = $prior[$claimed];
                 $item = $old;
                 $item['sequence'] = $index + 1;
-                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note'] as $field) {
+                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label'] as $field) {
                     if (($raw[$field] ?? null) !== ($old[$field] ?? null)) throw new InvalidArgumentException('ORDER_ITEM_ID_MEANING_CHANGED');
                 }
             } else {

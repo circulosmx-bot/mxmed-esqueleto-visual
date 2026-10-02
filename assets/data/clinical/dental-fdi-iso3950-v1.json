@@ -1,0 +1,474 @@
+{
+  "authority": "FDI_ISO_3950",
+  "contract_version": 1,
+  "teeth": [
+    {
+      "code": "11",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 1,
+      "name_es": "incisivo central superior derecho"
+    },
+    {
+      "code": "12",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 2,
+      "name_es": "incisivo lateral superior derecho"
+    },
+    {
+      "code": "13",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 3,
+      "name_es": "canino superior derecho"
+    },
+    {
+      "code": "14",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 4,
+      "name_es": "primer premolar superior derecho"
+    },
+    {
+      "code": "15",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 5,
+      "name_es": "segundo premolar superior derecho"
+    },
+    {
+      "code": "16",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 6,
+      "name_es": "primer molar superior derecho"
+    },
+    {
+      "code": "17",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 7,
+      "name_es": "segundo molar superior derecho"
+    },
+    {
+      "code": "18",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 1,
+      "position": 8,
+      "name_es": "tercer molar superior derecho"
+    },
+    {
+      "code": "21",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 1,
+      "name_es": "incisivo central superior izquierdo"
+    },
+    {
+      "code": "22",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 2,
+      "name_es": "incisivo lateral superior izquierdo"
+    },
+    {
+      "code": "23",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 3,
+      "name_es": "canino superior izquierdo"
+    },
+    {
+      "code": "24",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 4,
+      "name_es": "primer premolar superior izquierdo"
+    },
+    {
+      "code": "25",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 5,
+      "name_es": "segundo premolar superior izquierdo"
+    },
+    {
+      "code": "26",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 6,
+      "name_es": "primer molar superior izquierdo"
+    },
+    {
+      "code": "27",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 7,
+      "name_es": "segundo molar superior izquierdo"
+    },
+    {
+      "code": "28",
+      "dentition": "PERMANENT",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 2,
+      "position": 8,
+      "name_es": "tercer molar superior izquierdo"
+    },
+    {
+      "code": "31",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 1,
+      "name_es": "incisivo central inferior izquierdo"
+    },
+    {
+      "code": "32",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 2,
+      "name_es": "incisivo lateral inferior izquierdo"
+    },
+    {
+      "code": "33",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 3,
+      "name_es": "canino inferior izquierdo"
+    },
+    {
+      "code": "34",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 4,
+      "name_es": "primer premolar inferior izquierdo"
+    },
+    {
+      "code": "35",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 5,
+      "name_es": "segundo premolar inferior izquierdo"
+    },
+    {
+      "code": "36",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 6,
+      "name_es": "primer molar inferior izquierdo"
+    },
+    {
+      "code": "37",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 7,
+      "name_es": "segundo molar inferior izquierdo"
+    },
+    {
+      "code": "38",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 3,
+      "position": 8,
+      "name_es": "tercer molar inferior izquierdo"
+    },
+    {
+      "code": "41",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 1,
+      "name_es": "incisivo central inferior derecho"
+    },
+    {
+      "code": "42",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 2,
+      "name_es": "incisivo lateral inferior derecho"
+    },
+    {
+      "code": "43",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 3,
+      "name_es": "canino inferior derecho"
+    },
+    {
+      "code": "44",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 4,
+      "name_es": "primer premolar inferior derecho"
+    },
+    {
+      "code": "45",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 5,
+      "name_es": "segundo premolar inferior derecho"
+    },
+    {
+      "code": "46",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 6,
+      "name_es": "primer molar inferior derecho"
+    },
+    {
+      "code": "47",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 7,
+      "name_es": "segundo molar inferior derecho"
+    },
+    {
+      "code": "48",
+      "dentition": "PERMANENT",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 4,
+      "position": 8,
+      "name_es": "tercer molar inferior derecho"
+    },
+    {
+      "code": "51",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 5,
+      "position": 1,
+      "name_es": "incisivo central superior derecho"
+    },
+    {
+      "code": "52",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 5,
+      "position": 2,
+      "name_es": "incisivo lateral superior derecho"
+    },
+    {
+      "code": "53",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 5,
+      "position": 3,
+      "name_es": "canino superior derecho"
+    },
+    {
+      "code": "54",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 5,
+      "position": 4,
+      "name_es": "primer molar superior derecho"
+    },
+    {
+      "code": "55",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "DERECHO",
+      "quadrant": 5,
+      "position": 5,
+      "name_es": "segundo molar superior derecho"
+    },
+    {
+      "code": "61",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 6,
+      "position": 1,
+      "name_es": "incisivo central superior izquierdo"
+    },
+    {
+      "code": "62",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 6,
+      "position": 2,
+      "name_es": "incisivo lateral superior izquierdo"
+    },
+    {
+      "code": "63",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 6,
+      "position": 3,
+      "name_es": "canino superior izquierdo"
+    },
+    {
+      "code": "64",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 6,
+      "position": 4,
+      "name_es": "primer molar superior izquierdo"
+    },
+    {
+      "code": "65",
+      "dentition": "DECIDUOUS",
+      "arch": "SUPERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 6,
+      "position": 5,
+      "name_es": "segundo molar superior izquierdo"
+    },
+    {
+      "code": "71",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 7,
+      "position": 1,
+      "name_es": "incisivo central inferior izquierdo"
+    },
+    {
+      "code": "72",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 7,
+      "position": 2,
+      "name_es": "incisivo lateral inferior izquierdo"
+    },
+    {
+      "code": "73",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 7,
+      "position": 3,
+      "name_es": "canino inferior izquierdo"
+    },
+    {
+      "code": "74",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 7,
+      "position": 4,
+      "name_es": "primer molar inferior izquierdo"
+    },
+    {
+      "code": "75",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "IZQUIERDO",
+      "quadrant": 7,
+      "position": 5,
+      "name_es": "segundo molar inferior izquierdo"
+    },
+    {
+      "code": "81",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 8,
+      "position": 1,
+      "name_es": "incisivo central inferior derecho"
+    },
+    {
+      "code": "82",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 8,
+      "position": 2,
+      "name_es": "incisivo lateral inferior derecho"
+    },
+    {
+      "code": "83",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 8,
+      "position": 3,
+      "name_es": "canino inferior derecho"
+    },
+    {
+      "code": "84",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 8,
+      "position": 4,
+      "name_es": "primer molar inferior derecho"
+    },
+    {
+      "code": "85",
+      "dentition": "DECIDUOUS",
+      "arch": "INFERIOR",
+      "side": "DERECHO",
+      "quadrant": 8,
+      "position": 5,
+      "name_es": "segundo molar inferior derecho"
+    }
+  ]
+}

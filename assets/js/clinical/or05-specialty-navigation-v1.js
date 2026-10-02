@@ -160,7 +160,16 @@
             "category": "GENETICA"
           }
         ]
-      }
+      },
+      "D2": {"id":"dental-radiology","label":"Radiología dental 2D","icon":"radiology","parts":[
+        {"category":"IMAGEN","keys":["dental_panoramic_xray","dental_cephalometric_xray","tmj_comparative_xray"]}]},
+      "CB": {"id":"dental-cbct","label":"Cone Beam / CBCT","icon":"view_in_ar","parts":[
+        {"category":"IMAGEN","keys":["dental_cbct"]}]},
+      "RO": {"id":"dental-records","label":"Registros ortodóncicos","icon":"dentistry","parts":[
+        {"category":"IMAGEN","keys":["dental_panoramic_xray","dental_cephalometric_xray"]},
+        {"category":"DENTAL","keys":["dental_clinical_photographs","dental_intraoral_scan","dental_study_model"]}]},
+      "EM": {"id":"dental-scan-models","label":"Escaneo y modelos","icon":"dentistry","parts":[
+        {"category":"DENTAL","keys":["dental_intraoral_scan","dental_study_model"]}]}
     },
     "lower": [
       {
@@ -170,16 +179,6 @@
         "parts": [
           {
             "category": "OFTALMOLOGIA"
-          }
-        ]
-      },
-      {
-        "id": "dental",
-        "label": "Dental",
-        "icon": "dentistry",
-        "parts": [
-          {
-            "category": "DENTAL"
           }
         ]
       },
@@ -263,9 +262,16 @@
       ]
     },
     "dental": {
-      "quick": [],
-      "promoted": []
+      "quick": ["D2","EM","CB","RO"],
+      "promoted": ["dental_panoramic_xray","dental_intraoral_scan","dental_cbct"]
     },
+    "dental_ortho": {"quick":["RO","D2","EM","CB"],"promoted":["dental_panoramic_xray","dental_cephalometric_xray","dental_clinical_photographs","dental_intraoral_scan","dental_study_model"]},
+    "dental_implant": {"quick":["CB","D2","EM"],"promoted":["dental_cbct","dental_panoramic_xray","dental_intraoral_scan","dental_study_model"]},
+    "dental_endo": {"quick":["D2","CB"],"promoted":["dental_panoramic_xray"]},
+    "dental_perio": {"quick":["D2","EM"],"promoted":["dental_panoramic_xray","dental_clinical_photographs"]},
+    "dental_maxillofacial": {"quick":["CB","D2","EM"],"promoted":["dental_cbct","dental_panoramic_xray","tmj_comparative_xray"]},
+    "dental_prosthetic": {"quick":["EM","D2","RO"],"promoted":["dental_intraoral_scan","dental_study_model","dental_clinical_photographs"]},
+    "dental_pathology": {"quick":["D2","CB"],"promoted":[]},
     "derm": {
       "quick": [],
       "promoted": []
@@ -453,8 +459,8 @@
       ]
     },
     "peds_dental": {
-      "quick": [],
-      "promoted": []
+      "quick": ["D2","RO","EM"],
+      "promoted": ["dental_panoramic_xray","dental_clinical_photographs"]
     },
     "peds_nephro": {
       "quick": [],
@@ -609,9 +615,9 @@
     "Cirugía Gastrointestinal": "gi",
     "Cirugía General": "surgery",
     "Cirugía Laparoscópica": "surgery",
-    "Cirugía Maxilofacial": "dental",
+    "Cirugía Maxilofacial": "dental_maxillofacial",
     "Cirugía Oncológica Pediátrica": "peds_onc",
-    "Cirugía Oral y Maxilofacial": "dental",
+    "Cirugía Oral y Maxilofacial": "dental_maxillofacial",
     "Cirugía Pediátrica": "peds_surgery",
     "Cirugía Plástica": "surgery_narrow",
     "Cirugía Torácica": "pulm",
@@ -625,7 +631,7 @@
     "Dermatología": "derm",
     "Diabetología": "endocrine",
     "Endocrinología": "endocrine",
-    "Endodoncia": "dental",
+    "Endodoncia": "dental_endo",
     "Enfermería Comunitaria": "nursing",
     "Enfermería General": "nursing",
     "Enfermería Geriátrica": "nursing",
@@ -645,8 +651,8 @@
     "Ginecología y Obstetricia": "obgyn",
     "Hematología": "heme",
     "Hematología de Laboratorio": "qfb",
-    "Implantología": "dental",
-    "Implantología Dental": "dental",
+    "Implantología": "dental_implant",
+    "Implantología Dental": "dental_implant",
     "Infectología": "infect",
     "Inmunología": "qfb",
     "Kinesiología": "physio",
@@ -680,24 +686,24 @@
     "Nutrición en Diabetes": "nutrition",
     "Nutriología": "nutrition",
     "Odontología": "dental",
-    "Odontología Estética": "dental",
+    "Odontología Estética": "dental_prosthetic",
     "Odontopediatría": "peds_dental",
     "Oftalmología": "ophthal",
     "Oncología": "oncology",
     "Optometría": "ophthal",
-    "Ortodoncia": "dental",
-    "Ortopedia Dental": "dental",
+    "Ortodoncia": "dental_ortho",
+    "Ortopedia Dental": "dental_ortho",
     "Ortopedia y Traumatología": "ortho",
     "Otorrinolaringología": "ent",
     "Otra (especificar)": "other",
     "Patología": "pathology",
-    "Patología Bucal": "dental",
+    "Patología Bucal": "dental_pathology",
     "Patología Clínica": "clinical_lab",
     "Pediatría": "peds",
-    "Periodoncia": "dental",
+    "Periodoncia": "dental_perio",
     "Podología": "podiatry",
     "Proctología": "gi",
-    "Prótesis Bucal": "dental",
+    "Prótesis Bucal": "dental_prosthetic",
     "Psicología": "psychology",
     "Psicología Clínica": "psychology",
     "Psicología Educativa": "psychology",
@@ -708,7 +714,7 @@
     "Química Clínica": "qfb",
     "Radiología e Imagen": "imaging",
     "Rehabilitación Física": "physio",
-    "Rehabilitación Oral": "dental",
+    "Rehabilitación Oral": "dental_prosthetic",
     "Rehabilitación Postquirúrgica": "physio",
     "Reumatología": "rheum",
     "Salud Pública": "publichealth",
@@ -777,6 +783,7 @@
     return {profile: primary, quick, promoted: config.profiles[primary]?.promoted || [], source:
       verifiedProfile ? 'verified_primary' : textProfile ? 'primary_text' : titleProfile ? 'professional_family' : 'general'};
   }
-  const active = (group, counts) => group.parts.some(part => Number(counts[part.category] || 0) > 0);
+  const active = (group, counts) => (!group.id.startsWith('dental-') || Number(counts.DENTAL || 0) > 0) &&
+    group.parts.some(part => Number(counts[part.category] || 0) > 0);
   window.mxmedSpecialtyNavigationV1 = Object.freeze({config, normalize, profileFor, resolve, active});
 })();

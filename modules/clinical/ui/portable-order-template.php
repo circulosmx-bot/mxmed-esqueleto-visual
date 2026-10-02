@@ -87,6 +87,7 @@ $continuationHeader = $order
     .studies { margin: 0; padding-left: 25px; }
     .study { padding: 5px 0 9px; break-inside: avoid; page-break-inside: avoid; overflow-wrap: anywhere; }
     .study-note { margin: 3px 0 0; color: #444; white-space: pre-wrap; }
+    .study-context { margin: 3px 0 0; color: #244c5d; font-size: 12px; overflow-wrap: anywhere; }
     .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
     .priority { margin: 14px 0 0; }
     .priority--elevated { font-weight: 700; }
@@ -126,6 +127,7 @@ $continuationHeader = $order
     <?php if (($order['identity_snapshot_source'] ?? '') === 'LEGACY_RECONSTRUCTED'): ?><p class="legacy">Copia histórica reconstruida con los datos de identificación disponibles.</p><?php endif; ?>
     <section><h2>Estudios solicitados</h2><ol class="studies">
       <?php foreach ($order['studies'] as $study): ?><li class="study"><strong><?php echo portable_escape($study['name']); ?></strong>
+        <?php if (!empty($study['dental_context'])): ?><p class="study-context"><?php echo portable_escape($study['dental_context']); ?></p><?php endif; ?>
         <?php if (!empty($study['note'])): ?><p class="study-note"><?php echo portable_escape($study['note']); ?></p><?php endif; ?>
       </li><?php endforeach; ?>
     </ol></section>

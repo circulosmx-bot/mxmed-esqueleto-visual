@@ -20,6 +20,7 @@
     const doctorId=String(options.doctorId||'').trim();
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
+    let editingIndex=-1,activeDentalEditor=null;
     let results=[],offset=0,hasMore=false,request=0,controller=null,timer=null,destroyed=false;
     let navigationParts=Array.isArray(options.navigationGroup?.parts)?options.navigationGroup.parts
       .filter(part=>categories[part.category]).map(part=>({category:part.category,
@@ -66,13 +67,30 @@
     Object.entries(categories).forEach(([key,label])=>$('[data-tax03c-custom-category]').add(new Option(label,key)));
     const notify=()=>options.onChange?.(clone(selected),priority.value,indication.value);
     function renderSelected(){
+      activeDentalEditor=null;
       selectedBox.replaceChildren();
       if(!selected.length){const p=document.createElement('p');p.textContent='Todavía no has agregado estudios.';selectedBox.append(p);return;}
       selected.forEach((item,index)=>{
         const row=document.createElement('div');row.className='tax03c-selected-row';
         const copy=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;
         const sub=document.createElement('small');sub.textContent=categories[item.category]||'Otros';copy.append(name,sub);row.append(copy);
+        const dental=window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
+        if(kind&&kind!=='NONE'&&!readonly){
+          const configure=document.createElement('button');configure.type='button';configure.className='btn btn-outline-primary btn-sm dental-config-toggle';
+          configure.dataset.tax03cDental=String(index);configure.textContent=editingIndex===index?'Ocultar ubicación':'Configurar ubicación';
+          configure.setAttribute('aria-expanded',String(editingIndex===index));row.append(configure);
+        }
         if(!readonly){const remove=document.createElement('button');remove.type='button';remove.className='btn btn-link btn-sm';remove.textContent='Retirar';remove.dataset.tax03cRemove=String(index);remove.setAttribute('aria-label',`Retirar ${item.name}`);row.append(remove);}
+        if(kind&&kind!=='NONE'){
+          const summary=document.createElement('small');summary.className='dental-item-summary';
+          summary.textContent=dental.summary(item.dentalLocation)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');row.append(summary);
+          if(editingIndex===index&&!readonly){
+            const panel=document.createElement('div');panel.className='dental-location-host';row.append(panel);
+            activeDentalEditor=dental.mount(panel,kind,item.dentalLocation||null,location=>{
+              item.dentalLocation=location;summary.textContent=dental.summary(location)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');notify();
+            });
+          }
+        }
         selectedBox.append(row);
       });
     }
@@ -155,8 +173,11 @@
       if(target.dataset.tax03cId){const row=results.find(item=>String(item.study_type_id)===target.dataset.tax03cId);if(!row)return;
         if(selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id)))return;
         if(selected.length>=100){status.textContent='Máximo 100 estudios por orden.';return;}
-        selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key});renderSelected();renderResults();notify();}
-      if(target.dataset.tax03cRemove!==undefined){selected.splice(Number(target.dataset.tax03cRemove),1);renderSelected();renderResults();notify();}
+        selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key});
+        const kind=window.mxmedDentalLocationV1?.kindFor(row.study_type_key);editingIndex=kind&&kind!=='NONE'?selected.length-1:-1;
+        renderSelected();renderResults();notify();}
+      if(target.dataset.tax03cDental!==undefined){const index=Number(target.dataset.tax03cDental);editingIndex=editingIndex===index?-1:index;activeDentalEditor=null;renderSelected();selectedBox.querySelector(`[data-tax03c-dental="${index}"]`)?.focus({preventScroll:true});}
+      if(target.dataset.tax03cRemove!==undefined){const index=Number(target.dataset.tax03cRemove);selected.splice(index,1);editingIndex=editingIndex===index?-1:editingIndex>index?editingIndex-1:editingIndex;activeDentalEditor=null;renderSelected();renderResults();notify();}
       if(target.hasAttribute('data-tax03c-custom-open'))openCustom();
       if(target.hasAttribute('data-tax03c-custom-cancel'))custom.hidden=true;
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
@@ -169,8 +190,12 @@
     renderSelected();if(readonly){host.querySelectorAll('input,select,textarea,button').forEach(control=>control.disabled=true);}else load();
     return {
       selected:()=>clone(selected),priority:()=>priority.value,indication:()=>indication.value,
-      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})}),
-      valid:()=>selected.length>0&&selected.length<=100,
+      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})}),
+      valid:()=>selected.length>0&&selected.length<=100&&selected.every(item=>{
+        const kind=item.type==='canonical'?window.mxmedDentalLocationV1?.kindFor(item.key):null;
+        return !kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation);
+      })&&(!activeDentalEditor||activeDentalEditor.valid()),
+      validationMessage:()=>selected.length?'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.':'Agrega al menos un estudio antes de solicitar la orden.',
       destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();},
     };
   }

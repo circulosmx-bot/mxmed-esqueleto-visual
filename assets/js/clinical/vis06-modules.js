@@ -64,7 +64,7 @@
     dialog.querySelector('form').addEventListener('submit',async event=>{
       event.preventDefault();if(busy)return;
       const error=dialog.querySelector('[data-tax03c-error]');error.textContent='';
-      if(!composer.valid()){error.textContent='Agrega al menos un estudio antes de solicitar la orden.';return;}
+      if(!composer.valid()){error.textContent=composer.validationMessage();return;}
       if(selectedPatient()!==patientId||professional!==doctorId){error.textContent='El contexto del paciente cambió. Vuelve a abrir la solicitud.';return;}
       busy=true;const submit=dialog.querySelector('[data-tax03c-submit]');submit.disabled=true;submit.textContent='Guardando…';
       const items=composer.selected(),type=window.mxmedStudyComposer.documentType(items),priority=composer.priority(),indication=composer.indication().trim();
@@ -296,7 +296,8 @@
       dialog.innerHTML='<header><h4>Orden donde se solicitó</h4><button type="button" class="btn btn-link" aria-label="Cerrar">×</button></header><div data-tax03c-host></div><footer><button type="button" class="btn btn-outline-primary">Cerrar</button></footer>';
       const body=dialog.querySelector('[data-tax03c-host]'),payload=full?.content?.payload||{};
       body.append(node('h5',full.title||'Orden de estudios'),node('p',`Versión ${row.result_source_order_version}`));
-      const studies=Array.isArray(payload.order_items)&&payload.order_items.length?payload.order_items.map(item=>item.study_display_name):payload.requested_studies||[];
+      const studies=Array.isArray(payload.order_items)&&payload.order_items.length?payload.order_items.map(item=>
+        `${item.study_display_name}${item.dental_location_label?' · '+item.dental_location_label:''}`):payload.requested_studies||[];
       if(studies.length){const list=node('ul','','vis06-study-list');studies.forEach(name=>list.append(node('li',String(name))));body.append(list);}
       dialog.querySelectorAll('button').forEach(control=>control.addEventListener('click',()=>dialog.close()));
       dialog.addEventListener('close',()=>{dialog.remove();trigger.focus({preventScroll:true});},{once:true});
@@ -365,6 +366,7 @@
           meta.append(node('span',window.mxmedStudyComposer?.categories?.[study.study_category]||'Otra categoría'));
           if(Object.prototype.hasOwnProperty.call(study,'study_type_id')&&study.study_type_id===null&&study.study_type_key===null)meta.append(node('span','Personalizado','vis06-study-custom'));
           content.append(meta);
+          if(typeof study.dental_location_label==='string'&&study.dental_location_label.trim())content.append(node('p',study.dental_location_label.trim(),'vis06-study-note'));
           if(typeof study.note==='string'&&study.note.trim())content.append(node('p',study.note.trim(),'vis06-study-note'));
           const status=node('div','','vis06-study-status');status.append(node('span',itemCoverageLabel(study.coverage_state),'vis06-item-coverage'));
           const matches=exactItemResults(row,item.results||[],study);

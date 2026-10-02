@@ -215,7 +215,7 @@
       }
       draft.items=draft.items.map(item=>Object.fromEntries(Object.entries(item).map(([key,value])=>[key,String(value||'').trim()])));
       draft.observaciones=String(draft.observaciones||'').trim();
-    }else if((kind==='appointment'&&!draft.selection)||(kind==='orders'&&!modal.composer?.valid())||(kind!=='appointment'&&kind!=='orders'&&!draft.title.trim())||(kind==='followup'&&draft.link&&!chosen())){dialog.querySelector('[data-modal-error]').textContent=kind==='orders'?'Agrega al menos un estudio antes de preparar la orden.':'Completa la acción y selecciona una cita u horario cuando corresponda.';return;}
+    }else if((kind==='appointment'&&!draft.selection)||(kind==='orders'&&!modal.composer?.valid())||(kind!=='appointment'&&kind!=='orders'&&!draft.title.trim())||(kind==='followup'&&draft.link&&!chosen())){dialog.querySelector('[data-modal-error]').textContent=kind==='orders'?modal.composer?.validationMessage():'Completa la acción y selecciona una cita u horario cuando corresponda.';return;}
     if(kind==='orders'){
       draft.items=modal.composer.selected();draft.priority=modal.composer.priority();draft.indication=modal.composer.indication().trim();draft.summary=draft.indication;draft.title=window.mxmedStudyComposer.title(draft.items);
       const review=draft.review||{mode:'none'};
@@ -280,7 +280,7 @@
       for(const o of state.orders){
         if(o.state==='SUCCESS')continue;
         const type=window.mxmedStudyComposer.documentType(o.items);
-        const orderItems=o.items.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})});
+        const orderItems=o.items.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:item.dentalLocation}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})});
         await run(o,`/api/clinical/index.php/encounters/${encodeURIComponent(c.key)}/documents`,{
           document_type:type,title:o.title.trim(),summary:Array.from(o.summary||'').slice(0,512).join(''),event_datetime:o.event,
           payload:{source:'m7_ws04',order_area:window.mxmedStudyComposer.orderArea(o.items),priority:o.priority||'Rutinaria',indication:o.indication||'',order_items:orderItems}
