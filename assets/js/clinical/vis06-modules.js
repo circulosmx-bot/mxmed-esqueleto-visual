@@ -173,6 +173,10 @@
     view.list.querySelectorAll('[data-or-list-id]').forEach(card=>card.setAttribute('aria-pressed',String(card.dataset.orListId===view.selectedListId)));
   }
   const resultIsHistorical = row => row.result_order_relationship === 'PREDECESSOR_VERSION';
+  const exactItemResults = (order,results,study) => results.filter(result=>
+    Number(result.result_source_order_document_id)===Number(order.id) &&
+    Array.isArray(result.related_order_item_ids) &&
+    result.related_order_item_ids.includes(study.order_item_id));
   const hasExactSourceModel = row => Object.prototype.hasOwnProperty.call(row,'result_source_order_document_id');
   const resultSourceRef = row => row.result_source_order_document_uuid || row.result_source_order_document_id ||
     (!hasExactSourceModel(row) ? row.related_order_document_id : null);
@@ -206,7 +210,7 @@
     }catch(_){view.notice.textContent='No se pudo abrir la versión de origen de la orden.';}
     finally{trigger.disabled=false;}
   }
-  function selectProjected(row,item,view,listId,trigger=null) {
+  function selectProjected(row,item,view,listId,trigger=null,returnStudyId=null) {
     const request=++view.detailRequest,seen=generation;
     view.selectedListId=String(listId);view.selectedRowId=String(row.id);view.lastTrigger=trigger||view.lastTrigger;
     markProjectedSelection(view);
@@ -230,8 +234,20 @@
         actions.append(print,pdf);header.append(actions);
       }).catch(()=>{});
     }
-    const mobileBack=button('Volver a la lista',()=>{view.workspace.classList.remove('is-detail-open');view.lastTrigger?.focus({preventScroll:true});});
+    const mobileBack=button('Volver a la lista',()=>{
+      view.workspace.classList.remove('is-detail-open');
+      (view.lastTrigger?.isConnected?view.lastTrigger:view.list.querySelector(`[data-or-list-id="${listId}"]`))?.focus({preventScroll:true});
+    });
     mobileBack.classList.add('vis06-mobile-back');view.detail.append(mobileBack,header);
+    if(!isOrder&&item.kind==='ORDER'){
+      const back=button('Volver a la orden',()=>{
+        selectProjected(item.order,item,view,listId);
+        const study=returnStudyId?[...view.detail.querySelectorAll('.vis06-study-row')].find(row=>row.dataset.orderItemId===returnStudyId):null;
+        study?.scrollIntoView({block:'nearest'});
+        (study||view.detail)?.focus({preventScroll:true});
+      });
+      back.classList.add('vis06-return-order');view.detail.append(back);
+    }
     if(isOrder){
       const register=button('REGISTRAR RESULTADO',()=>{
         if(!window.mxmedLinkedResultComposer)return;
@@ -247,11 +263,35 @@
       data.append(facts);view.detail.append(data);
       const structured=row.order_payload_version===2&&Array.isArray(row.order_items)?row.order_items.filter(item=>typeof item?.study_display_name==='string'&&item.study_display_name.trim()):[];
       const studies=structured.length?structured:(row.requested_studies||[]).filter(value=>typeof value==='string'&&value.trim());
-      if(studies.length){const section=projectedSection('Estudios solicitados','science');section.append(node('p',coverageLabel(row.coverage_state),'vis06-coverage-summary'));const list=node('ul','','vis06-study-list');studies.forEach(study=>{
-        const item=node('li',typeof study==='string'?study:study.study_display_name);
-        if(typeof study==='object'){if(study.study_category){const category=node('small',window.mxmedStudyComposer?.categories?.[study.study_category]||'Otra categoría','vis06-study-category');item.append(category);}item.append(node('small',itemCoverageLabel(study.coverage_state),'vis06-item-coverage'));}
-        list.append(item);
-      });section.append(list);view.detail.append(section);}
+      if(studies.length){const section=projectedSection('Estudios solicitados','science');section.append(node('p',coverageLabel(row.coverage_state),'vis06-coverage-summary'));
+        if(structured.length){const list=node('div','','vis06-study-rows');structured.forEach(study=>{
+          const studyRow=node('div','','vis06-study-row');studyRow.dataset.orderItemId=study.order_item_id;studyRow.tabIndex=-1;
+          const content=node('div','','vis06-study-main');content.append(node('strong',study.study_display_name));
+          const meta=node('div','','vis06-study-meta');
+          meta.append(node('span',window.mxmedStudyComposer?.categories?.[study.study_category]||'Otra categoría'));
+          if(Object.prototype.hasOwnProperty.call(study,'study_type_id')&&study.study_type_id===null&&study.study_type_key===null)meta.append(node('span','Personalizado','vis06-study-custom'));
+          content.append(meta);
+          if(typeof study.note==='string'&&study.note.trim())content.append(node('p',study.note.trim(),'vis06-study-note'));
+          const status=node('div','','vis06-study-status');status.append(node('span',itemCoverageLabel(study.coverage_state),'vis06-item-coverage'));
+          const matches=exactItemResults(row,item.results||[],study);
+          if(matches.length===1){const result=matches[0],action=button('Ver resultado',()=>selectProjected(result,item,view,listId,action,study.order_item_id));
+            action.classList.add('vis06-study-action');action.setAttribute('aria-label',`Ver resultado de ${study.study_display_name}: ${result.title||projectionLabel(result)}`);
+            status.append(node('small','1 resultado'),action);
+          }else if(matches.length>1){const action=button(resultCount(matches.length),()=>{
+              const open=action.getAttribute('aria-expanded')!=='true';action.setAttribute('aria-expanded',String(open));choices.hidden=!open;
+            });
+            action.classList.add('vis06-study-action');action.setAttribute('aria-label',`Ver ${resultCount(matches.length)} de ${study.study_display_name}`);
+            action.setAttribute('aria-expanded','false');
+            const choices=node('div','','vis06-study-results');choices.id=`vis06-study-results-${row.id}-${study.order_item_id}`;choices.hidden=true;
+            action.setAttribute('aria-controls',choices.id);
+            matches.forEach(result=>{const link=button(result.title||projectionLabel(result),()=>selectProjected(result,item,view,listId,link,study.order_item_id));
+              link.classList.add('vis06-study-result-link');link.setAttribute('aria-label',`Ver resultado ${result.title||projectionLabel(result)} de ${study.study_display_name}`);
+              choices.append(link);});status.append(action);studyRow.append(content,status,choices);list.append(studyRow);return;
+          }
+          studyRow.append(content,status);list.append(studyRow);
+        });section.append(list);}
+        else {const list=node('ul','','vis06-study-list');studies.forEach(study=>list.append(node('li',study)));section.append(list);}
+        view.detail.append(section);}
       const linked=projectedSection(`Resultados vinculados (${item.result_count})`,'description');
       if(!item.result_count){const empty=node('div','','vis06-no-results');empty.append(symbol('description'),node('strong','Aún no se han recibido resultados para esta orden.'),node('p','Los resultados se mostrarán aquí cuando estén disponibles.'));linked.append(empty);}
       else item.results.forEach(result=>{

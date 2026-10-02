@@ -4885,6 +4885,22 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #t-estudios .vis06-orders .vis06-fact dd {margin:0;color:#123f60;white-space:pre-wrap;overflow-wrap:anywhere}
 #p-expediente #t-estudios .vis06-orders .vis06-study-list {margin:0;padding-left:18px;color:#123f60;font-size:12px}
 #p-expediente #t-estudios .vis06-orders .vis06-study-category {display:block;color:#526976;font-size:11px}
+#p-expediente #t-estudios .vis06-orders .vis06-study-rows {display:grid;gap:5px}
+#p-expediente #t-estudios .vis06-orders .vis06-study-row {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;min-width:0;padding:6px 8px;border:1px solid #d5e8ed;border-radius:7px;background:#f7fbfc}
+#p-expediente #t-estudios .vis06-orders .vis06-study-main {min-width:0}
+#p-expediente #t-estudios .vis06-orders .vis06-study-main strong {display:block;color:#123f60;font-size:12px;line-height:1.25;overflow-wrap:anywhere}
+#p-expediente #t-estudios .vis06-orders .vis06-study-meta {display:flex;flex-wrap:wrap;gap:3px 8px;color:#526976;font-size:11px;line-height:1.2}
+#p-expediente #t-estudios .vis06-orders .vis06-study-custom {color:#356b82}
+#p-expediente #t-estudios .vis06-orders .vis06-study-note {margin:2px 0 0;color:#526976;font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+#p-expediente #t-estudios .vis06-orders .vis06-study-status {display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:3px 7px;max-width:190px;text-align:right}
+#p-expediente #t-estudios .vis06-orders .vis06-study-status .vis06-item-coverage {color:#356b82;font-size:11px;line-height:1.2}
+#p-expediente #t-estudios .vis06-orders .vis06-study-status small {color:#526976;font-size:11px}
+#p-expediente #t-estudios .vis06-orders .vis06-study-action {min-height:32px;padding:4px 8px;white-space:nowrap}
+#p-expediente #t-estudios .vis06-orders .vis06-study-results {grid-column:1/-1;display:grid;gap:3px;padding-top:4px;border-top:1px solid #deebef}
+#p-expediente #t-estudios .vis06-orders .vis06-study-results[hidden] {display:none}
+#p-expediente #t-estudios .vis06-orders .vis06-study-result-link {display:block;width:100%;min-height:32px;padding:4px 8px;text-align:left;white-space:normal;overflow-wrap:anywhere}
+#p-expediente #t-estudios .vis06-orders .vis06-study-row:focus-visible,#p-expediente #t-estudios .vis06-orders .vis06-study-row button:focus-visible {outline:2px solid #008c9b;outline-offset:2px}
+#p-expediente #t-estudios .vis06-orders .vis06-return-order {margin:0 0 8px}
 #p-expediente #t-estudios .vis06-orders .vis06-result-entry {display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:6px 8px;border:1px solid #d5e8ed;border-radius:7px;background:#f7fbfc;color:#123f60;font-family:inherit;text-align:left;cursor:pointer}
 #p-expediente #t-estudios .vis06-orders .vis06-result-entry+.vis06-result-entry {margin-top:5px}
 #p-expediente #t-estudios .vis06-orders .vis06-result-entry>.material-symbols-rounded:first-child {font-size:23px;color:#07536e}
@@ -4944,4 +4960,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
   #p-expediente #t-estudios .vis06-orders .vis06-mobile-back {display:inline-flex;margin-bottom:10px}
   #p-expediente #t-estudios .vis06-orders .vis06-index-card {grid-template-columns:42px minmax(0,1fr) 16px}
   #p-expediente #t-estudios .vis06-orders .vis06-index-card>.vis06-count {grid-column:2;justify-self:start}
+  #p-expediente #t-estudios .vis06-orders .vis06-study-row {grid-template-columns:minmax(0,1fr)}
+  #p-expediente #t-estudios .vis06-orders .vis06-study-status {justify-content:flex-start;max-width:none;text-align:left}
+  #p-expediente #t-estudios .vis06-orders .vis06-study-action,#p-expediente #t-estudios .vis06-orders .vis06-study-result-link {min-height:40px}
 }
