@@ -26,6 +26,8 @@
       .filter(part=>categories[part.category]&&Array.isArray(part.keys)&&part.keys.length)
       .map(part=>({category:part.category,keys:new Set(part.keys)})):null;
     let globalCatalog=!!options.globalCatalog&&!!dentalScope?.length;
+    const labScope=Array.isArray(options.labScope)?options.labScope.filter(part=>categories[part.category]).map(part=>({category:part.category,keys:null})):null;
+    let laboratoryAll=options.navigationGroup?.key==='all-laboratory',laboratoryGlobal=false;
     let navigationParts=Array.isArray(options.navigationGroup?.parts)?options.navigationGroup.parts
       .filter(part=>categories[part.category]).map(part=>({category:part.category,
         keys:Array.isArray(part.keys)?new Set(part.keys):null})):null;
@@ -34,8 +36,10 @@
       <label class="tax03c-search-label">Buscar estudio<input type="search" data-tax03c-search placeholder="Buscar estudio" autocomplete="off" aria-label="Buscar estudio"></label>
       <div class="tax03c-scope-bar"><p class="tax03c-navigation-scope" data-tax03c-navigation-scope></p>
         <button type="button" class="tax03c-scope-link" data-tax03c-global hidden>Buscar en todo el catálogo</button>
-        <button type="button" class="tax03c-scope-link" data-tax03c-dental-back hidden>Volver a estudios dentales</button></div>
-      <div class="tax03c-filter"><button type="button" data-tax03c-all aria-pressed="true">Todas</button><label>Categorías<select data-tax03c-category aria-label="Filtrar estudios por categoría"><option value="">Todas las categorías</option></select></label></div>
+        <button type="button" class="tax03c-scope-link" data-tax03c-dental-back hidden>Volver a estudios dentales</button>
+        <button type="button" class="tax03c-scope-link" data-tax03c-lab-all hidden>Todos los estudios de laboratorio</button>
+        <button type="button" class="tax03c-scope-link" data-tax03c-lab-back hidden>Volver a laboratorio</button></div>
+      <div class="tax03c-filter" data-tax03c-filter><button type="button" data-tax03c-all aria-pressed="true">Todas</button><label>Categorías<select data-tax03c-category aria-label="Filtrar estudios por categoría"><option value="">Todas las categorías</option></select></label></div>
       <p class="tax03c-status" data-tax03c-status role="status" aria-live="polite"></p>
       <div class="tax03c-results" data-tax03c-results role="list" aria-label="Resultados del catálogo"></div>
       <button type="button" class="btn btn-outline-primary btn-sm tax03c-more" data-tax03c-more hidden>Mostrar más estudios</button>
@@ -65,6 +69,13 @@
         $('[data-tax03c-global]').hidden=globalCatalog;
         $('[data-tax03c-dental-back]').hidden=!globalCatalog;
         $('[data-tax03c-all]').textContent=globalCatalog?'Todas':'Estudios dentales';
+      }else if(labScope?.length){
+        navigationScope.textContent=laboratoryGlobal?'Catálogo general':laboratoryAll?'Todos los estudios de laboratorio':`Estudios de laboratorio · ${options.navigationGroup.label}`;
+        $('[data-tax03c-global]').hidden=laboratoryGlobal;
+        $('[data-tax03c-lab-all]').hidden=laboratoryGlobal||laboratoryAll;
+        $('[data-tax03c-lab-back]').hidden=!laboratoryGlobal;
+        $('[data-tax03c-all]').textContent=laboratoryGlobal?'Todas':'Estudios de laboratorio';
+        $('[data-tax03c-filter]').hidden=!laboratoryGlobal;
       }else navigationScope.textContent=navigationParts?.length?`Explorando ${options.navigationGroup.label}. Puedes buscar en todo el catálogo o cambiar de categoría.`:'';
       navigationScope.hidden=!navigationScope.textContent;
       navigationScope.parentElement.hidden=!navigationScope.textContent;
@@ -123,7 +134,8 @@
     function renderCategories(rows){
       const current=category.value;category.replaceChildren(new Option('Todas las categorías',''));
       (rows||[]).filter(row=>Number(row.active_count)>0&&
-        (!dentalScope?.length||globalCatalog||dentalScope.some(part=>part.category===row.category_key)))
+        (!dentalScope?.length||globalCatalog||dentalScope.some(part=>part.category===row.category_key))&&
+        (!labScope?.length||laboratoryGlobal||labScope.some(part=>part.category===row.category_key)))
         .forEach(row=>category.add(new Option(categories[row.category_key]||row.label_es,row.category_key)));
       category.value=current;
       $('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value&&!navigationParts?.length));
@@ -141,9 +153,11 @@
           return body.data||{};
         };
         let page=[],categoriesFromServer=[];
-        const activeParts=dentalScope?.length&&!globalCatalog
-          ?navigationParts?.length&&!search.value.trim()&&!category.value?navigationParts:dentalScope
-          :navigationParts?.length&&!search.value.trim()&&!category.value?navigationParts:null;
+        const activeParts=labScope?.length&&!laboratoryGlobal
+          ?laboratoryAll?labScope:navigationParts
+          :dentalScope?.length&&!globalCatalog
+            ?navigationParts?.length&&!search.value.trim()&&!category.value?navigationParts:dentalScope
+            :navigationParts?.length&&!search.value.trim()&&!category.value?navigationParts:null;
         if(activeParts?.length){
           const known=new Set(results.map(item=>String(item.study_type_id)));
           const relevant=category.value?activeParts.filter(part=>part.category===category.value):activeParts;
@@ -201,12 +215,19 @@
       if(target.hasAttribute('data-tax03c-custom-cancel'))custom.hidden=true;
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
       if(target.hasAttribute('data-tax03c-more')&&hasMore)load(true);
-      if(target.hasAttribute('data-tax03c-all')){navigationParts=null;renderNavigationScope();category.value='';target.setAttribute('aria-pressed','true');load();}
+      if(target.hasAttribute('data-tax03c-all')){
+        navigationParts=labScope?.length&&!laboratoryGlobal?labScope:null;
+        if(labScope?.length&&!laboratoryGlobal)laboratoryAll=true;
+        renderNavigationScope();category.value='';target.setAttribute('aria-pressed','true');load();
+      }
+      if(target.hasAttribute('data-tax03c-lab-all')&&labScope?.length){laboratoryAll=true;laboratoryGlobal=false;navigationParts=labScope;search.value='';category.value='';renderNavigationScope();load();search.focus();}
+      if(target.hasAttribute('data-tax03c-lab-back')&&labScope?.length){laboratoryAll=true;laboratoryGlobal=false;navigationParts=labScope;search.value='';category.value='';renderNavigationScope();load();search.focus();}
+      if(target.hasAttribute('data-tax03c-global')&&labScope?.length){laboratoryGlobal=true;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
       if(target.hasAttribute('data-tax03c-global')&&dentalScope?.length){globalCatalog=true;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
       if(target.hasAttribute('data-tax03c-dental-back')&&dentalScope?.length){globalCatalog=false;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
     });
     search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(),250);});
-    category.addEventListener('change',()=>{navigationParts=null;renderNavigationScope();$('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});
+    category.addEventListener('change',()=>{if(!labScope?.length||laboratoryGlobal)navigationParts=null;renderNavigationScope();$('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});
     priority.addEventListener('change',notify);indication.addEventListener('input',notify);
     renderSelected();if(readonly){host.querySelectorAll('input,select,textarea,button').forEach(control=>control.disabled=true);}else load();
     return {

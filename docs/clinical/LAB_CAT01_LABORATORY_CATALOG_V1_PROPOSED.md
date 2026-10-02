@@ -1,6 +1,6 @@
 # LAB-CAT01 — Laboratorio: catálogo V1 propuesto
 
-**Estado: PROPOSED · AUDIT ONLY · NOT IMPLEMENTED.** Fecha: 2026-10-02. Rama: `ux/consultation-step2-vitals-r1`. Baseline: `09d514d2727b5b5ab968041c87784d6a69a3630f`.
+**Estado de implementación: PARTIALLY_IMPLEMENTED por LAB-CAT02A; el inventario y las propuestas no implementadas permanecen PROPOSED.** Fecha: 2026-10-02. Rama: `ux/consultation-step2-vitals-r1`. Baseline: `09d514d2727b5b5ab968041c87784d6a69a3630f`.
 
 ## Alcance y autoridad
 

@@ -1,0 +1,24 @@
+/* LAB-CAT02A: compact laboratory family navigation; catalog identity and order styling stay shared. */
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-screen {display:grid;gap:8px;min-width:0}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-screen[hidden] {display:none}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-back {justify-self:start;margin:0 0 2px}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-priority,
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-compact {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;min-width:0}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-priority .vis06-category-primary {min-height:58px;padding:6px 8px}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-priority .vis06-category-primary small {font-size:10px}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-compact .vis06-category-secondary {min-height:35px}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-compact .vis06-category-secondary small {display:none}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-special:empty {display:none}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-special .vis06-category-secondary {width:100%;min-height:36px;background:#eaf8f7;border-color:#90d1d2;font-weight:700}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-priority .lab-cat02a-panels {background:#eaf8f7;border-color:#90d1d2}
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-links {margin-top:2px}
+.tax03c-filter[hidden] {display:none}
+@media(max-width:700px){
+  #p-expediente #t-estudios .vis06-orders .lab-cat02a-priority,
+  #p-expediente #t-estudios .vis06-orders .lab-cat02a-compact {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:430px){
+  #p-expediente #t-estudios .vis06-orders .lab-cat02a-priority .vis06-category-primary {min-height:54px;grid-template-columns:30px minmax(0,1fr) 12px;gap:5px}
+  #p-expediente #t-estudios .vis06-orders .lab-cat02a-priority .vis06-category-primary>.material-symbols-rounded:first-child {width:30px;height:30px;font-size:18px}
+  #p-expediente #t-estudios .vis06-orders .lab-cat02a-compact .vis06-category-secondary {min-height:42px}
+}
