@@ -218,7 +218,7 @@
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
 <link rel="stylesheet" href="assets/css/platform-shell-color-modes.css?v=vis09b">
 <link rel="stylesheet" href="assets/css/expediente-color-trial.css?v=013151-r2">
-<link rel="stylesheet" href="assets/css/vis25-adaptive-sidebar.css?v=vis25b">
+<link rel="stylesheet" href="assets/css/vis25-adaptive-sidebar.css?v=vis25r1b">
 </head>
 
 <body class="mx-sidebar-collapsed" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -227,7 +227,8 @@
   try {
     var stored = localStorage.getItem('mxmed.sidebar.state');
     var legacy = localStorage.getItem('mxmed.shell.sidebar.expanded');
-    if(stored === 'expanded' || (!stored && (legacy === '1' || legacy === 'true'))){
+    if((stored === 'expanded' || (!stored && (legacy === '1' || legacy === 'true'))) &&
+       matchMedia('(min-width: 1340px) and (hover: hover) and (pointer: fine)').matches){
       document.body.classList.replace('mx-sidebar-collapsed', 'mx-sidebar-expanded');
     }
   } catch (_) {}

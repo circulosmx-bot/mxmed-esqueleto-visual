@@ -3045,7 +3045,8 @@ console.info('app.js loaded :: 20251123a');
   const sidebarToggleBtn = sidebar.querySelector('[data-action="sidebar-toggle"]');
   const headerToggleBtn = document.querySelector('[data-action="sidebar-toggle-proxy"]');
   const toggleButtons = [sidebarToggleBtn, headerToggleBtn].filter(Boolean);
-  const desktopQuery = window.matchMedia('(min-width: 993px)');
+  const PUSH_MIN_VIEWPORT_PX = 1340;
+  const desktopQuery = window.matchMedia(`(min-width: ${PUSH_MIN_VIEWPORT_PX}px)`);
   const hoverQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
   const OPEN_DELAY_MS = 175;
   const CLOSE_DELAY_MS = 300;
@@ -3179,7 +3180,7 @@ console.info('app.js loaded :: 20251123a');
     temporary = !!next;
     syncClasses();
     if(temporary) sidebar.scrollTop = expandedScrollTop;
-    emitSidebarToggle(false);
+    emitSidebarToggle();
   };
   setPinned(readPersistedState() === 'expanded', { persist: false, silent: true });
 
