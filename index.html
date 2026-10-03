@@ -218,11 +218,19 @@
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
 <link rel="stylesheet" href="assets/css/platform-shell-color-modes.css?v=vis09b">
 <link rel="stylesheet" href="assets/css/expediente-color-trial.css?v=013151-r2">
+<link rel="stylesheet" href="assets/css/vis25-adaptive-sidebar.css?v=vis25">
 </head>
 
-<body class="mx-sidebar-expanded" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
+<body class="mx-sidebar-collapsed" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
 <script>
 (function(){
+  try {
+    var stored = localStorage.getItem('mxmed.sidebar.state');
+    var legacy = localStorage.getItem('mxmed.shell.sidebar.expanded');
+    if(stored === 'expanded' || (!stored && (legacy === '1' || legacy === 'true'))){
+      document.body.classList.replace('mx-sidebar-collapsed', 'mx-sidebar-expanded');
+    }
+  } catch (_) {}
   if(!/^(localhost|127\.0\.0\.1)$/i.test(location.hostname)) return;
   var requestedMode = new URLSearchParams(location.search).get('shell_mode');
   var localPreviewModes = {
@@ -241,7 +249,7 @@
 <header class="mx-global-header">
   <div class="wrap page">
     <div class="mx-gh-left">
-      <button class="mx-gh-toggle" type="button" data-action="sidebar-toggle-proxy" aria-label="Contraer menú lateral" aria-expanded="true">
+      <button class="mx-gh-toggle" type="button" data-action="sidebar-toggle-proxy" aria-label="Fijar menú lateral abierto" aria-expanded="false">
         <span class="material-symbols-rounded" aria-hidden="true">menu</span>
       </button>
       <button class="mx-gh-brand menu-main" type="button" data-panel="p-resumen" title="Ir al panel principal" aria-label="Ir al panel principal">
@@ -295,12 +303,13 @@
 
 <div class="mm-wrap">
 
-  <div class="mm-grid page is-sidebar-expanded">
+  <div class="mm-grid page">
 
 
 
     <!-- ===== LATERAL: Menú ===== -->
 
+    <div class="vis25-sidebar-rail">
     <aside class="mm-sidebar" id="mmSidebar">
 
       <button class="sidebar-toggle" type="button" data-action="sidebar-toggle" aria-label="Expandir menú lateral" aria-expanded="false">
@@ -471,6 +480,7 @@
 
 
       </aside>
+    </div>
 
 
 

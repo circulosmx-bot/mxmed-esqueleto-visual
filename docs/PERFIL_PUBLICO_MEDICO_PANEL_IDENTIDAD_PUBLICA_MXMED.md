@@ -2459,3 +2459,11 @@ La estrategia aprobada es una transición tipo Opción C:
 - Mostrar resultados por item (`created`, `already_exists`, `invalid_value`, etc.).
 - Mantener `localStorage` sin borrado automático hasta una fase posterior.
 - Documentar y validar la conexión UI cuando exista.
+
+## VIS25 — Sidebar adaptable del shell médico
+
+- En escritorio con puntero fino, el estado inicial sin preferencia es **COMPACT** (76 px). La preferencia anterior `mxmed.sidebar.state` (`expanded`/`collapsed`) y su clave legada se respetan; sólo el clic explícito en la hamburguesa escribe ambas claves en `localStorage`.
+- Al entrar al riel, **TEMPORARY_EXPANDED** abre a 232 px tras 175 ms; al salir se cierra tras 300 ms. Reingresar cancela el cierre. Este estado no se persiste. La superficie se extiende sobre el contenido mientras el riel y la posición/ancho del espacio clínico permanecen en 76 px.
+- La hamburguesa alterna **PINNED_EXPANDED** y **COMPACT**. El estado fijado reserva 232 px y no se cierra al salir o hacer clic fuera. El foco de teclado abre temporalmente el menú y lo mantiene abierto mientras permanece dentro. Los nombres accesibles y `aria-current` permanecen en los botones originales; la expansión muestra las etiquetas completas sin tooltip redundante.
+- En móvil y puntero grueso, la hamburguesa abre un cajón explícito; no se usa hover y la preferencia de escritorio no altera el cajón. Escape y clic fuera lo cierran. El mismo árbol de navegación y la guarda VIS24 procesan las acciones en todos los estados.
+- El riel conserva el scroll del mismo elemento de navegación al cambiar de estado. Las transiciones se desactivan con `prefers-reduced-motion`. La capa temporal queda bajo diálogos y confirmaciones.

@@ -1,0 +1,120 @@
+/* VIS25: reserve a stable rail; only explicit pinning changes workspace width. */
+@media (min-width: 993px) and (hover: hover) and (pointer: fine) {
+  .vis25-sidebar-rail {
+    position: sticky;
+    top: var(--mm-global-header-h);
+    align-self: flex-start;
+    flex: 0 0 var(--mm-sidebar-collapsed-w);
+    width: var(--mm-sidebar-collapsed-w);
+    height: calc(100vh - var(--mm-global-header-h));
+    z-index: 40;
+  }
+  body.mx-sidebar-expanded:not(.mx-sidebar-temporary) .vis25-sidebar-rail {
+    flex-basis: var(--mxmed-sidebar-expanded-width);
+    width: var(--mxmed-sidebar-expanded-width);
+  }
+  .vis25-sidebar-rail #mmSidebar,
+  body.mx-sidebar-collapsed .mm-grid .vis25-sidebar-rail #mmSidebar {
+    position: absolute;
+    inset: 0 auto auto 0;
+    box-sizing: border-box;
+    width: var(--mm-sidebar-collapsed-w);
+    height: 100%;
+    max-height: 100%;
+    flex: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: var(--mm-shell-sidebar-color);
+    z-index: 40;
+    transition: width .18s ease, box-shadow .18s ease;
+  }
+  body.mx-sidebar-expanded .vis25-sidebar-rail #mmSidebar,
+  body.mx-sidebar-temporary .vis25-sidebar-rail #mmSidebar {
+    width: var(--mxmed-sidebar-expanded-width);
+  }
+  body.mx-sidebar-temporary .vis25-sidebar-rail #mmSidebar {
+    box-shadow: 9px 5px 18px rgba(0,49,82,.19);
+  }
+  body.mx-sidebar-temporary {
+    --mm-shell-sidebar-rail-w: var(--mm-sidebar-collapsed-w);
+  }
+  body.mx-sidebar-temporary .mx-global-header .mx-gh-toggle {
+    left: calc((var(--mxmed-sidebar-collapsed-width) - var(--mxmed-sidebar-toggle-hit-size)) / 2) !important;
+  }
+  /* Keep the compact icon axis fixed while revealing labels to its right. */
+  body.mx-sidebar-temporary #mmSidebar .menu-main {
+    flex-direction: row-reverse;
+    padding-right: 8px;
+    padding-left: 20px;
+  }
+  body.mx-sidebar-temporary #mmSidebar .menu-main .ico {
+    margin: 0;
+  }
+  body.mx-sidebar-temporary #mmSidebar .menu-main .txt {
+    align-items: flex-start;
+    text-align: left;
+    padding-left: 6px;
+  }
+  body.mx-sidebar-temporary #mmSidebar .menu-main.sb01-has-children::after {
+    right: 8px;
+  }
+  body.mx-sidebar-temporary #mmSidebar .menu-sub.open {
+    width: calc(100% - 12px);
+    align-self: flex-end;
+    margin: 0 0 10px !important;
+  }
+}
+
+@media (max-width: 992px), (hover: none), (pointer: coarse) {
+  .mm-grid .vis25-sidebar-rail {
+    position: fixed;
+    z-index: 1040;
+    top: var(--mm-global-header-h);
+    bottom: 0;
+    left: 0;
+    width: min(280px, 85vw);
+    height: calc(100dvh - var(--mm-global-header-h));
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(-100%);
+    transition: transform .18s ease, visibility .18s;
+  }
+  body.vis25-mobile-open .mm-grid .vis25-sidebar-rail {
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+  .mm-grid .vis25-sidebar-rail #mmSidebar {
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--mm-shell-sidebar-color);
+  }
+  body.vis25-mobile-open::before {
+    content: '';
+    position: fixed;
+    z-index: 1035;
+    inset: var(--mm-global-header-h) 0 0;
+    background: rgba(0, 25, 45, .34);
+  }
+  body.vis25-mobile-open .mx-global-header .mx-gh-toggle {
+    z-index: 1041;
+  }
+  /* The local review switcher keeps its state and returns when the drawer closes. */
+  body.vis25-mobile-open #mxmed_dev_role_switcher {
+    visibility: hidden;
+  }
+}
+
+@media (min-width: 993px) and (hover: none), (min-width: 993px) and (pointer: coarse) {
+  body { --mm-shell-sidebar-rail-w: var(--mm-sidebar-collapsed-w); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vis25-sidebar-rail,
+  .vis25-sidebar-rail #mmSidebar { transition: none !important; }
+}

@@ -82,6 +82,8 @@ $(function(){
     }
     const showTooltip = ()=>{
       hideTooltip();
+      // VIS25 reveals the full label on hover/focus; an icon tooltip would race it.
+      if(document.querySelector('.vis25-sidebar-rail')) return;
       if(!sb01SidebarCollapsed() || pane?.classList.contains('sb01-flyout-visible')) return;
       // Replace mouse-only native titles with the same label on hover and focus.
       button.removeAttribute('title');
