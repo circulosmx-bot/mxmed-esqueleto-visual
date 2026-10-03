@@ -32,7 +32,7 @@
     microbiology:group('microbiology','Microbiología','microbiology',lab('microbiology')),
     genetics:group('genetics','Genética y diagnóstico molecular','genetics',[],
       ['cytogenetics','cytogenomics','genomic_sequencing','prenatal_genetics','germline_genetics','hereditary_oncology','pharmacogenomics','molecular_oncology']),
-    urine:group('urine','Orina y otros fluidos','water_drop',lab('urine')),
+    urine:group('urine','Orina y otros fluidos','water_drop',[{category:'LABORATORIO',keys:["urinalysis", "microalbumin", "urine_albumin_creatinine_panel", "urine_protein_creatinine_panel", "urine_osmolality", "urine_culture", "csf_cell_count", "synovial_crystals", "semen_analysis"]}]),
     stool:group('stool','Materia fecal','science',lab('stool')),
     tumor:group('tumor','Marcadores tumorales','biotech',lab('tumor')),
     drugs:group('drugs','Monitoreo de fármacos','medication',lab('drugs')),
