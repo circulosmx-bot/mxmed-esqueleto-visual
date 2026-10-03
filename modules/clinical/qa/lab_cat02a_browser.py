@@ -29,16 +29,16 @@ profiles = {
  'Médico General':['chemistry','hematology','urine','panels'],
  'Medicina Interna':['chemistry','hematology','immunology','microbiology'],
  'Endocrinología':['endocrine','chemistry','panels','urine'],
- 'Hematología':['hematology','coagulation','molecular','immunology'],
- 'Infectología':['microbiology','molecular','serology','immunology'],
+ 'Hematología':['hematology','coagulation','immunology'],
+ 'Infectología':['microbiology','serology','immunology'],
  'Nefrología':['chemistry','urine','hematology','panels'],
- 'Oncología':['hematology','chemistry','tumor','molecular'],
- 'Cardiología':['chemistry','hematology','coagulation','tumor'],
+ 'Oncología':['hematology','chemistry','tumor'],
+ 'Cardiología':['chemistry','hematology','coagulation'],
  'Gastroenterología':['chemistry','stool','serology','microbiology'],
  'Reumatología':['autoimmunity','immunology','hematology','chemistry'],
  'Ginecología y Obstetricia':['endocrine','microbiology','serology','chemistry'],
  'Pediatría':['hematology','chemistry','microbiology','urine'],
- 'Neumología':['microbiology','molecular','hematology','chemistry'],
+ 'Neumología':['microbiology','hematology','chemistry'],
 }
 
 def main():
@@ -70,7 +70,8 @@ def main():
    expect(page.locator('.lab-cat02a-screen')).to_be_visible()
    expect(page.locator('.lab-cat02a-priority button')).to_have_count(4)
    assert page.locator('.lab-cat02a-priority button').evaluate_all('(items)=>items.map(x=>x.dataset.labGroup)')==profiles['Médico General']
-   assert page.locator('.lab-cat02a-screen button[data-lab-group]').count()==15 # Trasplante remains hidden.
+   page.wait_for_function('()=>document.querySelectorAll(".lab-cat02a-screen button[data-lab-group]").length===24')
+   assert page.locator('.lab-cat02a-screen button[data-lab-group]').count()==24 # Trasplante and molecular/PCR have no supported active keys.
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    if width in (1366,390):page.screenshot(path=f'/tmp/lab-cat02a-{width}x{height}.png',full_page=True)
    for label,expected in profiles.items():
@@ -79,7 +80,7 @@ def main():
     page.evaluate('(value)=>window.mxmedReviewClassification.set(value)',value)
     expect(page.locator('.lab-cat02a-screen')).to_have_attribute('data-lab-profile',
       { 'Médico General':'general','Medicina Interna':'internal','Endocrinología':'endocrine','Hematología':'heme','Infectología':'infect','Nefrología':'nephro','Oncología':'oncology','Cardiología':'cardio','Gastroenterología':'gi','Reumatología':'rheum','Ginecología y Obstetricia':'obgyn','Pediatría':'peds','Neumología':'pulm'}[label])
-    page.wait_for_function('(expected)=>JSON.stringify([...document.querySelectorAll(".lab-cat02a-priority button")].map(x=>x.dataset.labGroup))===JSON.stringify(expected)', arg=expected)
+   page.wait_for_function('(expected)=>JSON.stringify([...document.querySelectorAll(".lab-cat02a-priority button")].map(x=>x.dataset.labGroup))===JSON.stringify(expected)', arg=expected)
    # Return to general, then exercise grouped search, cross-group, mixed-category and custom selection.
    value=page.evaluate('window.mxmedReviewClassification.options().find(o=>o.label==="Médico General").value')
    page.evaluate('(value)=>window.mxmedReviewClassification.set(value)',value)
@@ -94,8 +95,8 @@ def main():
    page.locator('.tax03c-dialog [data-tax03c-close]').first.click()
    page.locator('.lab-cat02a-screen button[data-lab-group="panels"]').click()
    expect(page.locator('.tax03c-dialog')).to_be_visible()
-   page.wait_for_function('()=>document.querySelectorAll("[data-tax03c-id]").length===8')
-   assert page.locator('[data-tax03c-id]').count()==8
+   page.wait_for_function('()=>document.querySelectorAll("[data-tax03c-id]").length===7')
+   assert page.locator('[data-tax03c-id]').count()==7
    page.locator('.tax03c-dialog [data-tax03c-close]').first.click()
    page.locator('.lab-cat02a-screen button[data-lab-group="hematology"]').click()
    expect(page.locator('.tax03c-dialog')).to_be_visible()
@@ -126,7 +127,7 @@ def main():
    assert len({item.get('study_type_id') for item in writes[0]['payload']['order_items'] if 'study_type_id' in item})==3
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    assert not errors,errors
-   print(f'QA_VIEWPORT_{width}x{height}=PASS profiles=13 groupers=15 items=4')
+   print(f'QA_VIEWPORT_{width}x{height}=PASS profiles=13 groupers=24 items=4')
    page.close()
   # Dental route stays the original OR05 route, including the Classification Simulator.
   for label in ['Ortodoncia','Implantología','Endodoncia']:

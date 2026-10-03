@@ -52,7 +52,16 @@
         "icon": "monitor_heart",
         "parts": [
           {
-            "category": "CARDIOVASCULAR"
+            "category": "CARDIOVASCULAR",
+            "keys": [
+              "ecg_12lead",
+              "ecg_rhythm_strip",
+              "holter",
+              "abpm_mapa",
+              "stress_test",
+              "tilt_table",
+              "ankle_brachial_index"
+            ]
           },
           {
             "category": "NEUROFISIOLOGIA"
@@ -172,6 +181,18 @@
         {"category":"DENTAL","keys":["dental_intraoral_scan","dental_study_model"]}]}
     },
     "lower": [
+      {
+        "id": "cardiac-ultrasound",
+        "label": "Ultrasonido cardiaco",
+        "icon": "cardiology",
+        "parts": [{"category": "CARDIOVASCULAR", "keys": ["echo_tte", "echo_tes", "stress_echo"]}]
+      },
+      {
+        "id": "vascular-ultrasound",
+        "label": "Ultrasonido vascular / Doppler",
+        "icon": "cardiology",
+        "parts": [{"category": "CARDIOVASCULAR", "keys": ["carotid_doppler", "lower_ext_art_doppler", "lower_ext_venous_doppler"]}]
+      },
       {
         "id": "ophthalmology",
         "label": "Oftalmología",

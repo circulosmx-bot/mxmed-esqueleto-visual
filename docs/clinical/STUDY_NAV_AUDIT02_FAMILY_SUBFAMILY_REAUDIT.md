@@ -1,6 +1,6 @@
 # STUDY-NAV-AUDIT02 — Reauditoría de familias y subfamilias de estudios
 
-**AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED.** No es autorización para cambiar catálogo, navegación, alias ni contratos clínicos.
+**AUDIT_ONLY al publicarse · PARTIALLY_IMPLEMENTED por FIX02A.** Esta matriz conserva la clasificación y los grupos *anteriores* como evidencia histórica. Las 26 correcciones aprobadas están registradas en [STUDY-NAV-FIX02A](STUDY_NAV_FIX02A_CLASSIFICATION_CORRECTIONS_IMPLEMENTED.md); las 94 rutas adicionales permanecen propuestas para FIX02B.
 
 ## Resumen para Dirección
 

@@ -105,12 +105,6 @@
       "icon": "endocrinology",
       "parts": [
         {
-          "category": "GENETICA",
-          "keys": [
-            "nipt"
-          ]
-        },
-        {
           "category": "LABORATORIO",
           "keys": [
             "anti_tg",
@@ -143,14 +137,10 @@
           "keys": [
             "c3",
             "c4",
-            "crp_hs",
-            "esr",
-            "hiv_ag_ac",
             "iga",
             "igg",
             "igm",
-            "rf",
-            "uric_acid"
+            "rf"
           ]
         }
       ],
@@ -178,25 +168,7 @@
       "key": "molecular",
       "label": "Biología molecular / PCR",
       "icon": "genetics",
-      "parts": [
-        {
-          "category": "GENETICA",
-          "keys": [
-            "brca1_2",
-            "carrier_screening",
-            "cma_microarray",
-            "hereditary_cancer_germline",
-            "karyotype",
-            "lynch",
-            "nipt",
-            "pgx",
-            "somatic_tumor_ngs",
-            "thrombophilia",
-            "wes",
-            "wgs"
-          ]
-        }
-      ],
+      "parts": [],
       "priority": 7
     },
     {
@@ -207,7 +179,6 @@
         {
           "category": "LABORATORIO",
           "keys": [
-            "albumin",
             "microalbumin",
             "urinalysis",
             "urine_culture"
@@ -254,18 +225,17 @@
       "priority": 2
     },
     {
+      "key": "inflammation",
+      "label": "Inflamación / reactantes",
+      "icon": "science",
+      "parts": [{"category": "LABORATORIO", "keys": ["crp_hs", "esr"]}],
+      "priority": 3
+    },
+    {
       "key": "tumor",
       "label": "Marcadores tumorales",
       "icon": "biotech",
       "parts": [
-        {
-          "category": "GENETICA",
-          "keys": [
-            "brca1_2",
-            "hereditary_cancer_germline",
-            "somatic_tumor_ngs"
-          ]
-        },
         {
           "category": "LABORATORIO",
           "keys": [
@@ -273,7 +243,7 @@
           ]
         }
       ],
-      "priority": 3
+      "priority": 4
     },
     {
       "key": "serology",
@@ -290,7 +260,14 @@
           ]
         }
       ],
-      "priority": 4
+      "priority": 5
+    },
+    {
+      "key": "infectious_serology",
+      "label": "Serologías / infecciones",
+      "icon": "lab_profile",
+      "parts": [{"category": "LABORATORIO", "keys": ["hiv_ag_ac"]}],
+      "priority": 6
     },
     {
       "key": "drugs",
@@ -304,29 +281,77 @@
           ]
         }
       ],
-      "priority": 5
+      "priority": 7
     },
     {
       "key": "transplant",
       "label": "Trasplante",
       "icon": "transplant",
       "parts": [],
-      "priority": 6
+      "priority": 8
     },
     {
-      "key": "other",
-      "label": "Otros",
-      "icon": "more_horiz",
-      "parts": [
-        {
-          "category": "PATOLOGIA",
-          "keys": [
-            "cyto_liquid_based",
-            "cyto_pap"
-          ]
-        }
-      ],
-      "priority": 7
+      "key": "cytopathology",
+      "label": "Citopatología cervical",
+      "icon": "biotech",
+      "parts": [{"category": "PATOLOGIA", "keys": ["cyto_liquid_based", "cyto_pap"]}],
+      "priority": 9
+    },
+    {
+      "key": "cytogenetics",
+      "label": "Citogenética",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["karyotype"]}],
+      "priority": 10
+    },
+    {
+      "key": "cytogenomics",
+      "label": "Citogenómica / microarreglos",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["cma_microarray"]}],
+      "priority": 11
+    },
+    {
+      "key": "genomic_sequencing",
+      "label": "Secuenciación genómica",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["wes", "wgs"]}],
+      "priority": 12
+    },
+    {
+      "key": "prenatal_genetics",
+      "label": "Tamiz genético prenatal",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["nipt"]}],
+      "priority": 13
+    },
+    {
+      "key": "germline_genetics",
+      "label": "Genética germinal",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["carrier_screening", "hereditary_cancer_germline", "brca1_2", "lynch", "thrombophilia"]}],
+      "priority": 14
+    },
+    {
+      "key": "hereditary_oncology",
+      "label": "Oncología hereditaria",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["hereditary_cancer_germline", "brca1_2", "lynch"]}],
+      "priority": 15
+    },
+    {
+      "key": "pharmacogenomics",
+      "label": "Farmacogenómica",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["pgx"]}],
+      "priority": 16
+    },
+    {
+      "key": "molecular_oncology",
+      "label": "Oncología molecular",
+      "icon": "genetics",
+      "parts": [{"category": "GENETICA", "keys": ["somatic_tumor_ngs"]}],
+      "priority": 17
     }
   ],
   "special": [
@@ -349,7 +374,6 @@
           "category": "LABORATORIO",
           "keys": [
             "cbc",
-            "stool_ova_parasites",
             "urinalysis"
           ]
         }
@@ -418,8 +442,7 @@
     "cardio": [
       "chemistry",
       "hematology",
-      "coagulation",
-      "tumor"
+      "coagulation"
     ],
     "gi": [
       "chemistry",
