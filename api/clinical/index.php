@@ -8918,6 +8918,33 @@ try {
             }
             return;
         }
+        // ORD-COMP01: authenticated patient-level atomic multi-order composition.
+        if ($method === 'POST' && count($segments) === 6 && ($segments[2] ?? '') === 'patients'
+            && ($segments[4] ?? '') === 'orders' && ($segments[5] ?? '') === 'batch') {
+            require_once __DIR__.'/../_lib/clinical_order_composition.php';
+            header('Cache-Control: private, no-store');
+            $patientId=trim(rawurldecode((string)$segments[3]));
+            try {
+                $pdo=clinical_documents_pdo();
+                if(!clinical_patient_exists($pdo,$patientId)||!clinical_has_active_doctor_patient_link($pdo,$scopedDoctorId,$patientId)){
+                    clinical_send_response(['ok'=>false,'error'=>'forbidden','message'=>'doctor patient link required','data'=>null],403);return;
+                }
+                if(!str_starts_with(strtolower((string)($_SERVER['CONTENT_TYPE']??'')),'application/json'))throw new ClinicalOrderCompositionException('JSON_REQUIRED');
+                $body=json_decode(file_get_contents('php://input'),true,64,JSON_THROW_ON_ERROR);
+                if(!is_array($body))throw new ClinicalOrderCompositionException('BATCH_INVALID');
+                $result=clinical_order_composition_create($pdo,$scopedDoctorId,$patientId,$scopedDoctorContext['user_id'],$body,
+                    clinical_idempotency_key_validate((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??'')));
+                $replay=$result['_idempotency_replay'];unset($result['_idempotency_replay']);
+                clinical_send_response(['ok'=>true,'data'=>$result,'meta'=>['idempotency_replay'=>$replay]],$replay?200:201);
+            }catch(ClinicalIdempotencyException $e){
+                clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->getMessage(),'data'=>null],$e->httpStatus);
+            }catch(ClinicalOrderCompositionException $e){
+                clinical_send_response(['ok'=>false,'error'=>'invalid_order_composition','message'=>$e->getMessage(),'data'=>null,'order_routing_group_key'=>$e->group],422);
+            }catch(JsonException $e){
+                clinical_send_response(['ok'=>false,'error'=>'invalid_json','message'=>'Invalid JSON','data'=>null],400);
+            }
+            return;
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
             clinical_m6_observability_route('C04_PATIENT_DOCUMENT', 'CREATE_DOCUMENT', 'PATIENT_LEVEL_C04');
             $doctorId = trim(rawurldecode((string)$segments[1]));
