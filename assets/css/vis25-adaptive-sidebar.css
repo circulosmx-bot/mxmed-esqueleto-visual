@@ -65,6 +65,13 @@
   }
 }
 
+/* Keep the compact patient header's established row height during overlay. */
+@media (min-width: 1400px) and (max-width: 1499.98px) {
+  body.mx-sidebar-temporary #p-expediente .head .vis02-active .vis02-context {
+    --vis09e-context-row-height: 117.078125px;
+  }
+}
+
 @media (max-width: 992px), (hover: none), (pointer: coarse) {
   .mm-grid .vis25-sidebar-rail {
     position: fixed;
