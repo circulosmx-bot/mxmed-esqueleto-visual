@@ -5035,3 +5035,28 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
   #p-expediente #t-estudios .vis06-orders .vis06-study-status {justify-content:flex-start;max-width:none;text-align:left}
   #p-expediente #t-estudios .vis06-orders .vis06-study-action,#p-expediente #t-estudios .vis06-orders .vis06-study-result-link {min-height:40px}
 }
+
+/* VIS23: the patient context replaces the section band while a patient is open. */
+#p-expediente[data-patient-id]:not([data-patient-id=""]) > .head {
+  padding-top:0!important;
+}
+#p-expediente[data-patient-id]:not([data-patient-id=""]) > .head > .mx-panel-subheader {
+  display:none!important;
+}
+#p-expediente:not([data-patient-id]:not([data-patient-id=""])) [data-vis23-context-heading] {
+  display:none!important;
+}
+#p-expediente > .body > [data-exp-return-to-patient] {
+  display:block;
+  width:max-content;
+  margin:0 0 10px;
+  border-color:#a9c2ce;
+  background:#fff;
+  color:#07536e;
+}
+#p-expediente > .body > [data-exp-return-to-patient]:hover {
+  background:#effafb;
+}
+#p-expediente > .body > [data-exp-return-to-patient]:focus-visible {
+  outline-color:#07536e;
+}
