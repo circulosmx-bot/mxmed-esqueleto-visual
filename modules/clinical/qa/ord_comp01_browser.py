@@ -1,0 +1,133 @@
+"""Inline selector behavior on real served assets, isolated API fixture; no clinical writes."""
+import ast,json,pathlib,re,subprocess,uuid
+from urllib.parse import parse_qs,urlsplit
+from playwright.sync_api import expect,sync_playwright
+ROOT=pathlib.Path(__file__).resolve().parents[3];BASE='http://127.0.0.1:18148'
+# Reuse the established fixture shell, without importing obsolete baseline count assertions.
+tree=ast.parse((ROOT/'modules/clinical/qa/lab_cat02a_browser.py').read_text())
+HTML=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='HTML' for t in n.targets))
+HTML=HTML.replace('</head>','<link rel="stylesheet" href="/assets/css/clinical/study-navigation-hierarchy-v2.css"><link rel="stylesheet" href="/assets/css/clinical/order-composition-v1.css"></head>')
+HTML=HTML.replace('<script src="/assets/js/clinical/vis06-modules.js','<script src="/assets/js/clinical/study-navigation-hierarchy-v2.js"></script><script src="/assets/js/clinical/patient-workspace-navigation-guard.js"></script><script src="/assets/js/clinical/order-composition-v1.js"></script><script src="/assets/js/clinical/vis06-modules.js')
+raw=subprocess.check_output(['mysql','-N','-B','mxmed_director_review_lon07c','-e','SELECT study_type_id,study_type_key,display_name_es,category_key,aliases_json FROM clinical_study_types WHERE is_active=1'],text=True)
+rows=[dict(study_type_id=int(i),study_type_key=k,display_name_es=n,category_key=c,aliases=json.loads(a)) for i,k,n,c,a in (line.split('\t') for line in raw.splitlines())]
+seed=(ROOT/'modules/clinical/db/migrations/2026_10_03_19_urine_fluids_catalog.sql').read_text()
+for key,name in re.findall(r"\('([^']+)','([^']+)','LABORATORIO'",seed):
+ if not any(r['study_type_key']==key for r in rows):rows.append(dict(study_type_id=10000+len(rows),study_type_key=key,display_name_es=name,category_key='LABORATORIO',aliases=[]))
+counts={k:sum(r['category_key']==k for r in rows) for k in {r['category_key'] for r in rows}}
+ids={r['study_type_key']:r['study_type_id'] for r in rows}
+with sync_playwright() as p:
+ browser=p.chromium.launch(headless=True)
+ for width,height in [(1440,900),(1366,768),(390,844)]:
+  page=browser.new_page(viewport={'width':width,'height':height});errors=[];writes=[];state={'profile':'Médico General','failure':False}
+  page.on('pageerror',lambda e:errors.append(str(e)))
+  page.route(BASE+'/__ordcomp01__',lambda r:r.fulfill(content_type='text/html',body=HTML))
+  page.route('**/api/profiles/index.php/private/doctor/**',lambda r:r.fulfill(content_type='application/json',body=json.dumps({'ok':True,'data':{'identity_public':{'specialty_primary':state['profile']},'verified_credentials':{'professional':None,'specialties':[]}}})))
+  def api(route):
+   url=urlsplit(route.request.url);q=parse_qs(url.query);status=200
+   if url.path.endswith('/study-types'):
+    filtered=[r for r in rows if not q.get('category') or r['category_key']==q['category'][0]];offset=int(q.get('offset',['0'])[0]);limit=int(q.get('limit',['30'])[0]);data={'items':filtered[offset:offset+limit],'has_more':offset+limit<len(filtered),'categories':[{'category_key':k,'label_es':k,'active_count':v} for k,v in counts.items()]}
+   elif url.path.endswith('/orders/batch'):
+    body=route.request.post_data_json;writes.append(body)
+    if state.get('uncertain'):
+     state['uncertain']=False;route.fulfill(status=500,content_type='application/json',body=json.dumps({'ok':False,'message':'unknown'}));return
+    if state['failure']:
+     state['failure']=False;route.fulfill(status=422,content_type='application/json',body=json.dumps({'ok':False,'message':'STUDY_TYPE_INVALID','order_routing_group_key':body['orders'][0]['order_routing_group_key']}));return
+    status=201;data={'order_composition_batch_uuid':body['order_composition_batch_uuid'],'orders':[{'document_id':i+1,'document_uuid':str(uuid.uuid4()),'order_routing_group_key':o['order_routing_group_key']} for i,o in enumerate(body['orders'])]}
+   elif url.path.endswith('/encounters/active'):data={'doctor_id':'d_labcat02a'}
+   else:data={'items':[]}
+   route.fulfill(status=status,content_type='application/json',body=json.dumps({'ok':True,'data':data},ensure_ascii=False))
+  page.route('**/api/clinical/index.php/**',api)
+  page.goto(BASE+'/__ordcomp01__',wait_until='networkidle');page.locator('.vis06-intent-card').first.click()
+  def nav(key):page.locator('[data-hier-node="'+key+'"]').click()
+  def back():page.locator('.vis06-head .vis06-flow-back').click()
+  def choose(key):
+   search=page.locator('.ordcomp [data-tax03c-search]');search.fill(next(r['display_name_es'] for r in rows if r['study_type_key']==key));page.locator(f'.ordcomp [data-tax03c-id="{ids[key]}"]').first.click()
+  def catalog_mode():
+   if width<768 and page.locator('.ordcomp').evaluate('(x)=>x.classList.contains("ordcomp-show-summary")'):page.get_by_role('button',name='Volver al catálogo',exact=True).click()
+  nav('laboratory');nav('urine')
+  expect(page.locator('.ordcomp')).to_be_visible();expect(page.locator('dialog[open]')).to_have_count(0)
+  expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
+  assert page.locator('[data-catalog-group]').count()==5
+  assert page.locator('.ordcomp-full-catalog').get_attribute('open') is None
+  page.locator('[data-ordcomp-featured] button').first.focus();page.keyboard.press('Enter')
+  expect(page.locator('[data-ordcomp-featured] button').first).to_have_attribute('aria-pressed','true')
+  page.locator('.ordcomp-full-catalog > summary').click();page.locator('[data-catalog-group] > summary').first.click()
+  assert page.locator('[data-catalog-group][open]').count()==1
+  page.locator('[data-catalog-group] > summary').nth(1).click();page.wait_for_timeout(100)
+  assert page.locator('[data-catalog-group][open]').count()==1
+  choose('microalbumin')
+  page.locator('[data-tax03c-search]').fill('RX Tórax');expect(page.locator('.ordcomp [data-tax03c-id]')).to_have_count(0)
+  page.locator('[data-tax03c-search]').fill('');expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
+  back();back();nav('imaging');nav('radiography');choose('rx_chest');back();back();nav('pathology');choose('cyto_pap');back();nav('functional');nav('cardiovascular');choose('ecg_12lead')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  expect(page.locator('.ordcomp-prepared-order')).to_have_count(4)
+  assert '2' in page.locator('[data-order-group="CLINICAL_LAB"] summary').inner_text()
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),page.evaluate('document.documentElement.scrollWidth')
+  page.screenshot(path=f'/tmp/ordcomp01_fixture_{width}x{height}.png',full_page=True)
+  page.get_by_role('button',name='Continuar con 4 órdenes',exact=True).click()
+  expect(page.locator('.ordcomp-review-order')).to_have_count(4)
+  page.locator('.ordcomp-review-order textarea').first.fill('Indicación laboratorio')
+  page.locator('.ordcomp-review-order textarea').nth(1).fill('Indicación imagen')
+  assert page.locator('.ordcomp a').count()==0
+  state['failure']=True;page.get_by_role('button',name='Emitir 4 órdenes',exact=True).click()
+  expect(page.locator('.ordcomp-review-order .ordcomp-error').first).to_contain_text('Revisa esta orden')
+  expect(page.locator('.ordcomp-review')).to_be_visible()
+  page.get_by_role('button',name='Emitir 4 órdenes',exact=True).click();expect(page.locator('.ordcomp-issued-order')).to_have_count(4)
+  assert len(writes)==2 and len(writes[1]['orders'])==4
+  assert writes[1]['orders'][0]['indication']!=writes[1]['orders'][1]['indication']
+  expect(page.locator('.ordcomp-issued-order a')).to_have_count(8)
+  page.get_by_role('button',name='Volver a órdenes y resultados',exact=True).click()
+  page.locator('.vis06-intent-card').first.click();nav('procedures');nav('bronchoscopy');choose('bronchoscopy_base')
+  back();back();nav('laboratory');nav('urine')
+  page.locator('[data-tax03c-custom-open]').click();page.locator('[data-tax03c-custom-name]').fill('Estudio propio');page.locator('[data-tax03c-custom-category]').select_option('LABORATORIO')
+  assert page.locator('[data-tax03c-custom-route]').input_value()=='CLINICAL_LAB'
+  page.locator('[data-tax03c-custom-add]').click()
+  assert page.locator('[data-order-group="CLINICAL_LAB"]').count()==1
+  page.locator('[data-tax03c-global]').click();page.locator('[data-tax03c-custom-open]').click()
+  # Global custom must not inherit the previous contextual group.
+  page.locator('[data-tax03c-custom-name]').fill('Global custom');page.locator('[data-tax03c-custom-category]').select_option('OTROS')
+  assert page.locator('[data-tax03c-custom-route]').input_value()==''
+  page.locator('[data-tax03c-custom-add]').click();expect(page.locator('[data-tax03c-custom-error]')).to_contain_text('Selecciona el servicio')
+  # Discard through the actual VIS24 registered source.
+  page.evaluate("void window.mxmedPatientWorkspaceNavigationGuard.request('qa-exit',()=>{},null,['ordcomp01-composition'])")
+  expect(page.locator('dialog[open]')).to_have_count(1)
+  page.locator('dialog[open] button').filter(has_text='Salir sin guardar').click()
+  expect(page.locator('.ordcomp')).not_to_be_visible()
+  state['profile']='Dentista'
+  page.reload(wait_until='networkidle');page.locator('.vis06-intent-card').first.click()
+  page.locator('.vis06-primary-categories button').filter(has_text='Cone Beam').click()
+  choose('dental_cbct')
+  expect(page.locator('dialog[open]')).to_have_count(0)
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  page.locator('[data-dental-field="coverage"]').select_option('LOCALIZED')
+  page.locator('[data-tooth="16"]').click()
+  expect(page.locator('[data-dental-summary]')).to_contain_text('16')
+  back()
+  page.locator('.vis06-primary-categories button').filter(has_text='Radiología dental 2D').click()
+  choose('dental_panoramic_xray')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  expect(page.locator('.ordcomp-prepared-order')).to_have_count(1)
+  page.get_by_role('button',name='Continuar con 1 orden',exact=True).click()
+  page.get_by_role('button',name='Emitir 1 orden',exact=True).click()
+  expect(page.locator('.ordcomp-issued-order')).to_have_count(1)
+  assert writes[-1]['orders'][0]['order_routing_group_key']=='DENTAL_DIAGNOSTICS'
+  assert writes[-1]['orders'][0]['order_items'][0]['dental_location']['selected_teeth']==['16']
+  print(f'QA_INLINE_DENTAL_FDI_{width}x{height}=PASS',flush=True)
+  page.get_by_role('button',name='Volver a órdenes y resultados',exact=True).click()
+  page.locator('.vis06-intent-card').first.click()
+  page.locator('.vis06-primary-categories button').filter(has_text='Radiología dental 2D').click()
+  choose('dental_panoramic_xray')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  assert page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});window.dispatchEvent(e);return e.defaultPrevented;})()")
+  page.get_by_role('button',name='Continuar con 1 orden',exact=True).click()
+  state['uncertain']=True
+  page.get_by_role('button',name='Emitir 1 orden',exact=True).click()
+  expect(page.get_by_role('button',name='Volver a editar estudios',exact=True)).to_be_disabled()
+  page.get_by_role('button',name='Reintentar emisión',exact=True).click()
+  expect(page.locator('.ordcomp-issued-order')).to_have_count(1)
+  assert writes[-1]==writes[-2]
+  print(f'QA_UNCERTAIN_RETRY_SAME_BATCH_{width}x{height}=PASS',flush=True)
+  assert not errors,errors
+  print(f'QA_INLINE_MULTI_BRANCH_ACCORDION_REVIEW_GUARD_{width}x{height}=PASS',flush=True)
+  page.close()
+ browser.close()

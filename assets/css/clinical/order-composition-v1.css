@@ -1,0 +1,42 @@
+/* ORD-COMP01 scoped to the inline final selector; normal shell/page flow. */
+.ordcomp [hidden], .ordcomp[hidden] { display:none !important; }
+.ordcomp { min-width:0; color:var(--mx-dark,#093c59); }
+.ordcomp-workspace { display:grid; grid-template-columns:minmax(0,1.62fr) minmax(0,1fr); gap:1rem; align-items:start; }
+.ordcomp-catalog,.ordcomp-summary,.ordcomp-review-order,.ordcomp-issued-order { min-width:0; background:rgba(255,255,255,.85); border:1px solid #bbdce4; border-radius:.65rem; padding:1rem; }
+.ordcomp-breadcrumb { font-size:.82rem; margin:0 0 .3rem; color:#506e84; }
+.ordcomp h4 { font-size:1rem; margin:0 0 .7rem; }
+.ordcomp h5 { font-size:.85rem; margin:.7rem 0 .4rem; }
+.ordcomp-summary { position:sticky; top:calc(var(--mm-global-header-h,0px) + 1rem); }
+.ordcomp .tax03c-composer { display:block; }
+.ordcomp .tax03c-result-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.65rem .4rem; border:0; border-bottom:1px solid #dfebef; background:transparent; text-align:left; color:inherit; }
+.ordcomp .tax03c-result-row span:first-child { min-width:0; overflow-wrap:anywhere; }
+.ordcomp .tax03c-result-row span:last-child { white-space:nowrap; color:#008a9e; font-size:.8rem; }
+.ordcomp .tax03c-result-row[aria-pressed=true] { background:#e9f9f5; opacity:1; }
+.ordcomp .tax03c-result-row:focus-visible,.ordcomp summary:focus-visible { outline:2px solid #008b9d; outline-offset:2px; }
+.ordcomp summary { cursor:pointer; padding:.6rem .3rem; font-weight:600; overflow-wrap:anywhere; }
+.ordcomp-full-catalog,.ordcomp-prepared-order { border:1px solid #d4e6eb; border-radius:.4rem; margin:.7rem 0; padding:.3rem; }
+.ordcomp-full-catalog > details { border-top:1px solid #d4e6eb; }
+.ordcomp .tax03c-selected-row { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; padding:.55rem .2rem; border-bottom:1px solid #e2edf0; }
+.ordcomp .tax03c-selected-row > span { flex:1 1 130px; min-width:0; overflow-wrap:anywhere; }
+.ordcomp .tax03c-selected-row strong { font-size:.88rem; }
+.ordcomp .tax03c-selected-row small { display:block; font-size:.75rem; }
+.ordcomp .dental-location-host { width:100%; min-width:0; }
+.ordcomp-count { font-size:.84rem; }
+.ordcomp-error { color:#9d2831; font-size:.9rem; }
+.ordcomp label { display:block; margin:.5rem 0; }
+.ordcomp input,.ordcomp select,.ordcomp textarea { display:block; width:100%; min-width:0; max-width:100%; border:1px solid #b9cdd8; border-radius:.35rem; padding:.5rem; color:inherit; }
+.ordcomp-review-order,.ordcomp-issued-order { margin:.8rem 0; }
+.ordcomp li,.ordcomp small { overflow-wrap:anywhere; }
+.ordcomp-issued-order small { display:block; margin:.5rem 0; }
+.ordcomp-issued-order a { margin:.3rem .5rem .3rem 0; }
+.ordcomp-mobile-bar { display:none; }
+@media(max-width:767px) {
+  .ordcomp-workspace { display:block; }
+  .ordcomp-summary { display:none; position:static; }
+  .ordcomp-show-summary .ordcomp-summary { display:block; }
+  .ordcomp-show-summary .ordcomp-catalog { display:none; }
+  .ordcomp-catalog,.ordcomp-summary { padding:.7rem; }
+  .ordcomp-mobile-bar { display:flex; position:sticky; bottom:0; z-index:2; align-items:center; justify-content:space-between; gap:.4rem; background:#effbfc; border:1px solid #b4dbe4; padding:.7rem .4rem; margin-top:.8rem; border-radius:.4rem; font-size:.8rem; }
+}
+/* The modal result list has its own height cap; embedded content uses page flow. */
+.ordcomp .tax03c-results { display:block; max-height:none; height:auto; overflow:visible; }

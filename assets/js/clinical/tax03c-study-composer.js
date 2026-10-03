@@ -17,6 +17,8 @@
   const orderArea=items=>documentType(items)==='lab_order'?'Laboratorio':documentType(items)==='imaging_order'?'Imagenología':'Estudios diagnósticos';
 
   function mount(host,options={}){
+    const embedded=options.presentation==='embedded';
+    let embeddedGlobal=false,embeddedRows=null,fullOpen=false,openGroup='';
     const doctorId=String(options.doctorId||'').trim();
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
@@ -58,12 +60,18 @@
     </div>`;
     const $=selector=>host.querySelector(selector);
     const search=$('[data-tax03c-search]'),category=$('[data-tax03c-category]'),status=$('[data-tax03c-status]');
-    const resultBox=$('[data-tax03c-results]'),selectedBox=$('[data-tax03c-selected]');
+    const resultBox=$('[data-tax03c-results]'),selectedBox=options.selectionHost||$('[data-tax03c-selected]');
+    if(embedded){resultBox.removeAttribute('role');$('[data-tax03c-selected]').parentElement.hidden=true;$('[data-tax03c-filter]').hidden=true;$('[data-tax03c-priority]').closest('.tax03c-order-fields').hidden=true;}
     const custom=$('[data-tax03c-custom]'),customName=$('[data-tax03c-custom-name]');
     const priority=$('[data-tax03c-priority]'),indication=$('[data-tax03c-indication]');
     const navigationScope=$('[data-tax03c-navigation-scope]');
     function renderNavigationScope(){
-      if(dentalScope?.length){
+      if(embedded){
+        navigationScope.textContent=embeddedGlobal?'Catálogo general':options.navigationGroup?.label||'Catálogo general';
+        $('[data-tax03c-global]').hidden=embeddedGlobal||!navigationParts?.length;
+        $('[data-tax03c-dental-back]').hidden=!embeddedGlobal;
+        $('[data-tax03c-dental-back]').textContent='Volver a '+(options.navigationGroup?.label||'esta familia');
+      }else if(dentalScope?.length){
         navigationScope.textContent=globalCatalog?'Catálogo general':navigationParts?.length
           ?`Estudios dentales · ${options.navigationGroup.label}`:'Estudios dentales';
         $('[data-tax03c-global]').hidden=globalCatalog;
@@ -89,11 +97,37 @@
       $('[data-tax03c-all]').setAttribute('aria-pressed','false');
     }
     Object.entries(categories).forEach(([key,label])=>$('[data-tax03c-custom-category]').add(new Option(label,key)));
+    let customRoute=null;
+    if(embedded){
+      const label=document.createElement('label');label.textContent='Servicio que realizará el estudio';
+      customRoute=document.createElement('select');customRoute.dataset.tax03cCustomRoute='';customRoute.setAttribute('aria-label','Servicio que realizará el estudio');
+      customRoute.add(new Option('Selecciona y confirma el servicio',''));
+      Object.entries(options.routing.groups).forEach(([key,name])=>customRoute.add(new Option(name,key)));
+      label.append(customRoute);custom.prepend(label);
+      if(options.customDraft){
+        custom.hidden=!options.customDraft.open;customName.value=options.customDraft.name||'';
+        $('[data-tax03c-custom-note]').value=options.customDraft.note||'';
+        $('[data-tax03c-custom-category]').value=options.customDraft.category||'';
+        customRoute.value=options.customDraft.route||'';
+      }
+    }
+    const customDraft=()=>({open:!custom.hidden,name:customName.value,note:$('[data-tax03c-custom-note]').value,category:$('[data-tax03c-custom-category]').value,route:customRoute?.value||''});
     const notify=()=>options.onChange?.(clone(selected),priority.value,indication.value);
+    custom.addEventListener('input',()=>options.onDraftChange?.());
+
     function renderSelected(){
       activeDentalEditor=null;
       selectedBox.replaceChildren();
       if(!selected.length){const p=document.createElement('p');p.textContent='Todavía no has agregado estudios.';selectedBox.append(p);return;}
+      const boxes=new Map();
+      if(embedded){
+        const activeGroups=[...new Set(selected.map(item=>item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup))];
+        activeGroups.forEach(key=>{
+          const card=document.createElement('details');card.className='ordcomp-prepared-order';card.dataset.orderGroup=key;card.open=activeGroups.length<=3||selected.some((item,i)=>i===editingIndex&&(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup)===key);
+          const heading=document.createElement('summary');heading.textContent=(options.routing.groups[key]||'Servicio pendiente')+' ('+selected.filter(item=>(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup)===key).length+')';
+          const box=document.createElement('div');card.append(heading,box);selectedBox.append(card);boxes.set(key,box);
+        });
+      }
       selected.forEach((item,index)=>{
         const row=document.createElement('div');row.className='tax03c-selected-row';
         const copy=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;
@@ -115,10 +149,11 @@
             });
           }
         }
-        selectedBox.append(row);
+        (embedded?boxes.get(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup):selectedBox).append(row);
       });
     }
     function renderResults(){
+      if(embedded){renderEmbedded();return;}
       resultBox.replaceChildren();
       if(!results.length){if(status.dataset.error!=='true')status.textContent=search.value.trim()?'No encontramos un estudio con ese nombre.':category.value?'No hay estudios catalogados todavía en esta categoría.':'No hay estudios catalogados disponibles.';return;}
       results.forEach(item=>{
@@ -131,6 +166,66 @@
         copy.append(name,sub);row.append(copy,mark);resultBox.append(row);
       });
     }
+    const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es');
+    function renderEmbedded(){
+      resultBox.replaceChildren();
+      if(!embeddedRows)return;
+      const scope=embeddedGlobal?null:navigationParts;
+      const scoped=embeddedRows.filter(item=>!scope?.length||scope.some(part=>part.category===item.category_key&&(!part.keys||part.keys.has(item.study_type_key))));
+      const needle=normalize(search.value.trim());
+      results=scoped.filter(item=>!needle||normalize([item.display_name_es,item.study_type_key,...(item.aliases||[])].join(' ')).includes(needle));
+      status.textContent=`${results.length} estudios disponibles${needle?' para esta búsqueda':''}.`;
+      const rowFor=item=>{
+        const added=selected.some(row=>row.type==='canonical'&&Number(row.id)===Number(item.study_type_id));
+        const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);
+        row.setAttribute('aria-pressed',String(added));row.setAttribute('aria-label',`${added?'Agregado':'Agregar'} ${item.display_name_es}`);
+        row.disabled=readonly||added;
+        const name=document.createElement('span'),mark=document.createElement('span');name.textContent=item.display_name_es;mark.textContent=added?'✓ Agregado':'+ Agregar';row.append(name,mark);return row;
+      };
+      if(needle){results.forEach(item=>resultBox.append(rowFor(item)));return;}
+      const config=!embeddedGlobal?options.routing.catalog[options.leafId]:null;
+      const featured=(config?.featured||[]).slice(0,6).map(key=>results.find(item=>item.study_type_key===key)).filter(Boolean);
+      if(featured.length){const heading=document.createElement('h5');heading.textContent='MÁS SOLICITADOS';resultBox.append(heading);const box=document.createElement('div');box.dataset.ordcompFeatured='';featured.forEach(item=>box.append(rowFor(item)));resultBox.append(box);}
+      const full=document.createElement('details');full.className='ordcomp-full-catalog';full.open=fullOpen;
+      const summary=document.createElement('summary');summary.textContent='Ver catálogo completo';full.append(summary);full.addEventListener('toggle',()=>{fullOpen=full.open;});
+      // Discovery uses the accepted hierarchy; operational routing remains independent.
+      const covered=new Set(),discovery=[];
+      const hierarchy=window.mxmedStudyNavigationHierarchyV2;
+      if(!config&&hierarchy){
+        Object.values(hierarchy.nodes).filter(node=>!node.children.length).forEach(node=>{
+          const keys=results.filter(item=>!covered.has(item.study_type_key)&&hierarchy.parts(node.id).some(part=>part.category===item.category_key&&(!part.keys||part.keys.includes(item.study_type_key)))).map(item=>item.study_type_key);
+          if(keys.length){keys.forEach(key=>covered.add(key));discovery.push({label:node.label,keys});}
+        });
+      }
+      Object.entries(categories).forEach(([category,label])=>{
+        const keys=results.filter(item=>item.category_key===category&&!covered.has(item.study_type_key)).map(item=>item.study_type_key);
+        if(keys.length)discovery.push({label,keys});
+      });
+      const groups=config?.groups||discovery;
+      groups.forEach(group=>{
+        const items=results.filter(item=>group.keys.includes(item.study_type_key));if(!items.length)return;
+        const details=document.createElement('details');details.dataset.catalogGroup=group.label;details.open=openGroup===group.label;
+        const title=document.createElement('summary');title.textContent=`${group.label} (${items.length})`;details.append(title);
+        items.forEach(item=>details.append(rowFor(item)));
+        details.addEventListener('toggle',()=>{if(details.open){openGroup=group.label;full.querySelectorAll('[data-catalog-group]').forEach(other=>{if(other!==details)other.open=false;});}else if(openGroup===group.label)openGroup='';});full.append(details);
+      });
+      resultBox.append(full);
+    }
+    async function loadEmbedded(){
+      if(destroyed)return;
+      status.textContent='Cargando catálogo…';
+      if(embeddedRows){renderEmbedded();return;}
+      controller?.abort();controller=new AbortController();const seen=++request;
+      try{
+        const found=[];let offset=0,more=true;
+        while(more){
+          const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/study-types?limit=100&offset=${offset}`,{credentials:'same-origin',signal:controller.signal});
+          const body=await response.json();if(!response.ok||!body.ok)throw new Error('CATALOG_UNAVAILABLE');
+          const rows=body.data.items||[];found.push(...rows);offset+=rows.length;more=body.data.has_more&&rows.length>0;
+        }
+        if(destroyed||seen!==request)return;embeddedRows=found;renderEmbedded();
+      }catch(error){if(error.name!=='AbortError'){status.textContent='No se pudo cargar el catálogo. Vuelve a esta familia para reintentar.';}}
+    }
     function renderCategories(rows){
       const current=category.value;category.replaceChildren(new Option('Todas las categorías',''));
       (rows||[]).filter(row=>Number(row.active_count)>0&&
@@ -141,6 +236,7 @@
       $('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value&&!navigationParts?.length));
     }
     async function load(append=false){
+      if(embedded){return loadEmbedded();}
       if(destroyed||readonly)return;
       if(!doctorId){status.dataset.error='true';status.textContent='No se pudo confirmar el profesional para consultar el catálogo.';return;}
       if(controller)controller.abort();controller=new AbortController();const seen=++request;
@@ -191,6 +287,11 @@
     }
     function openCustom(){custom.hidden=false;customName.value=search.value.trim();$('[data-tax03c-custom-error]').textContent='';
       if(options.initialCategory&&categories[options.initialCategory]&&!$('[data-tax03c-custom-category]').value)$('[data-tax03c-custom-category]').value=options.initialCategory;
+      if(customRoute&&!customRoute.value){
+        const scoped=embeddedGlobal?[]:(embeddedRows||[]).filter(item=>navigationParts?.some(part=>part.category===item.category_key&&(!part.keys||part.keys.has(item.study_type_key))));
+        const groups=[...new Set(scoped.map(item=>options.routing.studies[item.study_type_key]))];
+        if(groups.length===1)customRoute.value=groups[0];
+      }
       customName.focus();}
     function addCustom(){
       const cat=$('[data-tax03c-custom-category]').value,name=customName.value.trim(),note=$('[data-tax03c-custom-note]').value.trim();
@@ -198,21 +299,22 @@
       if(!name){$('[data-tax03c-custom-error]').textContent='Escribe el nombre del estudio.';customName.focus();return;}
       if(selected.some(row=>row.type==='custom'&&row.category===cat&&row.name.toLocaleLowerCase('es')===name.toLocaleLowerCase('es'))){$('[data-tax03c-custom-error]').textContent='Este estudio ya está agregado.';return;}
       if(selected.length>=100){$('[data-tax03c-custom-error]').textContent='Máximo 100 estudios por orden.';return;}
-      selected.push({type:'custom',category:cat,name,note});custom.hidden=true;customName.value='';$('[data-tax03c-custom-note]').value='';$('[data-tax03c-custom-category]').value='';
+      if(customRoute&&!customRoute.value){$('[data-tax03c-custom-error]').textContent='Selecciona el servicio que realizará el estudio.';return;}
+      selected.push({type:'custom',category:cat,name,note,...(embedded?{routingGroup:customRoute.value,routingConfirmed:true}:{})});custom.hidden=true;customName.value='';$('[data-tax03c-custom-note]').value='';$('[data-tax03c-custom-category]').value='';if(customRoute)customRoute.value='';
       renderSelected();notify();
     }
-    host.addEventListener('click',event=>{
+    const onClick=event=>{
       const target=event.target.closest('button');if(!target||readonly)return;
       if(target.dataset.tax03cId){const row=results.find(item=>String(item.study_type_id)===target.dataset.tax03cId);if(!row)return;
         if(selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id)))return;
-        if(selected.length>=100){status.textContent='Máximo 100 estudios por orden.';return;}
+        if(selected.length>=100){status.textContent=embedded?'Máximo 100 estudios por composición.':'Máximo 100 estudios por orden.';return;}
         selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key});
         const kind=window.mxmedDentalLocationV1?.kindFor(row.study_type_key);editingIndex=kind&&kind!=='NONE'?selected.length-1:-1;
         renderSelected();renderResults();notify();}
       if(target.dataset.tax03cDental!==undefined){const index=Number(target.dataset.tax03cDental);editingIndex=editingIndex===index?-1:index;activeDentalEditor=null;renderSelected();selectedBox.querySelector(`[data-tax03c-dental="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cRemove!==undefined){const index=Number(target.dataset.tax03cRemove);selected.splice(index,1);editingIndex=editingIndex===index?-1:editingIndex>index?editingIndex-1:editingIndex;activeDentalEditor=null;renderSelected();renderResults();notify();}
       if(target.hasAttribute('data-tax03c-custom-open'))openCustom();
-      if(target.hasAttribute('data-tax03c-custom-cancel'))custom.hidden=true;
+      if(target.hasAttribute('data-tax03c-custom-cancel')){custom.hidden=true;customName.value='';$('[data-tax03c-custom-note]').value='';$('[data-tax03c-custom-category]').value='';if(customRoute)customRoute.value='';}
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
       if(target.hasAttribute('data-tax03c-more')&&hasMore)load(true);
       if(target.hasAttribute('data-tax03c-all')){
@@ -222,23 +324,27 @@
       }
       if(target.hasAttribute('data-tax03c-lab-all')&&labScope?.length){laboratoryAll=true;laboratoryGlobal=false;navigationParts=labScope;search.value='';category.value='';renderNavigationScope();load();search.focus();}
       if(target.hasAttribute('data-tax03c-lab-back')&&labScope?.length){laboratoryAll=true;laboratoryGlobal=false;navigationParts=labScope;search.value='';category.value='';renderNavigationScope();load();search.focus();}
+      if(embedded&&target.hasAttribute('data-tax03c-global')){embeddedGlobal=true;search.value='';renderNavigationScope();load();return;}
+      if(embedded&&target.hasAttribute('data-tax03c-dental-back')){embeddedGlobal=false;search.value='';renderNavigationScope();load();return;}
       if(target.hasAttribute('data-tax03c-global')&&labScope?.length){laboratoryGlobal=true;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
       if(target.hasAttribute('data-tax03c-global')&&dentalScope?.length){globalCatalog=true;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
       if(target.hasAttribute('data-tax03c-dental-back')&&dentalScope?.length){globalCatalog=false;navigationParts=null;search.value='';category.value='';renderNavigationScope();load();search.focus();}
-    });
+    };
+    host.addEventListener('click',onClick);if(options.selectionHost)selectedBox.addEventListener('click',onClick);
     search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(),250);});
     category.addEventListener('change',()=>{if(!labScope?.length||laboratoryGlobal)navigationParts=null;renderNavigationScope();$('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});
     priority.addEventListener('change',notify);indication.addEventListener('input',notify);
     renderSelected();if(readonly){host.querySelectorAll('input,select,textarea,button').forEach(control=>control.disabled=true);}else load();
     return {
+      customDraft,
       selected:()=>clone(selected),priority:()=>priority.value,indication:()=>indication.value,
-      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})}),
+      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
       valid:()=>selected.length>0&&selected.length<=100&&selected.every(item=>{
         const kind=item.type==='canonical'?window.mxmedDentalLocationV1?.kindFor(item.key):null;
         return !kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation);
       })&&(!activeDentalEditor||activeDentalEditor.valid()),
       validationMessage:()=>selected.length?'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.':'Agrega al menos un estudio antes de solicitar la orden.',
-      destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();},
+      destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();host.removeEventListener('click',onClick);if(options.selectionHost)selectedBox.removeEventListener('click',onClick);},
     };
   }
   window.mxmedStudyComposer={mount,title,documentType,orderArea,categories};
