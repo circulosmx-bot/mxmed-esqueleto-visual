@@ -1,5 +1,7 @@
 # OR05-NAVMAP02 — specialty navigation V1 implemented
 
+**Current medical navigation:** [HIER03 V2](STUDY_NAV_HIER03_PROGRESSIVE_NAVIGATION_V2_IMPLEMENTED.md). OR05 V1 still supplies the dental mode and professional classification. Its four medical cards and specialty shortcuts below describe the prior screen; HIER03 displays five stable medical families and applies specialty ordering inside each family.
+
 The physician **Solicitar estudios → Generar nueva orden** screen now uses `assets/js/clinical/or05-specialty-navigation-v1.js` as its version 1 navigation configuration. The complete [NAVMAP01 matrix](OR05_NAVMAP01_SPECIALTY_NAVIGATION_MATRIX_V1_PROPOSED.md) remains the audited source for its 124 finite specialty labels, 10 professional titles, 183 active canonical studies, profile ordering, and proposed study promotions. NAVMAP01 remains labeled *proposed* as the historical audit; this document records the implemented scope.
 
 Four primary navigation groupers remain visible for every profile: LABORATORIO (laboratory, genetics, pathology), IMAGENOLOGÍA (image studies and the six audited cardiovascular imaging keys), ESTUDIOS FUNCIONALES (cardiovascular, neurophysiology, pulmonary function, sleep, audiology), and PROCEDIMIENTOS DIAGNÓSTICOS (endoscopy studies). They are navigation routes over `clinical_study_types`, not new clinical categories. The same study may appear through multiple routes and retains its one canonical `study_type_id` and `study_type_key` when selected.

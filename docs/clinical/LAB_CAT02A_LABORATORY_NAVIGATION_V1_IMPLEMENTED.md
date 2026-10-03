@@ -1,5 +1,7 @@
 # LAB-CAT02A — navegación de laboratorio V1 y pruebas comunes
 
+**Navegación vigente:** [HIER03 V2](STUDY_NAV_HIER03_PROGRESSIVE_NAVIGATION_V2_IMPLEMENTED.md). Esta documentación describe la configuración y QA histórica de V1. HIER03 reutiliza sus claves corregidas, muestra ocho grupos primarios y cuatro secundarios con Inmunología/Genética anidadas y separa las dos citologías en Patología. El escape actual de Laboratorio cubre 105 identidades (`LABORATORIO` + `GENETICA`); los 107 y la pantalla de 24 grupos indicados abajo corresponden a V1.
+
 **IMPLEMENTED, alcance mínimo.** Base: `019b3ab1d8633707704c5af3817ad77a59118fdf`. La auditoría [LAB-CAT01](LAB_CAT01_LABORATORY_CATALOG_V1_PROPOSED.md) queda **PARTIALLY_IMPLEMENTED**. Esta fase no implementa el resto de sus propuestas.
 
 ## Autoridad y comportamiento

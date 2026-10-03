@@ -1,5 +1,7 @@
 # STUDY-NAV-FIX02A — Correcciones de clasificación implementadas
 
+**Navegación vigente:** [HIER03 V2](STUDY_NAV_HIER03_PROGRESSIVE_NAVIGATION_V2_IMPLEMENTED.md). Este documento conserva la trazabilidad de las 26 correcciones FIX02A; sus capturas y recuentos de pantallas V1 son históricos. En V2, `PATOLOGIA` (2) está separada de Laboratorio (105), con total médico 105 + 44 + 2 + 35 + 13 y tres identidades dentales.
+
 **Estado: IMPLEMENTADO.** Autoridad: [matriz AUDIT02](STUDY_NAV_AUDIT02_FAMILY_SUBFAMILY_REAUDIT.md), 202 filas leídas; 26 correcciones aplicadas (6 familias primarias, 20 subfamilias). Base: `8ec66df6b63ed8f64810570f13abbb8d3b99fc90`.
 
 ## Alcance

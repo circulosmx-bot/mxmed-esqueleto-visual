@@ -50,7 +50,7 @@
     const resolved=window.mxmedReviewClassification?.resolveNavigation(profile)||navigation.resolve(profile);
     return {...resolved,labProfile:window.mxmedLabNavigationV1?.profileFor(profile,resolved,window.mxmedReviewClassification?.current())||'general'};
   }
-  async function openGeneralOrder(trigger,initialNavigation='',dentalMode=null,labMode=false){
+  async function openGeneralOrder(trigger,initialNavigation='',dentalMode=null,labMode=false,hierarchyMode=false){
     if(orderComposerDialog||openingOrderComposer)return;
     const patientId=selectedPatient(),doctorId=professional;
     if(!patientId||!doctorId||!window.mxmedStudyComposer){views.get('orders').notice.textContent='Selecciona un paciente y un profesional antes de solicitar estudios.';return;}
@@ -63,13 +63,24 @@
     const dialog=document.createElement('dialog');dialog.className='tax03c-dialog';dialog.setAttribute('aria-label','Solicitar estudios');
     dialog.innerHTML='<form><header><h4>Solicitar estudios</h4><button type="button" class="btn btn-link" data-tax03c-close>Volver a categorías</button></header><div data-tax03c-host></div><p data-tax03c-error role="alert"></p><footer><button type="button" class="btn btn-outline-secondary" data-tax03c-close>Cancelar</button><button type="submit" class="btn btn-primary" data-tax03c-submit>Solicitar estudios</button></footer></form>';
     document.body.append(dialog);orderComposerDialog=dialog;
+    const orderView=views.get('orders');
+    if(hierarchyMode){
+      dialog.querySelector('h4').textContent=orderView.hierLeafLabel||'Solicitar estudios';
+      dialog.querySelector('[data-tax03c-close]').textContent=`Volver a ${orderView.hierParentLabel||'tipos de estudio'}`;
+      dialog.querySelector('footer [data-tax03c-close]').hidden=true;
+    }
     let attemptKey=crypto.randomUUID(),attemptEvent='';
     const composer=window.mxmedStudyComposer.mount(dialog.querySelector('[data-tax03c-host]'),{
       doctorId,
       ...(typeof initialNavigation==='string'?{initialCategory:initialNavigation}:{navigationGroup:initialNavigation}),
       ...(dentalMode?{dentalScope:navigation.dentalScope(),globalCatalog:!!dentalMode.global}:{}),
-      ...(labMode?{labScope:labNavigation.config.allLaboratory.parts}:{}),
-      onChange:()=>{attemptKey=crypto.randomUUID();attemptEvent='';}
+      ...(labMode?{labScope:hierarchyMode?hierarchy.allLaboratory.parts:labNavigation.config.allLaboratory.parts}:{}),
+      ...(hierarchyMode?{selected:orderView.hierDraft.selected,priority:orderView.hierDraft.priority,
+        indication:orderView.hierDraft.indication}:{}),
+      onChange:(selected,priority,indication)=>{
+        attemptKey=crypto.randomUUID();attemptEvent='';
+        if(hierarchyMode){orderView.hierDraft={selected,priority,indication};orderView.hierContext=patientId;updateHierarchyDraft(orderView);}
+      }
     });
     openingOrderComposer=false;
     let busy=false;
@@ -79,17 +90,29 @@
     const closeRaw=()=>{
       if(!orderComposerDialog)return;
       unregisterGuard();
+      if(hierarchyMode){orderView.hierDraft={selected:composer.selected(),priority:composer.priority(),indication:composer.indication()};
+        updateHierarchyDraft(orderView);orderView.hierCloseComposer=null;}
       composer.destroy();dialog.close();dialog.remove();orderComposerDialog=null;trigger?.focus({preventScroll:true});
     };
+    if(hierarchyMode)orderView.hierCloseComposer=closeRaw;
     const hasDraft=()=>!!(orderComposerDialog===dialog&&dialog.open&&(composer.selected().length||composer.indication().trim()||composer.priority()!=='Rutinaria'||
       dialog.querySelector('[data-tax03c-custom-name]')?.value.trim()||dialog.querySelector('[data-tax03c-custom-note]')?.value.trim()||
       dialog.querySelector('[data-tax03c-custom-category]')?.value));
     const guard=window.mxmedPatientWorkspaceNavigationGuard;
-    unregisterGuard=guard?.register({id:'or05-order-composer',copy:'order',isInProgress:hasDraft,isSaving:()=>busy,
-      whenSettled:()=>new Promise(resolve=>saveWaiters.push(resolve)),discard:closeRaw})||(()=>{});
+    const hasLocalDraft=()=>!!(dialog.querySelector('[data-tax03c-custom-name]')?.value.trim()||
+      dialog.querySelector('[data-tax03c-custom-note]')?.value.trim()||dialog.querySelector('[data-tax03c-custom-category]')?.value);
+    unregisterGuard=guard?.register(hierarchyMode
+      ?{id:'or05-order-composer-local',copy:'order',isInProgress:hasLocalDraft,discard:()=>{}}
+      :{id:'or05-order-composer',copy:'order',isInProgress:hasDraft,isSaving:()=>busy,
+        whenSettled:()=>new Promise(resolve=>saveWaiters.push(resolve)),discard:closeRaw})||(()=>{});
     const close=(saved=false)=>{
       if(busy)return;
-      if(saved){closeRaw();return;}
+      if(saved){closeRaw();if(hierarchyMode)resetHierarchyDraft(orderView);return;}
+      if(hierarchyMode){
+        if(guard&&hasLocalDraft())void guard.request('order-composer-close',closeRaw,dialog.querySelector('[data-tax03c-close]'),['or05-order-composer-local']);
+        else closeRaw();
+        return;
+      }
       if(guard)void guard.request('order-composer-close',closeRaw,dialog.querySelector('[data-tax03c-close]'),['or05-order-composer']);
       else if(!hasDraft()||window.confirm('¿Volver a categorías? Los estudios seleccionados no se guardarán.'))closeRaw();
     };
@@ -100,7 +123,8 @@
       const error=dialog.querySelector('[data-tax03c-error]');error.textContent='';
       if(!composer.valid()){error.textContent=composer.validationMessage();return;}
       if(selectedPatient()!==patientId||professional!==doctorId){error.textContent='El contexto del paciente cambió. Vuelve a abrir la solicitud.';return;}
-      busy=true;const submit=dialog.querySelector('[data-tax03c-submit]');submit.disabled=true;submit.textContent='Guardando…';
+      busy=true;if(hierarchyMode)orderView.hierSaving=true;
+      const submit=dialog.querySelector('[data-tax03c-submit]');submit.disabled=true;submit.textContent='Guardando…';
       const items=composer.selected(),type=window.mxmedStudyComposer.documentType(items),priority=composer.priority(),indication=composer.indication().trim();
       const payload={source:'tax03c_catalog_composer',order_area:window.mxmedStudyComposer.orderArea(items),priority,indication,order_items:composer.orderItems()};
       attemptEvent ||=new Date().toISOString().slice(0,19).replace('T',' ');
@@ -110,10 +134,11 @@
         const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/documents`,{
           method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','Idempotency-Key':attemptKey},body:JSON.stringify(command)});
         const result=await response.json();if(!response.ok||result?.ok!==true)throw new Error(result?.message||'No se pudo guardar la orden.');
-        busy=false;close(true);settleSave();
+        busy=false;if(hierarchyMode)orderView.hierSaving=false;close(true);settleSave();
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:type,source:'tax03c_catalog_composer'}}));
         setOrderFlow(views.get('orders'),'PENDING');
-      }catch(failure){error.textContent=failure?.message||'No se pudo guardar la orden. Intenta de nuevo.';busy=false;settleSave();submit.disabled=false;submit.textContent='Solicitar estudios';}
+      }catch(failure){error.textContent=failure?.message||'No se pudo guardar la orden. Intenta de nuevo.';busy=false;
+        if(hierarchyMode)orderView.hierSaving=false;settleSave();submit.disabled=false;submit.textContent='Solicitar estudios';}
     });
     dialog.showModal();dialog.querySelector('[data-tax03c-search]')?.focus();
   }
@@ -213,6 +238,7 @@
   }
   function setOrderFlow(view,flow) {
     if(!view)return;
+    if(flow==='CATEGORY'&&view.flow!=='CATEGORY')view.hierPath=[];
     view.flow=flow;view.module.dataset.orFlow=flow.toLowerCase();ordersRequest++;
     view.home.hidden=flow!=='HOME';view.categoryScreen.hidden=flow!=='CATEGORY';
     if(view.labScreen)view.labScreen.hidden=true;
@@ -234,6 +260,7 @@
   }
   const navigation=window.mxmedSpecialtyNavigationV1;
   const labNavigation=window.mxmedLabNavigationV1;
+  const hierarchy=window.mxmedStudyNavigationHierarchyV2;
   async function dentalActiveStudyKeys(doctor){
     const keys=new Set();
     for(const part of navigation.dentalScope()){
@@ -297,6 +324,96 @@
     control.append(symbol('chevron_right','vis06-category-chevron'));
     return control;
   }
+  function resetHierarchyDraft(view){
+    if(!view)return;
+    view.hierDraft={selected:[],priority:'Rutinaria',indication:''};view.hierContext='';view.hierSaving=false;
+    updateHierarchyDraft(view);
+  }
+  function updateHierarchyDraft(view){
+    if(!view?.hierDraftStatus)return;
+    const count=view.hierDraft?.selected?.length||0;
+    const inProgress=!!(count||view.hierDraft.indication.trim()||view.hierDraft.priority!=='Rutinaria');
+    view.hierDraftStatus.hidden=!inProgress;
+    view.hierDraftStatus.textContent=count?`${count} estudio${count===1?'':'s'} en esta orden`:inProgress?'Orden en preparación':'';
+    view.hierDraftButton.hidden=!inProgress;
+  }
+  function hierarchyBack(view){
+    if(!view.hierMode){setOrderFlow(view,'HOME');return;}
+    if(view.hierPath.length){view.hierPath.pop();renderHierarchy(view);return;}
+    const leave=()=>{resetHierarchyDraft(view);setOrderFlow(view,'HOME');};
+    const guard=window.mxmedPatientWorkspaceNavigationGuard;
+    if(guard)void guard.request('or05-hierarchy-exit',leave,view.categoryBack,['or05-order-hierarchy']);
+    else leave();
+  }
+  function openHierarchyLeaf(view,id,trigger,parentLabel=''){
+    const entry=hierarchy.nodes[id];
+    view.hierLeafLabel=entry.label;
+    view.hierParentLabel=parentLabel||hierarchy.nodes[view.hierPath.at(-1)]?.label||'tipos de estudio';
+    const laboratory=view.hierPath[0]==='laboratory';
+    void openGeneralOrder(trigger,{label:entry.label,parts:hierarchy.parts(id)},null,laboratory,true);
+  }
+  function renderHierarchy(view){
+    if(!hierarchy||!view.hierActive)return;
+    const path=view.hierPath||[],parent=path.at(-1),active=view.hierActive;
+    const profile=parent==='laboratory'?view.hierResolved?.labProfile:view.hierResolved?.profile;
+    const primary=parent?hierarchy.children(parent,active,profile).filter(id=>!hierarchy.secondary[parent]?.includes(id))
+      :hierarchy.root.filter(id=>hierarchy.count(id,active)>0);
+    const secondary=parent==='laboratory'?hierarchy.secondary.laboratory.filter(id=>hierarchy.count(id,active)>0):[];
+    view.categoryScreen.hidden=false;
+    view.categoryScreen.dataset.hierLevel=parent?'family':'root';
+    view.categoryScreen.dataset.hierParent=parent||'';
+    view.categoryScreen.setAttribute('aria-label',parent?hierarchy.nodes[parent].label:'Tipos de estudio');
+    view.primaryCategories.replaceChildren();view.secondaryCategories.replaceChildren();view.lowerLinks.replaceChildren();
+    view.hierBreadcrumb.replaceChildren();
+    if(path.length){
+      view.hierBreadcrumb.append(node('span','Tipos de estudio'));
+      path.forEach(id=>view.hierBreadcrumb.append(node('span',` / ${hierarchy.nodes[id].label}`)));
+    }
+    view.hierBreadcrumb.hidden=!path.length;
+    view.headTitle.textContent=parent?hierarchy.nodes[parent].label:'Generar nueva orden';
+    view.categoryBack.textContent=parent?path.length>1?`Volver a ${hierarchy.nodes[path.at(-2)].label}`:'Volver a tipos de estudio':'Volver a opciones';
+    for(const id of primary){
+      const entry=hierarchy.nodes[id];
+      let control;
+      const action=()=>{
+        const children=hierarchy.children(id,active,profile);
+        if(children.length===1&&!hierarchy.secondary[id]?.length){
+          openHierarchyLeaf(view,children[0],control,parent?hierarchy.nodes[parent].label:'tipos de estudio');return;
+        }
+        if(children.length){view.hierPath.push(id);renderHierarchy(view);view.categoryBack.focus({preventScroll:true});return;}
+        openHierarchyLeaf(view,id,control);
+      };
+      control=categoryChoice(view,entry.label,parent?'':entry.description,entry.icon,action,true);
+      control.dataset.hierNode=id;control.setAttribute('aria-label',`Abrir ${entry.label}`);
+      view.primaryCategories.append(control);
+    }
+    view.secondarySection.hidden=!secondary.length;
+    for(const id of secondary){
+      const entry=hierarchy.nodes[id];let control;
+      control=categoryChoice(view,entry.label,'',entry.icon,()=>openHierarchyLeaf(view,id,control),false);
+      control.dataset.hierNode=id;view.secondaryCategories.append(control);
+    }
+    const escape=(label,group,labMode=false)=>{
+      let control;control=button(label,()=>{view.hierLeafLabel=label;view.hierParentLabel=parent?hierarchy.nodes[parent].label:'tipos de estudio';
+        void openGeneralOrder(control,group,null,labMode,true);});
+      control.className='vis06-lower-link';view.lowerLinks.append(control);
+    };
+    if(path[0]==='laboratory')escape('Todos los estudios de laboratorio',hierarchy.allLaboratory,true);
+    if(path[0]==='imaging')escape('Todos los estudios de imagenología',hierarchy.allImaging);
+    escape('Buscar en todo el catálogo','');
+    view.categoryStatus.textContent=primary.length?'':'No hay estudios activos en esta familia.';
+    updateHierarchyDraft(view);fitOrdersViewport(view);
+  }
+  async function allActiveStudyRows(doctor){
+    const active=new Map();let offset=0,more=true;
+    while(more){
+      const data=await get(`doctors/${encodeURIComponent(doctor)}/study-types?${new URLSearchParams({limit:'100',offset:String(offset)})}`);
+      const items=Array.isArray(data.items)?data.items:[];
+      items.forEach(item=>active.set(item.study_type_key,item));
+      offset+=items.length;more=!!data.has_more&&items.length>0&&offset<=10000;
+    }
+    return active;
+  }
   async function loadOrderCategories(view) {
     const request=++view.categoryRequest,doctor=professional,patientId=selectedPatient();
     view.categoryStatus.textContent='Cargando categorías de estudios…';view.primaryCategories.replaceChildren();view.secondaryCategories.replaceChildren();view.lowerLinks.replaceChildren();
@@ -312,6 +429,8 @@
       const counts=Object.fromEntries((data.categories||[]).map(row=>[row.category_key,Number(row.active_count)||0]));
       const groups=navigation.config.groups;
       if(resolved.family==='DENTAL'){
+        view.hierMode=false;view.hierBreadcrumb.hidden=true;view.categoryScreen.dataset.hierLevel='dental';
+        view.headTitle.textContent='Generar nueva orden';view.categoryBack.textContent='Volver a opciones';
         const activeKeys=await dentalActiveStudyKeys(doctor);
         if(request!==view.categoryRequest||view.flow!=='CATEGORY'||doctor!==professional||patientId!==selectedPatient())return;
         const shown=new Set();
@@ -327,25 +446,15 @@
         const all=button('Buscar en todo el catálogo',()=>openGeneralOrder(all,'',{global:true}));
         all.className='vis06-lower-link';view.lowerLinks.append(all);
       }else{
+        if(!hierarchy)throw new Error('STUDY_HIERARCHY_UNAVAILABLE');
+        const active=await allActiveStudyRows(doctor);
+        if(request!==view.categoryRequest||view.flow!=='CATEGORY'||doctor!==professional||patientId!==selectedPatient())return;
+        view.hierMode=true;view.hierActive=active;view.hierResolved=resolved;
         view.module.dataset.orFamily=resolved.family.toLowerCase();
         view.primaryCategories.style.removeProperty('--dental-primary-count');
-        groups.primary.filter(group=>navigation.active(group,counts)).forEach(group=>{
-          const control=categoryChoice(view,group.label,group.description,group.icon,()=>
-            group.id==='lab'?openLabNavigation(view,control):openGeneralOrder(control,group),true);
-          view.primaryCategories.append(control);
-        });
-        const shown=new Set();
-        resolved.quick.forEach(key=>{
-          const group=groups.quick[key];if(!group||shown.has(group.id)||!navigation.active(group,counts))return;
-          shown.add(group.id);
-          const control=categoryChoice(view,group.label,'',group.icon,()=>openGeneralOrder(control,group));
-          view.secondaryCategories.append(control);
-        });
-        view.secondarySection.hidden=!view.secondaryCategories.children.length;
-        groups.lower.filter(group=>navigation.active(group,counts)&&!shown.has(group.id)).forEach(group=>{
-          const control=button(group.label,()=>openGeneralOrder(control,group));control.className='vis06-lower-link';view.lowerLinks.append(control);
-        });
-        const all=button('Todos los estudios',()=>openGeneralOrder(all));all.className='vis06-lower-link';view.lowerLinks.append(all);
+        view.hierPath=view.hierPath.filter(id=>hierarchy.nodes[id]&&hierarchy.count(id,active)>0);
+        renderHierarchy(view);
+        view.categoryContext=context;return;
       }
       view.categoryStatus.textContent=view.primaryCategories.children.length?'':resolved.family==='DENTAL'
         ?'No hay estudios dentales activos en el catálogo.':'No hay estudios activos en el catálogo.';
@@ -661,7 +770,7 @@
   }
   async function load() {
     const id=selectedPatient(),seen=++generation;
-    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders')setOrderFlow(v,'HOME');else v.filter.value='';});
+    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders'){v.hierCloseComposer?.();resetHierarchyDraft(v);setOrderFlow(v,'HOME');}else v.filter.value='';});
     patient=id;professional='';rows=[];ordersRequest++;ordersItems=[];ordersCursor=null;ordersHasMore=false;ordersPageLoading=false;
     views.forEach(v=>{v.list.replaceChildren();if(v.kind==='orders'){v.selectedListId='';v.selectedRowId='';v.workspace.classList.remove('is-detail-open');emptyDetail(v,false);}else v.detail.hidden=true;v.notice.textContent=id?'Consultando registros…':'Selecciona un paciente.';});
     if(!id)return;
@@ -671,8 +780,7 @@
       if(!doctor)throw new Error('No se pudo confirmar el contexto del profesional.');
       professional=doctor;
       const ordersView=views.get('orders');
-      if(ordersView?.flow==='CATEGORY'&&!ordersView.labScreen.hidden)loadLabNavigation(ordersView);
-      else if(ordersView?.flow==='CATEGORY'&&ordersView.categoryContext!==`${doctor}:${id}`&&ordersView.categoryLoadingFor!==`${doctor}:${id}`)loadOrderCategories(ordersView);
+      if(ordersView?.flow==='CATEGORY'&&ordersView.categoryContext!==`${doctor}:${id}`&&ordersView.categoryLoadingFor!==`${doctor}:${id}`)loadOrderCategories(ordersView);
       if(['PENDING','HISTORY'].includes(views.get('orders')?.flow))loadOrders();
       const data=await get(`doctors/${encodeURIComponent(doctor)}/patients/${encodeURIComponent(id)}/documents?limit=200`);
       if(seen!==generation||selectedPatient()!==id)return;
@@ -713,10 +821,11 @@
     host.prepend(module);host.classList.add('vis06-ready');
     const view={kind,settings,host,module,headTitle:copy.querySelector('h3'),headCopy:copy.querySelector('p'),create,back,search,filter,notice,list,detail,workspace,lastTrigger:null,selectedListId:'',selectedRowId:'',detailRequest:0};views.set(kind,view);
     if(kind==='orders'){
-      view.categoryRequest=0;
+      view.categoryRequest=0;view.hierPath=[];view.hierMode=false;view.hierDraft={selected:[],priority:'Rutinaria',indication:''};
+      view.hierContext='';view.hierSaving=false;view.hierCloseComposer=null;
       view.flowBack=button('Volver a opciones',()=>setOrderFlow(view,'HOME'));
       view.flowBack.classList.add('vis06-flow-back');
-      view.categoryBack=button('Volver a opciones',()=>setOrderFlow(view,'HOME'));
+      view.categoryBack=button('Volver a opciones',()=>hierarchyBack(view));
       view.categoryBack.classList.add('vis06-flow-back');
       module.prepend(view.flowBack);head.prepend(view.categoryBack);
       view.home=node('div','','vis06-flow-home');view.home.setAttribute('aria-label','Opciones de órdenes y resultados');
@@ -731,11 +840,21 @@
         view.home.append(card);
       });
       view.categoryScreen=node('div','','vis06-category-screen');
+      view.hierBreadcrumb=node('nav','','vis06-hier-breadcrumb');view.hierBreadcrumb.setAttribute('aria-label','Ruta de estudios');view.hierBreadcrumb.hidden=true;
+      view.categoryScreen.append(view.hierBreadcrumb);
       view.primaryCategories=node('div','','vis06-primary-categories');view.categoryScreen.append(view.primaryCategories);
       view.secondarySection=node('section','','vis06-secondary-section');
       view.secondaryCategories=node('div','','vis06-secondary-categories');view.secondarySection.append(view.secondaryCategories);view.categoryScreen.append(view.secondarySection);
       view.lowerLinks=node('div','','vis06-lower-links');view.categoryScreen.append(view.lowerLinks);
+      view.hierDraftBar=node('div','','vis06-hier-draft');view.hierDraftStatus=node('p','','vis06-hier-draft-status');
+      view.hierDraftButton=button('Revisar orden',()=>{view.hierLeafLabel='Estudios solicitados';view.hierParentLabel='tipos de estudio';
+        void openGeneralOrder(view.hierDraftButton,'',null,false,true);});
+      view.hierDraftBar.append(view.hierDraftStatus,view.hierDraftButton);view.categoryScreen.append(view.hierDraftBar);
+      updateHierarchyDraft(view);
       view.categoryStatus=node('p','','vis06-category-status');view.categoryStatus.setAttribute('role','status');view.categoryScreen.append(view.categoryStatus);
+      window.mxmedPatientWorkspaceNavigationGuard?.register({id:'or05-order-hierarchy',copy:'order',
+        isInProgress:()=>view.hierContext===selectedPatient()&&!!(view.hierDraft.selected.length||view.hierDraft.indication.trim()||view.hierDraft.priority!=='Rutinaria'),
+        isSaving:()=>view.hierSaving,discard:()=>{view.hierCloseComposer?.();resetHierarchyDraft(view);}});
       view.labRequest=0;
       view.labScreen=node('section','','lab-cat02a-screen');view.labScreen.hidden=true;view.labScreen.setAttribute('aria-label','Familias de laboratorio');
       view.labBack=button('← Volver a familias de estudios',()=>{view.labScreen.hidden=true;view.categoryScreen.hidden=false;view.lastLabTrigger?.focus({preventScroll:true});});
@@ -754,8 +873,7 @@
       filter.addEventListener('click',event=>{const control=event.target.closest('button[data-filter]');if(!control)return;clearTimeout(searchTimer);setOrdersFilter(view,control.dataset.filter);});
       setOrderFlow(view,'HOME');
       window.addEventListener('mxmed:review-classification-changed',()=>{
-        if(view.flow==='CATEGORY'&&!view.labScreen.hidden)loadLabNavigation(view);
-        else if(view.flow==='CATEGORY')loadOrderCategories(view);
+        if(view.flow==='CATEGORY')loadOrderCategories(view);
       });
     }else{
       search.addEventListener('input',()=>render(view));filter.addEventListener('change',()=>render(view));
