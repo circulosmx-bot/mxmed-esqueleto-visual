@@ -155,8 +155,37 @@
     const expedienteRoot = document.getElementById('p-expediente');
     let creatingPatientPromise = null;
     let pendingCreatedPatientId = '';
+    let newPatientSaving = false;
+    window.mxmedNewPatientSaveBusy = ()=>!!creatingPatientPromise||newPatientSaving;
     let explicitSaveCompleted = false;
     const savePatientBtn = document.getElementById('dg-save-patient');
+    const patientForm = expedienteRoot?.querySelector('[data-exp-datos-form]');
+    let patientFormBaseline = '', patientFormPatientId = '', patientFormTouched = false, patientFormSaving = false;
+    const patientFormControls = ()=>[...(patientForm?.querySelectorAll('input:not([type="hidden"]):not([type="button"]),select,textarea')||[])];
+    const patientFormSnapshot = ()=>JSON.stringify(patientFormControls().map(control=>
+      control.type==='checkbox'||control.type==='radio'?control.checked:control.type==='file'?Array.from(control.files||[]).map(file=>[file.name,file.size,file.lastModified]):control.value));
+    const capturePatientFormBaseline = patientId=>{
+      if(!patientId||patientFormTouched)return;
+      patientFormPatientId=patientId;patientFormBaseline=patientFormSnapshot();
+    };
+    patientForm?.addEventListener('input', event=>{if(event.isTrusted)patientFormTouched=true;});
+    patientForm?.addEventListener('change', event=>{if(event.isTrusted)patientFormTouched=true;});
+    window.addEventListener('patient:selected',()=>{patientFormBaseline='';patientFormPatientId='';patientFormTouched=false;});
+    window.mxmedPatientWorkspaceNavigationGuard?.register({
+      id:'patient-datos-generales',
+      isDirty:()=>!!(getActivePatientId()&&!isInNewEntryMode()&&patientFormBaseline&&patientFormPatientId===getActivePatientId()&&patientFormSnapshot()!==patientFormBaseline),
+      isSaving:()=>patientFormSaving,
+      discard:()=>{
+        if(!patientFormBaseline)return;
+        const values=JSON.parse(patientFormBaseline);
+        patientFormControls().forEach((control,index)=>{
+          if(control.type==='checkbox'||control.type==='radio')control.checked=values[index];
+          else if(control.type==='file')control.value='';
+          else control.value=values[index];
+        });
+        patientFormTouched=false;
+      }
+    });
     const savePatientFeedback = document.getElementById('dg-save-feedback');
     const normalizeFieldLabel = (value)=> String(value || '')
       .normalize('NFD')
@@ -692,6 +721,7 @@
       setPrimaryFieldValue(fields.alternateEmail, alternateEmail?.value || '', { dispatchEvents: false });
       setPatientMobilePhoneFeedback('');
       lastHydratedEditableMobilePhoneSnapshot = serializeEditableMobilePhoneSnapshot(rawValue);
+      capturePatientFormBaseline(getActivePatientId());
       return true;
     };
 
@@ -909,6 +939,7 @@
       const patientId = String(patient.patient_id || '').trim();
       if(patientId && String(getActivePatientId() || '').trim() === patientId && !isInNewEntryMode()){
         hydrateEditableContactsForActivePatient(patientId).catch(()=> null);
+        capturePatientFormBaseline(patientId);
       }
       return hydratedProfile || hydratedAddress;
     };
@@ -1308,18 +1339,21 @@
         return null;
       }
       if(savePatientBtn) savePatientBtn.disabled = true;
+      patientFormSaving=true;
       setSaveFeedback('Guardando datos generales...', 'muted');
       try{
         if(lastEditableContactsHydratedPatientId !== patientId){
           throw new Error('Los contactos aún no están listos; vuelve a abrir el expediente antes de guardar.');
         }
         const saved = await saveCompletePatientDetails(patientId);
+        patientFormTouched=false;capturePatientFormBaseline(patientId);
         setSaveFeedback('Datos generales guardados correctamente.', 'success');
         return saved;
       }catch(err){
         setSaveFeedback(String(err?.message || 'No se pudieron guardar los datos generales.'), 'error');
         return null;
       }finally{
+        patientFormSaving=false;
         if(savePatientBtn) savePatientBtn.disabled = false;
       }
     };
@@ -1434,6 +1468,7 @@
       }
       if(pendingCreatedPatientId){
         const pendingId = pendingCreatedPatientId;
+        newPatientSaving = true;
         if(savePatientBtn) savePatientBtn.disabled = true;
         saveCompletePatientDetails(pendingId).then(()=>{
           pendingCreatedPatientId = '';
@@ -1443,7 +1478,7 @@
           setSaveFeedback('Paciente y datos generales guardados correctamente.', 'success');
         }).catch((err)=>{
           setSaveFeedback(`No se pudieron completar los datos generales: ${String(err?.message || 'error de guardado')}`, 'error');
-        }).finally(()=>{ if(savePatientBtn) savePatientBtn.disabled = false; });
+        }).finally(()=>{ newPatientSaving=false;if(savePatientBtn) savePatientBtn.disabled = false; });
         return;
       }
       createPatientFromExplicitSave();

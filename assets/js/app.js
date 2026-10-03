@@ -38556,7 +38556,42 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   els.docPrint?.addEventListener('click', () => printText(els.docText?.value || ''));
 
   // Rx modal
-  document.getElementById('modalReceta')?.addEventListener('show.bs.modal', renderRxModal);
+  const rxGuardModal = document.getElementById('modalReceta');
+  let rxGuardBaseline = '', rxGuardStored = null, rxGuardPatient = '', rxGuardBypass = false, rxWriteBusy = false;
+  const rxGuardSnapshot = ()=>JSON.stringify({items:collectRxModal(),diagnosis:collectRxDiagnosticContext()});
+  const rxGuardKey = patientId=>storage.rxKeyForPatient(patientId);
+  const rxGuardReadStored = patientId=>{try{return localStorage.getItem(rxGuardKey(patientId));}catch(_){return null;}};
+  const rxGuardDirty = ()=>!!(rxGuardModal?.classList.contains('show') && rxGuardBaseline && rxGuardSnapshot() !== rxGuardBaseline);
+  rxGuardModal?.addEventListener('show.bs.modal', renderRxModal);
+  rxGuardModal?.addEventListener('show.bs.modal',()=>{
+    rxGuardPatient=resolveRecetaRuntimeContext().patient_id;
+    rxGuardStored=rxGuardReadStored(rxGuardPatient);
+    rxGuardBaseline=rxGuardSnapshot();
+  });
+  rxGuardModal?.addEventListener('hide.bs.modal',event=>{
+    if(rxGuardBypass||rxWriteBusy||!rxGuardDirty()){
+      if(rxWriteBusy)event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    void window.mxmedPatientWorkspaceNavigationGuard?.request('prescription-modal-close',()=>{
+      rxGuardBypass=true;
+      try{bootstrap.Modal.getOrCreateInstance(rxGuardModal).hide();}finally{rxGuardBypass=false;}
+    },rxGuardModal,['prescription-modal']);
+  });
+  window.mxmedPatientWorkspaceNavigationGuard?.register({
+    id:'prescription-modal',copy:'prescription',isDirty:rxGuardDirty,
+    isSaving:()=>!!rxGuardModal?.classList.contains('show')&&rxWriteBusy,
+    discard:()=>{
+      if(rxGuardPatient){
+        try{
+          if(rxGuardStored===null)localStorage.removeItem(rxGuardKey(rxGuardPatient));
+          else localStorage.setItem(rxGuardKey(rxGuardPatient),rxGuardStored);
+        }catch(_){}
+      }
+      renderRxModal();rxGuardBaseline=rxGuardSnapshot();
+    }
+  });
   els.rxAdd?.addEventListener('click', () => {
     if (!els.rxGrid) return;
     const idx = els.rxGrid.querySelectorAll('.ne-rx-row').length;
@@ -38889,6 +38924,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (encounterKey) context.encounter_key = encounterKey;
     if (appointmentId) context.appointment_id = appointmentId;
     setRxFeedback('Guardando receta clínica…');
+    rxWriteBusy=true;
     if (els.rxSave) {
       els.rxSave.disabled = true;
       els.rxSave.textContent = 'Guardando...';
@@ -38903,6 +38939,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actor
       });
       const savedToken = resolveSavedPrescriptionToken(document);
+      rxGuardStored=rxGuardReadStored(patientKey);rxGuardBaseline=rxGuardSnapshot();
       setRxFeedback('Receta guardada correctamente.', 'success');
       setRxOpenDocumentAction(savedToken);
       validItems.forEach((item) => registerMedicationUsageForDoctor(item));
@@ -38931,6 +38968,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       setRxFeedback(`No se pudo guardar la receta clínica (${err?.message || 'error'}).`, 'error');
       setRxOpenDocumentAction('');
     } finally {
+      rxWriteBusy=false;
       if (els.rxSave) {
         els.rxSave.disabled = false;
         els.rxSave.textContent = 'Emitir receta';
@@ -54853,6 +54891,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const next = String(pid || '').trim();
     if(!next) return false;
     const current = String(getActivePatientId() || '').trim();
+    if(current && next !== current && window.mxmedPatientWorkspaceNavigationGuard &&
+      !(await window.mxmedPatientWorkspaceNavigationGuard.request('change-patient'))) return false;
     if(current && next !== current && opts.skipM7DirtyGuard !== true && typeof window.mxmedM7MayLeaveCurrentPatientContext === 'function'){
       const allowed = await window.mxmedM7MayLeaveCurrentPatientContext({ patientId:current, targetPatientId:next, reason:'change_patient' });
       if(!allowed) return false;
@@ -56139,10 +56179,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
       window.addEventListener(evtName, handlePatientGateChange);
     });
-    const onHashChange = ()=>{
+    const onHashChange = async (event)=>{
       const pid = String(getHashPatientId() || '').trim();
       if(!pid) return;
-      setActivePatientId(pid, { source:'hashchange', emitEvent:false, skipActiveEncounterConfirm:true });
+      const requestedHash = window.location.hash;
+      const changed = await setActivePatientId(pid, { source:'hashchange', emitEvent:false, skipActiveEncounterConfirm:true });
+      if(changed === false && requestedHash === window.location.hash && event.oldURL){
+        window.history.replaceState(window.history.state,'',event.oldURL);
+      }
       syncState({ allowNavigate:true });
     };
     window.addEventListener('hashchange', onHashChange);
@@ -56313,9 +56357,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     return clearNewPatientEntryState(source);
   };
   window.mxmedHasUnsavedNewPatientDraft = hasNewPatientDraftProgress;
+  window.mxmedHasNewPatientDraftProgress = hasNewPatientDraftProgress;
   window.mxmedClearNewPatientEntryDirty = (detail = {})=>{
     const reason = String(detail?.reason || 'clear_new_patient_entry_dirty').trim();
     return clearNewPatientEntryState(reason);
+  };
+  window.mxmedDiscardNewPatientEntry = ()=>{
+    if(!isNewPatientEntryModeActive()) return;
+    pane.querySelectorAll('#t-datos input:not([type="hidden"]):not([type="button"]), #t-datos textarea, #t-datos select').forEach(control=>{
+      if(control.type==='checkbox'||control.type==='radio')control.checked=false;
+      else if(control.tagName==='SELECT')control.selectedIndex=0;
+      else control.value='';
+    });
+    clearNewPatientEntryState('vis24_discard');
   };
   const startNewPatientEntry = (source = 'patient_empty_state')=>{
     clearClinicalCompletionHub('start_new_patient');
@@ -56563,6 +56617,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      quickRxEls.createForm.reset();
 	    }
 	  };
+	  let quickRxCreating=false,quickRxPersisted=false;
+	  const quickRxFormDirty=()=>!!(quickRxEls?.createForm&&!quickRxEls.createForm.classList.contains('d-none')&&!quickRxPersisted&&
+	    [...quickRxEls.createForm.querySelectorAll('input,select,textarea')].some(control=>
+	      control.type==='checkbox'||control.type==='radio'?control.checked:!!String(control.value||'').trim()));
+	  window.mxmedPatientWorkspaceNavigationGuard?.register({id:'quick-rx-patient-form',isDirty:quickRxFormDirty,
+	    isSaving:()=>quickRxCreating,discard:()=>{setQuickRxCreateFormVisible(false,{reset:true});quickRxPersisted=false;setQuickRxFeedback('');renderQuickRxPanel();}});
 	  const getQuickRxCreateField = (name)=>{
 	    if(!quickRxEls?.createForm) return null;
 	    return quickRxEls.createForm.querySelector(`[data-quick-rx-create-field="${name}"]`);
@@ -56709,6 +56769,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      return false;
 	    }
 	    if(quickRxEls.createSubmit) quickRxEls.createSubmit.disabled = true;
+	    quickRxCreating=true;
 	    setQuickRxFeedback('Creando paciente...', 'info');
 	    try{
 	      const response = await fetch('/api/patients/index.php/patients', {
@@ -56721,6 +56782,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      if(!response.ok || json?.ok !== true || !patientId){
 	        throw new Error(sanitizeText(json?.message || json?.error) || 'No fue posible crear el paciente.');
 	      }
+	      quickRxPersisted=true;
 	      const snapshot = { ...parsed.snapshot, patient_id: patientId };
 	      if(typeof window.mxmedRememberPatientLabel === 'function'){
 	        try{ window.mxmedRememberPatientLabel(patientId, parsed.payload.display_name); }catch(_){}
@@ -56768,6 +56830,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      setQuickRxFeedback(String(err?.message || 'No fue posible crear el paciente.'), 'error');
 	      return false;
 	    }finally{
+	      quickRxCreating=false;
 	      if(quickRxEls.createSubmit) quickRxEls.createSubmit.disabled = false;
 	    }
 	  };
@@ -56863,6 +56926,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	  const openQuickRxPatientCreate = ()=>{
 	    if(!quickRxPanel) return false;
 	    clearQuickRxPatientSearchIntent();
+	    quickRxPersisted=false;
 	    setQuickRxCreateFormVisible(true);
 	    setQuickRxFeedback('Captura nombre(s) y primer apellido para crear la ficha mínima.', 'info');
 	    window.setTimeout(()=> getQuickRxCreateField('first_name')?.focus?.(), 0);
@@ -56874,9 +56938,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	  });
 	  quickRxEls?.createCancel?.addEventListener('click', (event)=>{
 	    event.preventDefault();
-	    setQuickRxCreateFormVisible(false, { reset: true });
-	    setQuickRxFeedback('');
-	    renderQuickRxPanel();
+	    if(window.mxmedPatientWorkspaceNavigationGuard)void window.mxmedPatientWorkspaceNavigationGuard.request('quick-rx-form-close',()=>{
+	      setQuickRxCreateFormVisible(false,{reset:true});setQuickRxFeedback('');renderQuickRxPanel();
+	    },quickRxEls.createCancel,['quick-rx-patient-form']);
+	    else{setQuickRxCreateFormVisible(false,{reset:true});setQuickRxFeedback('');renderQuickRxPanel();}
 	  });
 	  quickRxPanel?.addEventListener('click', (event)=>{
 	    const actionBtn = event.target.closest('[data-quick-rx-action]');

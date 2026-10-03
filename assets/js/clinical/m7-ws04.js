@@ -402,6 +402,9 @@
     return {
       select(selected) { show(panel, selected); if (!selected && session) endCapture(true, true); if (selected && context) refresh(); },
       isDirty() { return !!($('[data-m7-doc-title]').value.trim() || $('[data-m7-doc-file]').files?.length || $('[data-m7-replace-reason]').value.trim() || $('[data-m7-replace-file]').files?.length); },
+      async discardLocal() { if(session)await endCapture(true,true);if(session)return false;uploadForm.reset(); replaceForm.reset(); resetAttempt('upload'); resetAttempt('replace'); closeUpload(true); selectedReplacement=null; show(replaceForm,false);return true; },
+      hasCaptureSession() { return !!session; },
+      isSaving() { return busy||captureBusy; },
       isBusy() { return busy || captureBusy || !!window.mxmedLinkedResultComposer?.isOpen(); },
       async leaveView() {
         if (busy) return false;

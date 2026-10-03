@@ -49,7 +49,6 @@
   let sectionVersion = null;
   let transitionBusy = false;
   let primaryTabBypass = false;
-  let authorizedPatientChange = '';
   let appointmentHeaderEpoch = 0;
   let editorStateTimer = 0;
   let activeSectionDraftKey = '';
@@ -252,70 +251,18 @@
       sectionButtons.forEach(button=>{ if(sectionTypes[button.dataset.m7Section]) button.disabled = false; });
     }
   }
-  function patientDisplayName(){
-    return String(patientPane.querySelector('.vis02-patient-name, [data-clinical-field="patient_name"]')?.textContent || 'este paciente').trim();
-  }
-  function ensureLeaveDialog(){
-    let modal = document.getElementById('m7-open-consultation-leave-modal');
-    if(modal) return modal;
-    modal = document.createElement('div');
-    modal.id = 'm7-open-consultation-leave-modal';
-    modal.className = 'modal fade';
-    modal.tabIndex = -1;
-    modal.setAttribute('aria-labelledby','m7-open-consultation-leave-title');
-    modal.setAttribute('aria-describedby','m7-open-consultation-leave-copy');
-    modal.setAttribute('aria-hidden','true');
-    modal.innerHTML = `<div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-      <div class="modal-header"><h2 class="modal-title fs-5" id="m7-open-consultation-leave-title">Consulta en curso</h2></div>
-      <div class="modal-body"><p id="m7-open-consultation-leave-copy"></p><p class="mb-0">¿Qué deseas hacer?</p></div>
-      <div class="modal-footer m7-leave-intent-actions">
-        <button type="button" class="btn btn-outline-secondary" data-m7-leave-choice="continue">Continuar aquí</button>
-        <button type="button" class="btn btn-outline-primary" data-m7-leave-choice="finalize">Ir a finalizar consulta</button>
-        <button type="button" class="btn btn-primary" data-m7-leave-choice="keep-open">Salir y mantener consulta en curso</button>
-      </div></div></div>`;
-    document.body.append(modal);
-    return modal;
-  }
-  function chooseExternalLeaveIntent(){
-    const modal = ensureLeaveDialog();
-    modal.querySelector('#m7-open-consultation-leave-copy').textContent = `La consulta de ${patientDisplayName()} permanecerá abierta.`;
-    return new Promise(resolve=>{
-      const instance = window.bootstrap?.Modal.getOrCreateInstance(modal,{backdrop:'static',keyboard:false});
-      let settled = false;
-      const finish = choice=>{
-        if(settled) return;
-        settled = true;
-        modal.removeEventListener('click', onClick);
-        instance?.hide();
-        resolve(choice);
-      };
-      const onClick = event=>{
-        const button = event.target.closest('[data-m7-leave-choice]');
-        if(button) finish(button.dataset.m7LeaveChoice);
-      };
-      modal.addEventListener('click', onClick);
-      instance?.show();
-    });
-  }
   async function mayLeaveCurrentPatientContext(options = {}){
-    if(window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return false;
+    const workspaceGuard=window.mxmedPatientWorkspaceNavigationGuard;
+    if(workspaceGuard?.active().length&&!workspaceGuard.isBypassing()){
+      if(!(await workspaceGuard.request(options.destination||options.reason||'leave-patient-context')))return false;
+    }else if(window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return false;
     const currentPatientId = selectedPatient();
-    if(options.reason === 'change_patient' && authorizedPatientChange === currentPatientId){ authorizedPatientChange = ''; return true; }
     if(!active || String(active.status || '').toLowerCase() !== 'open') return true;
     if(String(active.patient_id || currentPatientId).trim() !== currentPatientId) return true;
     const activeKey = String(active.encounter_key || '').trim();
     if(!activeKey || String(body.dataset.encounterKey || '').trim() !== activeKey) return true;
-    if((selectedSection === 'documents' || selectedSection === 'finalize') && isDirty() && !protectNavigation()) return false;
-    const choice = await chooseExternalLeaveIntent();
-    if(choice === 'continue') return false;
-    if(choice === 'finalize'){
-      if(eligibleCaptureIsDirty() && !(await saveEligibleCapture())) return false;
-      await openFinalizationStep();
-      return false;
-    }
-    if(choice !== 'keep-open') return false;
     if(eligibleCaptureIsDirty() && !(await saveEligibleCapture())) return false;
-    if(options.reason === 'change_patient_landing') authorizedPatientChange = currentPatientId;
+    if((selectedSection === 'documents' || selectedSection === 'finalize') && isDirty() && !protectNavigation()) return false;
     return true;
   }
   function sectionRow(type){ return loadedSections[type] || null; }
@@ -684,7 +631,7 @@
     editorText.focus();
   });
   window.addEventListener('beforeunload', event=>{
-    if(!isDirty()) return;
+    if(!workspaceTab?.classList.contains('active') || !isDirty()) return;
     if(selectedSection === 'documents') { /* The browser owns the selected File until the page closes. */ }
     else if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
     else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
@@ -752,6 +699,17 @@
   // VIS19: save eligible capture before transitions and use one deliberate OPEN-leave decision.
   window.mxmedM7MayLeaveCurrentPatientContext = mayLeaveCurrentPatientContext;
   window.mxmedM7RequestLeaveCurrentPatientContext = mayLeaveCurrentPatientContext;
+  window.mxmedPatientWorkspaceNavigationGuard?.register({
+    id:'m7-consultation-local',
+    isDirty:()=>!!workspaceTab?.classList.contains('active')&&isDirty(),
+    isInProgress:()=>!!workspaceTab?.classList.contains('active')&&selectedSection==='documents'&&!!ws04?.hasCaptureSession?.(),
+    isSaving:()=>!!workspaceTab?.classList.contains('active')&&(transitionBusy||sectionBusy||!!ws03?.isBusy()||!!ws04?.isSaving?.()||!!ws05?.isBusy()),
+    saveBeforeLeave:async()=>eligibleCaptureIsDirty()?saveEligibleCapture():true,
+    discard:async()=>{
+      if(selectedSection==='documents'&&(await ws04?.discardLocal?.())===false)return false;
+      if(selectedSection==='finalize')ws05?.discardLocal?.();
+    }
+  });
   workspaceTab?.addEventListener('shown.bs.tab', ()=>{
     const intent = pendingEntryIntent;
     pendingEntryIntent = '';
@@ -789,7 +747,7 @@
     if(!nextStepsLeaveBypass && (window.mxmedPlanNextSteps?.hasPending() || window.mxmedPlanNextSteps?.isBusy())){
       event.preventDefault();
       const destination = event.relatedTarget;
-      void window.mxmedPlanNextSteps.mayLeave().then(allowed=>{
+      void Promise.resolve(window.mxmedPlanNextSteps.mayLeaveView()).then(allowed=>{
         if(!allowed || !destination) return;
         nextStepsLeaveBypass = true;
         window.bootstrap?.Tab.getOrCreateInstance(destination).show();

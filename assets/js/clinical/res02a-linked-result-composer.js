@@ -22,14 +22,24 @@
   };
   let dialog, form, context, coverage, orderPicker, title, provenance, file, feedback, saveButton;
   let active = null, order = null, availableItems = [], loading = 0, busy = false, attempt = null, titleSuggested = '';
+  const saveWaiters = [];
+  const settleSave = () => { saveWaiters.splice(0).forEach(resolve => resolve()); };
   function node(selector) { return dialog.querySelector(selector); }
   function message(value) { feedback.textContent = value; }
   function resetAttempt() { attempt = null; }
+  function hasDraft() {
+    return !!(active && (file.files?.length || provenance.value.trim() || title.value.trim() !== titleSuggested ||
+      coverage.dataset.touched === 'true' || orderPicker.querySelector('select')?.value));
+  }
   function close(force = false, discard = false) {
     if (!dialog || !active) return;
     if (busy && !force) return;
-    if (!force && !discard && (file.files?.length || provenance.value.trim() || title.value.trim() !== titleSuggested || coverage.dataset.touched === 'true')
-      && !window.confirm('¿Descartar los cambios de este modal? El resultado no se ha guardado.')) return;
+    if (!force && hasDraft() && !discard) {
+      const guard = window.mxmedPatientWorkspaceNavigationGuard;
+      if (guard) void guard.request('result-composer-close', () => close(true), active.trigger || dialog, ['res02a-result-composer']);
+      else if (window.confirm('¿Descartar los cambios de este resultado?')) close(true);
+      return;
+    }
     const trigger = active?.trigger;
     active = null; order = null; availableItems = []; loading++; resetAttempt(); form.reset(); context.replaceChildren(); coverage.replaceChildren(); message('');
     if (dialog.open) dialog.close();
@@ -40,10 +50,14 @@
     dialog = document.createElement('dialog'); dialog.id = 'res02a-linked-result'; dialog.className = 'res02a-dialog'; dialog.setAttribute('aria-labelledby', 'res02a-title');
     dialog.innerHTML = `<form><header><h4 id="res02a-title">Registrar resultado</h4><button type="button" data-close aria-label="Cerrar">×</button></header><div class="res02a-body"><div data-order-picker></div><div data-context aria-live="polite"></div><fieldset data-coverage><legend>ESTE RESULTADO CORRESPONDE A</legend></fieldset><label>Título<input data-title required maxlength="160"></label><label>Procedencia<input data-provenance required maxlength="160" placeholder="Ej. Laboratorio que realizó el estudio"></label><label>Archivo PDF o imagen<input data-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><small>PDF, JPG, PNG o WebP. Un archivo por resultado.</small><p data-feedback role="status" aria-live="polite"></p></div><footer><button type="button" data-close class="btn btn-outline-secondary">Cancelar</button><button type="submit" class="btn btn-primary" data-save>Guardar resultado</button></footer></form>`;
     document.body.append(dialog); form = dialog.querySelector('form'); context = node('[data-context]'); coverage = node('[data-coverage]'); orderPicker = node('[data-order-picker]'); title = node('[data-title]'); provenance = node('[data-provenance]'); file = node('[data-file]'); feedback = node('[data-feedback]'); saveButton = node('[data-save]');
-    dialog.querySelectorAll('[data-close]').forEach(control => control.addEventListener('click', () => close(false,control.classList.contains('btn'))));
+    dialog.querySelectorAll('[data-close]').forEach(control => control.addEventListener('click', () => close()));
     dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
     form.addEventListener('input', resetAttempt); form.addEventListener('change', resetAttempt);
     form.addEventListener('submit', submit);
+    window.mxmedPatientWorkspaceNavigationGuard?.register({id:'res02a-result-composer',copy:'result',
+      isInProgress:hasDraft,isSaving:()=>!!active&&busy,
+      whenSettled:()=>new Promise(resolve=>saveWaiters.push(resolve)),
+      discard:()=>close(true)});
   }
   function chosen() { return [...coverage.querySelectorAll('input[data-item]:checked')].map(input => availableItems.find(item => item.order_item_id === input.value)).filter(Boolean); }
   function generalSelected() { return !!coverage.querySelector('input[data-general]:checked'); }
@@ -120,7 +134,7 @@
       await response(await fetch(url, {method:'POST', credentials:'same-origin', headers:{Accept:'application/json', 'Idempotency-Key':attempt.key}, body}));
       const onSaved = active.onSaved; close(true); await onSaved?.();
     } catch (error) { message(error.message); }
-    finally { busy = false; if (active) saveButton.disabled = false; }
+    finally { busy = false; settleSave(); if (active) saveButton.disabled = false; }
   }
   function open(options) {
     setup(); if (dialog.open || busy) return;

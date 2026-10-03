@@ -1,5 +1,35 @@
 # PATIENT GATE V1
 
+## VIS24: salida con trabajo local pendiente
+
+`window.mxmedPatientWorkspaceNavigationGuard` es la autoridad compartida para
+salidas del espacio de paciente. Los módulos registran una fuente con `id`,
+`isDirty`, `isInProgress`, `isSaving`, `getContextCopy` y `discard`; los pasos de
+consulta que ya guardan antes de salir también pueden ofrecer
+`saveBeforeLeave`. `whenSettled` espera una escritura; `risksDestination`
+permite distinguir una pestaña reanudable de una salida del paciente.
+`canDiscard` impide abandonar un resultado incierto. El registro devuelve una
+función para desregistrar la fuente. `request(destino, continuar, origen,
+fuentesOpcionales)` conserva el destino y limita el descarte a una fuente al
+cerrar su propio compositor.
+
+- `CLEAN`: no hay trabajo local en riesgo; la navegación sigue sin diálogo.
+- `DIRTY`: un formulario difiere de su estado guardado.
+- `IN_PROGRESS`: hay selección, archivo o preparación local aún no emitida.
+- `SAVING`: existe una escritura pendiente; la salida espera su resolución y
+  permanece en el contexto si falla. No se ofrece descartar mientras escribe.
+
+El guard protege menú lateral, pestañas del expediente, cambio y salida de
+paciente, comandos de panel y `beforeunload`. Conserva el destino original y
+solo permite una decisión pendiente. El diálogo nativo devuelve el foco al
+origen al cancelar. El navegador controla el texto de recarga/cierre.
+La aplicación no utiliza rutas de History para sus paneles. Un cambio de hash
+que solicite otro paciente pasa por la misma decisión y, si se cancela, restaura
+la URL anterior con `replaceState` sin agregar una entrada. Back/Forward que
+abandona el documento queda cubierto por `beforeunload`; no se instala una
+trampa de historial. Una consulta abierta y limpia nunca bloquea la salida.
+La navegación interna entre pasos conserva el guardado previo de M7.
+
 ## 1) Propósito
 Formalizar una regla de acceso y contexto de paciente para la UI de MXMed, de forma consistente y verificable, antes de implementar cambios visuales o funcionales.
 
@@ -81,4 +111,3 @@ No incluye todavía:
 - Refactor de estado global.
 - Cambios de backend/API.
 - Implementación UI final del gate.
-

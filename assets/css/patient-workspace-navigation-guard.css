@@ -1,0 +1,19 @@
+.mx-patient-leave-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 0;
+  border: 1px solid #b9dce8;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem rgba(4, 42, 69, .25);
+  color: #083c5c;
+}
+.mx-patient-leave-dialog::backdrop { background: rgba(2, 29, 48, .55); }
+.mx-patient-leave-content { padding: 1.5rem; }
+.mx-patient-leave-content h2 { margin: 0 0 .75rem; font-size: 1.3rem; }
+.mx-patient-leave-content p { margin: 0 0 1.5rem; }
+.mx-patient-leave-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; }
+@media (max-width: 480px) {
+  .mx-patient-leave-actions { flex-direction: column; }
+  .mx-patient-leave-actions button { width: 100%; }
+}

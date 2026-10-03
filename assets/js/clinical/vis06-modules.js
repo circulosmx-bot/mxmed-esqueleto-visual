@@ -73,11 +73,25 @@
     });
     openingOrderComposer=false;
     let busy=false;
+    const saveWaiters=[];
+    const settleSave=()=>{saveWaiters.splice(0).forEach(resolve=>resolve());};
+    let unregisterGuard=()=>{};
+    const closeRaw=()=>{
+      if(!orderComposerDialog)return;
+      unregisterGuard();
+      composer.destroy();dialog.close();dialog.remove();orderComposerDialog=null;trigger?.focus({preventScroll:true});
+    };
+    const hasDraft=()=>!!(orderComposerDialog===dialog&&dialog.open&&(composer.selected().length||composer.indication().trim()||composer.priority()!=='Rutinaria'||
+      dialog.querySelector('[data-tax03c-custom-name]')?.value.trim()||dialog.querySelector('[data-tax03c-custom-note]')?.value.trim()||
+      dialog.querySelector('[data-tax03c-custom-category]')?.value));
+    const guard=window.mxmedPatientWorkspaceNavigationGuard;
+    unregisterGuard=guard?.register({id:'or05-order-composer',copy:'order',isInProgress:hasDraft,isSaving:()=>busy,
+      whenSettled:()=>new Promise(resolve=>saveWaiters.push(resolve)),discard:closeRaw})||(()=>{});
     const close=(saved=false)=>{
       if(busy)return;
-      if(!saved&&(composer.selected().length||composer.indication().trim()||composer.priority()!=='Rutinaria')&&
-        !window.confirm('¿Volver a categorías? Los estudios seleccionados no se guardarán.'))return;
-      composer.destroy();dialog.close();dialog.remove();orderComposerDialog=null;trigger?.focus({preventScroll:true});
+      if(saved){closeRaw();return;}
+      if(guard)void guard.request('order-composer-close',closeRaw,dialog.querySelector('[data-tax03c-close]'),['or05-order-composer']);
+      else if(!hasDraft()||window.confirm('¿Volver a categorías? Los estudios seleccionados no se guardarán.'))closeRaw();
     };
     dialog.querySelectorAll('[data-tax03c-close]').forEach(control=>control.addEventListener('click',()=>close()));
     dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
@@ -96,10 +110,10 @@
         const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/documents`,{
           method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','Idempotency-Key':attemptKey},body:JSON.stringify(command)});
         const result=await response.json();if(!response.ok||result?.ok!==true)throw new Error(result?.message||'No se pudo guardar la orden.');
-        busy=false;close(true);
+        busy=false;close(true);settleSave();
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:type,source:'tax03c_catalog_composer'}}));
         setOrderFlow(views.get('orders'),'PENDING');
-      }catch(failure){error.textContent=failure?.message||'No se pudo guardar la orden. Intenta de nuevo.';busy=false;submit.disabled=false;submit.textContent='Solicitar estudios';}
+      }catch(failure){error.textContent=failure?.message||'No se pudo guardar la orden. Intenta de nuevo.';busy=false;settleSave();submit.disabled=false;submit.textContent='Solicitar estudios';}
     });
     dialog.showModal();dialog.querySelector('[data-tax03c-search]')?.focus();
   }

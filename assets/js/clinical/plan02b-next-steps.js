@@ -347,6 +347,8 @@
     persist();return true;
   }
   async function mayLeave(){
+    if(window.mxmedPatientWorkspaceNavigationGuard)
+      return window.mxmedPatientWorkspaceNavigationGuard.request('leave-plan-preparations');
     if(busy){state.message='Espera a que termine el registro de las acciones.';render();return false;}
     if(modal){requestClose();if(modal)return false;}
     if(!pending())return true;if(guardPromise)return guardPromise;
@@ -363,6 +365,22 @@
   document.querySelector('[data-review-docs]').onclick=()=>document.querySelector('.m7-workspace-sections [data-m7-section="documents"]').click();
   document.querySelector('[data-m7-terminal-refresh]').addEventListener('click',refreshSummary);
   window.mxmedPlanNextSteps={mayLeave,mayLeaveView,hasPending:()=>pending()||!!dirtyModal(),isBusy:()=>busy};
+  window.mxmedPatientWorkspaceNavigationGuard?.register({
+    id:'plan02b-preparations',getContextCopy:()=>state.prescription&&!state.orders.some(a=>a.state!=='SUCCESS')?'prescription':state.orders.some(a=>a.state!=='SUCCESS')&&!state.prescription?'order':'generic',
+    isInProgress:()=>pending()||!!dirtyModal(),isSaving:()=>busy,
+    risksDestination:destination=>!String(destination).startsWith('#t-')||!!dirtyModal(),
+    canDiscard:()=>!actions().some(uncertain),
+    onBlocked:()=>{state.message='Hay un registro pendiente de recuperar. Revisa la acción antes de salir.';render();},
+    discard:()=>{
+      closeModal();
+      state.orders=state.orders.filter(a=>a.state==='SUCCESS');
+      state.orderReviews=state.orderReviews.filter(a=>a.state==='SUCCESS');
+      if(state.prescription?.state!=='SUCCESS')state.prescription=null;
+      if(state.appointment?.state!=='SUCCESS')state.appointment=null;
+      if(state.followup?.state!=='SUCCESS')state.followup=null;
+      state.message='';render();
+    }
+  });
   window.addEventListener('beforeunload',event=>{if(pending()||busy||dirtyModal()){event.preventDefault();event.returnValue='';}});
   new MutationObserver(sync).observe(body,{attributes:true,attributeFilter:['data-encounter-id','data-encounter-key','data-encounter-state','data-plan02b-section']});
   sync();

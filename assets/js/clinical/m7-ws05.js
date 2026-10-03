@@ -167,6 +167,7 @@
       },
       select(selected) { show(panel, selected); if (selected && context) reload().catch(() => notice('No se pudo actualizar la consulta.', 'failed')); },
       reset() { context = null; attempt = ''; busy = false; show(panel,false); },
+      discardLocal() { voidForm.reset(); amendmentForm.reset(); attempt=''; },
       isDirty({excludeVoidReason = false} = {}) { return !!(context && ((!excludeVoidReason && $('[data-m7-void-reason]').value.trim()) || $('[data-m7-amendment-reason]').value.trim() || $('[data-m7-amendment-text]').value.trim())); },
       isBusy() { return busy; }
     };
