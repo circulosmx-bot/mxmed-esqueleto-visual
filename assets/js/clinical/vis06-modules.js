@@ -801,6 +801,12 @@
       view.composition=window.mxmedOrderCompositionV1.mount(compositionHost,{
         context:()=>({patient:selectedPatient(),doctor:professional}),
         onChange:({selected,orders})=>{view.hierDraft.selected=selected;view.hierOrderCount=orders;updateHierarchyDraft(view);},
+        onAddOtherStudies:()=>{
+          if(view.composition.locked()||!view.composition.hide())return;
+          view.hierPath=[];
+          if(view.hierMode){renderHierarchy(view);view.primaryCategories.querySelector('button')?.focus({preventScroll:true});}
+          else {void loadOrderCategories(view).then(()=>view.primaryCategories.querySelector('button')?.focus({preventScroll:true}));}
+        },
         onDone:()=>setOrderFlow(view,'HOME'),
         onIssued:patientId=>window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:'orders',source:'ord_comp01'}}))
       });

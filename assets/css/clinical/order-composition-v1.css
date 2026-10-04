@@ -16,10 +16,14 @@
 .ordcomp summary { cursor:pointer; padding:.6rem .3rem; font-weight:600; overflow-wrap:anywhere; }
 .ordcomp-full-catalog,.ordcomp-prepared-order { border:1px solid #d4e6eb; border-radius:.4rem; margin:.7rem 0; padding:.3rem; }
 .ordcomp-full-catalog > details { border-top:1px solid #d4e6eb; }
-.ordcomp .tax03c-selected-row { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; padding:.55rem .2rem; border-bottom:1px solid #e2edf0; }
+.ordcomp .tax03c-selected-row { display:flex; flex-wrap:wrap; align-items:center; gap:.25rem; padding:2px .2rem; border-bottom:1px solid #e2edf0; }
 .ordcomp .tax03c-selected-row > span { flex:1 1 130px; min-width:0; overflow-wrap:anywhere; }
 .ordcomp .tax03c-selected-row strong { font-size:.88rem; }
 .ordcomp .tax03c-selected-row small { display:block; font-size:.75rem; }
+.ordcomp .ordcomp-remove { display:inline-flex; align-items:center; justify-content:center; flex:none; width:44px; height:44px; min-width:44px; min-height:44px; padding:0; font-size:1.35rem; line-height:1; text-decoration:none; }
+.ordcomp .ordcomp-remove:focus-visible,.ordcomp-add-other:focus-visible { outline:2px solid #008b9d; outline-offset:2px; }
+.ordcomp .dental-item-summary { flex-basis:100%; }
+.ordcomp-add-other { display:block; width:100%; margin:.55rem 0; text-align:left; }
 .ordcomp .dental-location-host { width:100%; min-width:0; }
 .ordcomp-count { font-size:.84rem; }
 .ordcomp-error { color:#9d2831; font-size:.9rem; }

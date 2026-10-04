@@ -61,7 +61,8 @@
     const $=selector=>host.querySelector(selector);
     const search=$('[data-tax03c-search]'),category=$('[data-tax03c-category]'),status=$('[data-tax03c-status]');
     const resultBox=$('[data-tax03c-results]'),selectedBox=options.selectionHost||$('[data-tax03c-selected]');
-    if(embedded){resultBox.removeAttribute('role');$('[data-tax03c-selected]').parentElement.hidden=true;$('[data-tax03c-filter]').hidden=true;$('[data-tax03c-priority]').closest('.tax03c-order-fields').hidden=true;}
+    if(embedded){resultBox.removeAttribute('role');$('[data-tax03c-selected]').parentElement.hidden=true;$('[data-tax03c-filter]').hidden=true;$('[data-tax03c-priority]').closest('.tax03c-order-fields').hidden=true;
+      $('[data-tax03c-custom-open]').textContent='+ Agregar estudio no catalogado';}
     const custom=$('[data-tax03c-custom]'),customName=$('[data-tax03c-custom-name]');
     const priority=$('[data-tax03c-priority]'),indication=$('[data-tax03c-indication]');
     const navigationScope=$('[data-tax03c-navigation-scope]');
@@ -131,14 +132,17 @@
       selected.forEach((item,index)=>{
         const row=document.createElement('div');row.className='tax03c-selected-row';
         const copy=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;
-        const sub=document.createElement('small');sub.textContent=categories[item.category]||'Otros';copy.append(name,sub);row.append(copy);
+        copy.append(name);
+        if(!embedded){const sub=document.createElement('small');sub.textContent=categories[item.category]||'Otros';copy.append(sub);}
+        else if(item.type==='custom'&&item.note){const sub=document.createElement('small');sub.textContent=item.note;copy.append(sub);}
+        row.append(copy);
         const dental=window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
         if(kind&&kind!=='NONE'&&!readonly){
           const configure=document.createElement('button');configure.type='button';configure.className='btn btn-outline-primary btn-sm dental-config-toggle';
           configure.dataset.tax03cDental=String(index);configure.textContent=editingIndex===index?'Ocultar ubicación':'Configurar ubicación';
           configure.setAttribute('aria-expanded',String(editingIndex===index));row.append(configure);
         }
-        if(!readonly){const remove=document.createElement('button');remove.type='button';remove.className='btn btn-link btn-sm';remove.textContent='Retirar';remove.dataset.tax03cRemove=String(index);remove.setAttribute('aria-label',`Retirar ${item.name}`);row.append(remove);}
+        if(!readonly){const remove=document.createElement('button');remove.type='button';remove.className=embedded?'btn btn-link btn-sm ordcomp-remove':'btn btn-link btn-sm';remove.textContent=embedded?'×':'Retirar';remove.dataset.tax03cRemove=String(index);remove.setAttribute('aria-label',`Retirar ${item.name}`);row.append(remove);}
         if(kind&&kind!=='NONE'){
           const summary=document.createElement('small');summary.className='dental-item-summary';
           summary.textContent=dental.summary(item.dentalLocation)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');row.append(summary);

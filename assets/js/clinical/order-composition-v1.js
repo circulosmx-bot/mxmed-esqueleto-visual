@@ -12,9 +12,10 @@
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
     const title=el('h4'),crumb=el('p','','ordcomp-breadcrumb'),selector=el('div');catalog.append(crumb,title,selector);
     const count=el('p','','ordcomp-count'),selection=el('div'),error=el('p','','ordcomp-error');error.setAttribute('role','alert');
+    const addOther=button('+ Agregar otros estudios',()=>options.onAddOtherStudies?.());addOther.classList.add('ordcomp-add-other');
     const next=button('Continuar',()=>review());next.classList.add('btn-primary');
     aside.setAttribute('aria-label','Órdenes en preparación');count.setAttribute('role','status');
-    aside.append(el('h4','ÓRDENES EN PREPARACIÓN'),count,selection,error,next);workspace.append(catalog,aside);
+    aside.append(el('h4','ÓRDENES EN PREPARACIÓN'),count,selection,addOther,error,next);workspace.append(catalog,aside);
     const mobile=el('div','','ordcomp-mobile-bar'),mobileCount=el('span'),toggle=button('Ver órdenes',()=>{
       host.classList.toggle('ordcomp-show-summary');const show=host.classList.contains('ordcomp-show-summary');
       toggle.textContent=show?'Volver al catálogo':'Ver órdenes';toggle.setAttribute('aria-expanded',String(show));

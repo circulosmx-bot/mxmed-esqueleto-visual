@@ -47,6 +47,43 @@ with sync_playwright() as p:
   nav('laboratory');nav('urine')
   expect(page.locator('.ordcomp')).to_be_visible();expect(page.locator('dialog[open]')).to_have_count(0)
   expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
+  expect(page.locator('.ordcomp-prepared-order')).to_have_count(0)
+  assert page.locator('[data-ordcomp-featured] button[aria-pressed="true"]').count()==0
+  assert page.locator('[data-tax03c-custom-open]').inner_text()=='+ Agregar estudio no catalogado'
+  for control in page.locator('[data-ordcomp-featured] button').all():control.click()
+  expect(page.locator('[data-order-group="CLINICAL_LAB"] .tax03c-selected-row')).to_have_count(6)
+  assert page.locator('.ordcomp-count').inner_text()=='1 orden · 6 estudios seleccionados'
+  assert page.locator('.ordcomp-summary').locator('text=Orden independiente').count()==0
+  assert page.locator('.ordcomp-summary .tax03c-selected-row small').count()==0
+  assert page.locator('.ordcomp-summary .tax03c-selected-row').first.evaluate('(e)=>e.getBoundingClientRect().height')<=50
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  remove=page.locator('.ordcomp-summary .ordcomp-remove').first
+  assert remove.inner_text()=='×' and remove.get_attribute('aria-label').startswith('Retirar ')
+  assert remove.evaluate('(e)=>e.getBoundingClientRect().width')>=44
+  remove.click()
+  expect(page.locator('[data-order-group="CLINICAL_LAB"] .tax03c-selected-row')).to_have_count(5)
+  if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
+  page.locator('[data-tax03c-custom-open]').click()
+  page.locator('[data-tax03c-custom-name]').fill('Estudio en borrador')
+  page.locator('[data-tax03c-custom-note]').fill('Parámetro pendiente')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  page.get_by_role('button',name='+ Agregar otros estudios',exact=True).click()
+  expect(page.locator('.vis06-category-screen[data-hier-level="root"]')).to_be_visible()
+  expect(page.locator('.vis06-hier-draft')).to_contain_text('5 estudios')
+  expect(page.locator('dialog[open]')).to_have_count(0)
+  nav('laboratory');nav('urine')
+  expect(page.locator('[data-order-group="CLINICAL_LAB"] .tax03c-selected-row')).to_have_count(5)
+  expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
+  assert page.locator('[data-ordcomp-featured] button[aria-pressed="true"]').count()==5
+  assert page.locator('[data-tax03c-custom-name]').input_value()=='Estudio en borrador'
+  assert page.locator('[data-tax03c-custom-note]').input_value()=='Parámetro pendiente'
+  page.locator('[data-tax03c-custom-cancel]').click()
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  while page.locator('.ordcomp-summary .ordcomp-remove').count():page.locator('.ordcomp-summary .ordcomp-remove').first.click()
+  expect(page.locator('.ordcomp-prepared-order')).to_have_count(0)
+  if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  print(f'QA_ORDCOMP01_R1_FEATURED_ROOT_DRAFT_REMOVE_{width}x{height}=PASS',flush=True)
   assert page.locator('[data-catalog-group]').count()==5
   assert page.locator('.ordcomp-full-catalog').get_attribute('open') is None
   page.locator('[data-ordcomp-featured] button').first.focus();page.keyboard.press('Enter')
@@ -97,8 +134,16 @@ with sync_playwright() as p:
   page.reload(wait_until='networkidle');page.locator('.vis06-intent-card').first.click()
   page.locator('.vis06-primary-categories button').filter(has_text='Cone Beam').click()
   choose('dental_cbct')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  page.get_by_role('button',name='+ Agregar otros estudios',exact=True).click()
+  expect(page.locator('.vis06-category-screen[data-hier-level="dental"]')).to_be_visible()
+  expect(page.locator('.vis06-hier-draft')).to_contain_text('1 estudios')
+  expect(page.locator('dialog[open]')).to_have_count(0)
+  page.locator('.vis06-primary-categories button').filter(has_text='Cone Beam').click()
+  expect(page.locator('.ordcomp-prepared-order')).to_have_count(1)
   expect(page.locator('dialog[open]')).to_have_count(0)
   if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  page.locator('[data-tax03c-dental]').first.click()
   page.locator('[data-dental-field="coverage"]').select_option('LOCALIZED')
   page.locator('[data-tooth="16"]').click()
   expect(page.locator('[data-dental-summary]')).to_contain_text('16')
