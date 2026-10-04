@@ -1,153 +1,153 @@
 leaf_key,accordion_group_key,accordion_group_label,canonical_study_key,study_name,reason
-chemistry,chemistry__metabolism,Metabolismo y función renal,glucose,Glucosa,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__metabolism,Metabolismo y función renal,fructosamine,Fructosamina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__metabolism,Metabolismo y función renal,bun,Nitrógeno ureico (BUN),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__metabolism,Metabolismo y función renal,urea,Urea,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__metabolism,Metabolismo y función renal,creatinine,Creatinina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__metabolism,Metabolismo y función renal,uric_acid,Ácido úrico,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__electrolytes,Electrolitos y minerales,sodium,Sodio,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__electrolytes,Electrolitos y minerales,potassium,Potasio,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__electrolytes,Electrolitos y minerales,chloride,Cloro,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__electrolytes,Electrolitos y minerales,calcium,Calcio,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__electrolytes,Electrolitos y minerales,magnesium,Magnesio,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__electrolytes,Electrolitos y minerales,phosphorus,Fósforo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__lipids,Lípidos,chol_total,Colesterol total,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__lipids,Lípidos,hdl,HDL,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__lipids,Lípidos,ldl,LDL,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__lipids,Lípidos,non_hdl,Colesterol no-HDL,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__lipids,Lípidos,triglycerides,Triglicéridos,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,alt,ALT (TGP),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,ast,AST (TGO),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,alp,Fosfatasa alcalina (ALP),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,ggt,GGT,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,bilirubin_total,Bilirrubina total,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,bilirubin_direct,Bilirrubina directa,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,bilirubin_indirect,Bilirrubina indirecta,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,albumin,Albúmina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,total_protein,Proteínas totales,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__hepatic,Función hepática y bilirrubinas,lab_amonio,Amonio,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,amylase,Amilasa,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,lipase,Lipasa,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,lab_cpk,Creatina cinasa total,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,lab_ck_mb,Creatina cinasa MB,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__micronutrients,Vitaminas y micronutrientes,folate,Ácido fólico,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__micronutrients,Vitaminas y micronutrientes,vitamin_b12,Vitamina B12,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-chemistry,chemistry__micronutrients,Vitaminas y micronutrientes,vitamin_d,Vitamina D,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__thyroid,Tiroides,tsh,TSH,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__thyroid,Tiroides,ft4,T4 libre,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__thyroid,Tiroides,ft3,T3 libre,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__thyroid,Tiroides,anti_tpo,Anti-TPO,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__thyroid,Tiroides,anti_tg,Anti-tiroglobulina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__glycemic,Metabolismo de glucosa,hba1c,HbA1c,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__glycemic,Metabolismo de glucosa,ogtt,Curva de glucosa (OGTT),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,bhcg,β-hCG,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,estradiol,Estradiol,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,fsh,FSH,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,lh,LH,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,progesterone,Progesterona,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,prolactin,Prolactina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,testosterone_total,Testosterona total,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,testosterone_free,Testosterona libre,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__counts,Biometría y recuentos,cbc,Biometría hemática (BH / CBC),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__counts,Biometría y recuentos,platelets,Plaquetas,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__counts,Biometría y recuentos,lab_reticulocitos,Reticulocitos,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__counts,Biometría y recuentos,lab_frotis_sanguineo,Frotis sanguíneo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__counts,Biometría y recuentos,esr,VSG,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__iron,Hierro y reservas,ferritin,Ferritina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__iron,Hierro y reservas,iron,Hierro sérico,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__iron,Hierro y reservas,tibc,CTFH (TIBC),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__iron,Hierro y reservas,transferrin_sat,% Saturación transferrina,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__coombs,Pruebas de antiglobulina,lab_coombs_directo,Coombs directo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-hematology,hematology__coombs,Pruebas de antiglobulina,lab_coombs_indirecto,Coombs indirecto,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__culture,Cultivos por muestra,blood_culture,Hemocultivo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__culture,Cultivos por muestra,urine_culture,Urocultivo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__culture,Cultivos por muestra,stool_culture,Coprocultivo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__culture,Cultivos por muestra,throat_swab,Exudado faríngeo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__culture,Cultivos por muestra,vaginal_swab,Exudado vaginal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__culture,Cultivos por muestra,sterile_body_fluid_bacterial_culture,Cultivo bacteriano de líquido estéril,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__csf_infection,Infección de LCR,csf_cryptococcal_antigen,Antígeno criptocócico en LCR,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-microbiology,microbiology__csf_infection,Infección de LCR,csf_vdrl,VDRL en LCR,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__general,Paneles generales,cbc,Biometría hemática (BH / CBC),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__general,Paneles generales,urinalysis,EGO (examen general de orina),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__genetic,Paneles genéticos y moleculares,carrier_screening,Tamiz de portadores (Carrier screening),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__genetic,Paneles genéticos y moleculares,hereditary_cancer_germline,Panel de cáncer hereditario (multigénico),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__genetic,Paneles genéticos y moleculares,pgx,Panel farmacogenómico (PGx),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__genetic,Paneles genéticos y moleculares,somatic_tumor_ngs,Panel tumoral (NGS) — somático,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-panels,panels__genetic,Paneles genéticos y moleculares,thrombophilia,Panel de trombofilia (genético),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,urinalysis,EGO (examen general de orina),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,microalbumin,Microalbuminuria,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,urine_albumin_creatinine_panel,Albúmina y creatinina urinarias con relación (muestra aislada),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,urine_protein_creatinine_panel,Proteínas y creatinina urinarias con relación (muestra aislada),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,urine_osmolality,Osmolalidad urinaria,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,urine_creatinine_spot,Creatinina en orina (muestra aislada),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_1,Estudios generales y renales,urine_pregnancy_qualitative,Prueba de embarazo en orina (cualitativa),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_2,Electrolitos y minerales urinarios,urine_sodium_spot,Sodio en orina (muestra aislada),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_2,Electrolitos y minerales urinarios,urine_potassium_spot,Potasio en orina (muestra aislada),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_3,Microbiología urinaria,urine_culture,Urocultivo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_4,Semen,semen_analysis,Espermatobioscopía básica,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_4,Semen,post_vasectomy_semen_check,Control de semen posvasectomía,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_cell_count,Recuento celular y diferencial en LCR,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_glucose,Glucosa en líquido cefalorraquídeo (LCR),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_total_protein,Proteínas totales en líquido cefalorraquídeo (LCR),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_lactate,Lactato en LCR,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_oligoclonal_bands,Bandas oligoclonales en LCR y suero,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_cell_count,Recuento celular y diferencial en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_glucose,Glucosa en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_total_protein,Proteínas totales en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_albumin,Albúmina en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_ldh,LDH en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_amylase,Amilasa en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_triglycerides,Triglicéridos en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_6,Líquidos serosos,body_fluid_cholesterol,Colesterol en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_7,Líquido sinovial,synovial_crystals,Cristales en líquido sinovial,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_7,Líquido sinovial,body_fluid_cell_count,Recuento celular y diferencial en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_7,Líquido sinovial,body_fluid_glucose,Glucosa en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_7,Líquido sinovial,body_fluid_total_protein,Proteínas totales en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-urine,urine__urine_7,Líquido sinovial,body_fluid_ldh,LDH en líquido corporal,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_chest,RX Tórax,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_abdomen,RX Abdomen,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_pelvis,RX Pelvis,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_cspine,RX Columna cervical,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_lspine,RX Columna lumbar,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_shoulder,RX Hombro,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_knee,RX Rodilla,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_ankle,RX Tobillo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__plain,Radiografías convencionales,rx_hand,RX Mano,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__fluoro,Fluoroscopía,fluoro_hsg,Histerosalpingografía (HSG),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__fluoro,Fluoroscopía,fluoro_vcug,Cistouretrografía miccional (VCUG),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__fluoro,Fluoroscopía,fluoro_ugi,Tránsito esófago-gastro-duodenal (UGI),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-radiography,radiography__fluoro,Fluoroscopía,fluoro_barium_enema,Enema baritado,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__ecg,Electrocardiografía,ecg_12lead,ECG 12 derivaciones,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__ecg,Electrocardiografía,ecg_rhythm_strip,Tira de ritmo,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__ambulatory,Monitoreo ambulatorio,holter,Holter / monitorización ECG ambulatoria,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__ambulatory,Monitoreo ambulatorio,abpm_mapa,MAPA (presión arterial ambulatoria / ABPM),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__provocation,Esfuerzo y respuesta autonómica,stress_test,Prueba de esfuerzo (ECG de esfuerzo),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__provocation,Esfuerzo y respuesta autonómica,tilt_table,Prueba de mesa basculante (Tilt table),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-cardiovascular,cardiovascular__vascular,Evaluación vascular funcional,ankle_brachial_index,Índice tobillo-brazo (ITB/ABI),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__eeg,Electroencefalografía,eeg_routine,EEG rutinario,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__eeg,Electroencefalografía,eeg_sleep_deprived,EEG con privación de sueño,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__eeg,Electroencefalografía,video_eeg,Video-EEG (prolongado),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__neuromuscular,Electrodiagnóstico neuromuscular,emg_ncs,EMG + Velocidades de conducción nerviosa (VCN),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__neuromuscular,Electrodiagnóstico neuromuscular,repetitive_nerve_stimulation,Estimulación repetitiva,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__neuromuscular,Electrodiagnóstico neuromuscular,sfemg,EMG de fibra única (SFEMG),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__evoked,Potenciales evocados,evoked_auditory_baep,Potenciales auditivos de tronco (PEAT/BAEP),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__evoked,Potenciales evocados,evoked_ssep,Potenciales somatosensoriales (PESS/SSEP),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-neurophysiology,neurophysiology__evoked,Potenciales evocados,evoked_visual,Potenciales evocados visuales (PEV),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__spirometry,Espirometría y función integral,spirometry,Espirometría,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__spirometry,Espirometría y función integral,full_pft,Pruebas funcionales respiratorias completas (PFR completo),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__spirometry,Espirometría y función integral,plethysmography,Volúmenes pulmonares (pletismografía corporal),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__spirometry,Espirometría y función integral,dlco,DLCO (difusión de CO),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__exercise,Ejercicio y capacidad funcional,six_min_walk,Caminata 6 minutos (6MWT),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__exercise,Ejercicio y capacidad funcional,cpet,Prueba de esfuerzo cardiopulmonar (CPET),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__monitoring,Monitoreo respiratorio,overnight_oximetry,Oximetría nocturna,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__monitoring,Monitoreo respiratorio,capnography,Capnografía,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-pulmonary,pulmonary__monitoring,Monitoreo respiratorio,feno,FeNO (óxido nítrico exhalado),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__upper,Endoscopia digestiva alta,egd_eda_base,EGD/EDA (endoscopia alta),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__upper,Endoscopia digestiva alta,eus_use_base,EUS/USE (ultrasonido endoscópico),"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__upper,Endoscopia digestiva alta,ercp_cpre_base,CPRE / ERCP,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__upper,Endoscopia digestiva alta,enteroscopy_base,Enteroscopia,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__upper,Endoscopia digestiva alta,capsule_base,Cápsula endoscópica,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,colonoscopy_base,Colonoscopia,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,flex_sig_base,Sigmoidoscopia flexible,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,anoscopy_base,Anoscopia,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
-digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,proctoscopy_base,Proctoscopia,"Agrupa estudios por modalidad, muestra o propósito clínico explícito; revisar con Dirección."
+chemistry,chemistry__metabolism,Metabolismo y función renal,glucose,Glucosa,Reúne glucosa y nitrogenados usados para metabolismo y función renal.
+chemistry,chemistry__metabolism,Metabolismo y función renal,fructosamine,Fructosamina,Reúne glucosa y nitrogenados usados para metabolismo y función renal.
+chemistry,chemistry__metabolism,Metabolismo y función renal,bun,Nitrógeno ureico (BUN),Reúne glucosa y nitrogenados usados para metabolismo y función renal.
+chemistry,chemistry__metabolism,Metabolismo y función renal,urea,Urea,Reúne glucosa y nitrogenados usados para metabolismo y función renal.
+chemistry,chemistry__metabolism,Metabolismo y función renal,creatinine,Creatinina,Reúne glucosa y nitrogenados usados para metabolismo y función renal.
+chemistry,chemistry__metabolism,Metabolismo y función renal,uric_acid,Ácido úrico,Reúne glucosa y nitrogenados usados para metabolismo y función renal.
+chemistry,chemistry__electrolytes,Electrolitos y minerales,sodium,Sodio,Agrupa iones y minerales de balance hidroelectrolítico.
+chemistry,chemistry__electrolytes,Electrolitos y minerales,potassium,Potasio,Agrupa iones y minerales de balance hidroelectrolítico.
+chemistry,chemistry__electrolytes,Electrolitos y minerales,chloride,Cloro,Agrupa iones y minerales de balance hidroelectrolítico.
+chemistry,chemistry__electrolytes,Electrolitos y minerales,calcium,Calcio,Agrupa iones y minerales de balance hidroelectrolítico.
+chemistry,chemistry__electrolytes,Electrolitos y minerales,magnesium,Magnesio,Agrupa iones y minerales de balance hidroelectrolítico.
+chemistry,chemistry__electrolytes,Electrolitos y minerales,phosphorus,Fósforo,Agrupa iones y minerales de balance hidroelectrolítico.
+chemistry,chemistry__lipids,Lípidos,chol_total,Colesterol total,Agrupa componentes del perfil lipídico sin cambiar sus identidades.
+chemistry,chemistry__lipids,Lípidos,hdl,HDL,Agrupa componentes del perfil lipídico sin cambiar sus identidades.
+chemistry,chemistry__lipids,Lípidos,ldl,LDL,Agrupa componentes del perfil lipídico sin cambiar sus identidades.
+chemistry,chemistry__lipids,Lípidos,non_hdl,Colesterol no-HDL,Agrupa componentes del perfil lipídico sin cambiar sus identidades.
+chemistry,chemistry__lipids,Lípidos,triglycerides,Triglicéridos,Agrupa componentes del perfil lipídico sin cambiar sus identidades.
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,alt,ALT (TGP),"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,ast,AST (TGO),"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,alp,Fosfatasa alcalina (ALP),"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,ggt,GGT,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,bilirubin_total,Bilirrubina total,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,bilirubin_direct,Bilirrubina directa,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,bilirubin_indirect,Bilirrubina indirecta,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,albumin,Albúmina,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,total_protein,Proteínas totales,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__hepatic,Función hepática y bilirrubinas,lab_amonio,Amonio,"Separa enzimas, bilirrubinas y proteínas de evaluación hepatobiliar."
+chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,amylase,Amilasa,Distingue enzimas pancreáticas y musculares de pruebas metabólicas.
+chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,lipase,Lipasa,Distingue enzimas pancreáticas y musculares de pruebas metabólicas.
+chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,lab_cpk,Creatina cinasa total,Distingue enzimas pancreáticas y musculares de pruebas metabólicas.
+chemistry,chemistry__enzymes,Enzimas pancreáticas y musculares,lab_ck_mb,Creatina cinasa MB,Distingue enzimas pancreáticas y musculares de pruebas metabólicas.
+chemistry,chemistry__micronutrients,Vitaminas y micronutrientes,folate,Ácido fólico,Agrupa mediciones de vitaminas y folato.
+chemistry,chemistry__micronutrients,Vitaminas y micronutrientes,vitamin_b12,Vitamina B12,Agrupa mediciones de vitaminas y folato.
+chemistry,chemistry__micronutrients,Vitaminas y micronutrientes,vitamin_d,Vitamina D,Agrupa mediciones de vitaminas y folato.
+endocrine,endocrine__thyroid,Tiroides,tsh,TSH,Reúne hormonas y anticuerpos tiroideos.
+endocrine,endocrine__thyroid,Tiroides,ft4,T4 libre,Reúne hormonas y anticuerpos tiroideos.
+endocrine,endocrine__thyroid,Tiroides,ft3,T3 libre,Reúne hormonas y anticuerpos tiroideos.
+endocrine,endocrine__thyroid,Tiroides,anti_tpo,Anti-TPO,Reúne hormonas y anticuerpos tiroideos.
+endocrine,endocrine__thyroid,Tiroides,anti_tg,Anti-tiroglobulina,Reúne hormonas y anticuerpos tiroideos.
+endocrine,endocrine__glycemic,Metabolismo de glucosa,hba1c,HbA1c,Separa control glucémico de pruebas hormonales.
+endocrine,endocrine__glycemic,Metabolismo de glucosa,ogtt,Curva de glucosa (OGTT),Separa control glucémico de pruebas hormonales.
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,bhcg,β-hCG,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,estradiol,Estradiol,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,fsh,FSH,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,lh,LH,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,progesterone,Progesterona,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,prolactin,Prolactina,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,testosterone_total,Testosterona total,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+endocrine,endocrine__reproductive,Hormonas reproductivas y embarazo,testosterone_free,Testosterona libre,"Agrupa hormonas gonadales, prolactina y hCG por contexto reproductivo."
+hematology,hematology__counts,Biometría y recuentos,cbc,Biometría hemática (BH / CBC),"Reúne biometría, recuentos y morfología celular."
+hematology,hematology__counts,Biometría y recuentos,platelets,Plaquetas,"Reúne biometría, recuentos y morfología celular."
+hematology,hematology__counts,Biometría y recuentos,lab_reticulocitos,Reticulocitos,"Reúne biometría, recuentos y morfología celular."
+hematology,hematology__counts,Biometría y recuentos,lab_frotis_sanguineo,Frotis sanguíneo,"Reúne biometría, recuentos y morfología celular."
+hematology,hematology__counts,Biometría y recuentos,esr,VSG,"Reúne biometría, recuentos y morfología celular."
+hematology,hematology__iron,Hierro y reservas,ferritin,Ferritina,"Agrupa hierro, ferritina y capacidad de unión para estudio de reservas."
+hematology,hematology__iron,Hierro y reservas,iron,Hierro sérico,"Agrupa hierro, ferritina y capacidad de unión para estudio de reservas."
+hematology,hematology__iron,Hierro y reservas,tibc,CTFH (TIBC),"Agrupa hierro, ferritina y capacidad de unión para estudio de reservas."
+hematology,hematology__iron,Hierro y reservas,transferrin_sat,% Saturación transferrina,"Agrupa hierro, ferritina y capacidad de unión para estudio de reservas."
+hematology,hematology__coombs,Pruebas de antiglobulina,lab_coombs_directo,Coombs directo,Separa pruebas directa e indirecta de antiglobulina.
+hematology,hematology__coombs,Pruebas de antiglobulina,lab_coombs_indirecto,Coombs indirecto,Separa pruebas directa e indirecta de antiglobulina.
+microbiology,microbiology__culture,Cultivos por muestra,blood_culture,Hemocultivo,"Agrupa cultivos según muestra clínica, sin convertir resultados en órdenes."
+microbiology,microbiology__culture,Cultivos por muestra,urine_culture,Urocultivo,"Agrupa cultivos según muestra clínica, sin convertir resultados en órdenes."
+microbiology,microbiology__culture,Cultivos por muestra,stool_culture,Coprocultivo,"Agrupa cultivos según muestra clínica, sin convertir resultados en órdenes."
+microbiology,microbiology__culture,Cultivos por muestra,throat_swab,Exudado faríngeo,"Agrupa cultivos según muestra clínica, sin convertir resultados en órdenes."
+microbiology,microbiology__culture,Cultivos por muestra,vaginal_swab,Exudado vaginal,"Agrupa cultivos según muestra clínica, sin convertir resultados en órdenes."
+microbiology,microbiology__culture,Cultivos por muestra,sterile_body_fluid_bacterial_culture,Cultivo bacteriano de líquido estéril,"Agrupa cultivos según muestra clínica, sin convertir resultados en órdenes."
+microbiology,microbiology__csf_infection,Infección de LCR,csf_cryptococcal_antigen,Antígeno criptocócico en LCR,Reúne antígeno criptocócico y VDRL de LCR por muestra e infección.
+microbiology,microbiology__csf_infection,Infección de LCR,csf_vdrl,VDRL en LCR,Reúne antígeno criptocócico y VDRL de LCR por muestra e infección.
+panels,panels__general,Paneles generales,cbc,Biometría hemática (BH / CBC),Distingue paneles generales CBC/EGO mientras se revisa la hoja mixta.
+panels,panels__general,Paneles generales,urinalysis,EGO (examen general de orina),Distingue paneles generales CBC/EGO mientras se revisa la hoja mixta.
+panels,panels__genetic,Paneles genéticos y moleculares,carrier_screening,Tamiz de portadores (Carrier screening),Aísla paneles genéticos y moleculares en espera de revisión taxonómica.
+panels,panels__genetic,Paneles genéticos y moleculares,hereditary_cancer_germline,Panel de cáncer hereditario (multigénico),Aísla paneles genéticos y moleculares en espera de revisión taxonómica.
+panels,panels__genetic,Paneles genéticos y moleculares,pgx,Panel farmacogenómico (PGx),Aísla paneles genéticos y moleculares en espera de revisión taxonómica.
+panels,panels__genetic,Paneles genéticos y moleculares,somatic_tumor_ngs,Panel tumoral (NGS) — somático,Aísla paneles genéticos y moleculares en espera de revisión taxonómica.
+panels,panels__genetic,Paneles genéticos y moleculares,thrombophilia,Panel de trombofilia (genético),Aísla paneles genéticos y moleculares en espera de revisión taxonómica.
+urine,urine__urine_1,Estudios generales y renales,urinalysis,EGO (examen general de orina),"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_1,Estudios generales y renales,microalbumin,Microalbuminuria,"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_1,Estudios generales y renales,urine_albumin_creatinine_panel,Albúmina y creatinina urinarias con relación (muestra aislada),"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_1,Estudios generales y renales,urine_protein_creatinine_panel,Proteínas y creatinina urinarias con relación (muestra aislada),"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_1,Estudios generales y renales,urine_osmolality,Osmolalidad urinaria,"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_1,Estudios generales y renales,urine_creatinine_spot,Creatinina en orina (muestra aislada),"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_1,Estudios generales y renales,urine_pregnancy_qualitative,Prueba de embarazo en orina (cualitativa),"Conserva el grupo vigente de orina general, embarazo y función renal."
+urine,urine__urine_2,Electrolitos y minerales urinarios,urine_sodium_spot,Sodio en orina (muestra aislada),Conserva electrolitos urinarios puntuales juntos.
+urine,urine__urine_2,Electrolitos y minerales urinarios,urine_potassium_spot,Potasio en orina (muestra aislada),Conserva electrolitos urinarios puntuales juntos.
+urine,urine__urine_3,Microbiología urinaria,urine_culture,Urocultivo,Distingue cultivo urinario de química de orina.
+urine,urine__urine_4,Semen,semen_analysis,Espermatobioscopía básica,Separa análisis de semen y control posvasectomía por muestra.
+urine,urine__urine_4,Semen,post_vasectomy_semen_check,Control de semen posvasectomía,Separa análisis de semen y control posvasectomía por muestra.
+urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_cell_count,Recuento celular y diferencial en LCR,Agrupa analitos del líquido cefalorraquídeo por muestra.
+urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_glucose,Glucosa en líquido cefalorraquídeo (LCR),Agrupa analitos del líquido cefalorraquídeo por muestra.
+urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_total_protein,Proteínas totales en líquido cefalorraquídeo (LCR),Agrupa analitos del líquido cefalorraquídeo por muestra.
+urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_lactate,Lactato en LCR,Agrupa analitos del líquido cefalorraquídeo por muestra.
+urine,urine__urine_5,Líquido cefalorraquídeo (LCR),csf_oligoclonal_bands,Bandas oligoclonales en LCR y suero,Agrupa analitos del líquido cefalorraquídeo por muestra.
+urine,urine__urine_6,Líquidos serosos,body_fluid_cell_count,Recuento celular y diferencial en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_glucose,Glucosa en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_total_protein,Proteínas totales en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_albumin,Albúmina en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_ldh,LDH en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_amylase,Amilasa en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_triglycerides,Triglicéridos en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_6,Líquidos serosos,body_fluid_cholesterol,Colesterol en líquido corporal,Agrupa analitos configurables de líquidos serosos.
+urine,urine__urine_7,Líquido sinovial,synovial_crystals,Cristales en líquido sinovial,Conserva cristales y analitos aplicables a líquido sinovial.
+urine,urine__urine_7,Líquido sinovial,body_fluid_cell_count,Recuento celular y diferencial en líquido corporal,Conserva cristales y analitos aplicables a líquido sinovial.
+urine,urine__urine_7,Líquido sinovial,body_fluid_glucose,Glucosa en líquido corporal,Conserva cristales y analitos aplicables a líquido sinovial.
+urine,urine__urine_7,Líquido sinovial,body_fluid_total_protein,Proteínas totales en líquido corporal,Conserva cristales y analitos aplicables a líquido sinovial.
+urine,urine__urine_7,Líquido sinovial,body_fluid_ldh,LDH en líquido corporal,Conserva cristales y analitos aplicables a líquido sinovial.
+radiography,radiography__plain,Radiografías convencionales,rx_chest,RX Tórax,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_abdomen,RX Abdomen,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_pelvis,RX Pelvis,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_cspine,RX Columna cervical,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_lspine,RX Columna lumbar,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_shoulder,RX Hombro,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_knee,RX Rodilla,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_ankle,RX Tobillo,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__plain,Radiografías convencionales,rx_hand,RX Mano,Separa radiografías anatómicas convencionales de fluoroscopía.
+radiography,radiography__fluoro,Fluoroscopía,fluoro_hsg,Histerosalpingografía (HSG),Agrupa estudios dinámicos fluoroscópicos por técnica.
+radiography,radiography__fluoro,Fluoroscopía,fluoro_vcug,Cistouretrografía miccional (VCUG),Agrupa estudios dinámicos fluoroscópicos por técnica.
+radiography,radiography__fluoro,Fluoroscopía,fluoro_ugi,Tránsito esófago-gastro-duodenal (UGI),Agrupa estudios dinámicos fluoroscópicos por técnica.
+radiography,radiography__fluoro,Fluoroscopía,fluoro_barium_enema,Enema baritado,Agrupa estudios dinámicos fluoroscópicos por técnica.
+cardiovascular,cardiovascular__ecg,Electrocardiografía,ecg_12lead,ECG 12 derivaciones,Agrupa trazados eléctricos puntuales del corazón.
+cardiovascular,cardiovascular__ecg,Electrocardiografía,ecg_rhythm_strip,Tira de ritmo,Agrupa trazados eléctricos puntuales del corazón.
+cardiovascular,cardiovascular__ambulatory,Monitoreo ambulatorio,holter,Holter / monitorización ECG ambulatoria,Reúne registros cardíaco y tensional fuera del consultorio.
+cardiovascular,cardiovascular__ambulatory,Monitoreo ambulatorio,abpm_mapa,MAPA (presión arterial ambulatoria / ABPM),Reúne registros cardíaco y tensional fuera del consultorio.
+cardiovascular,cardiovascular__provocation,Esfuerzo y respuesta autonómica,stress_test,Prueba de esfuerzo (ECG de esfuerzo),Agrupa pruebas de esfuerzo y respuesta autonómica.
+cardiovascular,cardiovascular__provocation,Esfuerzo y respuesta autonómica,tilt_table,Prueba de mesa basculante (Tilt table),Agrupa pruebas de esfuerzo y respuesta autonómica.
+cardiovascular,cardiovascular__vascular,Evaluación vascular funcional,ankle_brachial_index,Índice tobillo-brazo (ITB/ABI),Mantiene índice tobillo-brazo como evaluación vascular funcional.
+neurophysiology,neurophysiology__eeg,Electroencefalografía,eeg_routine,EEG rutinario,"Agrupa registros EEG rutinario, privado de sueño y video EEG."
+neurophysiology,neurophysiology__eeg,Electroencefalografía,eeg_sleep_deprived,EEG con privación de sueño,"Agrupa registros EEG rutinario, privado de sueño y video EEG."
+neurophysiology,neurophysiology__eeg,Electroencefalografía,video_eeg,Video-EEG (prolongado),"Agrupa registros EEG rutinario, privado de sueño y video EEG."
+neurophysiology,neurophysiology__neuromuscular,Electrodiagnóstico neuromuscular,emg_ncs,EMG + Velocidades de conducción nerviosa (VCN),"Agrupa conducción, EMG y pruebas de unión neuromuscular."
+neurophysiology,neurophysiology__neuromuscular,Electrodiagnóstico neuromuscular,repetitive_nerve_stimulation,Estimulación repetitiva,"Agrupa conducción, EMG y pruebas de unión neuromuscular."
+neurophysiology,neurophysiology__neuromuscular,Electrodiagnóstico neuromuscular,sfemg,EMG de fibra única (SFEMG),"Agrupa conducción, EMG y pruebas de unión neuromuscular."
+neurophysiology,neurophysiology__evoked,Potenciales evocados,evoked_auditory_baep,Potenciales auditivos de tronco (PEAT/BAEP),Reúne potenciales evocados por vías sensoriales.
+neurophysiology,neurophysiology__evoked,Potenciales evocados,evoked_ssep,Potenciales somatosensoriales (PESS/SSEP),Reúne potenciales evocados por vías sensoriales.
+neurophysiology,neurophysiology__evoked,Potenciales evocados,evoked_visual,Potenciales evocados visuales (PEV),Reúne potenciales evocados por vías sensoriales.
+pulmonary,pulmonary__spirometry,Espirometría y función integral,spirometry,Espirometría,"Agrupa mecánica ventilatoria, volúmenes y difusión."
+pulmonary,pulmonary__spirometry,Espirometría y función integral,full_pft,Pruebas funcionales respiratorias completas (PFR completo),"Agrupa mecánica ventilatoria, volúmenes y difusión."
+pulmonary,pulmonary__spirometry,Espirometría y función integral,plethysmography,Volúmenes pulmonares (pletismografía corporal),"Agrupa mecánica ventilatoria, volúmenes y difusión."
+pulmonary,pulmonary__spirometry,Espirometría y función integral,dlco,DLCO (difusión de CO),"Agrupa mecánica ventilatoria, volúmenes y difusión."
+pulmonary,pulmonary__exercise,Ejercicio y capacidad funcional,six_min_walk,Caminata 6 minutos (6MWT),Separa capacidad de ejercicio y prueba cardiopulmonar.
+pulmonary,pulmonary__exercise,Ejercicio y capacidad funcional,cpet,Prueba de esfuerzo cardiopulmonar (CPET),Separa capacidad de ejercicio y prueba cardiopulmonar.
+pulmonary,pulmonary__monitoring,Monitoreo respiratorio,overnight_oximetry,Oximetría nocturna,Agrupa mediciones respiratorias de seguimiento y gases.
+pulmonary,pulmonary__monitoring,Monitoreo respiratorio,capnography,Capnografía,Agrupa mediciones respiratorias de seguimiento y gases.
+pulmonary,pulmonary__monitoring,Monitoreo respiratorio,feno,FeNO (óxido nítrico exhalado),Agrupa mediciones respiratorias de seguimiento y gases.
+digestive_endoscopy,digestive_endoscopy__upper,Endoscopia alta y biliopancreática,egd_eda_base,EGD/EDA (endoscopia alta),"Agrupa EGD, ultrasonido endoscópico y CPRE por acceso digestivo alto."
+digestive_endoscopy,digestive_endoscopy__upper,Endoscopia alta y biliopancreática,eus_use_base,EUS/USE (ultrasonido endoscópico),"Agrupa EGD, ultrasonido endoscópico y CPRE por acceso digestivo alto."
+digestive_endoscopy,digestive_endoscopy__upper,Endoscopia alta y biliopancreática,ercp_cpre_base,CPRE / ERCP,"Agrupa EGD, ultrasonido endoscópico y CPRE por acceso digestivo alto."
+digestive_endoscopy,digestive_endoscopy__small_bowel,Intestino delgado y cápsula,enteroscopy_base,Enteroscopia,Separa exploración del intestino delgado por cápsula o enteroscopia.
+digestive_endoscopy,digestive_endoscopy__small_bowel,Intestino delgado y cápsula,capsule_base,Cápsula endoscópica,Separa exploración del intestino delgado por cápsula o enteroscopia.
+digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,colonoscopy_base,Colonoscopia,"Agrupa colon, sigmoides y región anorrectal."
+digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,flex_sig_base,Sigmoidoscopia flexible,"Agrupa colon, sigmoides y región anorrectal."
+digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,anoscopy_base,Anoscopia,"Agrupa colon, sigmoides y región anorrectal."
+digestive_endoscopy,digestive_endoscopy__lower,Endoscopia baja y anorectal,proctoscopy_base,Proctoscopia,"Agrupa colon, sigmoides y región anorrectal."
