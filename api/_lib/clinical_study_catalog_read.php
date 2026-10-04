@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/clinical_study_search.php';
 
 /** TAX03B: read-only, active catalog projection for the future selector. */
 function clinical_study_catalog_read(PDO $pdo, array $query): array
@@ -28,17 +29,15 @@ function clinical_study_catalog_read(PDO $pdo, array $query): array
         $where[] = 'category_key=?';
         $params[] = $category;
     }
-    if ($search !== '') {
-        $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
-        $where[] = "(display_name_es LIKE ? ESCAPE '!' OR CONVERT(study_type_key USING utf8mb4) LIKE ? ESCAPE '!' OR CAST(aliases_json AS CHAR CHARACTER SET utf8mb4) LIKE ? ESCAPE '!')";
-        array_push($params, $term, $term, $term);
-    }
     $sql = 'SELECT study_type_id,study_type_key,display_name_es,category_key,aliases_json '
         .'FROM clinical_study_types WHERE '.implode(' AND ', $where)
-        .' ORDER BY display_name_es,study_type_id LIMIT '.($limit + 1).' OFFSET '.$offset;
+        .' ORDER BY display_name_es,study_type_id';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $authority = clinical_study_search_authority();
+    if ($search !== '') $rows = clinical_study_search_ranked_rows($rows, $search, $authority);
+    $rows = array_slice($rows, $offset, $limit + 1);
     $hasMore = count($rows) > $limit;
     if ($hasMore) array_pop($rows);
     $items = [];
@@ -50,6 +49,7 @@ function clinical_study_catalog_read(PDO $pdo, array $query): array
             'category_key' => (string)$row['category_key'],
             'category_label_es' => clinical_study_category_labels_es()[(string)$row['category_key']],
             'aliases' => json_decode((string)$row['aliases_json'], true, 512, JSON_THROW_ON_ERROR),
+            'common_display_name' => $authority['by_key'][(string)$row['study_type_key']]['common_display_name'] ?? null,
         ];
     }
     $counts=$pdo->query('SELECT category_key,COUNT(*) AS active_count FROM clinical_study_types WHERE is_active=1 GROUP BY category_key')->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -58,5 +58,6 @@ function clinical_study_catalog_read(PDO $pdo, array $query): array
         $categories[]=['category_key'=>$key,'label_es'=>clinical_study_category_labels_es()[$key],
             'active_count'=>(int)($counts[$key]??0)];
     }
-    return ['items'=>$items,'has_more'=>$hasMore,'offset'=>$offset,'limit'=>$limit,'categories'=>$categories];
+    return ['items'=>$items,'has_more'=>$hasMore,'offset'=>$offset,'limit'=>$limit,'categories'=>$categories,
+        'search_authority_version'=>$authority['config']['version']];
 }

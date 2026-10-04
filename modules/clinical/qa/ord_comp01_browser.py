@@ -1,4 +1,4 @@
-"""Inline selector behavior on real served assets, isolated API fixture; no clinical writes."""
+"""Inline selector on served assets with the isolated PHP-search fixture; no clinical writes."""
 import ast,json,pathlib,re,subprocess,uuid
 from urllib.parse import parse_qs,urlsplit
 from playwright.sync_api import expect,sync_playwright
@@ -10,6 +10,8 @@ HTML=HTML.replace('</head>','<link rel="stylesheet" href="/assets/css/clinical/s
 HTML=HTML.replace('<script src="/assets/js/clinical/vis06-modules.js','<script src="/assets/js/clinical/study-navigation-hierarchy-v2.js"></script><script src="/assets/js/clinical/patient-workspace-navigation-guard.js"></script><script src="/assets/js/clinical/order-composition-v1.js"></script><script src="/assets/js/clinical/vis06-modules.js')
 raw=subprocess.check_output(['mysql','-N','-B','mxmed_director_review_lon07c','-e','SELECT study_type_id,study_type_key,display_name_es,category_key,aliases_json FROM clinical_study_types WHERE is_active=1'],text=True)
 rows=[dict(study_type_id=int(i),study_type_key=k,display_name_es=n,category_key=c,aliases=json.loads(a)) for i,k,n,c,a in (line.split('\t') for line in raw.splitlines())]
+search_authority=json.loads((ROOT/'modules/clinical/catalog/study_search_authority_v1.json').read_text())
+common_by_key={entry['study_key']:entry['common_display_name'] for entry in search_authority['studies']}
 seed=(ROOT/'modules/clinical/db/migrations/2026_10_03_19_urine_fluids_catalog.sql').read_text()
 for key,name in re.findall(r"\('([^']+)','([^']+)','LABORATORIO'",seed):
  if not any(r['study_type_key']==key for r in rows):rows.append(dict(study_type_id=10000+len(rows),study_type_key=key,display_name_es=name,category_key='LABORATORIO',aliases=[]))
@@ -28,7 +30,13 @@ with sync_playwright() as p:
   def api(route):
    url=urlsplit(route.request.url);q=parse_qs(url.query);status=200
    if url.path.endswith('/study-types'):
-    filtered=[r for r in rows if not q.get('category') or r['category_key']==q['category'][0]];offset=int(q.get('offset',['0'])[0]);limit=int(q.get('limit',['30'])[0]);data={'items':filtered[offset:offset+limit],'has_more':offset+limit<len(filtered),'categories':[{'category_key':k,'label_es':k,'active_count':v} for k,v in counts.items()]}
+    filtered=[r for r in rows if not q.get('category') or r['category_key']==q['category'][0]]
+    if q.get('search'):
+     fixture=json.loads(subprocess.check_output(['php',str(ROOT/'modules/clinical/qa/study_search02_fixture.php'),'--response',json.dumps({'search':q['search'][0],'limit':'100','offset':'0'})],text=True))
+     by_key={r['study_type_key']:r for r in filtered}
+     filtered=[by_key[item['study_type_key']] for item in fixture['data']['items'] if item['study_type_key'] in by_key]
+    offset=int(q.get('offset',['0'])[0]);limit=int(q.get('limit',['30'])[0]);items=[dict(r,common_display_name=common_by_key.get(r['study_type_key'])) for r in filtered[offset:offset+limit]]
+    data={'items':items,'has_more':offset+limit<len(filtered),'categories':[{'category_key':k,'label_es':k,'active_count':v} for k,v in counts.items()],'search_authority_version':1}
    elif url.path.endswith('/orders/batch'):
     body=route.request.post_data_json;writes.append(body)
     if state.get('uncertain'):

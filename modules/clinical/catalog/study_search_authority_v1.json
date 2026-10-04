@@ -1,0 +1,2591 @@
+{
+  "version": 1,
+  "status": "ACTIVE_STUDY_SEARCH02",
+  "prefix_min_length": 3,
+  "short_query_exceptions": [
+    "t3",
+    "t4",
+    "tc",
+    "ct",
+    "rm",
+    "us",
+    "rx",
+    "psa t",
+    "psa l",
+    "anti cc",
+    "t4 lib",
+    "t4 l",
+    "t3 l"
+  ],
+  "short_modality_heads": {
+    "tc": [
+      "tc"
+    ],
+    "ct": [
+      "ct"
+    ],
+    "rm": [
+      "rm",
+      "rmn"
+    ],
+    "us": [
+      "us",
+      "usg"
+    ],
+    "rx": [
+      "rx"
+    ]
+  },
+  "studies": [
+    {
+      "study_key": "audiometry_speech",
+      "canonical_display_name": "Audiometría verbal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "audiometry_tonal",
+      "canonical_display_name": "Audiometría tonal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "otoacoustic_emissions",
+      "canonical_display_name": "Emisiones otoacústicas (OEA)",
+      "common_display_name": null,
+      "abbreviations": [
+        "OEA"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "tympanometry",
+      "canonical_display_name": "Timpanometría (impedanciometría)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "impedanciometría"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "vng",
+      "canonical_display_name": "Videonistagmografía (VNG)",
+      "common_display_name": null,
+      "abbreviations": [
+        "VNG"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "abpm_mapa",
+      "canonical_display_name": "MAPA (presión arterial ambulatoria / ABPM)",
+      "common_display_name": "Monitoreo ambulatorio de presión arterial",
+      "abbreviations": [
+        "ABPM",
+        "MAPA"
+      ],
+      "equivalent_aliases": [
+        "MAPA 24 h (presión arterial ambulatoria)"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ankle_brachial_index",
+      "canonical_display_name": "Índice tobillo-brazo (ITB/ABI)",
+      "common_display_name": null,
+      "abbreviations": [
+        "ITB",
+        "ABI"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "carotid_doppler",
+      "canonical_display_name": "Doppler carotídeo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ecg_12lead",
+      "canonical_display_name": "ECG 12 derivaciones",
+      "common_display_name": "Electrocardiograma de 12 derivaciones",
+      "abbreviations": [
+        "ECG 12 derivaciones",
+        "EKG 12 derivaciones"
+      ],
+      "equivalent_aliases": [
+        "Electrocardiograma de 12 derivaciones"
+      ],
+      "discovery_terms": [
+        "arritmia"
+      ]
+    },
+    {
+      "study_key": "ecg_rhythm_strip",
+      "canonical_display_name": "Tira de ritmo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "echo_tes",
+      "canonical_display_name": "Ecocardiograma transesofágico (ETE)",
+      "common_display_name": null,
+      "abbreviations": [
+        "ETE"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "echo_tte",
+      "canonical_display_name": "Ecocardiograma transtorácico (ETT)",
+      "common_display_name": null,
+      "abbreviations": [
+        "ETT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "holter",
+      "canonical_display_name": "Holter / monitorización ECG ambulatoria",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": [
+        "arritmia"
+      ]
+    },
+    {
+      "study_key": "lower_ext_art_doppler",
+      "canonical_display_name": "Doppler arterial de miembros inferiores",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lower_ext_venous_doppler",
+      "canonical_display_name": "Doppler venoso de miembros inferiores",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "stress_echo",
+      "canonical_display_name": "Ecocardiograma de estrés",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "stress_test",
+      "canonical_display_name": "Prueba de esfuerzo (ECG de esfuerzo)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "tilt_table",
+      "canonical_display_name": "Prueba de mesa basculante (Tilt table)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Mesa inclinada (Tilt test)"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dental_clinical_photographs",
+      "canonical_display_name": "Fotografías clínicas odontológicas",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Fotografías intraorales",
+        "Fotografías extraorales",
+        "Registros fotográficos dentales"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dental_intraoral_scan",
+      "canonical_display_name": "Escaneo intraoral dental",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Escaneo intraoral",
+        "Impresión digital intraoral"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dental_study_model",
+      "canonical_display_name": "Modelo de estudio dental",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Modelo dental",
+        "Modelos de estudio",
+        "Modelo de estudio odontológico"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anoscopy_base",
+      "canonical_display_name": "Anoscopia",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bronchoscopy_base",
+      "canonical_display_name": "Broncoscopía",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "capsule_base",
+      "canonical_display_name": "Cápsula endoscópica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "colonoscopy_base",
+      "canonical_display_name": "Colonoscopia",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ebus_base",
+      "canonical_display_name": "EBUS (ultrasonido endobronquial)",
+      "common_display_name": null,
+      "abbreviations": [
+        "EBUS"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "egd_eda_base",
+      "canonical_display_name": "EGD/EDA (endoscopia alta)",
+      "common_display_name": "Endoscopia digestiva alta",
+      "abbreviations": [
+        "EGD",
+        "EDA",
+        "EGD/EDA"
+      ],
+      "equivalent_aliases": [
+        "Esofagogastroduodenoscopia"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "enteroscopy_base",
+      "canonical_display_name": "Enteroscopia",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ercp_cpre_base",
+      "canonical_display_name": "CPRE / ERCP",
+      "common_display_name": null,
+      "abbreviations": [
+        "CPRE",
+        "ERCP",
+        "CPRE / ERCP"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "eus_use_base",
+      "canonical_display_name": "EUS/USE (ultrasonido endoscópico)",
+      "common_display_name": null,
+      "abbreviations": [
+        "EUS",
+        "USE",
+        "EUS/USE"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "flex_sig_base",
+      "canonical_display_name": "Sigmoidoscopia flexible",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "laryngoscopy_base",
+      "canonical_display_name": "Laringoscopía flexible",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "pleuroscopy_base",
+      "canonical_display_name": "Pleuroscopía / Toracoscopía médica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "proctoscopy_base",
+      "canonical_display_name": "Proctoscopia",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "capnography",
+      "canonical_display_name": "Capnografía",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cpet",
+      "canonical_display_name": "Prueba de esfuerzo cardiopulmonar (CPET)",
+      "common_display_name": null,
+      "abbreviations": [
+        "CPET"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dlco",
+      "canonical_display_name": "DLCO (difusión de CO)",
+      "common_display_name": null,
+      "abbreviations": [
+        "DLCO"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "feno",
+      "canonical_display_name": "FeNO (óxido nítrico exhalado)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "full_pft",
+      "canonical_display_name": "Pruebas funcionales respiratorias completas (PFR completo)",
+      "common_display_name": "Pruebas de función pulmonar completas",
+      "abbreviations": [
+        "PFR completo",
+        "PFT completo"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": [
+        "PFT"
+      ]
+    },
+    {
+      "study_key": "overnight_oximetry",
+      "canonical_display_name": "Oximetría nocturna",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "plethysmography",
+      "canonical_display_name": "Volúmenes pulmonares (pletismografía corporal)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "six_min_walk",
+      "canonical_display_name": "Caminata 6 minutos (6MWT)",
+      "common_display_name": null,
+      "abbreviations": [
+        "6MWT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "spirometry",
+      "canonical_display_name": "Espirometría",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": [
+        "PFT"
+      ]
+    },
+    {
+      "study_key": "brca1_2",
+      "canonical_display_name": "BRCA1/BRCA2 (germinal)",
+      "common_display_name": null,
+      "abbreviations": [
+        "BRCA1/BRCA2"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "carrier_screening",
+      "canonical_display_name": "Tamiz de portadores (Carrier screening)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cma_microarray",
+      "canonical_display_name": "Microarreglo cromosómico (CMA / Microarray)",
+      "common_display_name": null,
+      "abbreviations": [
+        "CMA"
+      ],
+      "equivalent_aliases": [
+        "Microarray"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "hereditary_cancer_germline",
+      "canonical_display_name": "Panel de cáncer hereditario (multigénico)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "karyotype",
+      "canonical_display_name": "Cariotipo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lynch",
+      "canonical_display_name": "Síndrome de Lynch (germinal)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "nipt",
+      "canonical_display_name": "NIPT (tamiz prenatal no invasivo)",
+      "common_display_name": null,
+      "abbreviations": [
+        "NIPT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "pgx",
+      "canonical_display_name": "Panel farmacogenómico (PGx)",
+      "common_display_name": null,
+      "abbreviations": [
+        "PGx"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "somatic_tumor_ngs",
+      "canonical_display_name": "Panel tumoral (NGS) — somático",
+      "common_display_name": null,
+      "abbreviations": [
+        "NGS"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "thrombophilia",
+      "canonical_display_name": "Panel de trombofilia (genético)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "wes",
+      "canonical_display_name": "Exoma clínico (WES)",
+      "common_display_name": null,
+      "abbreviations": [
+        "WES"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "wgs",
+      "canonical_display_name": "Genoma clínico (WGS)",
+      "common_display_name": null,
+      "abbreviations": [
+        "WGS"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "breast_us",
+      "canonical_display_name": "US Mama",
+      "common_display_name": "Ultrasonido de mama",
+      "abbreviations": [
+        "US Mama",
+        "USG mama"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de mama"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ct_abdomen_pelvis",
+      "canonical_display_name": "TAC Abdomen y pelvis",
+      "common_display_name": "Tomografía computarizada de abdomen y pelvis",
+      "abbreviations": [
+        "TAC Abdomen y pelvis",
+        "TC abdomen y pelvis",
+        "CT abdomen y pelvis"
+      ],
+      "equivalent_aliases": [
+        "TC de abdomen y pelvis"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ct_chest",
+      "canonical_display_name": "TAC Tórax",
+      "common_display_name": "Tomografía computarizada de tórax",
+      "abbreviations": [
+        "TAC Tórax",
+        "TC tórax",
+        "CT tórax"
+      ],
+      "equivalent_aliases": [
+        "TC de tórax"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ct_head",
+      "canonical_display_name": "TAC Cráneo",
+      "common_display_name": "Tomografía computarizada de cráneo",
+      "abbreviations": [
+        "TAC Cráneo",
+        "TC cráneo",
+        "CT cráneo"
+      ],
+      "equivalent_aliases": [
+        "TC de cráneo"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ct_uro",
+      "canonical_display_name": "UroTAC (vías urinarias)",
+      "common_display_name": "Tomografía computarizada de vías urinarias",
+      "abbreviations": [
+        "TC vías urinarias",
+        "CT vías urinarias",
+        "TAC vías urinarias"
+      ],
+      "equivalent_aliases": [
+        "TC de vías urinarias"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dental_cbct",
+      "canonical_display_name": "Tomografía dental y maxilofacial de haz cónico",
+      "common_display_name": "Tomografía dental de haz cónico",
+      "abbreviations": [
+        "CBCT"
+      ],
+      "equivalent_aliases": [
+        "Cone Beam",
+        "Tomografía Cone Beam",
+        "Tomografía dental",
+        "Tomografía computarizada de haz cónico dental"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dental_cephalometric_xray",
+      "canonical_display_name": "Radiografía cefalométrica lateral",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Rx lateral",
+        "Lateral de cráneo",
+        "Radiografía lateral de cráneo"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dental_panoramic_xray",
+      "canonical_display_name": "Radiografía panorámica dental",
+      "common_display_name": "Radiografía panorámica dental",
+      "abbreviations": [
+        "OPG"
+      ],
+      "equivalent_aliases": [
+        "Ortopantomografía",
+        "Rx panorámica",
+        "Panorámica dental"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dexa",
+      "canonical_display_name": "Densitometría ósea (DEXA)",
+      "common_display_name": null,
+      "abbreviations": [
+        "DEXA"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fluoro_barium_enema",
+      "canonical_display_name": "Enema baritado",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fluoro_hsg",
+      "canonical_display_name": "Histerosalpingografía (HSG)",
+      "common_display_name": null,
+      "abbreviations": [
+        "HSG"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fluoro_ugi",
+      "canonical_display_name": "Tránsito esófago-gastro-duodenal (UGI)",
+      "common_display_name": null,
+      "abbreviations": [
+        "UGI"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fluoro_vcug",
+      "canonical_display_name": "Cistouretrografía miccional (VCUG)",
+      "common_display_name": null,
+      "abbreviations": [
+        "VCUG"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mammo",
+      "canonical_display_name": "Mamografía",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_abdomen",
+      "canonical_display_name": "RM Abdomen",
+      "common_display_name": "Resonancia magnética de abdomen",
+      "abbreviations": [
+        "RM Abdomen",
+        "RMN abdomen",
+        "MRI abdomen"
+      ],
+      "equivalent_aliases": [
+        "RMN de abdomen"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_brain",
+      "canonical_display_name": "RM Cerebro",
+      "common_display_name": "Resonancia magnética de cerebro",
+      "abbreviations": [
+        "RM Cerebro",
+        "RMN cerebro",
+        "MRI cerebro"
+      ],
+      "equivalent_aliases": [
+        "RMN de cerebro"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_knee",
+      "canonical_display_name": "RM Rodilla",
+      "common_display_name": "Resonancia magnética de rodilla",
+      "abbreviations": [
+        "RM Rodilla",
+        "RMN rodilla",
+        "MRI rodilla"
+      ],
+      "equivalent_aliases": [
+        "RMN de rodilla"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_shoulder",
+      "canonical_display_name": "RM Hombro",
+      "common_display_name": "Resonancia magnética de hombro",
+      "abbreviations": [
+        "RM Hombro",
+        "RMN hombro",
+        "MRI hombro"
+      ],
+      "equivalent_aliases": [
+        "RMN de hombro"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "nm_bone_scan",
+      "canonical_display_name": "Gammagrama óseo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "nm_thyroid_uptake",
+      "canonical_display_name": "Captación tiroidea",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "pet_ct",
+      "canonical_display_name": "PET-CT",
+      "common_display_name": null,
+      "abbreviations": [
+        "PET-CT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_abdomen",
+      "canonical_display_name": "RX Abdomen",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Abdomen"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_ankle",
+      "canonical_display_name": "RX Tobillo",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Tobillo"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_chest",
+      "canonical_display_name": "RX Tórax",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Tórax"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_cspine",
+      "canonical_display_name": "RX Columna cervical",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Columna cervical"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_hand",
+      "canonical_display_name": "RX Mano",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Mano"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_knee",
+      "canonical_display_name": "RX Rodilla",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Rodilla"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_lspine",
+      "canonical_display_name": "RX Columna lumbar",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Columna lumbar"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_pelvis",
+      "canonical_display_name": "RX Pelvis",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Pelvis"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_shoulder",
+      "canonical_display_name": "RX Hombro",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX Hombro"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "tmj_comparative_xray",
+      "canonical_display_name": "Radiografía comparativa de articulaciones temporomandibulares",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Rx ATM",
+        "ATM comparativa",
+        "Radiografía ATM"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_abdomen",
+      "canonical_display_name": "US Abdomen",
+      "common_display_name": "Ultrasonido de abdomen",
+      "abbreviations": [
+        "US Abdomen",
+        "USG abdomen"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de abdomen"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_obstetric_study",
+      "canonical_display_name": "US Obstétrico",
+      "common_display_name": "Ultrasonido obstétrico",
+      "abbreviations": [
+        "US Obstétrico",
+        "USG obstétrico"
+      ],
+      "equivalent_aliases": [
+        "Ecografía obstétrica"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_pelvic",
+      "canonical_display_name": "US Pélvico",
+      "common_display_name": "Ultrasonido de pelvis",
+      "abbreviations": [
+        "US Pélvico",
+        "USG pelvis"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de pelvis"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_renal",
+      "canonical_display_name": "US Renal",
+      "common_display_name": "Ultrasonido de riñones",
+      "abbreviations": [
+        "US Renal",
+        "USG riñones"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de riñones"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_soft_tissue",
+      "canonical_display_name": "US Partes blandas",
+      "common_display_name": "Ultrasonido de partes blandas",
+      "abbreviations": [
+        "US Partes blandas",
+        "USG partes blandas"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de partes blandas"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_testicular",
+      "canonical_display_name": "US Testicular",
+      "common_display_name": "Ultrasonido de testículo",
+      "abbreviations": [
+        "US Testicular",
+        "USG testículo"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de testículo"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "us_thyroid",
+      "canonical_display_name": "US Tiroides",
+      "common_display_name": "Ultrasonido de tiroides",
+      "abbreviations": [
+        "US Tiroides",
+        "USG tiroides"
+      ],
+      "equivalent_aliases": [
+        "Ecografía de tiroides"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "acth_plasma",
+      "canonical_display_name": "Hormona adrenocorticotropa plasmática",
+      "common_display_name": null,
+      "abbreviations": [
+        "ACTH"
+      ],
+      "equivalent_aliases": [
+        "Corticotropina plasmática"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "afp_serum",
+      "canonical_display_name": "Alfa-fetoproteína sérica",
+      "common_display_name": null,
+      "abbreviations": [
+        "AFP"
+      ],
+      "equivalent_aliases": [
+        "Alfa fetoproteína"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "albumin",
+      "canonical_display_name": "Albúmina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "alp",
+      "canonical_display_name": "Fosfatasa alcalina (ALP)",
+      "common_display_name": "Fosfatasa alcalina",
+      "abbreviations": [
+        "ALP"
+      ],
+      "equivalent_aliases": [
+        "Fosfatasa alcalina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "alt",
+      "canonical_display_name": "ALT (TGP)",
+      "common_display_name": "Alanina aminotransferasa",
+      "abbreviations": [
+        "ALT",
+        "TGP"
+      ],
+      "equivalent_aliases": [
+        "Alanino aminotransferasa"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "amylase",
+      "canonical_display_name": "Amilasa",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ana",
+      "canonical_display_name": "ANA",
+      "common_display_name": "Anticuerpos antinucleares",
+      "abbreviations": [
+        "ANA"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anca",
+      "canonical_display_name": "ANCA",
+      "common_display_name": "Anticuerpos anticitoplasma de neutrófilos",
+      "abbreviations": [
+        "ANCA"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anti_ccp",
+      "canonical_display_name": "Anti-CCP",
+      "common_display_name": "Anticuerpos antipéptido citrulinado cíclico",
+      "abbreviations": [
+        "anti-CCP"
+      ],
+      "equivalent_aliases": [
+        "Acs. anti-péptido cíclicos citrulinados",
+        "Anticuerpos anti-CCP"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anti_ds_dna",
+      "canonical_display_name": "Anticuerpos anti-DNA de doble cadena",
+      "common_display_name": null,
+      "abbreviations": [
+        "anti-dsDNA"
+      ],
+      "equivalent_aliases": [
+        "anti-DNA nativo"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anti_hbc",
+      "canonical_display_name": "Anti-HBc",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anti_hbs",
+      "canonical_display_name": "Anti-HBs",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Acs. anti-antígeno de superficie"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anti_tg",
+      "canonical_display_name": "Anti-tiroglobulina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Acs. anti-tiroglobulina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "anti_tpo",
+      "canonical_display_name": "Anti-TPO",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Acs. anti-peroxidasa"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "apo_b",
+      "canonical_display_name": "Apolipoproteína B",
+      "common_display_name": null,
+      "abbreviations": [
+        "ApoB",
+        "Apo B"
+      ],
+      "equivalent_aliases": [
+        "Apolipoproteína B en suero"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "aptt",
+      "canonical_display_name": "TTPa (aPTT)",
+      "common_display_name": "Tiempo parcial de tromboplastina activada",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Tiempo de tromboplastina parcial activado"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ast",
+      "canonical_display_name": "AST (TGO)",
+      "common_display_name": "Aspartato aminotransferasa",
+      "abbreviations": [
+        "AST",
+        "TGO"
+      ],
+      "equivalent_aliases": [
+        "Aspartato aminotransferasa"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bhcg",
+      "canonical_display_name": "β-hCG",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bicarbonate_serum",
+      "canonical_display_name": "Bicarbonato / CO2 total sérico",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "HCO3 sérico",
+        "CO2 total sérico",
+        "Bicarbonato sérico"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bilirubin_direct",
+      "canonical_display_name": "Bilirrubina directa",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bilirubin_indirect",
+      "canonical_display_name": "Bilirrubina indirecta",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bilirubin_total",
+      "canonical_display_name": "Bilirrubina total",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "blood_culture",
+      "canonical_display_name": "Hemocultivo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_albumin",
+      "canonical_display_name": "Albúmina en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_amylase",
+      "canonical_display_name": "Amilasa en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_cell_count",
+      "canonical_display_name": "Recuento celular y diferencial en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_cholesterol",
+      "canonical_display_name": "Colesterol en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_glucose",
+      "canonical_display_name": "Glucosa en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_ldh",
+      "canonical_display_name": "LDH en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [
+        "LDH en líquido corporal"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_total_protein",
+      "canonical_display_name": "Proteínas totales en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "body_fluid_triglycerides",
+      "canonical_display_name": "Triglicéridos en líquido corporal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "bun",
+      "canonical_display_name": "Nitrógeno ureico (BUN)",
+      "common_display_name": "Nitrógeno ureico en sangre",
+      "abbreviations": [
+        "BUN"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "c3",
+      "canonical_display_name": "C3",
+      "common_display_name": null,
+      "abbreviations": [
+        "C3"
+      ],
+      "equivalent_aliases": [
+        "Complemento C3"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "c4",
+      "canonical_display_name": "C4",
+      "common_display_name": null,
+      "abbreviations": [
+        "C4"
+      ],
+      "equivalent_aliases": [
+        "Complemento C4"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ca125_serum",
+      "canonical_display_name": "Antígeno CA 125 sérico",
+      "common_display_name": null,
+      "abbreviations": [
+        "CA 125",
+        "CA-125"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ca153_serum",
+      "canonical_display_name": "Antígeno CA 15-3 sérico",
+      "common_display_name": null,
+      "abbreviations": [
+        "CA 15-3",
+        "CA15-3"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ca199_serum",
+      "canonical_display_name": "Antígeno CA 19-9 sérico",
+      "common_display_name": null,
+      "abbreviations": [
+        "CA 19-9",
+        "CA19-9"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "calcium",
+      "canonical_display_name": "Calcio",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cbc",
+      "canonical_display_name": "Biometría hemática (BH / CBC)",
+      "common_display_name": "Biometría hemática",
+      "abbreviations": [
+        "BH / CBC",
+        "CBC",
+        "BH"
+      ],
+      "equivalent_aliases": [
+        "Biometría hemática",
+        "Citometría hemática"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cea_serum",
+      "canonical_display_name": "Antígeno carcinoembrionario sérico",
+      "common_display_name": null,
+      "abbreviations": [
+        "CEA"
+      ],
+      "equivalent_aliases": [
+        "Antígeno carcinoembrionario"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "chloride",
+      "canonical_display_name": "Cloro",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "chol_total",
+      "canonical_display_name": "Colesterol total",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cortisol_serum",
+      "canonical_display_name": "Cortisol sérico",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Cortisol",
+        "Cortisol en suero"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "creatinine",
+      "canonical_display_name": "Creatinina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "crp_hs",
+      "canonical_display_name": "Proteína C reactiva ultrasensible (PCR-us)",
+      "common_display_name": null,
+      "abbreviations": [
+        "hs-CRP",
+        "PCR-us"
+      ],
+      "equivalent_aliases": [
+        "Proteína C reactiva H.S."
+      ],
+      "discovery_terms": [
+        "PCR",
+        "CRP",
+        "inflamación"
+      ]
+    },
+    {
+      "study_key": "crp_standard",
+      "canonical_display_name": "Proteína C reactiva convencional",
+      "common_display_name": null,
+      "abbreviations": [
+        "CRP convencional"
+      ],
+      "equivalent_aliases": [
+        "Proteína C reactiva estándar"
+      ],
+      "discovery_terms": [
+        "PCR",
+        "CRP",
+        "inflamación"
+      ]
+    },
+    {
+      "study_key": "csf_cell_count",
+      "canonical_display_name": "Recuento celular y diferencial en LCR",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Citometría de líquido cefalorraquídeo"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_cryptococcal_antigen",
+      "canonical_display_name": "Antígeno criptocócico en LCR",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_glucose",
+      "canonical_display_name": "Glucosa en líquido cefalorraquídeo (LCR)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_lactate",
+      "canonical_display_name": "Lactato en LCR",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_meningitis_encephalitis_panel",
+      "canonical_display_name": "Panel molecular de meningitis/encefalitis en LCR",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_oligoclonal_bands",
+      "canonical_display_name": "Bandas oligoclonales en LCR y suero",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_total_protein",
+      "canonical_display_name": "Proteínas totales en líquido cefalorraquídeo (LCR)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_vdrl",
+      "canonical_display_name": "VDRL en LCR",
+      "common_display_name": null,
+      "abbreviations": [
+        "VDRL en LCR"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "d_dimer",
+      "canonical_display_name": "Dímero D",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "dheas_serum",
+      "canonical_display_name": "Sulfato de dehidroepiandrosterona",
+      "common_display_name": null,
+      "abbreviations": [
+        "DHEA-S",
+        "DHEAS"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ena",
+      "canonical_display_name": "ENA",
+      "common_display_name": "Antígenos nucleares extraíbles",
+      "abbreviations": [
+        "ENA"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "esr",
+      "canonical_display_name": "Velocidad de sedimentación globular (VSG)",
+      "common_display_name": null,
+      "abbreviations": [
+        "VSG"
+      ],
+      "equivalent_aliases": [
+        "Velocidad de sed. globular",
+        "Velocidad de sedimentación globular"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "estradiol",
+      "canonical_display_name": "Estradiol",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fecal_occult_blood",
+      "canonical_display_name": "Sangre oculta en heces",
+      "common_display_name": null,
+      "abbreviations": [
+        "Sangre oculta en heces (FOB)"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ferritin",
+      "canonical_display_name": "Ferritina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fibrinogen",
+      "canonical_display_name": "Fibrinógeno",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "folate",
+      "canonical_display_name": "Ácido fólico",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fructosamine",
+      "canonical_display_name": "Fructosamina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "fsh",
+      "canonical_display_name": "FSH",
+      "common_display_name": "Hormona foliculoestimulante",
+      "abbreviations": [
+        "FSH"
+      ],
+      "equivalent_aliases": [
+        "Hormona folículo estimulante"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ft3",
+      "canonical_display_name": "T3 libre",
+      "common_display_name": "Triyodotironina libre",
+      "abbreviations": [
+        "T3L",
+        "T3 libre"
+      ],
+      "equivalent_aliases": [
+        "Triyodotironina libre"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ft4",
+      "canonical_display_name": "T4 libre",
+      "common_display_name": "Tiroxina libre",
+      "abbreviations": [
+        "T4L",
+        "T4 libre"
+      ],
+      "equivalent_aliases": [
+        "Tiroxina libre"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ggt",
+      "canonical_display_name": "GGT",
+      "common_display_name": "Gamma glutamil transferasa",
+      "abbreviations": [
+        "GGT"
+      ],
+      "equivalent_aliases": [
+        "Gamaglutamil transpeptidasa"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "glucose",
+      "canonical_display_name": "Glucosa",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "hba1c",
+      "canonical_display_name": "Hemoglobina glicosilada (HbA1c)",
+      "common_display_name": "Hemoglobina glicosilada",
+      "abbreviations": [
+        "HbA1c",
+        "A1c"
+      ],
+      "equivalent_aliases": [
+        "Hemoglobina glicosilada",
+        "Hemoglobina glucosilada",
+        "Hemoglobina A1c"
+      ],
+      "discovery_terms": [
+        "diabetes",
+        "glucosa"
+      ]
+    },
+    {
+      "study_key": "hbsag",
+      "canonical_display_name": "HBsAg",
+      "common_display_name": "Antígeno de superficie de hepatitis B",
+      "abbreviations": [
+        "Ag. de superficie del VHB"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "hcv_ab",
+      "canonical_display_name": "VHC (anticuerpos)",
+      "common_display_name": "Anticuerpos contra hepatitis C",
+      "abbreviations": [
+        "Acs. anti-VHC",
+        "VHC"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "hdl",
+      "canonical_display_name": "HDL",
+      "common_display_name": null,
+      "abbreviations": [
+        "HDL"
+      ],
+      "equivalent_aliases": [
+        "Colesterol HDL"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "hiv_ag_ac",
+      "canonical_display_name": "VIH Ag/Ac",
+      "common_display_name": null,
+      "abbreviations": [
+        "VIH Ag/Ac"
+      ],
+      "equivalent_aliases": [
+        "Virus de inmunodeficiencia humana"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "iga",
+      "canonical_display_name": "IgA",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "igg",
+      "canonical_display_name": "IgG",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "igm",
+      "canonical_display_name": "IgM",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "insulin_serum",
+      "canonical_display_name": "Insulina sérica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Insulina",
+        "Insulina en suero"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "iron",
+      "canonical_display_name": "Hierro sérico",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_ag_helicobacter_pylori",
+      "canonical_display_name": "Antígeno de Helicobacter pylori en heces",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Ag. Helicobacter pylori",
+        "Antígeno H. pylori en heces"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_amonio",
+      "canonical_display_name": "Amonio",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Amoníaco plasmático"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_calprotectina_cuantificada",
+      "canonical_display_name": "Calprotectina fecal cuantitativa",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Calprotectina cuantificada",
+        "Calprotectina fecal"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_ck_mb",
+      "canonical_display_name": "Creatina cinasa MB",
+      "common_display_name": null,
+      "abbreviations": [
+        "CK-MB",
+        "CK MB"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_coombs_directo",
+      "canonical_display_name": "Coombs directo",
+      "common_display_name": null,
+      "abbreviations": [
+        "DAT"
+      ],
+      "equivalent_aliases": [
+        "Prueba de antiglobulina directa"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_coombs_indirecto",
+      "canonical_display_name": "Coombs indirecto",
+      "common_display_name": null,
+      "abbreviations": [
+        "IAT"
+      ],
+      "equivalent_aliases": [
+        "Prueba de antiglobulina indirecta"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_cpk",
+      "canonical_display_name": "Creatina cinasa total",
+      "common_display_name": null,
+      "abbreviations": [
+        "CPK"
+      ],
+      "equivalent_aliases": [
+        "CK total"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_frotis_sanguineo",
+      "canonical_display_name": "Frotis sanguíneo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Frotis de sangre periférica"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_litio",
+      "canonical_display_name": "Litio",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Nivel de litio"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_reticulocitos",
+      "canonical_display_name": "Reticulocitos",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Recuento de reticulocitos"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_tiempo_de_protrombina",
+      "canonical_display_name": "Tiempo de protrombina",
+      "common_display_name": null,
+      "abbreviations": [
+        "TP",
+        "PT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lab_tiempo_de_trombina",
+      "canonical_display_name": "Tiempo de trombina",
+      "common_display_name": null,
+      "abbreviations": [
+        "TT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ldh_serum",
+      "canonical_display_name": "Lactato deshidrogenasa sérica",
+      "common_display_name": null,
+      "abbreviations": [
+        "LDH sérica",
+        "DHL sérica"
+      ],
+      "equivalent_aliases": [
+        "Lactato deshidrogenasa en suero"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ldl",
+      "canonical_display_name": "LDL",
+      "common_display_name": null,
+      "abbreviations": [
+        "LDL"
+      ],
+      "equivalent_aliases": [
+        "Colesterol LDL"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lh",
+      "canonical_display_name": "LH",
+      "common_display_name": "Hormona luteinizante",
+      "abbreviations": [
+        "LH"
+      ],
+      "equivalent_aliases": [
+        "Hormona luteinizante"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "lipase",
+      "canonical_display_name": "Lipasa",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "magnesium",
+      "canonical_display_name": "Magnesio",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "microalbumin",
+      "canonical_display_name": "Microalbuminuria",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Microalbúmina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "non_hdl",
+      "canonical_display_name": "Colesterol no-HDL",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ogtt",
+      "canonical_display_name": "Curva de glucosa (OGTT)",
+      "common_display_name": null,
+      "abbreviations": [
+        "OGTT"
+      ],
+      "equivalent_aliases": [
+        "Curva de tolerancia glucosa",
+        "Curva de tolerancia oral a la glucosa"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "phosphorus",
+      "canonical_display_name": "Fósforo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "platelets",
+      "canonical_display_name": "Plaquetas",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "post_vasectomy_semen_check",
+      "canonical_display_name": "Control de semen posvasectomía",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "potassium",
+      "canonical_display_name": "Potasio",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "procalcitonin_serum",
+      "canonical_display_name": "Procalcitonina sérica",
+      "common_display_name": null,
+      "abbreviations": [
+        "PCT"
+      ],
+      "equivalent_aliases": [
+        "Procalcitonina en suero"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "progesterone",
+      "canonical_display_name": "Progesterona",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "prolactin",
+      "canonical_display_name": "Prolactina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "psa_free",
+      "canonical_display_name": "Antígeno prostático específico libre",
+      "common_display_name": "PSA libre",
+      "abbreviations": [
+        "PSA libre",
+        "APE libre"
+      ],
+      "equivalent_aliases": [
+        "Antígeno prostático libre"
+      ],
+      "discovery_terms": [
+        "próstata"
+      ]
+    },
+    {
+      "study_key": "psa_total",
+      "canonical_display_name": "Antígeno prostático específico total",
+      "common_display_name": "PSA total",
+      "abbreviations": [
+        "PSA total",
+        "APE total"
+      ],
+      "equivalent_aliases": [
+        "Antígeno prostático total"
+      ],
+      "discovery_terms": [
+        "próstata"
+      ]
+    },
+    {
+      "study_key": "pth_intact",
+      "canonical_display_name": "Paratohormona intacta",
+      "common_display_name": null,
+      "abbreviations": [
+        "PTH intacta"
+      ],
+      "equivalent_aliases": [
+        "Hormona paratiroidea intacta"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rf",
+      "canonical_display_name": "Factor reumatoide",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "semen_analysis",
+      "canonical_display_name": "Espermatobioscopía básica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Análisis de semen",
+        "Espermatograma"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "sodium",
+      "canonical_display_name": "Sodio",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "sterile_body_fluid_bacterial_culture",
+      "canonical_display_name": "Cultivo bacteriano de líquido estéril",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "stool_culture",
+      "canonical_display_name": "Coprocultivo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "stool_ova_parasites",
+      "canonical_display_name": "Coproparasitoscópico",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "synovial_crystals",
+      "canonical_display_name": "Cristales en líquido sinovial",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Cristales sinoviales"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "syphilis_vdrl_serum",
+      "canonical_display_name": "VDRL sérico",
+      "common_display_name": null,
+      "abbreviations": [
+        "VDRL sérico"
+      ],
+      "equivalent_aliases": [
+        "VDRL en suero",
+        "Prueba VDRL sérica"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "testosterone_free",
+      "canonical_display_name": "Testosterona libre",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "testosterone_total",
+      "canonical_display_name": "Testosterona total",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "throat_swab",
+      "canonical_display_name": "Exudado faríngeo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "tibc",
+      "canonical_display_name": "CTFH (TIBC)",
+      "common_display_name": null,
+      "abbreviations": [
+        "CTFH",
+        "TIBC"
+      ],
+      "equivalent_aliases": [
+        "Capacidad de fijación total de hierro (transferrina)"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "total_protein",
+      "canonical_display_name": "Proteínas totales",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "total_t3",
+      "canonical_display_name": "Triyodotironina total",
+      "common_display_name": null,
+      "abbreviations": [
+        "T3 total"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "transferrin_sat",
+      "canonical_display_name": "% Saturación transferrina",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "% de saturación de transferrina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "triglycerides",
+      "canonical_display_name": "Triglicéridos",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "tsh",
+      "canonical_display_name": "TSH",
+      "common_display_name": "Hormona estimulante de la tiroides",
+      "abbreviations": [
+        "TSH"
+      ],
+      "equivalent_aliases": [
+        "Hormona estimulante de tiroides"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urea",
+      "canonical_display_name": "Urea",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "uric_acid",
+      "canonical_display_name": "Ácido úrico",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urinalysis",
+      "canonical_display_name": "EGO (examen general de orina)",
+      "common_display_name": null,
+      "abbreviations": [
+        "EGO"
+      ],
+      "equivalent_aliases": [
+        "examen general de orina",
+        "Examen general de orina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_albumin_creatinine_panel",
+      "canonical_display_name": "Albúmina y creatinina urinarias con relación (muestra aislada)",
+      "common_display_name": null,
+      "abbreviations": [
+        "ACR urinaria"
+      ],
+      "equivalent_aliases": [
+        "Relación albúmina/creatinina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_creatinine_spot",
+      "canonical_display_name": "Creatinina en orina (muestra aislada)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_culture",
+      "canonical_display_name": "Urocultivo",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_osmolality",
+      "canonical_display_name": "Osmolalidad urinaria",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Osmolaridad urinaria"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_potassium_spot",
+      "canonical_display_name": "Potasio en orina (muestra aislada)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_pregnancy_qualitative",
+      "canonical_display_name": "Prueba de embarazo en orina (cualitativa)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_protein_creatinine_panel",
+      "canonical_display_name": "Proteínas y creatinina urinarias con relación (muestra aislada)",
+      "common_display_name": null,
+      "abbreviations": [
+        "PCR urinaria"
+      ],
+      "equivalent_aliases": [
+        "Relación proteína/creatinina"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_sodium_spot",
+      "canonical_display_name": "Sodio en orina (muestra aislada)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "vaginal_swab",
+      "canonical_display_name": "Exudado vaginal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "vitamin_b12",
+      "canonical_display_name": "Vitamina B12",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "vitamin_d",
+      "canonical_display_name": "Vitamina D",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "eeg_routine",
+      "canonical_display_name": "EEG rutinario",
+      "common_display_name": null,
+      "abbreviations": [
+        "EEG rutinario"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "eeg_sleep_deprived",
+      "canonical_display_name": "EEG con privación de sueño",
+      "common_display_name": null,
+      "abbreviations": [
+        "EEG con privación de sueño"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "emg_ncs",
+      "canonical_display_name": "EMG + Velocidades de conducción nerviosa (VCN)",
+      "common_display_name": "Electromiografía y velocidades de conducción nerviosa",
+      "abbreviations": [
+        "EMG + Velocidades de conducción nerviosa",
+        "VCN",
+        "EMG + VCN"
+      ],
+      "equivalent_aliases": [
+        "EMG + VCN (estudio completo)"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "evoked_auditory_baep",
+      "canonical_display_name": "Potenciales auditivos de tronco (PEAT/BAEP)",
+      "common_display_name": null,
+      "abbreviations": [
+        "PEAT",
+        "BAEP"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "evoked_ssep",
+      "canonical_display_name": "Potenciales somatosensoriales (PESS/SSEP)",
+      "common_display_name": null,
+      "abbreviations": [
+        "PESS",
+        "SSEP"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "evoked_visual",
+      "canonical_display_name": "Potenciales evocados visuales (PEV)",
+      "common_display_name": null,
+      "abbreviations": [
+        "PEV"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "repetitive_nerve_stimulation",
+      "canonical_display_name": "Estimulación repetitiva",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "sfemg",
+      "canonical_display_name": "EMG de fibra única (SFEMG)",
+      "common_display_name": null,
+      "abbreviations": [
+        "EMG de fibra única",
+        "SFEMG"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "video_eeg",
+      "canonical_display_name": "Video-EEG (prolongado)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "csf_cytology",
+      "canonical_display_name": "Citología de LCR",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cyto_liquid_based",
+      "canonical_display_name": "Citología en base líquida",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cyto_pap",
+      "canonical_display_name": "Papanicolaou (convencional)",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "serous_fluid_cytology",
+      "canonical_display_name": "Citología de líquido seroso",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "urine_cytology",
+      "canonical_display_name": "Citología urinaria",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "hsat",
+      "canonical_display_name": "Estudio domiciliario de apnea (HSAT)",
+      "common_display_name": "Estudio domiciliario de apnea del sueño",
+      "abbreviations": [
+        "HSAT"
+      ],
+      "equivalent_aliases": [
+        "HSAT (apnea del sueño en casa)"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mslt",
+      "canonical_display_name": "MSLT (latencias múltiples del sueño)",
+      "common_display_name": null,
+      "abbreviations": [
+        "MSLT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mwt",
+      "canonical_display_name": "MWT (mantenimiento de la vigilia)",
+      "common_display_name": null,
+      "abbreviations": [
+        "MWT"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "psg_diagnostic",
+      "canonical_display_name": "Polisomnografía (PSG) diagnóstica",
+      "common_display_name": "Polisomnografía diagnóstica",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "PSG diagnóstica"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "psg_titration",
+      "canonical_display_name": "PSG con titulación (CPAP/BiPAP)",
+      "common_display_name": null,
+      "abbreviations": [
+        "PSG con titulación",
+        "CPAP"
+      ],
+      "equivalent_aliases": [],
+      "discovery_terms": []
+    }
+  ]
+}

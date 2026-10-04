@@ -1,6 +1,6 @@
 # STUDY-SEARCH01 — deterministic discovery authority proposal
 
-**AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED**
+**AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED · IMPLEMENTED by [STUDY-SEARCH02](STUDY_SEARCH02_CONTROLLED_PREFIX_SEARCH_IMPLEMENTED.md)**
 
 Source HEAD: `7e7c552c59e24ddd2b841e59e676d65a291d8ce4`. This audit snapshots the 252 active `clinical_study_types` rows from the Director review database on 2026-10-04. The [authority matrix](STUDY_SEARCH01_AUTHORITY_MATRIX.csv) has exactly one row per canonical `study_type_key`; the [query expectations](STUDY_SEARCH01_QUERY_EXPECTATIONS.csv) simulate the proposed matcher for 47 queries. Both are **proposals**, not data migrations or runtime behavior. Catalog rows, current aliases, navigation, frontend, backend, schema, writers and readers are unchanged.
 

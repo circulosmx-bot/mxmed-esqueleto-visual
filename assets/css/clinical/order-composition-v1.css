@@ -14,7 +14,9 @@
 .ordcomp-count { color:#496b80; }
 .ordcomp-selection > p:only-child { padding:.7rem .8rem; margin:.7rem 0; color:#506e84; background:#fff; border:1px solid #c8dfe8; border-radius:.4rem; }
 .ordcomp .tax03c-composer { display:block; }
-.ordcomp .tax03c-result-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.65rem .4rem; border:0; border-bottom:1px solid #dfebef; background:transparent; text-align:left; color:inherit; }
+.ordcomp .tax03c-result-row { width:100%; min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.65rem .4rem; border:0; border-bottom:1px solid #dfebef; background:transparent; text-align:left; color:inherit; }
+.tax03c-result-row .tax03c-result-copy { display:grid; gap:2px; min-width:0; flex:1 1 auto; overflow-wrap:anywhere; }
+.tax03c-result-row .tax03c-common-name { display:block; min-width:0; white-space:normal; overflow-wrap:anywhere; }
 .ordcomp .tax03c-result-row span:first-child { min-width:0; overflow-wrap:anywhere; }
 .ordcomp .tax03c-result-row span:last-child { white-space:nowrap; color:#008a9e; font-size:.8rem; }
 .ordcomp .tax03c-result-row[aria-pressed=true] { background:#e9f9f5; opacity:1; }
