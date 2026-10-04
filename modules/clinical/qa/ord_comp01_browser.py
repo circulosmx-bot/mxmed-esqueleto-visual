@@ -88,6 +88,20 @@ with sync_playwright() as p:
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   print(f'QA_ORDCOMP01_R1_FEATURED_ROOT_DRAFT_REMOVE_{width}x{height}=PASS',flush=True)
   assert page.locator('[data-catalog-group]').count()==6
+  labels=[node.get_attribute('data-catalog-group') for node in page.locator('[data-catalog-group]').all()]
+  assert next(i for i,s in enumerate(labels) if 'Semen' in s)==next(i for i,s in enumerate(labels) if 'Microbiología urinaria' in s)+1
+  assert page.locator('.specimen-editor').count()==0
+  choose('synovial_crystals')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  expect(page.locator('[data-tax03c-specimen]')).to_have_count(1)
+  page.locator('[data-tax03c-specimen]').click()
+  expect(page.locator('.specimen-editor label')).to_have_count(1)
+  page.locator('.specimen-editor select').select_option('JOINT')
+  page.locator('.specimen-editor input').fill('Rodilla derecha')
+  assert page.locator('.specimen-item-summary').inner_text()=='Datos de muestra completos'
+  page.locator('.ordcomp-summary .ordcomp-remove').click()
+  if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
+  page.locator('.ordcomp [data-tax03c-search]').fill('')
   new_groups={'urine_creatinine_spot':'Estudios generales y renales','urine_sodium_spot':'Electrolitos y minerales urinarios','urine_potassium_spot':'Electrolitos y minerales urinarios','urine_pregnancy_qualitative':'Estudios generales y renales','csf_glucose':'Líquido cefalorraquídeo (LCR)','csf_total_protein':'Líquido cefalorraquídeo (LCR)','post_vasectomy_semen_check':'Semen'}
   for key in new_groups:
    page.locator('.ordcomp [data-tax03c-search]').fill(next(r['display_name_es'] for r in rows if r['study_type_key']==key))
@@ -195,6 +209,28 @@ with sync_playwright() as p:
   expect(page.locator('.ordcomp-issued-order')).to_have_count(1)
   assert writes[-1]==writes[-2]
   print(f'QA_UNCERTAIN_RETRY_SAME_BATCH_{width}x{height}=PASS',flush=True)
+  # QA-only rule on an existing catalog identity; production config remains fixed and unchanged.
+  qa_specimen=json.loads((ROOT/'modules/clinical/catalog/study_specimen_requirements_v1.json').read_text())
+  qa_specimen['studies']['urine_osmolality']={'specimen_mode':'FIXED','fixed_specimen_type_key':'URINE','collection_mode':'REQUIRED_SELECTION','allowed_collection_modes':['SPOT','TIMED'],'allowed_duration_minutes':[1440]}
+  page.route('**/modules/clinical/catalog/study_specimen_requirements_v1.json',lambda route:route.fulfill(content_type='application/json',body=json.dumps(qa_specimen)))
+  state['profile']='Médico General'
+  page.reload(wait_until='networkidle');page.locator('.vis06-intent-card').first.click();nav('laboratory');nav('urine');choose('urine_osmolality')
+  if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  expect(page.locator('[data-tax03c-specimen]')).to_have_count(1)
+  expect(page.locator('.specimen-item-summary')).to_contain_text('Completar datos')
+  page.get_by_role('button',name='Continuar con 1 orden',exact=True).click()
+  expect(page.locator('.ordcomp-error').first).to_contain_text('Completa los datos de muestra')
+  page.locator('.specimen-editor select').first.select_option('TIMED')
+  expect(page.locator('.specimen-editor select')).to_have_count(2)
+  page.locator('.specimen-editor select').nth(1).select_option('1440')
+  expect(page.locator('.specimen-item-summary')).to_contain_text('completos')
+  assert page.locator('.specimen-editor').evaluate('(e)=>e.getBoundingClientRect().right<=innerWidth')
+  page.get_by_role('button',name='Continuar con 1 orden',exact=True).click()
+  page.get_by_role('button',name='Emitir 1 orden',exact=True).click()
+  expect(page.locator('.ordcomp-issued-order')).to_have_count(1)
+  assert writes[-1]['orders'][0]['order_items'][0]['specimen_collection_requirements']=={'version':1,'collection_mode':'TIMED','requested_duration_minutes':1440}
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  print(f'QA_CAT03B_SYNTHETIC_TIMED_INLINE_{width}x{height}=PASS',flush=True)
   assert not errors,errors
   print(f'QA_INLINE_MULTI_BRANCH_ACCORDION_REVIEW_GUARD_{width}x{height}=PASS',flush=True)
   page.close()

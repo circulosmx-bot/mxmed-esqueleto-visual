@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "contract": "specimen_collection_requirements",
+  "specimen_types": {
+    "URINE": "Orina", "CSF": "Líquido cefalorraquídeo (LCR)",
+    "PLEURAL_FLUID": "Líquido pleural", "ASCITIC_PERITONEAL_FLUID": "Líquido ascítico / peritoneal",
+    "SYNOVIAL_FLUID": "Líquido sinovial", "PERICARDIAL_FLUID": "Líquido pericárdico",
+    "SEMEN": "Semen", "SALIVA": "Saliva", "SPUTUM": "Esputo",
+    "BRONCHOALVEOLAR_LAVAGE": "Lavado broncoalveolar", "BRONCHIAL_WASHING": "Lavado bronquial",
+    "TRACHEAL_ASPIRATE": "Aspirado traqueal", "WHOLE_BLOOD": "Sangre total",
+    "SERUM": "Suero", "PLASMA": "Plasma"
+  },
+  "collection_modes": {
+    "SPOT": "Muestra aislada", "TIMED": "Recolección cronometrada",
+    "FIRST_MORNING": "Primera orina de la mañana", "MIDSTREAM": "Chorro medio"
+  },
+  "source_sites": {"JOINT": "Articulación", "OTHER_ANATOMICAL_SITE": "Otro sitio anatómico"},
+  "paired_relationships": {"SAME_COLLECTION_EPISODE": "Muestras del mismo episodio"},
+  "studies": {
+    "urinalysis": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE"},
+    "microalbumin": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE"},
+    "urine_culture": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE"},
+    "urine_albumin_creatinine_panel": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE", "fixed_collection_mode": "SPOT"},
+    "urine_protein_creatinine_panel": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE", "fixed_collection_mode": "SPOT"},
+    "urine_osmolality": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE"},
+    "urine_creatinine_spot": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE", "fixed_collection_mode": "SPOT"},
+    "urine_sodium_spot": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE", "fixed_collection_mode": "SPOT"},
+    "urine_potassium_spot": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE", "fixed_collection_mode": "SPOT"},
+    "urine_pregnancy_qualitative": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE"},
+    "csf_cell_count": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "csf_glucose": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "csf_total_protein": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "synovial_crystals": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SYNOVIAL_FLUID", "source_site": "OPTIONAL_SELECTION", "allowed_source_site_keys": ["JOINT", "OTHER_ANATOMICAL_SITE"], "source_site_text_required_keys": ["JOINT", "OTHER_ANATOMICAL_SITE"]},
+    "semen_analysis": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SEMEN"},
+    "post_vasectomy_semen_check": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SEMEN"}
+  }
+}

@@ -30,6 +30,8 @@ The inline composer derives “16 estudios disponibles” from active leaf membe
 
 **CAT03B** still owns `specimen_type`, `source_site`, collection duration/volume/start/end, random-versus-timed protocol, container/preservative, and paired specimens. No `urine_creatinine_24h`, `urine_sodium_24h`, `urine_potassium_24h`, or any other timed variant was added. **CAT03C** still owns stone-risk and CSF molecular panels, body-fluid chemistry/lipid profiles, pathology/microbiology expansion and advanced specialty studies. No generic body-fluid chemistry or susceptibility authority was introduced.
 
+**Status update:** [CAT03B](URINE_FLUIDS_CAT03B_SPECIMEN_COLLECTION_CONTRACT_V1_IMPLEMENTED.md) now implements physician-request specimen, collection mode/duration, optional site and paired-rule snapshots. Actual volume, collection timestamps, container and preservative remain future operational collection-event data. CAT03C's advanced orderables remain deferred.
+
 ## QA evidence
 
 - Disposable catalog gate: 215 unique active studies, 215 routing mappings, seven new keys and no new aliases; same-group order of seven, independent imaging order, exact item IDs, result linked to one new item, portable HTML/PDF, rollback/idempotency/auth and provider-identity regression passed. No review-db patient/order/result QA writes were made.

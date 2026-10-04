@@ -12,10 +12,13 @@ with sync_playwright() as p:
   expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
   expect(page.locator('[data-ordcomp-featured] button').first).to_be_visible()
   expect(page.locator('[data-catalog-group]')).to_have_count(6)
+  labels=[node.get_attribute('data-catalog-group') for node in page.locator('[data-catalog-group]').all()]
+  assert labels.index('Semen')==labels.index('Microbiología urinaria')+1
   expect(page.locator('.ordcomp [data-tax03c-status]')).to_contain_text('16 estudios disponibles')
   for name in ('Creatinina en orina (muestra aislada)','Sodio en orina (muestra aislada)','Potasio en orina (muestra aislada)','Prueba de embarazo en orina (cualitativa)','Glucosa en líquido cefalorraquídeo (LCR)','Proteínas totales en líquido cefalorraquídeo (LCR)','Control de semen posvasectomía'):
    assert page.locator('[data-catalog-group] [data-tax03c-id]').filter(has_text=name).count()==1
   page.locator('[data-ordcomp-featured] button').first.click()
+  assert page.locator('.specimen-editor').count()==0
   if w<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
   for state in (['compact','expanded'] if w>768 else ['mobile']):
    if state=='expanded':page.evaluate("document.querySelector('#mmSidebar [data-action=sidebar-toggle]').click()")

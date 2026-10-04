@@ -128,6 +128,7 @@ $continuationHeader = $order
     <section><h2>Estudios solicitados</h2><ol class="studies">
       <?php foreach ($order['studies'] as $study): ?><li class="study"><strong><?php echo portable_escape($study['name']); ?></strong>
         <?php if (!empty($study['dental_context'])): ?><p class="study-context"><?php echo portable_escape($study['dental_context']); ?></p><?php endif; ?>
+        <?php if (!empty($study['specimen_context'])): ?><p class="study-context"><?php echo portable_escape($study['specimen_context']); ?></p><?php endif; ?>
         <?php if (!empty($study['note'])): ?><p class="study-note"><?php echo portable_escape($study['note']); ?></p><?php endif; ?>
       </li><?php endforeach; ?>
     </ol></section>

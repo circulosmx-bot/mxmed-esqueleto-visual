@@ -7,7 +7,7 @@
   const routing=()=>routingPromise ||= fetch('/modules/clinical/catalog/study_order_routing_v1.json',{credentials:'same-origin'})
     .then(r=>{if(!r.ok)throw new Error('ROUTING_UNAVAILABLE');return r.json();}).catch(e=>{routingPromise=null;throw e;});
   function mount(host,options){
-    let config=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
+    let config=null,specimenConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
     let busy=false,attempt=null,uncertain=false,issued=false;const waiters=[];
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
     const title=el('h4'),crumb=el('p','','ordcomp-breadcrumb'),selector=el('div');catalog.append(crumb,title,selector);
@@ -54,9 +54,9 @@
       title.textContent=scope.label||'Catálogo general';crumb.textContent=scope.breadcrumb||'Selección de estudios';
       selector.textContent='Cargando estudios…';
       try{
-        config=await routing();if(epoch!==seen)return false;
+        [config,specimenConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();})]);if(epoch!==seen)return false;
         composer=window.mxmedStudyComposer.mount(selector,{doctorId:current.doctor,presentation:'embedded',routing:config,
-          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',selectionHost:selection,
+          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',selectionHost:selection,specimenConfig,
           initialCategory:scope.parts?.length===1?scope.parts[0].category:'',selected,customDraft,
           onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.()});
         counts();selector.querySelector('input')?.focus({preventScroll:true});return true;
@@ -75,7 +75,8 @@
       for(const [key,items] of groups()){
         const card=el('section','','ordcomp-review-order');card.dataset.reviewGroup=key;card.append(el('h5',config.groups[key]));
         const list=el('ul');items.forEach(({item})=>{const li=el('li',item.name+(item.type==='custom'?' · Estudio personalizado':''));
-          if(item.dentalLocation)li.append(el('small',window.mxmedDentalLocationV1.summary(item.dentalLocation)));list.append(li);});card.append(list);
+          if(item.dentalLocation)li.append(el('small',window.mxmedDentalLocationV1.summary(item.dentalLocation)));
+          if(item.specimenRequirements){const request=item.specimenRequirements,detail=[(request.specimen_type_key&&specimenConfig.specimen_types[request.specimen_type_key]),(request.collection_mode==='TIMED'&&`${request.requested_duration_minutes/60} horas`),(request.source_site_text&&`Sitio: ${request.source_site_text}`)].filter(Boolean).join(' · ');if(detail)li.append(el('small',detail));}list.append(li);});card.append(list);
         const meta=metadata[key] ||= {priority:'Rutinaria',indication:''};
         const pl=el('label','Prioridad'),priority=el('select');['Rutinaria','Urgente'].forEach(v=>priority.add(new Option(v,v)));priority.value=meta.priority;
         priority.setAttribute('aria-label',`Prioridad · ${config.groups[key]}`);priority.addEventListener('change',()=>{meta.priority=priority.value;attempt=null;});pl.append(priority);

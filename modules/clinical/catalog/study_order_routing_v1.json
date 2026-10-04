@@ -269,6 +269,13 @@
           ]
         },
         {
+          "label": "Semen",
+          "keys": [
+            "semen_analysis",
+            "post_vasectomy_semen_check"
+          ]
+        },
+        {
           "label": "Líquido cefalorraquídeo (LCR)",
           "keys": [
             "csf_cell_count",
@@ -280,13 +287,6 @@
           "label": "Líquido sinovial",
           "keys": [
             "synovial_crystals"
-          ]
-        },
-        {
-          "label": "Semen",
-          "keys": [
-            "semen_analysis",
-            "post_vasectomy_semen_check"
           ]
         }
       ]

@@ -4,8 +4,10 @@ repo_root="$(cd "$(dirname "$0")/../../.." && pwd)"
 qa_db="ordcomp01_qa_$(openssl rand -hex 5)"
 qa_root="$(mktemp -d /tmp/ordcomp01-qa-XXXXXXXX)"
 http_pid=""
+synthetic_pid=""
 cleanup(){
   if [[ -n "$http_pid" ]]; then kill "$http_pid" 2>/dev/null || true; wait "$http_pid" 2>/dev/null || true; fi
+  if [[ -n "$synthetic_pid" ]]; then kill "$synthetic_pid" 2>/dev/null || true; wait "$synthetic_pid" 2>/dev/null || true; fi
   mysql -e "DROP DATABASE IF EXISTS \`$qa_db\`"
   rm -rf "$qa_root"
 }
@@ -35,3 +37,10 @@ MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS=
  php -d "session.save_path=$qa_root/sessions" -S "127.0.0.1:$qa_port" -t "$repo_root" > "$qa_root/server.log" 2>&1 & http_pid=$!
 for _ in {1..40}; do if curl -fsS -o /dev/null "http://127.0.0.1:$qa_port/index.html" 2>/dev/null; then break; fi; sleep 0.1; done
 LAB_CAT02A_QA_BASE="http://127.0.0.1:$qa_port" LAB_CAT02A_QA_DB="$qa_db" python3 "$repo_root/modules/clinical/qa/ord_comp01_disposable_gate.py"
+LAB_CAT02A_QA_DB="$qa_db" php "$repo_root/modules/clinical/qa/urine_fluids_cat03b_contract_gate.php"
+synthetic_hex="$(openssl rand -hex 2)"; synthetic_port=$((18000 + 16#$synthetic_hex % 20000))
+MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS='' \
+ MXMED_CLINICAL_PRIVATE_STORAGE_ROOT="$qa_root/private" MXMED_CLINICAL_STAGING_TTL_SECONDS=300 MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1=1 MXMED_CLINICAL_M6_COHORT_MODE=off \
+ php -d "auto_prepend_file=$repo_root/modules/clinical/qa/urine_fluids_cat03b_synthetic_prepend.php" -d "session.save_path=$qa_root/sessions" -S "127.0.0.1:$synthetic_port" -t "$repo_root" > "$qa_root/synthetic-server.log" 2>&1 & synthetic_pid=$!
+for _ in {1..40}; do if curl -fsS -o /dev/null "http://127.0.0.1:$synthetic_port/index.html" 2>/dev/null; then break; fi; sleep 0.1; done
+CAT03B_QA_BASE="http://127.0.0.1:$synthetic_port" CAT03B_QA_DB="$qa_db" python3 "$repo_root/modules/clinical/qa/urine_fluids_cat03b_synthetic_batch_gate.py"

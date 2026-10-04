@@ -50,6 +50,8 @@ for doc in issued:
  assert p['order_payload_version']==2 and p['order_routing_version']==1
  assert p['order_composition_batch_uuid']==body['order_composition_batch_uuid'] and p['order_routing_group_key']==doc['order_routing_group_key']
  assert all(routing['studies'][i['study_type_key']]==p['order_routing_group_key'] and i['study_type_id'] for i in p['order_items'])
+ if p['order_routing_group_key']=='CLINICAL_LAB':
+  assert all(i['specimen_collection_requirements']=={'version':1,'specimen_type_key':'URINE'} for i in p['order_items'])
  all_ids.extend(i['order_item_id'] for i in p['order_items'])
 assert len(all_ids)==len(set(all_ids))==5
 code,replay=req(PATH+'/orders/batch',body);assert code==200 and replay['data']==result['data'],(code,replay)
@@ -61,6 +63,10 @@ sql("UPDATE clinical_study_types SET is_active=1 WHERE study_type_key='urine_osm
 print('QA_MULTI_ORDER_SUCCESS=PASS; QA_MULTI_ORDER_IDEMPOTENCY=PASS',flush=True)
 def counts():return sql('SELECT COUNT(*) FROM clinical_documents')+':'+sql('SELECT COUNT(*) FROM clinical_idempotency_requests')
 before=counts()
+specimen_invalid=batch([order('GENERAL_IMAGING',['rx_chest']),{'order_routing_group_key':'CLINICAL_LAB','priority':'Rutinaria','indication':'QA muestra inválida','order_items':[{'study_type_key':'csf_glucose','specimen_collection_requirements':{'version':1,'specimen_type_key':'SERUM'}}]}])
+code,error=req(PATH+'/orders/batch',specimen_invalid)
+assert code==422 and error['order_routing_group_key']=='CLINICAL_LAB' and counts()==before,(code,error)
+print('QA_SPECIMEN_BATCH_REJECTION_ZERO_WRITES=PASS; QA_FIXED_SPECIMEN_SNAPSHOT=PASS',flush=True)
 invalid=batch([order('CLINICAL_LAB',['glucose']),order('GENERAL_IMAGING',['not_a_study'])]);code,error=req(PATH+'/orders/batch',invalid)
 assert code==422 and error['order_routing_group_key']=='GENERAL_IMAGING' and counts()==before,(code,error)
 # Force a write-time failure AFTER the first document insert, to exercise actual rollback.
@@ -130,6 +136,7 @@ for doc in issued+[old,dental_doc,new_lab]:
  code,model=req('/api/clinical/index.php/doctors/d_labcat02a_order/portable-orders/'+doc['document_uuid']);assert code==200
  code,html=req('/modules/clinical/ui/portable-order.php?'+query);assert code==200
  assert all(item['name'].encode() in html for item in model['data']['studies'])
+ assert all(item['specimen_context'].encode() in html for item in model['data']['studies'] if item.get('specimen_context'))
  code,pdf=req('/modules/clinical/ui/portable-order-pdf.php?'+query)
  assert code==200 and pdf.startswith(b'%PDF-') and pdf.rstrip().endswith(b'%%EOF'),(code,pdf[:200])
  print('QA_PORTABLE_'+doc.get('order_routing_group_key','HISTORICAL_MIXED')+'=PASS',flush=True)

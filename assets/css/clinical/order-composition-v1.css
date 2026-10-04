@@ -25,6 +25,9 @@
 .ordcomp .dental-item-summary { flex-basis:100%; }
 .ordcomp-add-other { display:block; width:100%; margin:.55rem 0; text-align:left; }
 .ordcomp .dental-location-host { width:100%; min-width:0; }
+.ordcomp .specimen-item-summary { flex-basis:100%; }
+.ordcomp .specimen-editor { width:100%; min-width:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr)); gap:.25rem .6rem; padding:.35rem .2rem; }
+.ordcomp .specimen-editor label { min-width:0; }
 .ordcomp-count { font-size:.84rem; }
 .ordcomp-error { color:#9d2831; font-size:.9rem; }
 .ordcomp label { display:block; margin:.5rem 0; }
