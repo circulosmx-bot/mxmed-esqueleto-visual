@@ -4,6 +4,7 @@ import csv
 import json
 import pathlib
 import subprocess
+from collections import defaultdict
 from urllib.parse import parse_qs, urlsplit
 
 from playwright.sync_api import expect, sync_playwright
@@ -13,6 +14,11 @@ BASE = 'http://127.0.0.1:18148'
 MATRIX = list(csv.DictReader((ROOT / 'docs/clinical/STUDY_NAV_FEATURED01_LEAF_MATRIX.csv').open()))
 MEMBERS = list(csv.DictReader((ROOT / 'docs/clinical/STUDY_NAV_FEATURED01_GROUP_MEMBERSHIP_MATRIX.csv').open()))
 CONFIG = json.loads((ROOT / 'modules/clinical/catalog/study_featured_navigation_v1.json').read_text())['leaves']
+AUTHORITY = list(csv.DictReader((ROOT / 'docs/clinical/LAB_CAT04A_R1_IMPLEMENTATION_AUTHORITY.csv').open()))
+ADDED = defaultdict(list)
+for authority in AUTHORITY:
+    if authority['r1_action'] == 'CREATE_CANONICAL':
+        ADDED[authority['r1_primary_leaf_key']].append(authority)
 tree = ast.parse((ROOT / 'modules/clinical/qa/lab_cat02a_browser.py').read_text())
 HTML = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
             if any(isinstance(target, ast.Name) and target.id == 'HTML' for target in node.targets))
@@ -24,28 +30,36 @@ ROWS = [dict(study_type_id=int(i), study_type_key=k, display_name_es=n, category
         for i, k, n, c, a in (line.split('\t') for line in raw.splitlines())]
 IDS = {row['study_type_key']:row['study_type_id'] for row in ROWS}
 COUNTS = {category:sum(row['category_key'] == category for row in ROWS) for category in {row['category_key'] for row in ROWS}}
-assert len(ROWS) == 232 and len(CONFIG) == len(MATRIX) == 49
+assert len(ROWS) == 252 and len(CONFIG) == len(MATRIX) == 49 and sum(map(len, ADDED.values())) == 20
 assert len(MEMBERS) == 152
 assert set(IDS) == set().union(*(set(leaf['study_keys']) for leaf in CONFIG.values()))
-assert sum(leaf['small'] for leaf in CONFIG.values()) == 38
+assert sum(leaf['small'] for leaf in CONFIG.values()) == 37
 assert sum(len(leaf['featured']) for leaf in CONFIG.values()) == 29
-assert sum(len(leaf['groups']) for leaf in CONFIG.values()) == 38
-assert sum(len(group['keys']) for leaf in CONFIG.values() for group in leaf['groups']) == 152
+assert sum(len(leaf['groups']) for leaf in CONFIG.values()) == 41
+assert sum(len(group['keys']) for leaf in CONFIG.values() for group in leaf['groups']) == 169
 for row in MATRIX:
     leaf = CONFIG[row['leaf_key']]
+    additions = ADDED[row['leaf_key']]
+    expected_keys = set(row['current_active_study_keys'].split('|')) | {item['r1_stable_key'] for item in additions}
     assert leaf['heading'] == row['heading_proposal']
-    assert leaf['small'] == (row['small_catalog_rule_applies'] == 'yes')
-    assert leaf['study_keys'] == row['current_active_study_keys'].split('|')
-    assert len(leaf['study_keys']) == int(row['current_active_study_count'])
+    assert leaf['small'] == (len(expected_keys) <= 6)
+    assert set(leaf['study_keys']) == expected_keys
+    assert len(leaf['study_keys']) == len(expected_keys)
     expected = [] if row['featured_confidence'] == 'LOW' else [row[f'proposed_featured_{i}'] for i in range(1, 7) if row[f'proposed_featured_{i}']]
     assert leaf['featured'] == expected
-    expected_groups = [key for key in row['proposed_catalog_groups'].split('|') if key]
-    assert [group['key'] for group in leaf['groups']] == expected_groups
+    expected_groups = {key for key in row['proposed_catalog_groups'].split('|') if key}
+    expected_groups.update(item['r1_accordion_group_key'] for item in additions if item['r1_accordion_group_key'] != 'DIRECT_DISPLAY')
+    assert {group['key'] for group in leaf['groups']} == expected_groups
     assert all(group['keys'] and set(group['keys']) <= set(leaf['study_keys']) for group in leaf['groups'])
+    for item in additions:
+        if item['r1_accordion_group_key'] != 'DIRECT_DISPLAY':
+            group = next(group for group in leaf['groups'] if group['key'] == item['r1_accordion_group_key'])
+            assert group['label'] == item['r1_accordion_group_label']
+            assert item['r1_stable_key'] in group['keys']
 for member in MEMBERS:
     group = next(group for group in CONFIG[member['leaf_key']]['groups'] if group['key'] == member['accordion_group_key'])
     assert group['label'] == member['accordion_group_label'] and member['canonical_study_key'] in group['keys']
-print('QA_FEATURED02_STATIC_49_LEAVES_232_ACTIVE_38_GROUPS_152_MEMBERS=PASS', flush=True)
+print('QA_FEATURED02_STATIC_49_LEAVES_252_ACTIVE_41_GROUPS_169_MEMBERS=PASS', flush=True)
 
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch(headless=True)

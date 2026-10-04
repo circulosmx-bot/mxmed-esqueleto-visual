@@ -49,6 +49,26 @@
     "csf_cryptococcal_antigen": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
     "csf_vdrl": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
     "csf_meningitis_encephalitis_panel": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
-    "csf_cytology": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"}
+    "csf_cytology": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "crp_standard": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "psa_total": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "insulin_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "cortisol_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "syphilis_vdrl_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "ldh_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "psa_free": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "afp_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "cea_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "ca125_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "ca199_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "ca153_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "acth_plasma": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "PLASMA"},
+    "pth_intact": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "dheas_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "anti_ds_dna": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "procalcitonin_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "total_t3": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "bicarbonate_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "apo_b": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"}
   }
 }

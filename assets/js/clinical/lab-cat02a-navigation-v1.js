@@ -40,7 +40,9 @@
             "alp",
             "alt",
             "amylase",
+            "apo_b",
             "ast",
+            "bicarbonate_serum",
             "bilirubin_direct",
             "bilirubin_indirect",
             "bilirubin_total",
@@ -57,6 +59,7 @@
             "lab_amonio",
             "lab_ck_mb",
             "lab_cpk",
+            "ldh_serum",
             "ldl",
             "lipase",
             "magnesium",
@@ -107,20 +110,26 @@
         {
           "category": "LABORATORIO",
           "keys": [
+            "acth_plasma",
             "anti_tg",
             "anti_tpo",
             "bhcg",
+            "cortisol_serum",
+            "dheas_serum",
             "estradiol",
             "fsh",
             "ft3",
             "ft4",
             "hba1c",
+            "insulin_serum",
             "lh",
             "ogtt",
             "progesterone",
             "prolactin",
+            "pth_intact",
             "testosterone_free",
             "testosterone_total",
+            "total_t3",
             "tsh"
           ]
         }
@@ -238,6 +247,7 @@
             "ana",
             "anca",
             "anti_ccp",
+            "anti_ds_dna",
             "ena"
           ]
         }
@@ -248,7 +258,7 @@
       "key": "inflammation",
       "label": "Inflamación / reactantes",
       "icon": "science",
-      "parts": [{"category": "LABORATORIO", "keys": ["crp_hs", "esr"]}],
+      "parts": [{"category": "LABORATORIO", "keys": ["crp_hs", "crp_standard", "esr", "procalcitonin_serum"]}],
       "priority": 3
     },
     {
@@ -259,7 +269,14 @@
         {
           "category": "LABORATORIO",
           "keys": [
-            "bhcg"
+            "afp_serum",
+            "bhcg",
+            "ca125_serum",
+            "ca153_serum",
+            "ca199_serum",
+            "cea_serum",
+            "psa_free",
+            "psa_total"
           ]
         }
       ],
@@ -286,7 +303,7 @@
       "key": "infectious_serology",
       "label": "Serologías / infecciones",
       "icon": "lab_profile",
-      "parts": [{"category": "LABORATORIO", "keys": ["hiv_ag_ac"]}],
+      "parts": [{"category": "LABORATORIO", "keys": ["hiv_ag_ac", "syphilis_vdrl_serum"]}],
       "priority": 6
     },
     {

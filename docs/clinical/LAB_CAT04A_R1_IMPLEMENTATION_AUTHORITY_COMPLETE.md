@@ -2,6 +2,8 @@
 
 **AUDIT_ONLY · IMPLEMENTATION_AUTHORITY_COMPLETE · DIRECTOR_REVIEW_REQUIRED**
 
+Implementation status: **PARTIALLY_IMPLEMENTED** by [LAB-CAT04B](LAB_CAT04B_COMMON_LAB_MINIMUM_SAFE_IMPLEMENTED.md). This R1 document remains the decision record for the exact 28 implemented targets and the deferred concepts.
+
 Baseline: `c9b48adcc589b6e6a6847a8f57bef418960096d9`. This repairs the CAT04A decision table; it creates no catalog rows, aliases, navigation, routing, specimen config, order or result records. CAT04B remains a separate implementation task. The original 168 audit rows and classifications are preserved in the repaired matrix. The 28 target rows are also extracted to the machine-readable authority CSV.
 
 ## Contract and reconciliation

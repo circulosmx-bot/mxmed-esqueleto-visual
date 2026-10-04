@@ -247,7 +247,27 @@
     "csf_vdrl": "CLINICAL_LAB",
     "serous_fluid_cytology": "PATHOLOGY_CYTOLOGY",
     "sterile_body_fluid_bacterial_culture": "CLINICAL_LAB",
-    "urine_cytology": "PATHOLOGY_CYTOLOGY"
+    "urine_cytology": "PATHOLOGY_CYTOLOGY",
+    "acth_plasma": "CLINICAL_LAB",
+    "afp_serum": "CLINICAL_LAB",
+    "anti_ds_dna": "CLINICAL_LAB",
+    "apo_b": "CLINICAL_LAB",
+    "bicarbonate_serum": "CLINICAL_LAB",
+    "ca125_serum": "CLINICAL_LAB",
+    "ca153_serum": "CLINICAL_LAB",
+    "ca199_serum": "CLINICAL_LAB",
+    "cea_serum": "CLINICAL_LAB",
+    "cortisol_serum": "CLINICAL_LAB",
+    "crp_standard": "CLINICAL_LAB",
+    "dheas_serum": "CLINICAL_LAB",
+    "insulin_serum": "CLINICAL_LAB",
+    "ldh_serum": "CLINICAL_LAB",
+    "procalcitonin_serum": "CLINICAL_LAB",
+    "psa_free": "CLINICAL_LAB",
+    "psa_total": "CLINICAL_LAB",
+    "pth_intact": "CLINICAL_LAB",
+    "syphilis_vdrl_serum": "CLINICAL_LAB",
+    "total_t3": "CLINICAL_LAB"
   },
   "catalog": {
     "urine": {
