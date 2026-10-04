@@ -10,8 +10,8 @@
     let config=null,specimenConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
     let busy=false,attempt=null,uncertain=false,issued=false,reviewReturnFocus=null,reviewScroll=null;const waiters=[];
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
-    const title=el('h4'),crumb=el('p','','ordcomp-breadcrumb'),selector=el('div');catalog.append(crumb,title,selector);
-    const count=el('p','','ordcomp-count'),selection=el('div'),error=el('p','','ordcomp-error');error.setAttribute('role','alert');
+    const title=el('h4'),crumb=el('p','','ordcomp-breadcrumb'),selector=el('div');catalog.append(el('h5','CATÁLOGO DE ESTUDIOS','ordcomp-catalog-role'),crumb,title,selector);
+    const count=el('p','','ordcomp-count'),selection=el('div','','ordcomp-selection'),error=el('p','','ordcomp-error');error.setAttribute('role','alert');
     const addOther=button('+ Agregar estudios',()=>chooser.hidden?openChooser():closeChooser(true));addOther.classList.add('ordcomp-add-other');
     const chooser=el('section','','ordcomp-add-chooser');chooser.id='ordcomp-add-chooser';chooser.hidden=true;chooser.setAttribute('role','region');chooser.setAttribute('aria-label','Elegir dónde agregar estudios');
     addOther.setAttribute('aria-controls',chooser.id);addOther.setAttribute('aria-expanded','false');
