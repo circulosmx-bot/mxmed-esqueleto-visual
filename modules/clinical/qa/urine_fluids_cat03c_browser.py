@@ -60,7 +60,8 @@ with sync_playwright() as playwright:
         assert selector.evaluate('(element)=>element.required && element.closest("label")?.textContent?.includes("Muestra")')
         assert selector.locator('option').evaluate_all('(options)=>options.map(option=>option.value)')==['','PLEURAL_FLUID','ASCITIC_PERITONEAL_FLUID','SYNOVIAL_FLUID','PERICARDIAL_FLUID']
         page.locator('.ordcomp-review-one').click()
-        expect(page.locator('.ordcomp-error').first).to_contain_text('Completa los datos de muestra')
+        expect(page.locator('dialog.ordcomp-review[open] .ordcomp-error').first).to_contain_text('Completa los datos de muestra')
+        page.get_by_role('button',name='Cerrar revisión').click()
         selector.focus();assert selector.evaluate('(element)=>document.activeElement===element')
         selector.select_option('PLEURAL_FLUID')
         expect(page.locator('.ordcomp-summary .tax03c-selected-row')).to_contain_text('Líquido pleural')

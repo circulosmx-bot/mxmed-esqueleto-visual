@@ -4,6 +4,8 @@
 
 **Actualización ORD-COMP02 (2026-10-03):** “+ Agregar estudios” abre un selector inline en el compositor. Usa `hierPath[0]` como ID estable de la familia médica actual, permite volver a su pantalla de subfamilias o cambiar a otra familia raíz mediante `renderHierarchy`, y preserva el borrador. En modo dental vuelve a categorías dentales o abre el catálogo global. Estas transiciones internas no activan VIS24. La revisión por tarjeta y la revisión atómica de todas las órdenes se describen en el contrato ORD-COMP01 actualizado.
 
+**Actualización ORD-COMP02-R1 (2026-10-03):** El selector de familias sustituye temporalmente su botón disparador. La revisión individual y conjunta se presenta en un diálogo modal sobre la misma hoja HIER03 y conserva el borrador al cerrar.
+
 La autoridad de presentación es [`study-navigation-hierarchy-v2.js`](../../assets/js/clinical/study-navigation-hierarchy-v2.js). La identidad y disponibilidad de cada estudio siguen en `clinical_study_types`; esta configuración solo organiza rutas por `category_key` y `study_type_key`. El selector y la deduplicación por `study_type_id` siguen en TAX03C. ORD-COMP01 coordina la emisión atómica de documentos mediante el writer canónico existente. V1 permanece como base de los atajos dentales y de las listas de claves de LAB-CAT02A, sin que su pantalla plana sea el modelo médico actual.
 
 ## Modelo de niveles y límites
@@ -44,7 +46,7 @@ Las rutas de Laboratorio se definen en las listas exactas de `lab-cat02a-navigat
 
 La especialidad solo **reordena subfamilias**. Cardiología prioriza Ultrasonido en Imagenología, cardíaco/vascular dentro de Ultrasonido y Cardiovascular en Funcionales. Endocrinología prioriza Hormonas/Química; Neurología, Neurofisiología/Sueño; Gastroenterología, Endoscopia digestiva. El Simulador de Clasificación vuelve a resolver ese orden en la pantalla abierta sin cambiar la raíz. Ningún perfil oculta el catálogo global.
 
-TAX03C recibe el alcance explícito en presentación **EMBEDDED**. El resumen **Ver órdenes en preparación** recupera la selección acumulada. Una sesión puede recorrer varias familias sin pérdida; cada grupo operativo produce su propia orden, con indicación y prioridad independientes. La confirmación se realiza en una pantalla de revisión inline. VIS24 protege toda la composición y sus campos locales al cambiar pestaña, paciente, barra lateral o salir. Volver entre familias no es abandono. La escritura nueva usa `POST .../patients/{patient}/orders/batch`; la escritura individual permanece para compatibilidad y las órdenes mixtas históricas siguen válidas.
+TAX03C recibe el alcance explícito en presentación **EMBEDDED**. El resumen **Ver órdenes en preparación** recupera la selección acumulada. Una sesión puede recorrer varias familias sin pérdida; cada grupo operativo produce su propia orden, con indicación y prioridad independientes. La confirmación se realiza en un diálogo modal sobre el compositor inline. VIS24 protege toda la composición y sus campos locales al cambiar pestaña, paciente, barra lateral o salir. Volver entre familias no es abandono. La escritura nueva usa `POST .../patients/{patient}/orders/batch`; la escritura individual permanece para compatibilidad y las órdenes mixtas históricas siguen válidas.
 
 ## QA y alcance
 
