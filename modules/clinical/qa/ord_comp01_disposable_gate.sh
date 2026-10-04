@@ -19,6 +19,7 @@ mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_02_17_dental
 mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_02_18_lab_cat02a_common_catalog.sql"
 mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_03_19_urine_fluids_catalog.sql"
 mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_03_20_urine_fluids_cat03a.sql"
+mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_03_21_urine_fluids_cat03c_minimum.sql"
 mysql "$qa_db" <<'SQL'
 INSERT INTO patients_patients(patient_id,display_name,birthdate) VALUES
  ('p_labcat02a_order','Paciente Laboratorio QA','1985-02-03'),('p_labcat02a_foreign','Paciente Ajeno QA','1992-06-07');
@@ -38,6 +39,7 @@ MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS=
 for _ in {1..40}; do if curl -fsS -o /dev/null "http://127.0.0.1:$qa_port/index.html" 2>/dev/null; then break; fi; sleep 0.1; done
 LAB_CAT02A_QA_BASE="http://127.0.0.1:$qa_port" LAB_CAT02A_QA_DB="$qa_db" python3 "$repo_root/modules/clinical/qa/ord_comp01_disposable_gate.py"
 LAB_CAT02A_QA_DB="$qa_db" php "$repo_root/modules/clinical/qa/urine_fluids_cat03b_contract_gate.php"
+LAB_CAT02A_QA_DB="$qa_db" php "$repo_root/modules/clinical/qa/urine_fluids_cat03c_contract_gate.php"
 synthetic_hex="$(openssl rand -hex 2)"; synthetic_port=$((18000 + 16#$synthetic_hex % 20000))
 MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS='' \
  MXMED_CLINICAL_PRIVATE_STORAGE_ROOT="$qa_root/private" MXMED_CLINICAL_STAGING_TTL_SECONDS=300 MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1=1 MXMED_CLINICAL_M6_COHORT_MODE=off \

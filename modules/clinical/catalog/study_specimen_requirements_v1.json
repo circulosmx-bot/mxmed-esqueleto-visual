@@ -32,6 +32,23 @@
     "csf_total_protein": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
     "synovial_crystals": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SYNOVIAL_FLUID", "source_site": "OPTIONAL_SELECTION", "allowed_source_site_keys": ["JOINT", "OTHER_ANATOMICAL_SITE"], "source_site_text_required_keys": ["JOINT", "OTHER_ANATOMICAL_SITE"]},
     "semen_analysis": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SEMEN"},
-    "post_vasectomy_semen_check": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SEMEN"}
+    "post_vasectomy_semen_check": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SEMEN"},
+    "body_fluid_cell_count": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "SYNOVIAL_FLUID", "PERICARDIAL_FLUID"]},
+    "body_fluid_glucose": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "SYNOVIAL_FLUID", "PERICARDIAL_FLUID"]},
+    "body_fluid_total_protein": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "SYNOVIAL_FLUID", "PERICARDIAL_FLUID"]},
+    "body_fluid_albumin": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "PERICARDIAL_FLUID"]},
+    "body_fluid_ldh": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "SYNOVIAL_FLUID"]},
+    "body_fluid_amylase": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "PERICARDIAL_FLUID"]},
+    "body_fluid_triglycerides": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "PERICARDIAL_FLUID"]},
+    "body_fluid_cholesterol": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "PERICARDIAL_FLUID"]},
+    "sterile_body_fluid_bacterial_culture": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "PERICARDIAL_FLUID", "SYNOVIAL_FLUID"]},
+    "serous_fluid_cytology": {"specimen_mode": "REQUIRED_SELECTION", "allowed_specimen_type_keys": ["PLEURAL_FLUID", "ASCITIC_PERITONEAL_FLUID", "PERICARDIAL_FLUID"]},
+    "urine_cytology": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "URINE"},
+    "csf_lactate": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "csf_oligoclonal_bands": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF", "paired_specimen": {"required": true, "counterpart_specimen_type_key": "SERUM", "relationship_key": "SAME_COLLECTION_EPISODE"}},
+    "csf_cryptococcal_antigen": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "csf_vdrl": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "csf_meningitis_encephalitis_panel": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"},
+    "csf_cytology": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "CSF"}
   }
 }

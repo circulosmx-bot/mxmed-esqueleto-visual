@@ -155,7 +155,10 @@
           "category": "LABORATORIO",
           "keys": [
             "blood_culture",
+            "csf_cryptococcal_antigen",
+            "csf_vdrl",
             "stool_culture",
+            "sterile_body_fluid_bacterial_culture",
             "throat_swab",
             "urine_culture",
             "vaginal_swab"
@@ -166,9 +169,9 @@
     },
     {
       "key": "molecular",
-      "label": "Biología molecular / PCR",
+      "label": "Molecular e infecciosas",
       "icon": "genetics",
-      "parts": [],
+      "parts": [{"category":"LABORATORIO","keys":["csf_meningitis_encephalitis_panel"]}],
       "priority": 7
     },
     {
@@ -188,6 +191,16 @@
             "urine_pregnancy_qualitative",
             "csf_glucose",
             "csf_total_protein",
+            "csf_lactate",
+            "csf_oligoclonal_bands",
+            "body_fluid_cell_count",
+            "body_fluid_glucose",
+            "body_fluid_total_protein",
+            "body_fluid_albumin",
+            "body_fluid_ldh",
+            "body_fluid_amylase",
+            "body_fluid_triglycerides",
+            "body_fluid_cholesterol",
             "post_vasectomy_semen_check"
           ]
         }

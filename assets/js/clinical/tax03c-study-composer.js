@@ -144,6 +144,10 @@
         const row=document.createElement('div');row.className='tax03c-selected-row';
         const copy=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;
         copy.append(name);
+        if(item.specimenRequirements?.specimen_type_key){
+          const specimenName=specimen?.specimen_types?.[item.specimenRequirements.specimen_type_key];
+          if(specimenName){const context=document.createElement('small');context.className='specimen-item-summary';context.textContent=specimenName;copy.append(context);}
+        }
         if(!embedded){const sub=document.createElement('small');sub.textContent=categories[item.category]||'Otros';copy.append(sub);}
         else if(item.type==='custom'&&item.note){const sub=document.createElement('small');sub.textContent=item.note;copy.append(sub);}
         row.append(copy);

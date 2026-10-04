@@ -9,8 +9,8 @@ $check=static function(bool $pass,string $name):void {if(!$pass)throw new Runtim
 $reject=static function(callable $action,string $code) use($check):void {try{$action();}catch(InvalidArgumentException $e){$check($e->getMessage()===$code,'QA_REJECT_'.$code);return;}throw new RuntimeException('Expected '.$code);};
 $config=clinical_specimen_authority();
 $urine=array_merge(...array_map(static fn($g)=>$g['keys'],json_decode(file_get_contents(__DIR__.'/../catalog/study_order_routing_v1.json'),true)['catalog']['urine']['groups']));
-$check(count($urine)===16 && count($config['studies'])===16 && array_diff($urine,array_keys($config['studies']))===[],'QA_ALL_ACTIVE_FLUID_STUDIES_CONFIGURED');
-foreach($urine as $key){
+$check(count($urine)===30 && count(array_unique($urine))===26 && count($config['studies'])===33 && array_diff($urine,array_keys($config['studies']))===[],'QA_ALL_ACTIVE_FLUID_STUDIES_CONFIGURED');
+foreach(array_keys(array_filter($config['studies'],static fn($rule)=>$rule['specimen_mode']==='FIXED')) as $key){
     $snapshot=clinical_study_normalize_order_payload($pdo,'orders',['order_items'=>[['study_type_key'=>$key]]]);
     $item=$snapshot['order_items'][0];
     $check(($item['specimen_collection_requirements']['version']??null)===1 && is_string($item['specimen_collection_requirements']['specimen_type_key']??null),'QA_FIXED_'.strtoupper($key));

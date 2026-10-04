@@ -8,12 +8,12 @@
   const group=(id,label,icon,parts,children=[],description='')=>({id,label,icon,parts,children,description});
   const nodes={
     laboratory:group('laboratory','LABORATORIO','science',[{category:'LABORATORIO'},{category:'GENETICA'}],
-      ['chemistry','hematology','coagulation','endocrine','immunoserology','microbiology','genetics','urine','stool','tumor','drugs','panels'],
+      ['chemistry','hematology','coagulation','endocrine','immunoserology','microbiology','molecular_infectious','genetics','urine','stool','tumor','drugs','panels'],
       'Análisis de muestras y pruebas de laboratorio.'),
     imaging:group('imaging','IMAGENOLOGÍA','image',[{category:'IMAGEN'},{category:'CARDIOVASCULAR',keys:['echo_tte','echo_tes','stress_echo','carotid_doppler','lower_ext_art_doppler','lower_ext_venous_doppler']}],
       ['radiography','ultrasound','tomography','magnetic_resonance','nuclear','breast_imaging','densitometry'],
       'Radiografías, ultrasonido, tomografía y resonancia.'),
-    pathology:group('pathology','PATOLOGÍA Y BIOPSIAS','biotech',[{category:'PATOLOGIA'}],['cervical_cytology'],
+    pathology:group('pathology','PATOLOGÍA Y BIOPSIAS','biotech',[{category:'PATOLOGIA'}],['cervical_cytology','fluid_cytology'],
       'Citologías y análisis de tejidos o muestras.'),
     functional:group('functional','ESTUDIOS FUNCIONALES','monitor_heart',[
       {category:'CARDIOVASCULAR',keys:['ecg_12lead','ecg_rhythm_strip','holter','abpm_mapa','stress_test','tilt_table','ankle_brachial_index']},
@@ -30,9 +30,11 @@
     immunoserology:group('immunoserology','Inmunología y serología','vaccines',[],
       ['immunoglobulins','autoimmunity','hepatitis_serology','infectious_serology','inflammation']),
     microbiology:group('microbiology','Microbiología','microbiology',lab('microbiology')),
+    molecular_infectious:group('molecular_infectious','Molecular e infecciosas','genetics',
+      [{category:'LABORATORIO',keys:['csf_meningitis_encephalitis_panel']}]),
     genetics:group('genetics','Genética y diagnóstico molecular','genetics',[],
       ['cytogenetics','cytogenomics','genomic_sequencing','prenatal_genetics','germline_genetics','hereditary_oncology','pharmacogenomics','molecular_oncology']),
-    urine:group('urine','Orina y otros fluidos','water_drop',[{category:'LABORATORIO',keys:["urinalysis", "microalbumin", "urine_albumin_creatinine_panel", "urine_protein_creatinine_panel", "urine_osmolality", "urine_creatinine_spot", "urine_sodium_spot", "urine_potassium_spot", "urine_pregnancy_qualitative", "urine_culture", "csf_cell_count", "csf_glucose", "csf_total_protein", "synovial_crystals", "semen_analysis", "post_vasectomy_semen_check"]}]),
+    urine:group('urine','Orina y otros fluidos','water_drop',[{category:'LABORATORIO',keys:["urinalysis", "microalbumin", "urine_albumin_creatinine_panel", "urine_protein_creatinine_panel", "urine_osmolality", "urine_creatinine_spot", "urine_sodium_spot", "urine_potassium_spot", "urine_pregnancy_qualitative", "urine_culture", "csf_cell_count", "csf_glucose", "csf_total_protein", "csf_lactate", "csf_oligoclonal_bands", "synovial_crystals", "semen_analysis", "post_vasectomy_semen_check", "body_fluid_cell_count", "body_fluid_glucose", "body_fluid_total_protein", "body_fluid_albumin", "body_fluid_ldh", "body_fluid_amylase", "body_fluid_triglycerides", "body_fluid_cholesterol"]}]),
     stool:group('stool','Materia fecal','science',lab('stool')),
     tumor:group('tumor','Marcadores tumorales','biotech',lab('tumor')),
     drugs:group('drugs','Monitoreo de fármacos','medication',lab('drugs')),
@@ -54,6 +56,8 @@
     molecular_oncology:group('molecular_oncology','Oncología molecular','genetics',lab('molecular_oncology')),
     cervical_cytology:group('cervical_cytology','Citología cervical','biotech',[
       {category:'PATOLOGIA',keys:['cyto_pap','cyto_liquid_based']}]),
+    fluid_cytology:group('fluid_cytology','Citología de orina y líquidos','biotech',[
+      {category:'PATOLOGIA',keys:['urine_cytology','csf_cytology','serous_fluid_cytology']}]),
     radiography:group('radiography','Radiografía y fluoroscopía','radiology',[
       {category:'IMAGEN',keys:['rx_chest','rx_abdomen','rx_pelvis','rx_cspine','rx_lspine','rx_shoulder','rx_knee','rx_ankle','rx_hand',
         'fluoro_hsg','fluoro_vcug','fluoro_ugi','fluoro_barium_enema']}]),

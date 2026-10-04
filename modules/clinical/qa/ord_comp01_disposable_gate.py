@@ -25,19 +25,19 @@ def req(path,body=None,key=None,cookie=OWNER,multipart=False):
  return code,json.loads(raw) if h.get_content_type()=='application/json' else raw
 routing=json.loads((ROOT/'modules/clinical/catalog/study_order_routing_v1.json').read_text())
 keys=sql('SELECT study_type_key FROM clinical_study_types WHERE is_active=1').splitlines()
-assert len(keys)==215 and len(keys)==len(set(keys))
+assert len(keys)==232 and len(keys)==len(set(keys))
 assert all(k in routing['studies'] and routing['studies'][k] in routing['groups'] for k in keys)
-assert len(routing['studies'])==215
+assert len(routing['studies'])==232
 urine=routing['catalog']['urine'];assert len(urine['featured'])<=6 and set(urine['featured'])<=set(k for g in urine['groups'] for k in g['keys'])<=set(keys)
 new_keys=['urine_creatinine_spot','urine_sodium_spot','urine_potassium_spot','urine_pregnancy_qualitative','csf_glucose','csf_total_protein','post_vasectomy_semen_check']
 assert set(new_keys)<=set(keys) and all(routing['studies'][k]=='CLINICAL_LAB' for k in new_keys)
 assert len(urine['featured'])==6 and not set(new_keys)&set(urine['featured'])
 assert sql("SELECT COUNT(*) FROM clinical_study_types WHERE study_type_key IN ("+','.join("'"+k+"'" for k in new_keys)+") AND JSON_LENGTH(aliases_json)=0")=='7'
 assert sql("SELECT COUNT(*) FROM clinical_study_types WHERE study_type_key LIKE '%_24h' AND seed_provenance LIKE 'URINE-FLUIDS-CAT03A:%'")=='0'
-assert sum(len(g['keys']) for g in urine['groups'])==16 and len(urine['groups'])==6
-assert next(g for g in urine['groups'] if g['label']=='Líquido cefalorraquídeo (LCR)')['keys']==['csf_cell_count','csf_glucose','csf_total_protein']
+assert sum(len(g['keys']) for g in urine['groups'])==30 and len({key for group in urine['groups'] for key in group['keys']})==26 and len(urine['groups'])==7
+assert next(g for g in urine['groups'] if g['label']=='Líquido cefalorraquídeo (LCR)')['keys']==['csf_cell_count','csf_glucose','csf_total_protein','csf_lactate','csf_oligoclonal_bands']
 assert next(g for g in urine['groups'] if g['label']=='Semen')['keys']==['semen_analysis','post_vasectomy_semen_check']
-print('QA_URINE_CATALOG=PASS; QA_ROUTING_215=PASS; QA_FEATURED=PASS; QA_CAT03A_SEVEN=PASS',flush=True)
+print('QA_URINE_CATALOG=PASS; QA_ROUTING_232=PASS; QA_FEATURED=PASS; QA_CAT03A_SEVEN=PASS',flush=True)
 def order(group,keys):return {'order_routing_group_key':group,'priority':'Rutinaria','indication':'QA desechable '+group,'order_items':[{'study_type_key':k} for k in keys]}
 def batch(orders):return {'order_composition_batch_uuid':str(uuid.uuid4()),'order_routing_version':1,'orders':orders}
 body=batch([order('CLINICAL_LAB',['urinalysis','urine_osmolality']),order('GENERAL_IMAGING',['rx_chest']),order('PATHOLOGY_CYTOLOGY',['cyto_pap']),order('CARDIOVASCULAR_DIAGNOSTICS',['echo_tte'])])
@@ -140,4 +140,61 @@ for doc in issued+[old,dental_doc,new_lab]:
  code,pdf=req('/modules/clinical/ui/portable-order-pdf.php?'+query)
  assert code==200 and pdf.startswith(b'%PDF-') and pdf.rstrip().endswith(b'%%EOF'),(code,pdf[:200])
  print('QA_PORTABLE_'+doc.get('order_routing_group_key','HISTORICAL_MIXED')+'=PASS',flush=True)
+cat03c=json.loads((ROOT/'modules/clinical/catalog/study_specimen_requirements_v1.json').read_text())
+cat03c_keys=sql("SELECT study_type_key FROM clinical_study_types WHERE seed_provenance='URINE-FLUIDS-CAT03C-IMPL:2026_10_03_21' ORDER BY study_type_key").splitlines()
+assert len(cat03c_keys)==17
+for key in cat03c_keys:
+ name=sql("SELECT display_name_es FROM clinical_study_types WHERE study_type_key='"+key+"'")
+ code,found=req('/api/clinical/index.php/doctors/d_labcat02a_order/study-types?'+urllib.parse.urlencode({'search':name,'limit':100}))
+ assert code==200 and any(row['study_type_key']==key and row['display_name_es']==name for row in found['data']['items']),(key,code,found)
+print('QA_CAT03C_SEARCH_17=PASS',flush=True)
+def selected(key,specimen=None):
+ return {'study_type_key':key,**({'specimen_collection_requirements':{'version':1,'specimen_type_key':specimen}} if specimen else {})}
+def prepared(group,items):return {'order_routing_group_key':group,'priority':'Rutinaria','indication':'CAT03C QA desechable','order_items':items}
+triple=batch([
+ prepared('CLINICAL_LAB',[selected('body_fluid_glucose','PLEURAL_FLUID'),selected('body_fluid_albumin','ASCITIC_PERITONEAL_FLUID')]),
+ prepared('PATHOLOGY_CYTOLOGY',[selected('serous_fluid_cytology','PERICARDIAL_FLUID')]),
+ prepared('GENETICS_MOLECULAR',[selected('csf_meningitis_encephalitis_panel')])])
+incomplete=copy.deepcopy(triple);del incomplete['orders'][0]['order_items'][0]['specimen_collection_requirements'];incomplete['order_composition_batch_uuid']=str(uuid.uuid4())
+before=counts();code,error=req(PATH+'/orders/batch',incomplete)
+assert code==422 and counts()==before,(code,error)
+code,created=req(PATH+'/orders/batch',triple)
+assert code==201 and len(created['data']['orders'])==3,(code,created)
+documents=created['data']['orders'];assert len({doc['document_uuid'] for doc in documents})==3
+assert sorted(doc['order_routing_group_key'] for doc in documents)==['CLINICAL_LAB','GENETICS_MOLECULAR','PATHOLOGY_CYTOLOGY']
+snapshots={doc['order_routing_group_key']:json.loads(sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(doc['document_id'])}")) for doc in documents}
+lab=snapshots['CLINICAL_LAB']['order_items'];assert len(lab)==2 and lab[0]['specimen_collection_requirements']['specimen_type_key']=='PLEURAL_FLUID' and lab[1]['specimen_collection_requirements']['specimen_type_key']=='ASCITIC_PERITONEAL_FLUID'
+assert len({item['order_item_id'] for p in snapshots.values() for item in p['order_items']})==4
+assert snapshots['PATHOLOGY_CYTOLOGY']['order_items'][0]['specimen_collection_requirements']['specimen_type_key']=='PERICARDIAL_FLUID'
+assert len(snapshots['GENETICS_MOLECULAR']['order_items'])==1 and snapshots['GENETICS_MOLECULAR']['order_items'][0]['specimen_collection_requirements']['specimen_type_key']=='CSF'
+code,replayed=req(PATH+'/orders/batch',triple);assert code==200 and replayed['data']==created['data']
+for doc in documents:
+ query=urllib.parse.urlencode({'uuid':doc['document_uuid'],'doctor_id':'d_labcat02a_order'})
+ code,model=req('/api/clinical/index.php/doctors/d_labcat02a_order/portable-orders/'+doc['document_uuid']);assert code==200
+ code,html=req('/modules/clinical/ui/portable-order.php?'+query);assert code==200
+ assert all(item['name'].encode() in html for item in model['data']['studies'])
+ assert all(item['specimen_context'].encode() in html for item in model['data']['studies'] if item.get('specimen_context'))
+ code,pdf=req('/modules/clinical/ui/portable-order-pdf.php?'+query);assert code==200 and pdf.startswith(b'%PDF-') and pdf.rstrip().endswith(b'%%EOF')
+panel_doc=next(doc for doc in documents if doc['order_routing_group_key']=='GENETICS_MOLECULAR')
+panel_item=snapshots['GENETICS_MOLECULAR']['order_items'][0]
+result_body={'patient_id':'p_labcat02a_order','document_type':'lab_result','title':'Panel LCR CAT03C QA','event_datetime':'2026-10-03 12:00:00','provenance':'Laboratorio QA','payload':{'source':'res02a_linked_result','related_order_document_uuid':panel_doc['document_uuid'],'related_order_item_ids':[panel_item['order_item_id']],'provenance':'Laboratorio QA'}}
+code,res=req(PATH+'/documents',result_body,multipart=True);assert code==201,(code,res)
+stored=json.loads(sql("SELECT payload_json FROM clinical_documents WHERE document_uuid='"+(res['data'].get('document_uuid') or res['data']['document_id'])+"'"))
+assert stored['related_order_item_ids']==[panel_item['order_item_id']]
+print('QA_CAT03C_INCOMPLETE_ZERO_WRITES=PASS; QA_CAT03C_THREE_ROUTING_BATCH=PASS; QA_CAT03C_EXACT_REPLAY=PASS',flush=True)
+print('QA_CAT03C_PORTABLE_HTML_PDF=PASS; QA_CAT03C_PANEL_RESULT_EXACT_ITEM=PASS',flush=True)
+for fluid,items in [('PLEURAL_FLUID',[selected('sterile_body_fluid_bacterial_culture','PLEURAL_FLUID'),selected('body_fluid_ldh','SYNOVIAL_FLUID')]),('SYNOVIAL_FLUID',[selected('sterile_body_fluid_bacterial_culture','SYNOVIAL_FLUID')])]:
+ code,issued_fluid=req(PATH+'/orders/batch',batch([prepared('CLINICAL_LAB',items)]))
+ assert code==201,(fluid,code,issued_fluid)
+ p=json.loads(sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(issued_fluid['data']['orders'][0]['document_id'])}"))
+ culture=next(item for item in p['order_items'] if item['study_type_key']=='sterile_body_fluid_bacterial_culture')
+ assert culture['specimen_collection_requirements']['specimen_type_key']==fluid
+ assert culture['study_type_id']==int(sql("SELECT study_type_id FROM clinical_study_types WHERE study_type_key='sterile_body_fluid_bacterial_culture'"))
+ if fluid=='PLEURAL_FLUID':assert next(item for item in p['order_items'] if item['study_type_key']=='body_fluid_ldh')['specimen_collection_requirements']['specimen_type_key']=='SYNOVIAL_FLUID'
+cytology=batch([prepared('PATHOLOGY_CYTOLOGY',[selected('urine_cytology'),selected('csf_cytology')])])
+code,issued_cytology=req(PATH+'/orders/batch',cytology);assert code==201,(code,issued_cytology)
+p=json.loads(sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(issued_cytology['data']['orders'][0]['document_id'])}"))
+assert [item['study_type_key'] for item in p['order_items']]==['urine_cytology','csf_cytology']
+assert [item['specimen_collection_requirements']['specimen_type_key'] for item in p['order_items']]==['URINE','CSF']
+print('QA_CAT03C_STERILE_CULTURE_TWO_FLUID_SNAPSHOTS=PASS; QA_CAT03C_SYNOVIAL_LDH=PASS; QA_CAT03C_URINE_CSF_CYTOLOGY=PASS',flush=True)
 print('ORD_COMP01_DISPOSABLE_GATE=PASS',flush=True)

@@ -87,7 +87,7 @@ with sync_playwright() as p:
   if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   print(f'QA_ORDCOMP01_R1_FEATURED_ROOT_DRAFT_REMOVE_{width}x{height}=PASS',flush=True)
-  assert page.locator('[data-catalog-group]').count()==6
+  assert page.locator('[data-catalog-group]').count()==7
   labels=[node.get_attribute('data-catalog-group') for node in page.locator('[data-catalog-group]').all()]
   assert next(i for i,s in enumerate(labels) if 'Semen' in s)==next(i for i,s in enumerate(labels) if 'Microbiología urinaria' in s)+1
   assert page.locator('.specimen-editor').count()==0
@@ -132,7 +132,7 @@ with sync_playwright() as p:
   choose('microalbumin')
   page.locator('[data-tax03c-search]').fill('RX Tórax');expect(page.locator('.ordcomp [data-tax03c-id]')).to_have_count(0)
   page.locator('[data-tax03c-search]').fill('');expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
-  back();back();nav('imaging');nav('radiography');choose('rx_chest');back();back();nav('pathology');choose('cyto_pap');back();nav('functional');nav('cardiovascular');choose('ecg_12lead')
+  back();back();nav('imaging');nav('radiography');choose('rx_chest');back();back();nav('pathology');nav('cervical_cytology');choose('cyto_pap');back();back();nav('functional');nav('cardiovascular');choose('ecg_12lead')
   if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
   expect(page.locator('.ordcomp-prepared-order')).to_have_count(4)
   assert '2' in page.locator('[data-order-group="CLINICAL_LAB"] summary').inner_text()

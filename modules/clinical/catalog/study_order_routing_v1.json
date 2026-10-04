@@ -230,7 +230,24 @@
     "urine_pregnancy_qualitative": "CLINICAL_LAB",
     "csf_glucose": "CLINICAL_LAB",
     "csf_total_protein": "CLINICAL_LAB",
-    "post_vasectomy_semen_check": "CLINICAL_LAB"
+    "post_vasectomy_semen_check": "CLINICAL_LAB",
+    "body_fluid_albumin": "CLINICAL_LAB",
+    "body_fluid_amylase": "CLINICAL_LAB",
+    "body_fluid_cell_count": "CLINICAL_LAB",
+    "body_fluid_cholesterol": "CLINICAL_LAB",
+    "body_fluid_glucose": "CLINICAL_LAB",
+    "body_fluid_ldh": "CLINICAL_LAB",
+    "body_fluid_total_protein": "CLINICAL_LAB",
+    "body_fluid_triglycerides": "CLINICAL_LAB",
+    "csf_cryptococcal_antigen": "CLINICAL_LAB",
+    "csf_cytology": "PATHOLOGY_CYTOLOGY",
+    "csf_lactate": "CLINICAL_LAB",
+    "csf_meningitis_encephalitis_panel": "GENETICS_MOLECULAR",
+    "csf_oligoclonal_bands": "CLINICAL_LAB",
+    "csf_vdrl": "CLINICAL_LAB",
+    "serous_fluid_cytology": "PATHOLOGY_CYTOLOGY",
+    "sterile_body_fluid_bacterial_culture": "CLINICAL_LAB",
+    "urine_cytology": "PATHOLOGY_CYTOLOGY"
   },
   "catalog": {
     "urine": {
@@ -280,13 +297,32 @@
           "keys": [
             "csf_cell_count",
             "csf_glucose",
-            "csf_total_protein"
+            "csf_total_protein",
+            "csf_lactate",
+            "csf_oligoclonal_bands"
+          ]
+        },
+        {
+          "label": "Líquidos serosos",
+          "keys": [
+            "body_fluid_cell_count",
+            "body_fluid_glucose",
+            "body_fluid_total_protein",
+            "body_fluid_albumin",
+            "body_fluid_ldh",
+            "body_fluid_amylase",
+            "body_fluid_triglycerides",
+            "body_fluid_cholesterol"
           ]
         },
         {
           "label": "Líquido sinovial",
           "keys": [
-            "synovial_crystals"
+            "synovial_crystals",
+            "body_fluid_cell_count",
+            "body_fluid_glucose",
+            "body_fluid_total_protein",
+            "body_fluid_ldh"
           ]
         }
       ]

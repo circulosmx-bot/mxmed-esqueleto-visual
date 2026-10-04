@@ -1,6 +1,8 @@
 # URINE-FLUIDS-CAT03C — advanced orderables reaudit after CAT03B
 
-**AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED**
+**PARTIALLY_IMPLEMENTED · historical audit and remaining proposals**
+
+The approved 17-key first set is recorded in [CAT03C minimum safe implementation](URINE_FLUIDS_CAT03C_MINIMUM_SAFE_IMPLEMENTED.md). Counts and "unchanged" statements below describe the original audit baseline. The 31-key extended set and blocked/uncertain rows remain proposals.
 Date: 2026-10-03. Source HEAD: `78e0f9160f73b3b2f1e90b797b7b86757cfd12cc`. Branch: `ux/consultation-step2-vitals-r1`. The worktree and tracking HEAD matched at preflight. This document authorizes no clinical catalog, routing, navigation, schema, writer, reader, or alias change.
 
 ## Director summary
