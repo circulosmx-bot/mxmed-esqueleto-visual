@@ -122,8 +122,13 @@
           if(item.dentalLocation)li.append(el('small',window.mxmedDentalLocationV1.summary(item.dentalLocation)));
           if(item.specimenRequirements){const request=item.specimenRequirements,detail=[(request.specimen_type_key&&specimenConfig.specimen_types[request.specimen_type_key]),(request.collection_mode==='TIMED'&&`${request.requested_duration_minutes/60} horas`),(request.source_site_text&&`Sitio: ${request.source_site_text}`)].filter(Boolean).join(' · ');if(detail)li.append(el('small',detail));}list.append(li);});card.append(list);
         const meta=metadata[key] ||= {priority:'Rutinaria',indication:''};
-        const pl=el('label','Prioridad'),priority=el('select');['Rutinaria','Urgente'].forEach(v=>priority.add(new Option(v,v)));priority.value=meta.priority;
-        priority.setAttribute('aria-label',`Prioridad · ${service}`);priority.addEventListener('change',()=>{meta.priority=priority.value;attempt=null;});pl.append(priority);
+        const pl=el('fieldset','','ordcomp-priority');pl.append(el('legend','Prioridad'));
+        ['Rutinaria','Urgente'].forEach(value=>{
+          const label=el('label'),radio=el('input');radio.type='radio';radio.name=`ordcomp-priority-${key}`;radio.value=value;radio.checked=meta.priority===value;
+          radio.addEventListener('change',()=>{if(radio.checked){meta.priority=value;attempt=null;}});
+          label.append(radio,document.createTextNode(value));pl.append(label);
+        });
+        if(!['Rutinaria','Urgente'].includes(meta.priority)){const unsupported=el('p',`Prioridad previa no compatible con esta composición: ${meta.priority}. Selecciona Rutinaria o Urgente para continuar.`,'ordcomp-error');unsupported.setAttribute('role','alert');pl.append(unsupported);}
         const il=el('label','Indicación clínica'),indication=el('textarea');indication.rows=2;indication.maxLength=2000;indication.value=meta.indication;
         indication.setAttribute('aria-label',`Indicación · ${service}`);indication.addEventListener('input',()=>{meta.indication=indication.value;attempt=null;});il.append(indication);
         const issue=el('p','','ordcomp-error');issue.setAttribute('role','alert');card.append(pl,il,issue);reviewContent.append(card);cards.set(key,{card,issue});
@@ -136,6 +141,7 @@
         if(busy)return;
         if(!composer?.valid()){failure.textContent=composer?.validationMessage()||'Completa los datos de los estudios antes de generar la orden.';return;}
         if([...groups().keys()].some(key=>!config.groups[key])){failure.textContent='Falta confirmar el servicio de un estudio.';return;}
+        if([...groups().keys()].some(key=>!['Rutinaria','Urgente'].includes(metadata[key]?.priority))){failure.textContent='Selecciona Rutinaria o Urgente para cada orden.';return;}
         if(options.context().patient!==context.patient||options.context().doctor!==context.doctor){failure.textContent='Cambió el paciente. Abre de nuevo la composición.';return;}
         if(!attempt){
           const inputs=composer.orderItems();attempt={order_composition_batch_uuid:crypto.randomUUID(),order_routing_version:config.version,

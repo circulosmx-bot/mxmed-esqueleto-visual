@@ -18,7 +18,7 @@
 
   function mount(host,options={}){
     const embedded=options.presentation==='embedded';
-    let embeddedGlobal=false,embeddedRows=null,fullOpen=false,openGroup='';
+    let embeddedGlobal=false,embeddedRows=null,fullOpen=embedded&&!!options.customDraft?.open,openGroup='';
     const doctorId=String(options.doctorId||'').trim();
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
@@ -72,8 +72,9 @@
     const $=selector=>host.querySelector(selector);
     const search=$('[data-tax03c-search]'),category=$('[data-tax03c-category]'),status=$('[data-tax03c-status]');
     const resultBox=$('[data-tax03c-results]'),selectedBox=options.selectionHost||$('[data-tax03c-selected]');
+    let customOpen=$('[data-tax03c-custom-open]');
     if(embedded){resultBox.removeAttribute('role');$('[data-tax03c-selected]').parentElement.hidden=true;$('[data-tax03c-filter]').hidden=true;$('[data-tax03c-priority]').closest('.tax03c-order-fields').hidden=true;
-      $('[data-tax03c-custom-open]').textContent='+ Agregar estudio no catalogado';}
+      const link=document.createElement('a');link.href='#';link.className='ordcomp-custom-link';link.dataset.tax03cCustomOpen='';link.textContent='¿No encuentras el estudio? Agregar estudio no catalogado';customOpen.replaceWith(link);customOpen=link;}
     const custom=$('[data-tax03c-custom]'),customName=$('[data-tax03c-custom-name]');
     const priority=$('[data-tax03c-priority]'),indication=$('[data-tax03c-indication]');
     const navigationScope=$('[data-tax03c-navigation-scope]');
@@ -234,7 +235,14 @@
         row.disabled=readonly||added;
         const name=document.createElement('span'),mark=document.createElement('span');name.textContent=item.display_name_es;mark.textContent=added?'✓ Agregado':'+ Agregar';row.append(name,mark);return row;
       };
-      if(needle){results.forEach(item=>resultBox.append(rowFor(item)));return;}
+      if(needle){
+        results.forEach(item=>resultBox.append(rowFor(item)));
+        if(embedded){
+          const hiddenCustom=document.createElement('div');hiddenCustom.hidden=true;
+          hiddenCustom.append(customOpen,custom);resultBox.append(hiddenCustom);
+        }
+        return;
+      }
       const config=!embeddedGlobal?options.routing.catalog[options.leafId]:null;
       const featured=(config?.featured||[]).slice(0,6).map(key=>results.find(item=>item.study_type_key===key)).filter(Boolean);
       if(featured.length){const heading=document.createElement('h5');heading.textContent='MÁS SOLICITADOS';resultBox.append(heading);const box=document.createElement('div');box.dataset.ordcompFeatured='';featured.forEach(item=>box.append(rowFor(item)));resultBox.append(box);}
@@ -261,6 +269,7 @@
         items.forEach(item=>details.append(rowFor(item)));
         details.addEventListener('toggle',()=>{if(details.open){openGroup=group.label;full.querySelectorAll('[data-catalog-group]').forEach(other=>{if(other!==details)other.open=false;});}else if(openGroup===group.label)openGroup='';});full.append(details);
       });
+      if(embedded)full.append(customOpen,custom);
       resultBox.append(full);
     }
     async function loadEmbedded(){
@@ -356,7 +365,7 @@
       renderSelected();notify();
     }
     const onClick=event=>{
-      const target=event.target.closest('button');if(!target||readonly)return;
+      const target=event.target.closest('button,[data-tax03c-custom-open]');if(!target||readonly)return;
       if(target.dataset.tax03cId){const row=results.find(item=>String(item.study_type_id)===target.dataset.tax03cId);if(!row)return;
         if(selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id)))return;
         if(selected.length>=100){status.textContent=embedded?'Máximo 100 estudios por composición.':'Máximo 100 estudios por orden.';return;}
@@ -366,7 +375,7 @@
       if(target.dataset.tax03cDental!==undefined){const index=Number(target.dataset.tax03cDental);editingIndex=editingIndex===index?-1:index;activeDentalEditor=null;renderSelected();selectedBox.querySelector(`[data-tax03c-dental="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cSpecimen!==undefined){const index=Number(target.dataset.tax03cSpecimen);editingIndex=editingIndex===index?-1:index;renderSelected();selectedBox.querySelector(`[data-tax03c-specimen="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cRemove!==undefined){const index=Number(target.dataset.tax03cRemove);selected.splice(index,1);editingIndex=editingIndex===index?-1:editingIndex>index?editingIndex-1:editingIndex;activeDentalEditor=null;renderSelected();renderResults();notify();}
-      if(target.hasAttribute('data-tax03c-custom-open'))openCustom();
+      if(target.hasAttribute('data-tax03c-custom-open')){event.preventDefault();openCustom();}
       if(target.hasAttribute('data-tax03c-custom-cancel')){custom.hidden=true;customName.value='';$('[data-tax03c-custom-note]').value='';$('[data-tax03c-custom-category]').value='';if(customRoute)customRoute.value='';}
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
       if(target.hasAttribute('data-tax03c-more')&&hasMore)load(true);

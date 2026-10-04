@@ -41,6 +41,7 @@ print('QA_URINE_CATALOG=PASS; QA_ROUTING_232=PASS; QA_FEATURED=PASS; QA_CAT03A_S
 def order(group,keys):return {'order_routing_group_key':group,'priority':'Rutinaria','indication':'QA desechable '+group,'order_items':[{'study_type_key':k} for k in keys]}
 def batch(orders):return {'order_composition_batch_uuid':str(uuid.uuid4()),'order_routing_version':1,'orders':orders}
 body=batch([order('CLINICAL_LAB',['urinalysis','urine_osmolality']),order('GENERAL_IMAGING',['rx_chest']),order('PATHOLOGY_CYTOLOGY',['cyto_pap']),order('CARDIOVASCULAR_DIAGNOSTICS',['echo_tte'])])
+body['orders'][1]['priority']='Urgente'
 code,result=req(PATH+'/orders/batch',body);assert code==201,(code,result)
 issued=result['data']['orders'];assert len(issued)==4
 assert len({r['document_id'] for r in issued})==len({r['document_uuid'] for r in issued})==4
@@ -49,11 +50,13 @@ for doc in issued:
  p=json.loads(sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(doc['document_id'])}"));snapshots.append(p)
  assert p['order_payload_version']==2 and p['order_routing_version']==1
  assert p['order_composition_batch_uuid']==body['order_composition_batch_uuid'] and p['order_routing_group_key']==doc['order_routing_group_key']
+ assert p['priority']==body['orders'][len(snapshots)-1]['priority']
  assert all(routing['studies'][i['study_type_key']]==p['order_routing_group_key'] and i['study_type_id'] for i in p['order_items'])
  if p['order_routing_group_key']=='CLINICAL_LAB':
   assert all(i['specimen_collection_requirements']=={'version':1,'specimen_type_key':'URINE'} for i in p['order_items'])
  all_ids.extend(i['order_item_id'] for i in p['order_items'])
 assert len(all_ids)==len(set(all_ids))==5
+print('QA_PRIORITY_WRITER_ROUTINE_URGENT=PASS',flush=True)
 code,replay=req(PATH+'/orders/batch',body);assert code==200 and replay['data']==result['data'],(code,replay)
 changed=copy.deepcopy(body);changed['orders'][0]['indication']='changed';assert req(PATH+'/orders/batch',changed)[0]==409
 # Replay survives subsequent catalog deactivation; the original snapshot set is authoritative.
@@ -86,7 +89,7 @@ assert req(PATH+'/orders/batch',batch([order('CLINICAL_LAB',['glucose'])]),cooki
 assert req(PATH+'/orders/batch',batch([order('CLINICAL_LAB',['glucose'])]),cookie='PHPSESSID=labcat02a-foreign')[0]==403
 print('QA_CUSTOM_ROUTING_AUTH_AND_REJECTION=PASS',flush=True)
 # Legacy mixed orders stay on the original single-order endpoint.
-legacy={'patient_id':'p_labcat02a_order','document_type':'orders','title':'Orden mixta histórica QA','payload':{'source':'tax03c_catalog_composer','order_items':[{'study_type_key':'glucose'},{'study_type_key':'rx_chest'}]}}
+legacy={'patient_id':'p_labcat02a_order','document_type':'orders','title':'Orden mixta histórica QA','payload':{'source':'tax03c_catalog_composer','priority':'priority_stat','order_items':[{'study_type_key':'glucose'},{'study_type_key':'rx_chest'}]}}
 code,old=req(PATH+'/documents',legacy);assert code==201,(code,old)
 old=old['data'];old_json=sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(old['document_id'])}")
 old_payload=json.loads(old_json)
@@ -134,12 +137,14 @@ print('QA_PROVIDER_INTEROP_STATIC=PASS (exact version/items; provider eligibilit
 for doc in issued+[old,dental_doc,new_lab]:
  query=urllib.parse.urlencode({'uuid':doc['document_uuid'],'doctor_id':'d_labcat02a_order'})
  code,model=req('/api/clinical/index.php/doctors/d_labcat02a_order/portable-orders/'+doc['document_uuid']);assert code==200
+ if doc['document_uuid']==old['document_uuid']:assert model['data']['priority']=='Prioridad (STAT)'
  code,html=req('/modules/clinical/ui/portable-order.php?'+query);assert code==200
  assert all(item['name'].encode() in html for item in model['data']['studies'])
  assert all(item['specimen_context'].encode() in html for item in model['data']['studies'] if item.get('specimen_context'))
  code,pdf=req('/modules/clinical/ui/portable-order-pdf.php?'+query)
  assert code==200 and pdf.startswith(b'%PDF-') and pdf.rstrip().endswith(b'%%EOF'),(code,pdf[:200])
  print('QA_PORTABLE_'+doc.get('order_routing_group_key','HISTORICAL_MIXED')+'=PASS',flush=True)
+print('QA_HISTORICAL_PRIORITY_STAT=PASS',flush=True)
 cat03c=json.loads((ROOT/'modules/clinical/catalog/study_specimen_requirements_v1.json').read_text())
 cat03c_keys=sql("SELECT study_type_key FROM clinical_study_types WHERE seed_provenance='URINE-FLUIDS-CAT03C-IMPL:2026_10_03_21' ORDER BY study_type_key").splitlines()
 assert len(cat03c_keys)==17

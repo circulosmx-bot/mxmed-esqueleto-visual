@@ -41,7 +41,8 @@ with sync_playwright() as p:
    route.fulfill(status=status,content_type='application/json',body=json.dumps({'ok':True,'data':data},ensure_ascii=False))
   page.route('**/api/clinical/index.php/**',api)
   page.goto(BASE+'/__ordcomp01__',wait_until='networkidle');page.locator('.vis06-intent-card').first.click()
-  def nav(key):page.locator('[data-hier-node="'+key+'"]').click()
+  def nav(key):
+   page.locator('[data-hier-node="'+key+'"]').click()
   def back():page.locator('.vis06-head .vis06-flow-back').click()
   def choose(key):
    search=page.locator('.ordcomp [data-tax03c-search]');search.fill(next(r['display_name_es'] for r in rows if r['study_type_key']==key));page.locator(f'.ordcomp [data-tax03c-id="{ids[key]}"]').first.click()
@@ -60,20 +61,32 @@ with sync_playwright() as p:
   expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
   expect(page.locator('.ordcomp-prepared-order')).to_have_count(0)
   assert page.locator('[data-ordcomp-featured] button[aria-pressed="true"]').count()==0
-  assert page.locator('[data-tax03c-custom-open]').inner_text()=='+ Agregar estudio no catalogado'
+  expect(page.locator('[data-tax03c-custom-open]')).to_be_hidden()
+  page.locator('.ordcomp-full-catalog > summary').click()
+  expect(page.locator('[data-tax03c-custom-open]')).to_be_visible()
+  assert page.locator('[data-tax03c-custom-open]').inner_text()=='¿No encuentras el estudio? Agregar estudio no catalogado'
+  assert page.locator('[data-tax03c-custom-open]').evaluate('(e)=>e.tagName')=='A'
+  assert page.locator('.ordcomp-full-catalog [data-catalog-group]').count()>0
+  page.locator('.ordcomp-full-catalog > summary').click()
+  expect(page.locator('[data-tax03c-custom-open]')).to_be_hidden()
   for control in page.locator('[data-ordcomp-featured] button').all():control.click()
   expect(page.locator('[data-order-group="CLINICAL_LAB"] .tax03c-selected-row')).to_have_count(6)
   assert page.locator('.ordcomp-count').inner_text()=='1 orden · 6 estudios seleccionados'
   assert page.locator('.ordcomp-summary').locator('text=Orden independiente').count()==0
   assert page.locator('.ordcomp-summary .tax03c-selected-row small').count()==0
   assert page.locator('.ordcomp-summary .tax03c-selected-row').first.evaluate('(e)=>e.getBoundingClientRect().height')<=50
+  assert page.locator('.ordcomp-summary .tax03c-selected-row strong').first.evaluate('(e)=>Number(getComputedStyle(e).fontWeight)>=700')
+  assert page.locator('.ordcomp-summary .tax03c-selected-row').first.evaluate('(e)=>getComputedStyle(e).backgroundColor')!='rgba(0, 0, 0, 0)'
   if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+  long_row=page.locator('.ordcomp-summary .tax03c-selected-row').first
+  assert long_row.evaluate("(e)=>{const n=e.querySelector('strong'),original=n.textContent;n.textContent='Estudio de laboratorio con un nombre clínico excepcionalmente largo para comprobar el ajuste natural de varias líneas';const row=e.getBoundingClientRect(),title=n.getBoundingClientRect();n.textContent=original;return title.right<=row.right&&document.documentElement.scrollWidth<=innerWidth}")
   remove=page.locator('.ordcomp-summary .ordcomp-remove').first
   assert remove.inner_text()=='×' and remove.get_attribute('aria-label').startswith('Retirar ')
   assert remove.evaluate('(e)=>e.getBoundingClientRect().width')>=44
   remove.click()
   expect(page.locator('[data-order-group="CLINICAL_LAB"] .tax03c-selected-row')).to_have_count(5)
   if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
+  page.locator('.ordcomp-full-catalog > summary').click()
   page.locator('[data-tax03c-custom-open]').click()
   page.locator('[data-tax03c-custom-name]').fill('Estudio en borrador')
   page.locator('[data-tax03c-custom-note]').fill('Parámetro pendiente')
@@ -99,6 +112,7 @@ with sync_playwright() as p:
   assert page.locator('[data-tax03c-custom-name]').input_value()=='Estudio en borrador'
   assert page.locator('[data-tax03c-custom-note]').input_value()=='Parámetro pendiente'
   page.locator('[data-tax03c-custom-cancel]').click()
+  page.locator('.ordcomp-full-catalog > summary').click()
   if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
   while page.locator('.ordcomp-summary .ordcomp-remove').count():page.locator('.ordcomp-summary .ordcomp-remove').first.click()
   expect(page.locator('.ordcomp-prepared-order')).to_have_count(0)
@@ -136,7 +150,7 @@ with sync_playwright() as p:
    page.locator('.ordcomp-summary .ordcomp-remove').first.click()
    expect(page.locator('.ordcomp-prepared-order')).to_have_count(0)
    if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
-  assert page.locator('.ordcomp [data-tax03c-custom-open]').inner_text()=='+ Agregar estudio no catalogado'
+  expect(page.locator('.ordcomp [data-tax03c-custom-open]')).to_be_visible()
   page.locator('.ordcomp-full-catalog > summary').click()
   print(f'QA_CAT03A_SEVEN_ACCORDION_ADD_REMOVE_{width}x{height}=PASS',flush=True)
   assert page.locator('.ordcomp-full-catalog').get_attribute('open') is None
@@ -178,14 +192,14 @@ with sync_playwright() as p:
   expect(page.locator('.ordcomp-review-order')).to_have_count(1)
   expect(page.get_by_role('button',name='Generar todas las órdenes',exact=True)).to_have_count(0)
   page.locator('.ordcomp-review-order textarea').fill('Indicación laboratorio')
-  page.locator('.ordcomp-review-order select').select_option('Urgente')
+  page.locator('.ordcomp-review-order .ordcomp-priority input[value="Urgente"]').check()
   assert page.evaluate('document.querySelector(".ordcomp-catalog")===window.ordcompQANode')
   page.get_by_role('button',name='Cerrar revisión').click()
   expect(page.locator('dialog.ordcomp-review[open]')).to_have_count(0)
   expect(page.locator('.ordcomp-review-one').first).to_be_focused()
   page.locator('.ordcomp-review-one').first.click()
   expect(page.locator('.ordcomp-review-order textarea')).to_have_value('Indicación laboratorio')
-  expect(page.locator('.ordcomp-review-order select')).to_have_value('Urgente')
+  expect(page.locator('.ordcomp-review-order .ordcomp-priority input[value="Urgente"]')).to_be_checked()
   page.keyboard.press('Escape')
   expect(page.locator('dialog.ordcomp-review[open]')).to_have_count(0)
   expect(page.locator('.ordcomp-review-one').first).to_be_focused()
@@ -202,7 +216,7 @@ with sync_playwright() as p:
   expect(page.locator('#ordcomp-review-title')).to_contain_text('Revisar 4 órdenes')
   expect(page.locator('.ordcomp-review-order')).to_have_count(4)
   expect(page.locator('.ordcomp-review-order textarea').first).to_have_value('Indicación laboratorio')
-  expect(page.locator('.ordcomp-review-order select').first).to_have_value('Urgente')
+  expect(page.locator('.ordcomp-review-order .ordcomp-priority input[value="Urgente"]').first).to_be_checked()
   page.get_by_role('button',name='Cerrar revisión').click()
   expect(page.locator('.ordcomp-prepared-order')).to_have_count(4)
   page.get_by_role('button',name='Revisar todas las órdenes',exact=True).click()
@@ -215,13 +229,15 @@ with sync_playwright() as p:
   page.get_by_role('button',name='Revisar todas las órdenes',exact=True).click()
   page.locator('.ordcomp-review-order textarea').first.fill('Indicación laboratorio')
   page.locator('.ordcomp-review-order textarea').nth(1).fill('Indicación imagen')
-  assert page.locator('.ordcomp a').count()==0
+  expect(page.locator('.ordcomp-custom-link')).to_have_count(1)
   state['failure']=True;page.get_by_role('button',name='Generar todas las órdenes',exact=True).click()
   expect(page.locator('.ordcomp-review-order .ordcomp-error').first).to_contain_text('Revisa esta orden')
   expect(page.locator('.ordcomp-review')).to_be_visible()
   page.get_by_role('button',name='Generar todas las órdenes',exact=True).click();expect(page.locator('.ordcomp-issued-order')).to_have_count(4)
   assert len(writes)==2 and len(writes[1]['orders'])==4
   assert writes[1]['orders'][0]['indication']!=writes[1]['orders'][1]['indication']
+  assert writes[1]['orders'][0]['priority']=='Urgente'
+  assert writes[1]['orders'][1]['priority']=='Rutinaria'
   expect(page.locator('.ordcomp-issued-order a')).to_have_count(8)
   page.get_by_role('button',name='Volver a Estudios de diagnóstico',exact=True).click()
   expect(page.locator('.vis06-orders .vis06-head')).to_contain_text('Estudios de diagnóstico')
@@ -231,6 +247,7 @@ with sync_playwright() as p:
   page.locator('.vis06-orders > .vis06-flow-back').click()
   page.locator('.vis06-intent-card').first.click();nav('procedures');nav('bronchoscopy');choose('bronchoscopy_base');assert_family_add('+ Más procedimientos diagnósticos')
   back();back();nav('laboratory');nav('urine')
+  page.locator('.ordcomp-full-catalog > summary').click()
   page.locator('[data-tax03c-custom-open]').click();page.locator('[data-tax03c-custom-name]').fill('Estudio propio');page.locator('[data-tax03c-custom-category]').select_option('LABORATORIO')
   assert page.locator('[data-tax03c-custom-route]').input_value()=='CLINICAL_LAB'
   page.locator('[data-tax03c-custom-add]').click()

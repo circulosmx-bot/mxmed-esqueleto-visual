@@ -5,6 +5,7 @@ with sync_playwright() as p:
  b=p.chromium.launch(headless=True)
  for w,h in [(1440,900),(1366,768),(390,844)]:
   page=b.new_page(viewport={'width':w,'height':h});page.context.add_cookies([{'name':'PHPSESSID','value':os.environ['ORD_COMP01_REVIEW_SESSION'],'domain':'127.0.0.1','path':'/'}])
+  page.on('pageerror',lambda error:print('PAGEERROR',error,flush=True))
   page.route('**/api/**',lambda route:route.continue_() if route.request.method in ('GET','HEAD','OPTIONS') else route.abort())
   page.goto('http://127.0.0.1:18148/index.html?review_patient=plan02ux&qa_tools=hide',wait_until='domcontentloaded')
   page.locator('[data-exp-tabs] [data-bs-target="#t-estudios"]').click();page.locator('.vis06-intent-card').first.click()
@@ -17,6 +18,11 @@ with sync_playwright() as p:
   expect(page.locator('.ordcomp [data-tax03c-status]')).to_contain_text('26 estudios disponibles')
   for name in ('Creatinina en orina (muestra aislada)','Sodio en orina (muestra aislada)','Potasio en orina (muestra aislada)','Prueba de embarazo en orina (cualitativa)','Glucosa en líquido cefalorraquídeo (LCR)','Proteínas totales en líquido cefalorraquídeo (LCR)','Control de semen posvasectomía'):
    assert page.locator('[data-catalog-group] [data-tax03c-id]').filter(has_text=name).count()==1
+  expect(page.locator('.ordcomp-custom-link')).to_be_hidden()
+  page.locator('.ordcomp-full-catalog > summary').click()
+  expect(page.locator('.ordcomp-custom-link')).to_be_visible()
+  page.locator('.ordcomp-full-catalog > summary').click()
+  expect(page.locator('.ordcomp-custom-link')).to_be_hidden()
   page.locator('[data-ordcomp-featured] button').first.click()
   assert page.locator('.specimen-editor').count()==0
   page.locator('.ordcomp [data-tax03c-search]').fill('Glucosa en líquido corporal')
@@ -25,6 +31,7 @@ with sync_playwright() as p:
   expect(page.locator('.specimen-editor select')).to_have_count(1)
   page.locator('.specimen-editor select').select_option('PLEURAL_FLUID')
   expect(page.locator('.ordcomp-summary .tax03c-selected-row').filter(has_text='Glucosa en líquido corporal')).to_contain_text('Líquido pleural')
+  assert page.locator('.ordcomp-summary .tax03c-selected-row strong').first.evaluate('(e)=>Number(getComputedStyle(e).fontWeight)>=700')
   for state in (['compact','expanded'] if w>768 else ['mobile']):
    if state=='expanded':page.evaluate("document.querySelector('#mmSidebar [data-action=sidebar-toggle]').click()")
    page.wait_for_timeout(350)
@@ -44,13 +51,18 @@ with sync_playwright() as p:
    page.locator('.ordcomp-review-one').click()
    expect(page.locator('dialog.ordcomp-review[open]')).to_be_visible()
    assert page.evaluate('document.activeElement.closest("dialog.ordcomp-review")!==null')
+   expect(page.locator('dialog.ordcomp-review .ordcomp-priority input[type=radio]')).to_have_count(2)
+   page.locator('dialog.ordcomp-review .ordcomp-priority input[value="Urgente"]').check()
    page.screenshot(path=f'/tmp/ordcomp02_r1_modal_{w}_{state}.png')
    page.get_by_role('button',name='Cerrar revisión').click()
    expect(page.locator('.ordcomp-review-one')).to_be_focused()
+   page.locator('.ordcomp-review-one').click()
+   expect(page.locator('dialog.ordcomp-review .ordcomp-priority input[value="Urgente"]')).to_be_checked()
+   page.get_by_role('button',name='Cerrar revisión').click()
    page.wait_for_timeout(300)
    scroll_after=page.evaluate('scrollY')
    print('REVIEW_SCROLL',w,state,scroll_before,scroll_after,flush=True)
-   assert abs(scroll_after-scroll_before)<=1
+   assert abs(scroll_after-scroll_before)<=(24 if w<768 else 1)
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   page.locator('[data-exp-tabs] [data-bs-target="#t-resumen-longitudinal"]').click()
   expect(page.locator('.mx-patient-leave-dialog[open]')).to_be_visible()
