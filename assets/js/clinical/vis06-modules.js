@@ -3,7 +3,7 @@
   const pane = document.getElementById('p-expediente');
   if (!pane) return;
   const config = {
-    orders:{target:'t-estudios',title:'Órdenes y resultados',copy:'Solicitudes y resultados vinculados a su atención de origen.',empty:'No hay órdenes ni resultados registrados.',action:'Solicitar estudios'},
+    orders:{target:'t-estudios',title:'Estudios de diagnóstico',copy:'Solicitudes y resultados vinculados a su atención de origen.',empty:'No hay órdenes ni resultados registrados.',action:'Solicitar estudios'},
     documents:{target:'t-consent',title:'Documentos',copy:'Archivos clínicos, informes y versiones. Las órdenes y los resultados tienen su propia sección.',empty:'No hay documentos clínicos registrados.',action:'Crear o adjuntar documento'},
     prescriptions:{target:'t-tratamiento',title:'Recetas',copy:'Historial de prescripciones. Una receta no confirma el uso actual del medicamento.',empty:'No hay recetas registradas.',action:'Emitir receta'}
   };
@@ -163,7 +163,7 @@
     if(view.labScreen)view.labScreen.hidden=true;
     view.flowBack.hidden=flow!=='PENDING'&&flow!=='HISTORY';
     view.categoryBack.hidden=flow!=='CATEGORY';
-    const heading={HOME:['Órdenes y resultados','Selecciona lo que deseas hacer para este paciente.'],
+    const heading={HOME:['Estudios de diagnóstico','Selecciona lo que deseas hacer para este paciente.'],
       CATEGORY:['Generar nueva orden',''],
       PENDING:['Revisar órdenes pendientes','Solicitudes que requieren seguimiento.'],
       HISTORY:['Ver resultados e historial','Resultados registrados y órdenes completas.']}[flow];
@@ -760,7 +760,7 @@
       view.categoryBack=button('Volver a opciones',()=>hierarchyBack(view));
       view.categoryBack.classList.add('vis06-flow-back');
       module.prepend(view.flowBack);head.prepend(view.categoryBack);
-      view.home=node('div','','vis06-flow-home');view.home.setAttribute('aria-label','Opciones de órdenes y resultados');
+      view.home=node('div','','vis06-flow-home');view.home.setAttribute('aria-label','Opciones de estudios de diagnóstico');
       const options=[
         ['Solicitar estudios','Solicita nuevos estudios para este paciente.','science','Elegir estudios','CATEGORY'],
         ['Revisar órdenes pendientes','Consulta solicitudes sin resultados o con resultados parciales.','assignment','Ver órdenes pendientes','PENDING'],
@@ -801,11 +801,15 @@
       view.composition=window.mxmedOrderCompositionV1.mount(compositionHost,{
         context:()=>({patient:selectedPatient(),doctor:professional}),
         onChange:({selected,orders})=>{view.hierDraft.selected=selected;view.hierOrderCount=orders;updateHierarchyDraft(view);},
-        onAddOtherStudies:()=>{
-          if(view.composition.locked()||!view.composition.hide())return;
-          view.hierPath=[];
-          if(view.hierMode){renderHierarchy(view);view.primaryCategories.querySelector('button')?.focus({preventScroll:true});}
-          else {void loadOrderCategories(view).then(()=>view.primaryCategories.querySelector('button')?.focus({preventScroll:true}));}
+        addStudiesContext:()=>view.module.dataset.orFamily==='dental'
+          ?{currentFamilyId:'dental',families:[{id:'global',label:'Buscar en todo el catálogo'}]}
+          :{currentFamilyId:view.hierPath[0]||'',families:hierarchy.root.filter(id=>hierarchy.count(id,view.hierActive)>0).map(id=>({id,label:{laboratory:'Laboratorio',imaging:'Imagenología',pathology:'Patología y biopsias',functional:'Estudios funcionales',procedures:'Procedimientos diagnósticos'}[id]||hierarchy.nodes[id].label}))},
+        onAddStudiesDestination:id=>{
+          if(view.composition.locked())return;
+          if(id==='global'){void openGeneralOrder(view.hierDraftButton,'',{global:true});return;}
+          if(id==='dental'){void loadOrderCategories(view).then(()=>view.primaryCategories.querySelector('button')?.focus({preventScroll:true}));return;}
+          if(!view.hierMode||!hierarchy.nodes[id]||!hierarchy.root.includes(id))return;
+          view.hierPath=[id];renderHierarchy(view);view.primaryCategories.querySelector('button')?.focus({preventScroll:true});
         },
         onDone:()=>setOrderFlow(view,'HOME'),
         onIssued:patientId=>window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:'orders',source:'ord_comp01'}}))
@@ -820,7 +824,7 @@
     }else{
       search.addEventListener('input',()=>render(view));filter.addEventListener('change',()=>render(view));
     }
-    if(kind==='documents'){const link=button('Ver órdenes y resultados',()=>pane.querySelector('[data-bs-target="#t-estudios"]')?.click());module.append(link);}
+    if(kind==='documents'){const link=button('Ver estudios de diagnóstico',()=>pane.querySelector('[data-bs-target="#t-estudios"]')?.click());module.append(link);}
     if(kind==='prescriptions'){const link=button('Consultar medicación actual',()=>pane.querySelector('[data-bs-target="#t-medicamentos-longitudinal"]')?.click());module.append(link);}
     pane.querySelector(`[data-bs-target="#${settings.target}"]`)?.addEventListener('shown.bs.tab',()=>{
       if(kind==='orders')setOrderFlow(view,'HOME');load();

@@ -20,7 +20,7 @@ with sync_playwright() as p:
   page.locator('[data-ordcomp-featured] button').first.click()
   assert page.locator('.specimen-editor').count()==0
   page.locator('.ordcomp [data-tax03c-search]').fill('Glucosa en líquido corporal')
-  page.locator('.ordcomp [data-tax03c-results] [data-tax03c-id]').filter(has_text='Glucosa en líquido corporal').click()
+  page.locator('.ordcomp [data-tax03c-results] [data-tax03c-id]').filter(has_text='Glucosa en líquido corporal').first.click()
   if w<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
   expect(page.locator('.specimen-editor select')).to_have_count(1)
   page.locator('.specimen-editor select').select_option('PLEURAL_FLUID')
@@ -28,8 +28,16 @@ with sync_playwright() as p:
   for state in (['compact','expanded'] if w>768 else ['mobile']):
    if state=='expanded':page.evaluate("document.querySelector('#mmSidebar [data-action=sidebar-toggle]').click()")
    page.wait_for_timeout(350)
-   print(w,state,page.evaluate("({width:innerWidth,scroll:document.documentElement.scrollWidth,columns:getComputedStyle(document.querySelector('.ordcomp-workspace')).gridTemplateColumns,summary:document.querySelector('.ordcomp-summary').getBoundingClientRect().toJSON()})"),flush=True)
+   geometry=page.evaluate("(()=>{const tabs=document.querySelector('[data-exp-tabs]'),target=tabs.querySelector('[data-bs-target=\"#t-estudios\"]'),tr=tabs.getBoundingClientRect(),r=target.getBoundingClientRect();return {width:innerWidth,scroll:document.documentElement.scrollWidth,tabScroll:tabs.scrollWidth,tabClient:tabs.clientWidth,tabText:target.innerText,tabRect:r.toJSON(),tabFits:r.left>=tr.left&&r.right<=tr.right,columns:getComputedStyle(document.querySelector('.ordcomp-workspace')).gridTemplateColumns,summary:document.querySelector('.ordcomp-summary').getBoundingClientRect().toJSON()}})()")
+   print(w,state,geometry,flush=True)
+   assert 'Estudios de diagnóstico' in geometry['tabText'] and geometry['tabFits']
+   if w>768:assert geometry['tabScroll']<=geometry['tabClient']
+   expect(page.locator('.ordcomp-review-one')).to_have_count(1)
+   page.get_by_role('button',name='+ Agregar estudios',exact=True).click()
+   expect(page.locator('.ordcomp-add-chooser')).to_be_visible()
+   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    page.locator('.ordcomp').scroll_into_view_if_needed();page.screenshot(path=f'/tmp/ordcomp01_live_{w}_{state}.png',full_page=True)
+   page.get_by_role('button',name='Cerrar',exact=True).click()
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   page.locator('[data-exp-tabs] [data-bs-target="#t-resumen-longitudinal"]').click()
   expect(page.locator('.mx-patient-leave-dialog[open]')).to_be_visible()

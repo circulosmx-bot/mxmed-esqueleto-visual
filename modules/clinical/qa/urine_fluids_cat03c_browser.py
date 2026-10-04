@@ -59,7 +59,7 @@ with sync_playwright() as playwright:
         selector=page.locator('.specimen-editor select')
         assert selector.evaluate('(element)=>element.required && element.closest("label")?.textContent?.includes("Muestra")')
         assert selector.locator('option').evaluate_all('(options)=>options.map(option=>option.value)')==['','PLEURAL_FLUID','ASCITIC_PERITONEAL_FLUID','SYNOVIAL_FLUID','PERICARDIAL_FLUID']
-        page.get_by_role('button',name='Continuar con 1 orden',exact=True).click()
+        page.locator('.ordcomp-review-one').click()
         expect(page.locator('.ordcomp-error').first).to_contain_text('Completa los datos de muestra')
         selector.focus();assert selector.evaluate('(element)=>document.activeElement===element')
         selector.select_option('PLEURAL_FLUID')

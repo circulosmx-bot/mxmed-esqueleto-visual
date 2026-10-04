@@ -136,7 +136,14 @@
         const activeGroups=[...new Set(selected.map(item=>item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup))];
         activeGroups.forEach(key=>{
           const card=document.createElement('details');card.className='ordcomp-prepared-order';card.dataset.orderGroup=key;card.open=activeGroups.length<=3||selected.some((item,i)=>i===editingIndex&&(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup)===key);
-          const heading=document.createElement('summary');heading.textContent=(options.routing.groups[key]||'Servicio pendiente')+' ('+selected.filter(item=>(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup)===key).length+')';
+          const service=options.routing.groups[key]||'Servicio pendiente';
+          const heading=document.createElement('summary');
+          const label=document.createElement('span');label.textContent=service+' ('+selected.filter(item=>(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup)===key).length+')';heading.append(label);
+          if(options.onReviewOrder){
+            const review=document.createElement('button');review.type='button';review.className='btn btn-outline-primary btn-sm ordcomp-review-one';review.textContent='Revisar orden';
+            review.setAttribute('aria-label',`Revisar orden de ${service}`);
+            review.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();options.onReviewOrder(key);});heading.append(review);
+          }
           const box=document.createElement('div');card.append(heading,box);selectedBox.append(card);boxes.set(key,box);
         });
       }

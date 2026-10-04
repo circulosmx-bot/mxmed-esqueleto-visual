@@ -12,10 +12,12 @@
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
     const title=el('h4'),crumb=el('p','','ordcomp-breadcrumb'),selector=el('div');catalog.append(crumb,title,selector);
     const count=el('p','','ordcomp-count'),selection=el('div'),error=el('p','','ordcomp-error');error.setAttribute('role','alert');
-    const addOther=button('+ Agregar otros estudios',()=>options.onAddOtherStudies?.());addOther.classList.add('ordcomp-add-other');
-    const next=button('Continuar',()=>review());next.classList.add('btn-primary');
+    const addOther=button('+ Agregar estudios',()=>chooser.hidden?openChooser():closeChooser(true));addOther.classList.add('ordcomp-add-other');
+    const chooser=el('section','','ordcomp-add-chooser');chooser.id='ordcomp-add-chooser';chooser.hidden=true;chooser.setAttribute('role','region');chooser.setAttribute('aria-label','Elegir dónde agregar estudios');
+    addOther.setAttribute('aria-controls',chooser.id);addOther.setAttribute('aria-expanded','false');
+    const reviewAll=button('Revisar todas las órdenes',()=>review());reviewAll.classList.add('ordcomp-review-all');reviewAll.hidden=true;
     aside.setAttribute('aria-label','Órdenes en preparación');count.setAttribute('role','status');
-    aside.append(el('h4','ÓRDENES EN PREPARACIÓN'),count,selection,addOther,error,next);workspace.append(catalog,aside);
+    aside.append(el('h4','ÓRDENES EN PREPARACIÓN'),count,selection,addOther,chooser,error,reviewAll);workspace.append(catalog,aside);
     const mobile=el('div','','ordcomp-mobile-bar'),mobileCount=el('span'),toggle=button('Ver órdenes',()=>{
       host.classList.toggle('ordcomp-show-summary');const show=host.classList.contains('ordcomp-show-summary');
       toggle.textContent=show?'Volver al catálogo':'Ver órdenes';toggle.setAttribute('aria-expanded',String(show));
@@ -28,15 +30,27 @@
       const grouped=new Map();selected.forEach((item,index)=>{const key=groupKey(item);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push({item,index});});return grouped;
     };
     const sync=()=>{if(composer){selected=composer.selected();customDraft=composer.customDraft();}};
+    function closeChooser(restoreFocus=false){chooser.hidden=true;chooser.replaceChildren();addOther.setAttribute('aria-expanded','false');if(restoreFocus)addOther.focus({preventScroll:true});}
+    function openChooser(){
+      const nav=options.addStudiesContext?.()||{},familyId=nav.currentFamilyId||'';
+      const sameLabel={laboratory:'Más estudios de Laboratorio',imaging:'Más estudios de Imagenología',pathology:'Más estudios de Patología y biopsias',functional:'Más estudios funcionales',procedures:'Más procedimientos diagnósticos',dental:'Más estudios dentales'}[familyId];
+      chooser.replaceChildren(el('h5','¿Qué desea agregar?'));
+      const choose=id=>{closeChooser();options.onAddStudiesDestination?.(id);};
+      if(sameLabel){const current=button('+ '+sameLabel,()=>choose(familyId));current.classList.add('ordcomp-add-current');chooser.append(current);}
+      const others=(nav.families||[]).filter(family=>family.id!==familyId);
+      if(others.length){chooser.append(el('p',familyId==='dental'?'Otra opción':'Otro tipo de estudio','ordcomp-add-caption'));others.forEach(family=>chooser.append(button(family.label,()=>choose(family.id))));}
+      chooser.append(button('Cerrar',()=>closeChooser(true)));
+      chooser.hidden=false;addOther.setAttribute('aria-expanded','true');chooser.querySelector('button')?.focus({preventScroll:true});
+    }
     function counts(){
       const n=groups().size,m=selected.length;count.textContent=`${n} ${n===1?'orden':'órdenes'} · ${m} ${m===1?'estudio seleccionado':'estudios seleccionados'}`;
       mobileCount.textContent=`${m} ${m===1?'estudio':'estudios'} · ${n} ${n===1?'orden':'órdenes'}`;
-      next.textContent=`Continuar con ${n} ${n===1?'orden':'órdenes'}`;next.disabled=!m;
+      reviewAll.hidden=n<=1;
       options.onChange?.({selected:structuredClone(selected),orders:n,studies:m});
     }
     function reset(){
       epoch++;composer?.destroy();composer=null;selected=[];customDraft={};metadata={};context=null;attempt=null;uncertain=false;issued=false;lastScope=null;
-      host.hidden=true;selector.replaceChildren();selection.replaceChildren();reviewBox.replaceChildren();reviewBox.hidden=true;workspace.hidden=false;mobile.hidden=false;error.textContent='';counts();
+      closeChooser();host.hidden=true;selector.replaceChildren();selection.replaceChildren();reviewBox.replaceChildren();reviewBox.hidden=true;workspace.hidden=false;mobile.hidden=false;error.textContent='';counts();
     }
     const dirty=()=>{
       sync();return !issued&&(!!selected.length||!!customDraft.name?.trim()||!!customDraft.note?.trim()||!!customDraft.category||!!customDraft.route);
@@ -49,6 +63,7 @@
       const current=options.context();if(!current.doctor||!current.patient)return false;
       if(context&&(context.patient!==current.patient||context.doctor!==current.doctor))reset();
       context=current;const seen=++epoch;sync();composer?.destroy();composer=null;
+      closeChooser();
       host.hidden=false;workspace.hidden=false;reviewBox.hidden=true;mobile.hidden=false;issued=false;lastScope=scope;
       host.classList.remove('ordcomp-show-summary');toggle.textContent='Ver órdenes';toggle.setAttribute('aria-expanded','false');
       title.textContent=scope.label||'Catálogo general';crumb.textContent=scope.breadcrumb||'Selección de estudios';
@@ -58,21 +73,23 @@
         composer=window.mxmedStudyComposer.mount(selector,{doctorId:current.doctor,presentation:'embedded',routing:config,
           navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',selectionHost:selection,specimenConfig,
           initialCategory:scope.parts?.length===1?scope.parts[0].category:'',selected,customDraft,
-          onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.()});
+          onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.(),onReviewOrder:key=>review(key)});
         counts();selector.querySelector('input')?.focus({preventScroll:true});return true;
       }catch(_){selector.textContent='No se pudo preparar la selección. Vuelve a esta familia para reintentar.';return true;}
     }
-    function hide(){if(busy||uncertain)return false;sync();host.hidden=true;return true;}
-    function review(){
+    function hide(){if(busy||uncertain)return false;sync();closeChooser();host.hidden=true;return true;}
+    function review(focusKey=''){
       sync();error.textContent='';
-      if(!composer?.valid()){error.textContent=composer?.validationMessage()||'Agrega al menos un estudio.';return;}
-      if([...groups().keys()].some(key=>!config.groups[key])){error.textContent='Falta confirmar el servicio de un estudio.';return;}
+      const grouped=groups(),single=grouped.size===1,focused=focusKey&&grouped.has(focusKey);
+      if(!grouped.size)return;
+      if((!focused||single)&&!composer?.valid()){error.textContent=composer?.validationMessage()||'Agrega al menos un estudio.';return;}
+      if((focused?[focusKey]:[...grouped.keys()]).some(key=>!config.groups[key])){error.textContent='Falta confirmar el servicio de un estudio.';return;}
       workspace.hidden=true;mobile.hidden=true;reviewBox.hidden=false;reviewBox.replaceChildren();
-      const n=groups().size,heading=el('h4',`Revisar ${n} ${n===1?'orden':'órdenes'}`);heading.tabIndex=-1;
-      const edit=button('Volver a editar estudios',()=>{if(busy||uncertain)return;reviewBox.hidden=true;workspace.hidden=false;mobile.hidden=false;});
-      reviewBox.append(heading,el('p','Los estudios se emitirán en órdenes separadas según el tipo de servicio.'),edit);
+      const n=grouped.size,reviewed=focused?[[focusKey,grouped.get(focusKey)]]:[...grouped],heading=el('h4',focused?`Revisar orden de ${config.groups[focusKey]}`:`Revisar todas las órdenes`);heading.tabIndex=-1;
+      const edit=button('Volver a seleccionar estudios',()=>{if(busy||uncertain)return;reviewBox.hidden=true;workspace.hidden=false;mobile.hidden=false;});
+      reviewBox.append(heading,el('p',focused&&n>1?'Las demás órdenes permanecen en preparación.':'Cada servicio generará una orden independiente.'),edit);
       const cards=new Map();
-      for(const [key,items] of groups()){
+      for(const [key,items] of reviewed){
         const card=el('section','','ordcomp-review-order');card.dataset.reviewGroup=key;card.append(el('h5',config.groups[key]));
         const list=el('ul');items.forEach(({item})=>{const li=el('li',item.name+(item.type==='custom'?' · Estudio personalizado':''));
           if(item.dentalLocation)li.append(el('small',window.mxmedDentalLocationV1.summary(item.dentalLocation)));
@@ -84,8 +101,10 @@
         indication.setAttribute('aria-label',`Indicación · ${config.groups[key]}`);indication.addEventListener('input',()=>{meta.indication=indication.value;attempt=null;});il.append(indication);
         const issue=el('p','','ordcomp-error');issue.setAttribute('role','alert');card.append(pl,il,issue);reviewBox.append(card);cards.set(key,{card,issue});
       }
+      if(focused&&n>1){const all=button('Revisar todas las órdenes',()=>review());all.classList.add('ordcomp-review-all');reviewBox.append(all);heading.focus({preventScroll:true});return;}
       const failure=el('p','','ordcomp-error');failure.setAttribute('role','alert');
-      const submit=button(`Emitir ${n} ${n===1?'orden':'órdenes'}`,async()=>{
+      const submitLabel=n===1?'Generar orden':'Generar todas las órdenes';
+      const submit=button(submitLabel,async()=>{
         if(busy)return;
         if(options.context().patient!==context.patient||options.context().doctor!==context.doctor){failure.textContent='Cambió el paciente. Abre de nuevo la composición.';return;}
         if(!attempt){
@@ -110,7 +129,7 @@
         }catch(e){
           if(e instanceof TypeError||e instanceof SyntaxError)uncertain=true;
           failure.textContent=uncertain?'No se pudo confirmar la emisión. Reintentar recuperará las mismas órdenes sin duplicarlas.':e.message;
-          submit.textContent=uncertain?'Reintentar emisión':`Emitir ${n} ${n===1?'orden':'órdenes'}`;
+          submit.textContent=uncertain?'Reintentar emisión':submitLabel;
           reviewBox.querySelectorAll('button,input,textarea,select').forEach(c=>c.disabled=uncertain);submit.disabled=false;
           if(!uncertain)attempt=null;
         }finally{busy=false;waiters.splice(0).forEach(resolve=>resolve());}
@@ -129,7 +148,7 @@
         const pdf=el('a','Descargar PDF','btn btn-outline-primary btn-sm');pdf.href='/modules/clinical/ui/portable-order-pdf.php?'+query;pdf.target='_blank';pdf.rel='noopener';card.append(print,pdf);reviewBox.append(card);
       }
       selected=[];customDraft={};composer?.destroy();composer=null;counts();
-      reviewBox.append(button('Volver a órdenes y resultados',()=>{reset();options.onDone?.();}));
+      reviewBox.append(button('Volver a Estudios de diagnóstico',()=>{reset();options.onDone?.();}));
     }
     return {open,hide,reset,dirty,visible:()=>!host.hidden,locked:()=>busy||uncertain,issued:()=>issued,back:()=>{
       if(busy||uncertain)return false;

@@ -2,6 +2,8 @@
 
 **Actualización ORD-COMP01 (2026-10-03):** HIER03 conserva raíz/familias/subfamilias. El nivel final ahora es el compositor inline TAX03C, con múltiples órdenes operativas; véase [contrato vigente ORD-COMP01](ORD_COMP01_INLINE_MULTI_ORDER_COMPOSER_IMPLEMENTED.md). Los conteos de 202 y QA HIER03 de este documento describen su baseline histórico; el catálogo vigente tiene 208.
 
+**Actualización ORD-COMP02 (2026-10-03):** “+ Agregar estudios” abre un selector inline en el compositor. Usa `hierPath[0]` como ID estable de la familia médica actual, permite volver a su pantalla de subfamilias o cambiar a otra familia raíz mediante `renderHierarchy`, y preserva el borrador. En modo dental vuelve a categorías dentales o abre el catálogo global. Estas transiciones internas no activan VIS24. La revisión por tarjeta y la revisión atómica de todas las órdenes se describen en el contrato ORD-COMP01 actualizado.
+
 La autoridad de presentación es [`study-navigation-hierarchy-v2.js`](../../assets/js/clinical/study-navigation-hierarchy-v2.js). La identidad y disponibilidad de cada estudio siguen en `clinical_study_types`; esta configuración solo organiza rutas por `category_key` y `study_type_key`. El selector y la deduplicación por `study_type_id` siguen en TAX03C. ORD-COMP01 coordina la emisión atómica de documentos mediante el writer canónico existente. V1 permanece como base de los atajos dentales y de las listas de claves de LAB-CAT02A, sin que su pantalla plana sea el modelo médico actual.
 
 ## Modelo de niveles y límites
