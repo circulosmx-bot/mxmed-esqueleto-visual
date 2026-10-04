@@ -154,6 +154,7 @@ with sync_playwright() as p:
   page.locator('.ordcomp-full-catalog > summary').click()
   print(f'QA_CAT03A_SEVEN_ACCORDION_ADD_REMOVE_{width}x{height}=PASS',flush=True)
   assert page.locator('.ordcomp-full-catalog').get_attribute('open') is None
+  expect(page.locator('[data-ordcomp-featured] button').first).to_be_visible()
   page.locator('[data-ordcomp-featured] button').first.focus();page.keyboard.press('Enter')
   expect(page.locator('[data-ordcomp-featured] button').first).to_have_attribute('aria-pressed','true')
   if page.locator('.ordcomp-full-catalog').get_attribute('open') is None:page.locator('.ordcomp-full-catalog > summary').click()

@@ -1,0 +1,1125 @@
+{
+  "version": 1,
+  "source": "STUDY_NAV_FEATURED01_LEAF_MATRIX.csv + STUDY_NAV_FEATURED01_GROUP_MEMBERSHIP_MATRIX.csv",
+  "leaves": {
+    "chemistry": {
+      "heading": "LABORATORIO / QUÍMICA CLÍNICA",
+      "root_family": "laboratory",
+      "small": false,
+      "study_keys": [
+        "albumin",
+        "alp",
+        "alt",
+        "amylase",
+        "ast",
+        "bilirubin_direct",
+        "bilirubin_indirect",
+        "bilirubin_total",
+        "bun",
+        "calcium",
+        "chloride",
+        "chol_total",
+        "creatinine",
+        "folate",
+        "fructosamine",
+        "ggt",
+        "glucose",
+        "hdl",
+        "lab_amonio",
+        "lab_ck_mb",
+        "lab_cpk",
+        "ldl",
+        "lipase",
+        "magnesium",
+        "non_hdl",
+        "phosphorus",
+        "potassium",
+        "sodium",
+        "total_protein",
+        "triglycerides",
+        "urea",
+        "uric_acid",
+        "vitamin_b12",
+        "vitamin_d"
+      ],
+      "featured": [
+        "glucose",
+        "creatinine",
+        "urea",
+        "chol_total",
+        "hdl",
+        "triglycerides"
+      ],
+      "groups": [
+        {
+          "key": "chemistry__metabolism",
+          "label": "Metabolismo y función renal",
+          "keys": [
+            "glucose",
+            "fructosamine",
+            "bun",
+            "urea",
+            "creatinine",
+            "uric_acid"
+          ]
+        },
+        {
+          "key": "chemistry__electrolytes",
+          "label": "Electrolitos y minerales",
+          "keys": [
+            "sodium",
+            "potassium",
+            "chloride",
+            "calcium",
+            "magnesium",
+            "phosphorus"
+          ]
+        },
+        {
+          "key": "chemistry__lipids",
+          "label": "Lípidos",
+          "keys": [
+            "chol_total",
+            "hdl",
+            "ldl",
+            "non_hdl",
+            "triglycerides"
+          ]
+        },
+        {
+          "key": "chemistry__hepatic",
+          "label": "Función hepática y bilirrubinas",
+          "keys": [
+            "alt",
+            "ast",
+            "alp",
+            "ggt",
+            "bilirubin_total",
+            "bilirubin_direct",
+            "bilirubin_indirect",
+            "albumin",
+            "total_protein",
+            "lab_amonio"
+          ]
+        },
+        {
+          "key": "chemistry__enzymes",
+          "label": "Enzimas pancreáticas y musculares",
+          "keys": [
+            "amylase",
+            "lipase",
+            "lab_cpk",
+            "lab_ck_mb"
+          ]
+        },
+        {
+          "key": "chemistry__micronutrients",
+          "label": "Vitaminas y micronutrientes",
+          "keys": [
+            "folate",
+            "vitamin_b12",
+            "vitamin_d"
+          ]
+        }
+      ]
+    },
+    "coagulation": {
+      "heading": "LABORATORIO / COAGULACIÓN",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "aptt",
+        "d_dimer",
+        "fibrinogen",
+        "lab_tiempo_de_protrombina",
+        "lab_tiempo_de_trombina",
+        "thrombophilia"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "drugs": {
+      "heading": "LABORATORIO / MONITOREO DE FÁRMACOS",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "lab_litio"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "endocrine": {
+      "heading": "LABORATORIO / ENDOCRINOLOGÍA Y HORMONAS",
+      "root_family": "laboratory",
+      "small": false,
+      "study_keys": [
+        "anti_tg",
+        "anti_tpo",
+        "bhcg",
+        "estradiol",
+        "fsh",
+        "ft3",
+        "ft4",
+        "hba1c",
+        "lh",
+        "ogtt",
+        "progesterone",
+        "prolactin",
+        "testosterone_free",
+        "testosterone_total",
+        "tsh"
+      ],
+      "featured": [
+        "tsh",
+        "ft4",
+        "hba1c"
+      ],
+      "groups": [
+        {
+          "key": "endocrine__thyroid",
+          "label": "Tiroides",
+          "keys": [
+            "tsh",
+            "ft4",
+            "ft3",
+            "anti_tpo",
+            "anti_tg"
+          ]
+        },
+        {
+          "key": "endocrine__glycemic",
+          "label": "Metabolismo de glucosa",
+          "keys": [
+            "hba1c",
+            "ogtt"
+          ]
+        },
+        {
+          "key": "endocrine__reproductive",
+          "label": "Hormonas reproductivas y embarazo",
+          "keys": [
+            "bhcg",
+            "estradiol",
+            "fsh",
+            "lh",
+            "progesterone",
+            "prolactin",
+            "testosterone_total",
+            "testosterone_free"
+          ]
+        }
+      ]
+    },
+    "cytogenetics": {
+      "heading": "LABORATORIO / CITOGENÉTICA",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "karyotype"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "cytogenomics": {
+      "heading": "LABORATORIO / CITOGENÓMICA Y MICROARREGLOS",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "cma_microarray"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "genomic_sequencing": {
+      "heading": "LABORATORIO / SECUENCIACIÓN GENÓMICA",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "wes",
+        "wgs"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "germline_genetics": {
+      "heading": "LABORATORIO / GENÉTICA GERMINAL",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "brca1_2",
+        "carrier_screening",
+        "hereditary_cancer_germline",
+        "lynch",
+        "thrombophilia"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "hereditary_oncology": {
+      "heading": "LABORATORIO / ONCOLOGÍA HEREDITARIA",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "brca1_2",
+        "hereditary_cancer_germline",
+        "lynch"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "molecular_oncology": {
+      "heading": "LABORATORIO / ONCOLOGÍA MOLECULAR",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "somatic_tumor_ngs"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "pharmacogenomics": {
+      "heading": "LABORATORIO / FARMACOGENÓMICA",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "pgx"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "prenatal_genetics": {
+      "heading": "LABORATORIO / TAMIZ GENÉTICO PRENATAL",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "nipt"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "hematology": {
+      "heading": "LABORATORIO / HEMATOLOGÍA",
+      "root_family": "laboratory",
+      "small": false,
+      "study_keys": [
+        "cbc",
+        "esr",
+        "ferritin",
+        "iron",
+        "lab_coombs_directo",
+        "lab_coombs_indirecto",
+        "lab_frotis_sanguineo",
+        "lab_reticulocitos",
+        "platelets",
+        "tibc",
+        "transferrin_sat"
+      ],
+      "featured": [
+        "cbc",
+        "ferritin",
+        "iron"
+      ],
+      "groups": [
+        {
+          "key": "hematology__counts",
+          "label": "Biometría y recuentos",
+          "keys": [
+            "cbc",
+            "platelets",
+            "lab_reticulocitos",
+            "lab_frotis_sanguineo",
+            "esr"
+          ]
+        },
+        {
+          "key": "hematology__iron",
+          "label": "Hierro y reservas",
+          "keys": [
+            "ferritin",
+            "iron",
+            "tibc",
+            "transferrin_sat"
+          ]
+        },
+        {
+          "key": "hematology__coombs",
+          "label": "Pruebas de antiglobulina",
+          "keys": [
+            "lab_coombs_directo",
+            "lab_coombs_indirecto"
+          ]
+        }
+      ]
+    },
+    "autoimmunity": {
+      "heading": "LABORATORIO / AUTOINMUNIDAD",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "ana",
+        "anca",
+        "anti_ccp",
+        "ena",
+        "rf"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "hepatitis_serology": {
+      "heading": "LABORATORIO / SEROLOGÍAS DE HEPATITIS",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "anti_hbc",
+        "anti_hbs",
+        "hbsag",
+        "hcv_ab"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "immunoglobulins": {
+      "heading": "LABORATORIO / INMUNOGLOBULINAS Y COMPLEMENTO",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "c3",
+        "c4",
+        "iga",
+        "igg",
+        "igm"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "infectious_serology": {
+      "heading": "LABORATORIO / OTRAS SEROLOGÍAS INFECCIOSAS",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "hiv_ag_ac"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "inflammation": {
+      "heading": "LABORATORIO / INFLAMACIÓN Y REACTANTES",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "crp_hs",
+        "esr"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "microbiology": {
+      "heading": "LABORATORIO / MICROBIOLOGÍA",
+      "root_family": "laboratory",
+      "small": false,
+      "study_keys": [
+        "blood_culture",
+        "csf_cryptococcal_antigen",
+        "csf_vdrl",
+        "sterile_body_fluid_bacterial_culture",
+        "stool_culture",
+        "throat_swab",
+        "urine_culture",
+        "vaginal_swab"
+      ],
+      "featured": [
+        "urine_culture",
+        "blood_culture",
+        "throat_swab",
+        "stool_culture"
+      ],
+      "groups": [
+        {
+          "key": "microbiology__culture",
+          "label": "Cultivos por muestra",
+          "keys": [
+            "blood_culture",
+            "urine_culture",
+            "stool_culture",
+            "throat_swab",
+            "vaginal_swab",
+            "sterile_body_fluid_bacterial_culture"
+          ]
+        },
+        {
+          "key": "microbiology__csf_infection",
+          "label": "Infección de LCR",
+          "keys": [
+            "csf_cryptococcal_antigen",
+            "csf_vdrl"
+          ]
+        }
+      ]
+    },
+    "molecular_infectious": {
+      "heading": "LABORATORIO / MOLECULAR E INFECCIOSAS",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "csf_meningitis_encephalitis_panel"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "panels": {
+      "heading": "LABORATORIO / PERFILES Y PANELES",
+      "root_family": "laboratory",
+      "small": false,
+      "study_keys": [
+        "carrier_screening",
+        "cbc",
+        "hereditary_cancer_germline",
+        "pgx",
+        "somatic_tumor_ngs",
+        "thrombophilia",
+        "urinalysis"
+      ],
+      "featured": [],
+      "groups": [
+        {
+          "key": "panels__general",
+          "label": "Paneles generales",
+          "keys": [
+            "cbc",
+            "urinalysis"
+          ]
+        },
+        {
+          "key": "panels__genetic",
+          "label": "Paneles genéticos y moleculares",
+          "keys": [
+            "carrier_screening",
+            "hereditary_cancer_germline",
+            "pgx",
+            "somatic_tumor_ngs",
+            "thrombophilia"
+          ]
+        }
+      ]
+    },
+    "stool": {
+      "heading": "LABORATORIO / MATERIA FECAL",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "fecal_occult_blood",
+        "lab_ag_helicobacter_pylori",
+        "lab_calprotectina_cuantificada",
+        "stool_culture",
+        "stool_ova_parasites"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "tumor": {
+      "heading": "LABORATORIO / MARCADORES TUMORALES",
+      "root_family": "laboratory",
+      "small": true,
+      "study_keys": [
+        "bhcg"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "urine": {
+      "heading": "LABORATORIO / ORINA Y OTROS FLUIDOS",
+      "root_family": "laboratory",
+      "small": false,
+      "study_keys": [
+        "body_fluid_albumin",
+        "body_fluid_amylase",
+        "body_fluid_cell_count",
+        "body_fluid_cholesterol",
+        "body_fluid_glucose",
+        "body_fluid_ldh",
+        "body_fluid_total_protein",
+        "body_fluid_triglycerides",
+        "csf_cell_count",
+        "csf_glucose",
+        "csf_lactate",
+        "csf_oligoclonal_bands",
+        "csf_total_protein",
+        "microalbumin",
+        "post_vasectomy_semen_check",
+        "semen_analysis",
+        "synovial_crystals",
+        "urinalysis",
+        "urine_albumin_creatinine_panel",
+        "urine_creatinine_spot",
+        "urine_culture",
+        "urine_osmolality",
+        "urine_potassium_spot",
+        "urine_pregnancy_qualitative",
+        "urine_protein_creatinine_panel",
+        "urine_sodium_spot"
+      ],
+      "featured": [
+        "urinalysis",
+        "microalbumin",
+        "urine_culture",
+        "urine_albumin_creatinine_panel",
+        "urine_protein_creatinine_panel",
+        "urine_osmolality"
+      ],
+      "groups": [
+        {
+          "key": "urine__urine_1",
+          "label": "Estudios generales y renales",
+          "keys": [
+            "urinalysis",
+            "microalbumin",
+            "urine_albumin_creatinine_panel",
+            "urine_protein_creatinine_panel",
+            "urine_osmolality",
+            "urine_creatinine_spot",
+            "urine_pregnancy_qualitative"
+          ]
+        },
+        {
+          "key": "urine__urine_2",
+          "label": "Electrolitos y minerales urinarios",
+          "keys": [
+            "urine_sodium_spot",
+            "urine_potassium_spot"
+          ]
+        },
+        {
+          "key": "urine__urine_3",
+          "label": "Microbiología urinaria",
+          "keys": [
+            "urine_culture"
+          ]
+        },
+        {
+          "key": "urine__urine_4",
+          "label": "Semen",
+          "keys": [
+            "semen_analysis",
+            "post_vasectomy_semen_check"
+          ]
+        },
+        {
+          "key": "urine__urine_5",
+          "label": "Líquido cefalorraquídeo (LCR)",
+          "keys": [
+            "csf_cell_count",
+            "csf_glucose",
+            "csf_total_protein",
+            "csf_lactate",
+            "csf_oligoclonal_bands"
+          ]
+        },
+        {
+          "key": "urine__urine_6",
+          "label": "Líquidos serosos",
+          "keys": [
+            "body_fluid_cell_count",
+            "body_fluid_glucose",
+            "body_fluid_total_protein",
+            "body_fluid_albumin",
+            "body_fluid_ldh",
+            "body_fluid_amylase",
+            "body_fluid_triglycerides",
+            "body_fluid_cholesterol"
+          ]
+        },
+        {
+          "key": "urine__urine_7",
+          "label": "Líquido sinovial",
+          "keys": [
+            "synovial_crystals",
+            "body_fluid_cell_count",
+            "body_fluid_glucose",
+            "body_fluid_total_protein",
+            "body_fluid_ldh"
+          ]
+        }
+      ]
+    },
+    "breast_imaging": {
+      "heading": "IMAGENOLOGÍA / IMAGEN MAMARIA",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "breast_us",
+        "mammo"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "densitometry": {
+      "heading": "IMAGENOLOGÍA / DENSITOMETRÍA",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "dexa"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "magnetic_resonance": {
+      "heading": "IMAGENOLOGÍA / RESONANCIA MAGNÉTICA",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "mr_abdomen",
+        "mr_brain",
+        "mr_knee",
+        "mr_shoulder"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "nuclear": {
+      "heading": "IMAGENOLOGÍA / MEDICINA NUCLEAR Y PET",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "nm_bone_scan",
+        "nm_thyroid_uptake",
+        "pet_ct"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "radiography": {
+      "heading": "IMAGENOLOGÍA / RADIOGRAFÍA Y FLUOROSCOPÍA",
+      "root_family": "imaging",
+      "small": false,
+      "study_keys": [
+        "fluoro_barium_enema",
+        "fluoro_hsg",
+        "fluoro_ugi",
+        "fluoro_vcug",
+        "rx_abdomen",
+        "rx_ankle",
+        "rx_chest",
+        "rx_cspine",
+        "rx_hand",
+        "rx_knee",
+        "rx_lspine",
+        "rx_pelvis",
+        "rx_shoulder"
+      ],
+      "featured": [],
+      "groups": [
+        {
+          "key": "radiography__plain",
+          "label": "Radiografías convencionales",
+          "keys": [
+            "rx_chest",
+            "rx_abdomen",
+            "rx_pelvis",
+            "rx_cspine",
+            "rx_lspine",
+            "rx_shoulder",
+            "rx_knee",
+            "rx_ankle",
+            "rx_hand"
+          ]
+        },
+        {
+          "key": "radiography__fluoro",
+          "label": "Fluoroscopía",
+          "keys": [
+            "fluoro_hsg",
+            "fluoro_vcug",
+            "fluoro_ugi",
+            "fluoro_barium_enema"
+          ]
+        }
+      ]
+    },
+    "tomography": {
+      "heading": "IMAGENOLOGÍA / TOMOGRAFÍA",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "ct_abdomen_pelvis",
+        "ct_chest",
+        "ct_head",
+        "ct_uro"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "ultrasound_cardiac": {
+      "heading": "IMAGENOLOGÍA / ULTRASONIDO CARDÍACO",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "echo_tes",
+        "echo_tte",
+        "stress_echo"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "ultrasound_general": {
+      "heading": "IMAGENOLOGÍA / ULTRASONIDO GENERAL",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "us_abdomen",
+        "us_renal",
+        "us_soft_tissue",
+        "us_testicular",
+        "us_thyroid"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "ultrasound_obgyn": {
+      "heading": "IMAGENOLOGÍA / ULTRASONIDO OBSTÉTRICO Y GINECOLÓGICO",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "us_obstetric_study",
+        "us_pelvic"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "ultrasound_vascular": {
+      "heading": "IMAGENOLOGÍA / ULTRASONIDO VASCULAR / DOPPLER",
+      "root_family": "imaging",
+      "small": true,
+      "study_keys": [
+        "carotid_doppler",
+        "lower_ext_art_doppler",
+        "lower_ext_venous_doppler"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "cervical_cytology": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / CITOLOGÍA CERVICAL",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "cyto_liquid_based",
+        "cyto_pap"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "fluid_cytology": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / CITOLOGÍA DE ORINA Y LÍQUIDOS",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "csf_cytology",
+        "serous_fluid_cytology",
+        "urine_cytology"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "audiovestibular": {
+      "heading": "ESTUDIOS FUNCIONALES / AUDIOLOGÍA Y FUNCIÓN VESTIBULAR",
+      "root_family": "functional",
+      "small": true,
+      "study_keys": [
+        "audiometry_speech",
+        "audiometry_tonal",
+        "otoacoustic_emissions",
+        "tympanometry",
+        "vng"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "cardiovascular": {
+      "heading": "ESTUDIOS FUNCIONALES / CARDIOVASCULAR",
+      "root_family": "functional",
+      "small": false,
+      "study_keys": [
+        "abpm_mapa",
+        "ankle_brachial_index",
+        "ecg_12lead",
+        "ecg_rhythm_strip",
+        "holter",
+        "stress_test",
+        "tilt_table"
+      ],
+      "featured": [
+        "ecg_12lead",
+        "holter",
+        "abpm_mapa",
+        "stress_test"
+      ],
+      "groups": [
+        {
+          "key": "cardiovascular__ecg",
+          "label": "Electrocardiografía",
+          "keys": [
+            "ecg_12lead",
+            "ecg_rhythm_strip"
+          ]
+        },
+        {
+          "key": "cardiovascular__ambulatory",
+          "label": "Monitoreo ambulatorio",
+          "keys": [
+            "holter",
+            "abpm_mapa"
+          ]
+        },
+        {
+          "key": "cardiovascular__provocation",
+          "label": "Esfuerzo y respuesta autonómica",
+          "keys": [
+            "stress_test",
+            "tilt_table"
+          ]
+        },
+        {
+          "key": "cardiovascular__vascular",
+          "label": "Evaluación vascular funcional",
+          "keys": [
+            "ankle_brachial_index"
+          ]
+        }
+      ]
+    },
+    "neurophysiology": {
+      "heading": "ESTUDIOS FUNCIONALES / NEUROFISIOLOGÍA",
+      "root_family": "functional",
+      "small": false,
+      "study_keys": [
+        "eeg_routine",
+        "eeg_sleep_deprived",
+        "emg_ncs",
+        "evoked_auditory_baep",
+        "evoked_ssep",
+        "evoked_visual",
+        "repetitive_nerve_stimulation",
+        "sfemg",
+        "video_eeg"
+      ],
+      "featured": [],
+      "groups": [
+        {
+          "key": "neurophysiology__eeg",
+          "label": "Electroencefalografía",
+          "keys": [
+            "eeg_routine",
+            "eeg_sleep_deprived",
+            "video_eeg"
+          ]
+        },
+        {
+          "key": "neurophysiology__neuromuscular",
+          "label": "Electrodiagnóstico neuromuscular",
+          "keys": [
+            "emg_ncs",
+            "repetitive_nerve_stimulation",
+            "sfemg"
+          ]
+        },
+        {
+          "key": "neurophysiology__evoked",
+          "label": "Potenciales evocados",
+          "keys": [
+            "evoked_auditory_baep",
+            "evoked_ssep",
+            "evoked_visual"
+          ]
+        }
+      ]
+    },
+    "pulmonary": {
+      "heading": "ESTUDIOS FUNCIONALES / FUNCIÓN PULMONAR",
+      "root_family": "functional",
+      "small": false,
+      "study_keys": [
+        "capnography",
+        "cpet",
+        "dlco",
+        "feno",
+        "full_pft",
+        "overnight_oximetry",
+        "plethysmography",
+        "six_min_walk",
+        "spirometry"
+      ],
+      "featured": [
+        "spirometry",
+        "full_pft",
+        "dlco"
+      ],
+      "groups": [
+        {
+          "key": "pulmonary__spirometry",
+          "label": "Espirometría y función integral",
+          "keys": [
+            "spirometry",
+            "full_pft",
+            "plethysmography",
+            "dlco"
+          ]
+        },
+        {
+          "key": "pulmonary__exercise",
+          "label": "Ejercicio y capacidad funcional",
+          "keys": [
+            "six_min_walk",
+            "cpet"
+          ]
+        },
+        {
+          "key": "pulmonary__monitoring",
+          "label": "Monitoreo respiratorio",
+          "keys": [
+            "overnight_oximetry",
+            "capnography",
+            "feno"
+          ]
+        }
+      ]
+    },
+    "sleep": {
+      "heading": "ESTUDIOS FUNCIONALES / SUEÑO",
+      "root_family": "functional",
+      "small": true,
+      "study_keys": [
+        "hsat",
+        "mslt",
+        "mwt",
+        "psg_diagnostic",
+        "psg_titration"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "bronchoscopy": {
+      "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / BRONCOSCOPÍA",
+      "root_family": "procedures",
+      "small": true,
+      "study_keys": [
+        "bronchoscopy_base",
+        "ebus_base"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "digestive_endoscopy": {
+      "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / ENDOSCOPIA DIGESTIVA",
+      "root_family": "procedures",
+      "small": false,
+      "study_keys": [
+        "anoscopy_base",
+        "capsule_base",
+        "colonoscopy_base",
+        "egd_eda_base",
+        "enteroscopy_base",
+        "ercp_cpre_base",
+        "eus_use_base",
+        "flex_sig_base",
+        "proctoscopy_base"
+      ],
+      "featured": [],
+      "groups": [
+        {
+          "key": "digestive_endoscopy__upper",
+          "label": "Endoscopia alta y biliopancreática",
+          "keys": [
+            "egd_eda_base",
+            "eus_use_base",
+            "ercp_cpre_base"
+          ]
+        },
+        {
+          "key": "digestive_endoscopy__small_bowel",
+          "label": "Intestino delgado y cápsula",
+          "keys": [
+            "enteroscopy_base",
+            "capsule_base"
+          ]
+        },
+        {
+          "key": "digestive_endoscopy__lower",
+          "label": "Endoscopia baja y anorectal",
+          "keys": [
+            "colonoscopy_base",
+            "flex_sig_base",
+            "anoscopy_base",
+            "proctoscopy_base"
+          ]
+        }
+      ]
+    },
+    "laryngoscopy": {
+      "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / LARINGOSCOPÍA",
+      "root_family": "procedures",
+      "small": true,
+      "study_keys": [
+        "laryngoscopy_base"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "pleuroscopy": {
+      "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / PLEUROSCOPÍA",
+      "root_family": "procedures",
+      "small": true,
+      "study_keys": [
+        "pleuroscopy_base"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-cbct": {
+      "heading": "DENTAL / CONE BEAM / CBCT",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "dental_cbct"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-radiology": {
+      "heading": "DENTAL / RADIOLOGÍA DENTAL 2D",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "dental_cephalometric_xray",
+        "dental_panoramic_xray",
+        "tmj_comparative_xray"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-records": {
+      "heading": "DENTAL / REGISTROS ORTODÓNCICOS",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "dental_cephalometric_xray",
+        "dental_clinical_photographs",
+        "dental_intraoral_scan",
+        "dental_panoramic_xray",
+        "dental_study_model"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-scan-models": {
+      "heading": "DENTAL / ESCANEO Y MODELOS",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "dental_intraoral_scan",
+        "dental_study_model"
+      ],
+      "featured": [],
+      "groups": []
+    }
+  }
+}

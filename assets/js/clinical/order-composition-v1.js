@@ -6,11 +6,14 @@
   let routingPromise;
   const routing=()=>routingPromise ||= fetch('/modules/clinical/catalog/study_order_routing_v1.json',{credentials:'same-origin'})
     .then(r=>{if(!r.ok)throw new Error('ROUTING_UNAVAILABLE');return r.json();}).catch(e=>{routingPromise=null;throw e;});
+  let featuredPromise;
+  const featuredNavigation=()=>featuredPromise ||= fetch('/modules/clinical/catalog/study_featured_navigation_v1.json',{credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error('FEATURED_NAVIGATION_UNAVAILABLE');return r.json();}).catch(e=>{featuredPromise=null;throw e;});
   function mount(host,options){
-    let config=null,specimenConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
+    let config=null,specimenConfig=null,featuredConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
     let busy=false,attempt=null,uncertain=false,issued=false,reviewReturnFocus=null,reviewScroll=null;const waiters=[];
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
-    const title=el('h4'),crumb=el('p','','ordcomp-breadcrumb'),selector=el('div');catalog.append(el('h5','CATÁLOGO DE ESTUDIOS','ordcomp-catalog-role'),crumb,title,selector);
+    const selector=el('div');catalog.setAttribute('aria-label','Selección de estudios');catalog.append(selector);
     const count=el('p','','ordcomp-count'),selection=el('div','','ordcomp-selection'),error=el('p','','ordcomp-error');error.setAttribute('role','alert');
     const addOther=button('+ Agregar estudios',()=>chooser.hidden?openChooser():closeChooser(true));addOther.classList.add('ordcomp-add-other');
     const chooser=el('section','','ordcomp-add-chooser');chooser.id='ordcomp-add-chooser';chooser.hidden=true;chooser.setAttribute('role','region');chooser.setAttribute('aria-label','Elegir dónde agregar estudios');
@@ -87,12 +90,12 @@
       if(reviewBox.open)reviewBox.close();reviewBox.hidden=true;reviewReturnFocus=null;reviewScroll=null;
       host.hidden=false;workspace.hidden=false;mobile.hidden=false;issued=false;lastScope=scope;
       host.classList.remove('ordcomp-show-summary');toggle.textContent='Ver órdenes';toggle.setAttribute('aria-expanded','false');
-      title.textContent=scope.label||'Catálogo general';crumb.textContent=scope.breadcrumb||'Selección de estudios';
       selector.textContent='Cargando estudios…';
       try{
-        [config,specimenConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();})]);if(epoch!==seen)return false;
+        [config,specimenConfig,featuredConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();}),featuredNavigation()]);if(epoch!==seen)return false;
+        options.onHeading?.(featuredConfig.leaves?.[scope.id]?.heading||scope.label||'Catálogo general');
         composer=window.mxmedStudyComposer.mount(selector,{doctorId:current.doctor,presentation:'embedded',routing:config,
-          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',selectionHost:selection,specimenConfig,
+          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',featuredNavigation:featuredConfig,selectionHost:selection,specimenConfig,
           initialCategory:scope.parts?.length===1?scope.parts[0].category:'',selected,customDraft,
           onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.(),onReviewOrder:key=>review(key)});
         counts();selector.querySelector('input')?.focus({preventScroll:true});return true;

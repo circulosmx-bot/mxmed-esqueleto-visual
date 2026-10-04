@@ -11,7 +11,8 @@ with sync_playwright() as p:
   page.locator('[data-exp-tabs] [data-bs-target="#t-estudios"]').click();page.locator('.vis06-intent-card').first.click()
   page.locator('[data-hier-node="laboratory"]').click();page.locator('[data-hier-node="urine"]').click()
   expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)
-  expect(page.locator('.ordcomp-catalog-role')).to_have_text('CATÁLOGO DE ESTUDIOS')
+  expect(page.locator('#t-estudios .vis06-head h3')).to_have_text('LABORATORIO / ORINA Y OTROS FLUIDOS')
+  expect(page.locator('.ordcomp-catalog-role')).to_have_count(0)
   expect(page.locator('.ordcomp-selection > p')).to_have_text('Todavía no has agregado estudios.')
   assert page.locator('.ordcomp-selection > p').evaluate("e=>getComputedStyle(e).backgroundColor==='rgb(255, 255, 255)'")
   assert page.evaluate("getComputedStyle(document.querySelector('.ordcomp-catalog')).backgroundColor!==getComputedStyle(document.querySelector('.ordcomp-summary')).backgroundColor")
@@ -21,7 +22,7 @@ with sync_playwright() as p:
   expect(page.locator('[data-catalog-group]')).to_have_count(7)
   labels=[node.get_attribute('data-catalog-group') for node in page.locator('[data-catalog-group]').all()]
   assert labels.index('Semen')==labels.index('Microbiología urinaria')+1
-  expect(page.locator('.ordcomp [data-tax03c-status]')).to_contain_text('26 estudios disponibles')
+  expect(page.locator('.ordcomp [data-tax03c-status]')).to_be_hidden()
   for name in ('Creatinina en orina (muestra aislada)','Sodio en orina (muestra aislada)','Potasio en orina (muestra aislada)','Prueba de embarazo en orina (cualitativa)','Glucosa en líquido cefalorraquídeo (LCR)','Proteínas totales en líquido cefalorraquídeo (LCR)','Control de semen posvasectomía'):
    assert page.locator('[data-catalog-group] [data-tax03c-id]').filter(has_text=name).count()==1
   expect(page.locator('.ordcomp-custom-link')).to_be_hidden()

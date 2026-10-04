@@ -56,8 +56,8 @@
     if(typeof initialNavigation==='string'&&initialNavigation)group={label:window.mxmedStudyComposer.categories[initialNavigation],parts:[{category:initialNavigation}]};
     view.categoryRequest++;view.categoryScreen.hidden=true;view.labScreen.hidden=true;
     view.categoryBack.textContent='Volver a '+(hierarchyMode?view.hierParentLabel||'tipos de estudio':'categorías');
-    view.headTitle.textContent='Seleccionar estudios';
-    await view.composition.open({...group,breadcrumb:view.hierPath.map(id=>hierarchy.nodes[id].label).join(' / ')});
+    view.headTitle.textContent=group.label||'Catálogo general';
+    await view.composition.open(group);
   }
   const views = new Map();
   let rows=[], patient='', professional='', generation=0, ordersRequest=0, ordersItems=[], ordersCursor=null, ordersHasMore=false, ordersPageLoading=false;
@@ -295,11 +295,7 @@
     view.categoryScreen.setAttribute('aria-label',parent?hierarchy.nodes[parent].label:'Tipos de estudio');
     view.primaryCategories.replaceChildren();view.secondaryCategories.replaceChildren();view.lowerLinks.replaceChildren();
     view.hierBreadcrumb.replaceChildren();
-    if(path.length){
-      view.hierBreadcrumb.append(node('span','Tipos de estudio'));
-      path.forEach(id=>view.hierBreadcrumb.append(node('span',` / ${hierarchy.nodes[id].label}`)));
-    }
-    view.hierBreadcrumb.hidden=!path.length;
+    view.hierBreadcrumb.hidden=true;
     view.headTitle.textContent=parent?hierarchy.nodes[parent].label:'Generar nueva orden';
     view.categoryBack.textContent=parent?path.length>1?`Volver a ${hierarchy.nodes[path.at(-2)].label}`:'Volver a tipos de estudio':'Volver a opciones';
     for(const id of primary){
@@ -800,6 +796,7 @@
       module.append(view.home,view.categoryScreen,view.labScreen,compositionHost);
       view.composition=window.mxmedOrderCompositionV1.mount(compositionHost,{
         context:()=>({patient:selectedPatient(),doctor:professional}),
+        onHeading:heading=>{view.headTitle.textContent=heading;},
         onChange:({selected,orders})=>{view.hierDraft.selected=selected;view.hierOrderCount=orders;updateHierarchyDraft(view);},
         addStudiesContext:()=>view.module.dataset.orFamily==='dental'
           ?{currentFamilyId:'dental',families:[{id:'global',label:'Buscar en todo el catálogo'}]}

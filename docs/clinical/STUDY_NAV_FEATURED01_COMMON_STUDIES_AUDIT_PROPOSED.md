@@ -1,5 +1,7 @@
 # STUDY-NAV-FEATURED01 — estudios comunes y catálogo desplegable
 
+**Estado de implementación: PARTIALLY_IMPLEMENTED en STUDY-NAV-FEATURED02.** Se implementaron las 49 hojas y las 152 relaciones de grupos. Los candidatos `LOW` de radiografía, neurofisiología y endoscopia digestiva no se promueven a “COMUNES”; `panels` permanece sin destacados por investigación insuficiente. Véase [FEATURED02](STUDY_NAV_FEATURED02_IMPLEMENTED.md). La matriz original sigue siendo evidencia de auditoría, no configuración operativa.
+
 **AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED**  
 Fuente: HEAD `55dc59f50d49c823d6d9a6982ac7355f41c53be6`, 2026-10-04. Ninguna configuración ni conducta de runtime cambió. La imagen integrada del Director se usó solo para la intención visual de pantalla de familia y pantalla final; las identidades, rótulos y rutas provienen del producto real.
 

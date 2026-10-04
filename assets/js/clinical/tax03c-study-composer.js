@@ -80,7 +80,8 @@
     const navigationScope=$('[data-tax03c-navigation-scope]');
     function renderNavigationScope(){
       if(embedded){
-        navigationScope.textContent=embeddedGlobal?'Catálogo general':options.navigationGroup?.label||'Catálogo general';
+        const finalLeaf=!!options.featuredNavigation?.leaves?.[options.leafId];
+        navigationScope.textContent=embeddedGlobal?'Catálogo general':finalLeaf?'':options.navigationGroup?.label||'Catálogo general';
         $('[data-tax03c-global]').hidden=embeddedGlobal||!navigationParts?.length;
         $('[data-tax03c-dental-back]').hidden=!embeddedGlobal;
         $('[data-tax03c-dental-back]').textContent='Volver a '+(options.navigationGroup?.label||'esta familia');
@@ -99,7 +100,7 @@
         $('[data-tax03c-filter]').hidden=!laboratoryGlobal;
       }else navigationScope.textContent=navigationParts?.length?`Explorando ${options.navigationGroup.label}. Puedes buscar en todo el catálogo o cambiar de categoría.`:'';
       navigationScope.hidden=!navigationScope.textContent;
-      navigationScope.parentElement.hidden=!navigationScope.textContent;
+      navigationScope.parentElement.hidden=!navigationScope.textContent&&$('[data-tax03c-global]').hidden&&$('[data-tax03c-dental-back]').hidden&&$('[data-tax03c-lab-all]').hidden&&$('[data-tax03c-lab-back]').hidden;
     }
     renderNavigationScope();
     priority.value=options.priority==='Urgente'?'Urgente':'Rutinaria';
@@ -223,11 +224,13 @@
     function renderEmbedded(){
       resultBox.replaceChildren();
       if(!embeddedRows)return;
+      const leaf=!embeddedGlobal?options.featuredNavigation?.leaves?.[options.leafId]:null;
       const scope=embeddedGlobal?null:navigationParts;
       const scoped=embeddedRows.filter(item=>!scope?.length||scope.some(part=>part.category===item.category_key&&(!part.keys||part.keys.has(item.study_type_key))));
       const needle=normalize(search.value.trim());
       results=scoped.filter(item=>!needle||normalize([item.display_name_es,item.study_type_key,...(item.aliases||[])].join(' ')).includes(needle));
-      status.textContent=`${results.length} estudios disponibles${needle?' para esta búsqueda':''}.`;
+      status.hidden=!!leaf&&!needle;
+      status.textContent=needle?`${results.length} ${results.length===1?'estudio encontrado':'estudios encontrados'} para esta búsqueda.`:`${results.length} estudios disponibles.`;
       const rowFor=item=>{
         const added=selected.some(row=>row.type==='canonical'&&Number(row.id)===Number(item.study_type_id));
         const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);
@@ -237,17 +240,26 @@
       };
       if(needle){
         results.forEach(item=>resultBox.append(rowFor(item)));
-        if(embedded){
+        if(leaf?.small){resultBox.append(customOpen,custom);}
+        else if(embedded){
           const hiddenCustom=document.createElement('div');hiddenCustom.hidden=true;
           hiddenCustom.append(customOpen,custom);resultBox.append(hiddenCustom);
         }
         return;
       }
+      if(leaf?.small){
+        results.forEach(item=>resultBox.append(rowFor(item)));
+        resultBox.append(customOpen,custom);
+        return;
+      }
       const config=!embeddedGlobal?options.routing.catalog[options.leafId]:null;
-      const featured=(config?.featured||[]).slice(0,6).map(key=>results.find(item=>item.study_type_key===key)).filter(Boolean);
-      if(featured.length){const heading=document.createElement('h5');heading.textContent='MÁS SOLICITADOS';resultBox.append(heading);const box=document.createElement('div');box.dataset.ordcompFeatured='';featured.forEach(item=>box.append(rowFor(item)));resultBox.append(box);}
+      const featured=((leaf?leaf.featured:config?.featured)||[]).slice(0,6).map(key=>results.find(item=>item.study_type_key===key)).filter(Boolean);
+      let featuredSection=null;
+      if(featured.length){featuredSection=document.createElement('section');featuredSection.className='ordcomp-featured-section';featuredSection.hidden=fullOpen;
+        const heading=document.createElement('h5');heading.textContent='COMUNES';featuredSection.append(heading);
+        const box=document.createElement('div');box.dataset.ordcompFeatured='';featured.forEach(item=>box.append(rowFor(item)));featuredSection.append(box);resultBox.append(featuredSection);}
       const full=document.createElement('details');full.className='ordcomp-full-catalog';full.open=fullOpen;
-      const summary=document.createElement('summary');summary.textContent='Ver catálogo completo';full.append(summary);full.addEventListener('toggle',()=>{fullOpen=full.open;});
+      const summary=document.createElement('summary');summary.textContent='Ver catálogo completo';full.append(summary);full.addEventListener('toggle',()=>{fullOpen=full.open;if(featuredSection)featuredSection.hidden=fullOpen;});
       // Discovery uses the accepted hierarchy; operational routing remains independent.
       const covered=new Set(),discovery=[];
       const hierarchy=window.mxmedStudyNavigationHierarchyV2;
@@ -261,7 +273,7 @@
         const keys=results.filter(item=>item.category_key===category&&!covered.has(item.study_type_key)).map(item=>item.study_type_key);
         if(keys.length)discovery.push({label,keys});
       });
-      const groups=config?.groups||discovery;
+      const groups=leaf?.groups||config?.groups||discovery;
       groups.forEach(group=>{
         const items=results.filter(item=>group.keys.includes(item.study_type_key));if(!items.length)return;
         const details=document.createElement('details');details.dataset.catalogGroup=group.label;details.open=openGroup===group.label;
