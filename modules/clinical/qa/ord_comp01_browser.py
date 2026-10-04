@@ -13,6 +13,9 @@ rows=[dict(study_type_id=int(i),study_type_key=k,display_name_es=n,category_key=
 seed=(ROOT/'modules/clinical/db/migrations/2026_10_03_19_urine_fluids_catalog.sql').read_text()
 for key,name in re.findall(r"\('([^']+)','([^']+)','LABORATORIO'",seed):
  if not any(r['study_type_key']==key for r in rows):rows.append(dict(study_type_id=10000+len(rows),study_type_key=key,display_name_es=name,category_key='LABORATORIO',aliases=[]))
+seed=(ROOT/'modules/clinical/db/migrations/2026_10_03_20_urine_fluids_cat03a.sql').read_text()
+for key,name in re.findall(r"\('([^']+)','([^']+)','LABORATORIO'",seed):
+ if not any(r['study_type_key']==key for r in rows):rows.append(dict(study_type_id=10000+len(rows),study_type_key=key,display_name_es=name,category_key='LABORATORIO',aliases=[]))
 counts={k:sum(r['category_key']==k for r in rows) for k in {r['category_key'] for r in rows}}
 ids={r['study_type_key']:r['study_type_id'] for r in rows}
 with sync_playwright() as p:
@@ -84,14 +87,34 @@ with sync_playwright() as p:
   if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   print(f'QA_ORDCOMP01_R1_FEATURED_ROOT_DRAFT_REMOVE_{width}x{height}=PASS',flush=True)
-  assert page.locator('[data-catalog-group]').count()==5
+  assert page.locator('[data-catalog-group]').count()==6
+  new_groups={'urine_creatinine_spot':'Estudios generales y renales','urine_sodium_spot':'Electrolitos y minerales urinarios','urine_potassium_spot':'Electrolitos y minerales urinarios','urine_pregnancy_qualitative':'Estudios generales y renales','csf_glucose':'Líquido cefalorraquídeo (LCR)','csf_total_protein':'Líquido cefalorraquídeo (LCR)','post_vasectomy_semen_check':'Semen'}
+  for key in new_groups:
+   page.locator('.ordcomp [data-tax03c-search]').fill(next(r['display_name_es'] for r in rows if r['study_type_key']==key))
+   expect(page.locator('[data-tax03c-results] [data-tax03c-id]')).to_have_count(1)
+  page.locator('.ordcomp [data-tax03c-search]').fill('')
+  page.locator('.ordcomp-full-catalog > summary').click()
+  for key,group_name in new_groups.items():
+   group=page.locator('[data-catalog-group="'+group_name+'"]')
+   assert group.locator('[data-tax03c-id="'+str(ids[key])+'"]').count()==1
+   if group.get_attribute('open') is None:group.locator('summary').first.click()
+   group.locator('[data-tax03c-id="'+str(ids[key])+'"]').click()
+   expect(page.locator('[data-order-group="CLINICAL_LAB"] .tax03c-selected-row')).to_have_count(1)
+   if width<768:page.get_by_role('button',name='Ver órdenes',exact=True).click()
+   page.locator('.ordcomp-summary .ordcomp-remove').first.click()
+   expect(page.locator('.ordcomp-prepared-order')).to_have_count(0)
+   if width<768:page.get_by_role('button',name='Volver al catálogo',exact=True).click()
+  assert page.locator('.ordcomp [data-tax03c-custom-open]').inner_text()=='+ Agregar estudio no catalogado'
+  page.locator('.ordcomp-full-catalog > summary').click()
+  print(f'QA_CAT03A_SEVEN_ACCORDION_ADD_REMOVE_{width}x{height}=PASS',flush=True)
   assert page.locator('.ordcomp-full-catalog').get_attribute('open') is None
   page.locator('[data-ordcomp-featured] button').first.focus();page.keyboard.press('Enter')
   expect(page.locator('[data-ordcomp-featured] button').first).to_have_attribute('aria-pressed','true')
-  page.locator('.ordcomp-full-catalog > summary').click();page.locator('[data-catalog-group] > summary').first.click()
-  assert page.locator('[data-catalog-group][open]').count()==1
+  if page.locator('.ordcomp-full-catalog').get_attribute('open') is None:page.locator('.ordcomp-full-catalog > summary').click()
+  if page.locator('[data-catalog-group]').first.get_attribute('open') is None:page.locator('[data-catalog-group] > summary').first.click()
+  expect(page.locator('[data-catalog-group][open]')).to_have_count(1)
   page.locator('[data-catalog-group] > summary').nth(1).click();page.wait_for_timeout(100)
-  assert page.locator('[data-catalog-group][open]').count()==1
+  expect(page.locator('[data-catalog-group][open]')).to_have_count(1)
   choose('microalbumin')
   page.locator('[data-tax03c-search]').fill('RX Tórax');expect(page.locator('.ordcomp [data-tax03c-id]')).to_have_count(0)
   page.locator('[data-tax03c-search]').fill('');expect(page.locator('[data-ordcomp-featured] button')).to_have_count(6)

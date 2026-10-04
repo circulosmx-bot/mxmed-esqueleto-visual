@@ -3,6 +3,8 @@
 **AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED**
 Source HEAD: `a17806c2d9fc2a4004a1dd88cc6611b087a5a805`. Date: 2026-10-03. No catalog, navigation, alias, schema, reader, or writer change is authorized by this document.
 
+**Implementation status: PARTIALLY_IMPLEMENTED.** The seven fixed-scope tests approved after this audit were added in [URINE-FLUIDS-CAT03A](URINE_FLUIDS_CAT03A_SAFE_ORDERABLES_IMPLEMENTED.md). Counts and preflight below describe the CAT02 baseline of 208 active studies; the other proposals remain deferred.
+
 ## Director summary
 
 The review records **177 distinct source/candidate concepts** in the [complete concept matrix](URINE_FLUIDS_CAT02_CONCEPT_MATRIX.csv). The current review database has **208 active canonical studies**, of which **9** are explicitly urine/fluid/semen studies in HIER03. Of the 177 reviewed concepts, 9 match those identities exactly, 4 match their existing aliases, 110 represent currently missing orderable or potentially orderable concepts, 40 are not separate canonical orders, and 14 remain uncertain. No serum analyte was accepted as a near-equivalent match to a urine or serous-fluid order.

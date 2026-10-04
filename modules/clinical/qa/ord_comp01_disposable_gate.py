@@ -25,11 +25,19 @@ def req(path,body=None,key=None,cookie=OWNER,multipart=False):
  return code,json.loads(raw) if h.get_content_type()=='application/json' else raw
 routing=json.loads((ROOT/'modules/clinical/catalog/study_order_routing_v1.json').read_text())
 keys=sql('SELECT study_type_key FROM clinical_study_types WHERE is_active=1').splitlines()
-assert len(keys)==208 and len(keys)==len(set(keys))
+assert len(keys)==215 and len(keys)==len(set(keys))
 assert all(k in routing['studies'] and routing['studies'][k] in routing['groups'] for k in keys)
-assert len(routing['studies'])==208
+assert len(routing['studies'])==215
 urine=routing['catalog']['urine'];assert len(urine['featured'])<=6 and set(urine['featured'])<=set(k for g in urine['groups'] for k in g['keys'])<=set(keys)
-print('QA_URINE_CATALOG=PASS; QA_ROUTING_208=PASS; QA_FEATURED=PASS',flush=True)
+new_keys=['urine_creatinine_spot','urine_sodium_spot','urine_potassium_spot','urine_pregnancy_qualitative','csf_glucose','csf_total_protein','post_vasectomy_semen_check']
+assert set(new_keys)<=set(keys) and all(routing['studies'][k]=='CLINICAL_LAB' for k in new_keys)
+assert len(urine['featured'])==6 and not set(new_keys)&set(urine['featured'])
+assert sql("SELECT COUNT(*) FROM clinical_study_types WHERE study_type_key IN ("+','.join("'"+k+"'" for k in new_keys)+") AND JSON_LENGTH(aliases_json)=0")=='7'
+assert sql("SELECT COUNT(*) FROM clinical_study_types WHERE study_type_key LIKE '%_24h' AND seed_provenance LIKE 'URINE-FLUIDS-CAT03A:%'")=='0'
+assert sum(len(g['keys']) for g in urine['groups'])==16 and len(urine['groups'])==6
+assert next(g for g in urine['groups'] if g['label']=='Líquido cefalorraquídeo (LCR)')['keys']==['csf_cell_count','csf_glucose','csf_total_protein']
+assert next(g for g in urine['groups'] if g['label']=='Semen')['keys']==['semen_analysis','post_vasectomy_semen_check']
+print('QA_URINE_CATALOG=PASS; QA_ROUTING_215=PASS; QA_FEATURED=PASS; QA_CAT03A_SEVEN=PASS',flush=True)
 def order(group,keys):return {'order_routing_group_key':group,'priority':'Rutinaria','indication':'QA desechable '+group,'order_items':[{'study_type_key':k} for k in keys]}
 def batch(orders):return {'order_composition_batch_uuid':str(uuid.uuid4()),'order_routing_version':1,'orders':orders}
 body=batch([order('CLINICAL_LAB',['urinalysis','urine_osmolality']),order('GENERAL_IMAGING',['rx_chest']),order('PATHOLOGY_CYTOLOGY',['cyto_pap']),order('CARDIOVASCULAR_DIAGNOSTICS',['echo_tte'])])
@@ -88,6 +96,20 @@ raw=json.dumps(projection)
 assert 'result_source_order_document_uuid' in raw and issued[0]['document_uuid'] in raw and old['document_uuid'] in raw
 assert sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(old['document_id'])}")==old_json
 print('QA_RESULT_REGRESSION=PASS; QA_HISTORICAL_MIXED_ORDER_LINKAGE=PASS',flush=True)
+new_body=batch([order('CLINICAL_LAB',new_keys),order('GENERAL_IMAGING',['rx_chest'])])
+code,new_issue=req(PATH+'/orders/batch',new_body);assert code==201,(code,new_issue)
+new_docs=new_issue['data']['orders'];assert len(new_docs)==2
+new_lab=next(d for d in new_docs if d['order_routing_group_key']=='CLINICAL_LAB')
+new_payload=json.loads(sql(f"SELECT payload_json FROM clinical_documents WHERE id={int(new_lab['document_id'])}"))
+assert [i['study_type_key'] for i in new_payload['order_items']]==new_keys
+assert len({i['order_item_id'] for i in new_payload['order_items']})==7
+assert all(i['study_type_id'] for i in new_payload['order_items'])
+result_body={'patient_id':'p_labcat02a_order','document_type':'lab_result','title':'Resultado CAT03A QA','event_datetime':'2026-10-03 12:00:00','provenance':'Laboratorio QA','payload':{'source':'res02a_linked_result','related_order_document_uuid':new_lab['document_uuid'],'related_order_item_ids':[new_payload['order_items'][0]['order_item_id']],'provenance':'Laboratorio QA'}}
+code,new_result=req(PATH+'/documents',result_body,multipart=True);assert code==201,(code,new_result)
+new_result_uuid=new_result['data'].get('document_uuid') or new_result['data']['document_id']
+stored_result=json.loads(sql("SELECT payload_json FROM clinical_documents WHERE document_uuid='"+new_result_uuid+"'"))
+assert stored_result['related_order_item_ids']==[new_payload['order_items'][0]['order_item_id']]
+print('QA_CAT03A_SEVEN_SAME_ROUTING_MULTI_ORDER_RESULT_LINKAGE=PASS',flush=True)
 dental=order('DENTAL_DIAGNOSTICS',['dental_cbct','dental_panoramic_xray'])
 dental['order_items'][0]['dental_location']={'contract_version':1,'numbering_system':'FDI_ISO_3950','dentition_mode':'PERMANENT','coverage':'LOCALIZED','selected_teeth':['16']}
 code,d=req(PATH+'/orders/batch',batch([dental]));assert code==201,(code,d)
@@ -103,7 +125,7 @@ for doc,p in zip(issued,snapshots):
  assert p['order_payload_version']==2 and all(i['study_type_id'] and i['order_item_id'] for i in p['order_items'])
 assert 'order_composition_batch_uuid' not in interop
 print('QA_PROVIDER_INTEROP_STATIC=PASS (exact version/items; provider eligibility unchanged)',flush=True)
-for doc in issued+[old,dental_doc]:
+for doc in issued+[old,dental_doc,new_lab]:
  query=urllib.parse.urlencode({'uuid':doc['document_uuid'],'doctor_id':'d_labcat02a_order'})
  code,model=req('/api/clinical/index.php/doctors/d_labcat02a_order/portable-orders/'+doc['document_uuid']);assert code==200
  code,html=req('/modules/clinical/ui/portable-order.php?'+query);assert code==200

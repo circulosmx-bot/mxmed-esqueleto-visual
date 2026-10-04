@@ -181,7 +181,14 @@
           "keys": [
             "microalbumin",
             "urinalysis",
-            "urine_culture"
+            "urine_culture",
+            "urine_creatinine_spot",
+            "urine_sodium_spot",
+            "urine_potassium_spot",
+            "urine_pregnancy_qualitative",
+            "csf_glucose",
+            "csf_total_protein",
+            "post_vasectomy_semen_check"
           ]
         }
       ],

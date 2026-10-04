@@ -16,6 +16,7 @@ mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_09_30_15_initia
 mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_02_17_dental_cat02_catalog.sql"
 mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_02_18_lab_cat02a_common_catalog.sql"
 mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_03_19_urine_fluids_catalog.sql"
+mysql "$qa_db" < "$repo_root/modules/clinical/db/migrations/2026_10_03_20_urine_fluids_cat03a.sql"
 mysql "$qa_db" <<'SQL'
 INSERT INTO patients_patients(patient_id,display_name,birthdate) VALUES
  ('p_labcat02a_order','Paciente Laboratorio QA','1985-02-03'),('p_labcat02a_foreign','Paciente Ajeno QA','1992-06-07');

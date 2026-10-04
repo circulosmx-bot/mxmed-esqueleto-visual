@@ -223,7 +223,14 @@
     "urine_osmolality": "CLINICAL_LAB",
     "csf_cell_count": "CLINICAL_LAB",
     "synovial_crystals": "CLINICAL_LAB",
-    "semen_analysis": "CLINICAL_LAB"
+    "semen_analysis": "CLINICAL_LAB",
+    "urine_creatinine_spot": "CLINICAL_LAB",
+    "urine_sodium_spot": "CLINICAL_LAB",
+    "urine_potassium_spot": "CLINICAL_LAB",
+    "urine_pregnancy_qualitative": "CLINICAL_LAB",
+    "csf_glucose": "CLINICAL_LAB",
+    "csf_total_protein": "CLINICAL_LAB",
+    "post_vasectomy_semen_check": "CLINICAL_LAB"
   },
   "catalog": {
     "urine": {
@@ -243,7 +250,16 @@
             "microalbumin",
             "urine_albumin_creatinine_panel",
             "urine_protein_creatinine_panel",
-            "urine_osmolality"
+            "urine_osmolality",
+            "urine_creatinine_spot",
+            "urine_pregnancy_qualitative"
+          ]
+        },
+        {
+          "label": "Electrolitos y minerales urinarios",
+          "keys": [
+            "urine_sodium_spot",
+            "urine_potassium_spot"
           ]
         },
         {
@@ -255,7 +271,9 @@
         {
           "label": "Líquido cefalorraquídeo (LCR)",
           "keys": [
-            "csf_cell_count"
+            "csf_cell_count",
+            "csf_glucose",
+            "csf_total_protein"
           ]
         },
         {
@@ -267,7 +285,8 @@
         {
           "label": "Semen",
           "keys": [
-            "semen_analysis"
+            "semen_analysis",
+            "post_vasectomy_semen_check"
           ]
         }
       ]

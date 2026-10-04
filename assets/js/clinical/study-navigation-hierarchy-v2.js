@@ -32,7 +32,7 @@
     microbiology:group('microbiology','Microbiología','microbiology',lab('microbiology')),
     genetics:group('genetics','Genética y diagnóstico molecular','genetics',[],
       ['cytogenetics','cytogenomics','genomic_sequencing','prenatal_genetics','germline_genetics','hereditary_oncology','pharmacogenomics','molecular_oncology']),
-    urine:group('urine','Orina y otros fluidos','water_drop',[{category:'LABORATORIO',keys:["urinalysis", "microalbumin", "urine_albumin_creatinine_panel", "urine_protein_creatinine_panel", "urine_osmolality", "urine_culture", "csf_cell_count", "synovial_crystals", "semen_analysis"]}]),
+    urine:group('urine','Orina y otros fluidos','water_drop',[{category:'LABORATORIO',keys:["urinalysis", "microalbumin", "urine_albumin_creatinine_panel", "urine_protein_creatinine_panel", "urine_osmolality", "urine_creatinine_spot", "urine_sodium_spot", "urine_potassium_spot", "urine_pregnancy_qualitative", "urine_culture", "csf_cell_count", "csf_glucose", "csf_total_protein", "synovial_crystals", "semen_analysis", "post_vasectomy_semen_check"]}]),
     stool:group('stool','Materia fecal','science',lab('stool')),
     tumor:group('tumor','Marcadores tumorales','biotech',lab('tumor')),
     drugs:group('drugs','Monitoreo de fármacos','medication',lab('drugs')),
