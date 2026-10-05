@@ -3,7 +3,7 @@
   const categories={
     LABORATORIO:'Laboratorio',IMAGEN:'Imagenología',CARDIOVASCULAR:'Cardiovascular',
     OFTALMOLOGIA:'Oftalmología',NEUROFISIOLOGIA:'Neurofisiología',FUNCION_PULMONAR:'Función pulmonar',
-    AUDIOLOGIA:'Audiología',DENTAL:'Dental',PATOLOGIA:'Patología',ENDOSCOPIA:'Endoscopía',
+    AUDIOLOGIA:'Audiología',DENTAL:'Dental',PATOLOGIA:'Patología',ENDOSCOPIA:'Endoscopía',PROCEDIMIENTOS_DIAGNOSTICOS:'Procedimientos diagnósticos',
     SUENO:'Medicina del sueño',GENETICA:'Genética',OTROS:'Otros'
   };
   const clone=value=>JSON.parse(JSON.stringify(value));

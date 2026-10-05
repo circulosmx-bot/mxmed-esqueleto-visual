@@ -52,6 +52,20 @@ final class HealthcareStudyInteropService
         return is_array($row)?$row:null;
     }
 
+    private function assertDiagnosticProcedurePolicies(array $studyIds): void
+    {
+        if ($studyIds===[]) throw new RuntimeException('REFERRAL_ITEMS_INVALID');
+        $query=$this->pdo->prepare('SELECT study_type_key,category_key FROM clinical_study_types WHERE study_type_id=?');
+        foreach ($studyIds as $studyId) {
+            $query->execute([(int)$studyId]);
+            $row=$query->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row) || ((string)$row['category_key']==='PROCEDIMIENTOS_DIAGNOSTICOS'
+                && clinical_diagnostic_procedure_policy((string)$row['study_type_key'])===null)) {
+                throw new RuntimeException('DIAGNOSTIC_PROCEDURE_SCOPE_INVALID');
+            }
+        }
+    }
+
     private static function digest(array $data): string
     {
         return hash('sha256',json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
@@ -129,6 +143,7 @@ final class HealthcareStudyInteropService
                     throw new RuntimeException('REFERRAL_ITEM_NOT_CANONICAL_SOURCE');
                 $studyId=(int)$item['study_type_id'];$studyIds[$studyId]=true;$items[$id]=$item;
             }
+            $this->assertDiagnosticProcedurePolicies(array_keys($studyIds));
             $target=$this->one("SELECT l.location_id FROM healthcare_organization_locations l
                 JOIN healthcare_organization_provider_status ps ON ps.group_id=l.group_id
                 WHERE l.location_id=? AND l.group_id=? AND l.operational_state='ACTIVE' AND l.verification_state='VERIFIED'
@@ -195,6 +210,9 @@ final class HealthcareStudyInteropService
                   AND l.verification_state='VERIFIED' AND ps.operational_state='ACTIVE'
                   AND ps.verification_state='VERIFIED' LIMIT 1",[$ref['location_id'],$ref['group_id']]);
             if ($eligible===null) throw new RuntimeException('REFERRAL_TARGET_INELIGIBLE');
+            $ids=$this->pdo->prepare('SELECT DISTINCT study_type_id FROM healthcare_study_referral_items WHERE referral_id=?');
+            $ids->execute([$ref['referral_id']]);
+            $this->assertDiagnosticProcedurePolicies($ids->fetchAll(PDO::FETCH_COLUMN));
             $items=$this->one("SELECT COUNT(*) AS total,
                 SUM(CASE WHEN o.offering_id IS NOT NULL AND o.operational_state='ACTIVE'
                     AND o.verification_state='VERIFIED' AND o.service_mode='ON_SITE'

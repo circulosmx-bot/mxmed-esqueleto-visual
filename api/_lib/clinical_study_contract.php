@@ -8,12 +8,13 @@ require_once __DIR__ . '/clinical_pathology_parameters.php';
 require_once __DIR__ . '/clinical_imaging_parameters.php';
 require_once __DIR__ . '/clinical_lab_panel.php';
 require_once __DIR__ . '/clinical_lab_presets.php';
+require_once __DIR__ . '/clinical_diagnostic_procedure.php';
 
 /** TAX03A: document-payload study identity. No legacy payload is rewritten. */
 function clinical_study_categories(): array
 {
     return ['LABORATORIO','IMAGEN','CARDIOVASCULAR','OFTALMOLOGIA','NEUROFISIOLOGIA',
-        'FUNCION_PULMONAR','AUDIOLOGIA','DENTAL','PATOLOGIA','ENDOSCOPIA','SUENO','GENETICA','OTROS'];
+        'FUNCION_PULMONAR','AUDIOLOGIA','DENTAL','PATOLOGIA','ENDOSCOPIA','PROCEDIMIENTOS_DIAGNOSTICOS','SUENO','GENETICA','OTROS'];
 }
 
 function clinical_study_category_labels_es(): array
@@ -22,7 +23,7 @@ function clinical_study_category_labels_es(): array
         'LABORATORIO'=>'Laboratorio', 'IMAGEN'=>'Imagenología', 'CARDIOVASCULAR'=>'Cardiovascular',
         'OFTALMOLOGIA'=>'Oftalmología', 'NEUROFISIOLOGIA'=>'Neurofisiología',
         'FUNCION_PULMONAR'=>'Función pulmonar', 'AUDIOLOGIA'=>'Audiología', 'DENTAL'=>'Dental',
-        'PATOLOGIA'=>'Patología', 'ENDOSCOPIA'=>'Endoscopía', 'SUENO'=>'Medicina del sueño',
+        'PATOLOGIA'=>'Patología', 'ENDOSCOPIA'=>'Endoscopía', 'PROCEDIMIENTOS_DIAGNOSTICOS'=>'Procedimientos diagnósticos', 'SUENO'=>'Medicina del sueño',
         'GENETICA'=>'Genética', 'OTROS'=>'Otros',
     ];
 }
@@ -98,6 +99,7 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
         $name = clinical_study_text($input['study_display_name'] ?? null, 255, 'STUDY_NAME_REQUIRED');
     }
     if (!in_array($category, clinical_study_categories(), true)) throw new InvalidArgumentException('STUDY_CATEGORY_INVALID');
+    clinical_diagnostic_procedure_assert_order($key, $category, $input, $resultTaxonomy);
     $note = clinical_study_optional_text($input['note'] ?? null, 1000, 'STUDY_NOTE_INVALID');
     $system = clinical_study_optional_text($input['external_code_system'] ?? null, 190, 'STUDY_EXTERNAL_CODE_INVALID');
     $code = clinical_study_optional_text($input['external_code'] ?? null, 128, 'STUDY_EXTERNAL_CODE_INVALID');

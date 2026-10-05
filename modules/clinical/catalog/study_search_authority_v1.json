@@ -281,6 +281,30 @@
       "discovery_terms": []
     },
     {
+      "study_key": "colposcopy_diagnostic",
+      "canonical_display_name": "Colposcopia diagnóstica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": ["colposcopía", "videocolposcopia"],
+      "discovery_terms": ["video colpo"]
+    },
+    {
+      "study_key": "cystoscopy_diagnostic",
+      "canonical_display_name": "Cistoscopia diagnóstica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": ["cistouretroscopia diagnóstica", "videocistoscopia simple"],
+      "discovery_terms": ["video cisto"]
+    },
+    {
+      "study_key": "hysteroscopy_diagnostic",
+      "canonical_display_name": "Histeroscopia diagnóstica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": ["histeroscopía diagnóstica", "histeroscopia de consultorio"],
+      "discovery_terms": []
+    },
+    {
       "study_key": "ebus_base",
       "canonical_display_name": "EBUS (ultrasonido endobronquial)",
       "common_display_name": null,
@@ -302,7 +326,7 @@
       "equivalent_aliases": [
         "Esofagogastroduodenoscopia"
       ],
-      "discovery_terms": []
+      "discovery_terms": ["panendoscopia", "gastroscopia", "endoscopia alta"]
     },
     {
       "study_key": "enteroscopy_base",

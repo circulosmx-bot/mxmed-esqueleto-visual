@@ -1088,6 +1088,22 @@
       "featured": [],
       "groups": []
     },
+    "gynecology": {
+      "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / GINECOLOGÍA",
+      "root_family": "procedures",
+      "small": true,
+      "study_keys": ["colposcopy_diagnostic", "hysteroscopy_diagnostic"],
+      "featured": [],
+      "groups": []
+    },
+    "urology": {
+      "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / UROLOGÍA",
+      "root_family": "procedures",
+      "small": true,
+      "study_keys": ["cystoscopy_diagnostic"],
+      "featured": [],
+      "groups": []
+    },
     "digestive_endoscopy": {
       "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / ENDOSCOPIA DIGESTIVA",
       "root_family": "procedures",

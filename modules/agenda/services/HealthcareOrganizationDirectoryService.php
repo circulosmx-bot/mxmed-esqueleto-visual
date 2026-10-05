@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Agenda\Services;
 
 require_once __DIR__.'/HealthcareOrganizationMasterService.php';
+require_once __DIR__.'/../../../api/_lib/clinical_diagnostic_procedure.php';
 
 use InvalidArgumentException;
 use PDO;
@@ -116,14 +117,17 @@ final class HealthcareOrganizationDirectoryService
             $this->pdo->beginTransaction();
         }
         try {
-            $study = $this->pdo->prepare('SELECT is_active FROM clinical_study_types WHERE study_type_id=:id FOR UPDATE');
+            $study = $this->pdo->prepare('SELECT study_type_key,category_key,is_active FROM clinical_study_types WHERE study_type_id=:id FOR UPDATE');
             $study->execute(['id' => $studyTypeId]);
-            $active = $study->fetchColumn();
-            if ($active === false) {
+            $row = $study->fetch(PDO::FETCH_ASSOC);
+            if ($row === false) {
                 throw new InvalidArgumentException('study_type_not_found');
             }
-            if ((int)$active !== 1) {
+            if ((int)$row['is_active'] !== 1) {
                 throw new InvalidArgumentException('study_type_inactive');
+            }
+            if (!\clinical_diagnostic_procedure_service_mode($row['study_type_key'], $fields['service_mode'], $row['category_key'])) {
+                throw new InvalidArgumentException('diagnostic_procedure_requires_on_site');
             }
             $master=(new HealthcareOrganizationMasterService($this->pdo))->resolveOrCreate($groupId,$studyTypeId);
             if (array_key_exists('requires_appointment',$fields)) $fields['requires_appointment_override']=$fields['requires_appointment'];
@@ -158,8 +162,9 @@ final class HealthcareOrganizationDirectoryService
 
     public function updateOffering(string $groupId, string $locationUuid, int $studyTypeId, array $data): array
     {
-        $this->requireOffering($groupId, $locationUuid, $studyTypeId);
+        $offering = $this->requireOffering($groupId, $locationUuid, $studyTypeId);
         $fields = $this->offeringFields($data, false);
+        $this->assertDiagnosticProcedureMode($studyTypeId, $fields['service_mode'] ?? $offering['service_mode']);
         if (array_key_exists('requires_appointment',$fields)) $fields['requires_appointment_override']=$fields['requires_appointment'];
         if (array_key_exists('preparation_instructions',$fields)) {
             $fields['preparation_instructions_override']=$fields['preparation_instructions'];
@@ -173,7 +178,8 @@ final class HealthcareOrganizationDirectoryService
 
     public function setOfferingVerification(string $groupId, string $locationUuid, int $studyTypeId, string $state, string $actorUserId): array
     {
-        $this->requireOffering($groupId, $locationUuid, $studyTypeId);
+        $offering = $this->requireOffering($groupId, $locationUuid, $studyTypeId);
+        if ($state === 'VERIFIED') $this->assertDiagnosticProcedureMode($studyTypeId, $offering['service_mode']);
         $this->assertVerification($state, $actorUserId);
         $stmt = $this->pdo->prepare('UPDATE healthcare_organization_location_study_offerings o
             JOIN healthcare_organization_locations l ON l.location_id=o.location_id
@@ -182,6 +188,16 @@ final class HealthcareOrganizationDirectoryService
         $stmt->execute(['state' => $state, 'actor' => $actorUserId, 'group_id' => $groupId,
             'location_uuid' => $locationUuid, 'study_type_id' => $studyTypeId]);
         return $this->requireOffering($groupId, $locationUuid, $studyTypeId);
+    }
+
+    private function assertDiagnosticProcedureMode(int $studyTypeId, string $mode): void
+    {
+        $stmt = $this->pdo->prepare('SELECT study_type_key,category_key FROM clinical_study_types WHERE study_type_id=?');
+        $stmt->execute([$studyTypeId]);
+        $study = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($study) || !\clinical_diagnostic_procedure_service_mode((string)$study['study_type_key'], $mode, (string)$study['category_key'])) {
+            throw new InvalidArgumentException('diagnostic_procedure_requires_on_site');
+        }
     }
 
     public function readOrganization(string $groupId): array

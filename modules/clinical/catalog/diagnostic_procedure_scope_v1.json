@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "studies": {
+    "colposcopy_diagnostic": {"scope": "DIAGNOSTIC_ONLY", "allowed_service_modes": ["ON_SITE"], "optional_biopsy_intent": "NONE_V1"},
+    "hysteroscopy_diagnostic": {"scope": "DIAGNOSTIC_ONLY", "allowed_service_modes": ["ON_SITE"], "optional_biopsy_intent": "NONE_V1"},
+    "cystoscopy_diagnostic": {"scope": "DIAGNOSTIC_ONLY", "allowed_service_modes": ["ON_SITE"], "optional_biopsy_intent": "NONE_V1"}
+  }
+}

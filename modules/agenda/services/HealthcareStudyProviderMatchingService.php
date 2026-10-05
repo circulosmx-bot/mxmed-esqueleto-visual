@@ -56,10 +56,11 @@ final class HealthcareStudyProviderMatchingService
             $unmatchable = [];
             foreach ($items as $item) {
                 $typeId = $item['study_type_id'];
-                if ($typeId !== null && ($catalog[$typeId] ?? false)) {
+                if ($typeId !== null && ($catalog[$typeId]['active'] ?? false)
+                    && \clinical_diagnostic_procedure_service_mode($catalog[$typeId]['key'], $serviceMode, $catalog[$typeId]['category'])) {
                     $activeItems[] = $item;
                 } else {
-                    $item['reason'] = $typeId === null ? $item['reason'] : 'INACTIVE_OR_MISSING_STUDY_TYPE';
+                    $item['reason'] = $typeId === null ? $item['reason'] : 'INACTIVE_OR_UNSUPPORTED_STUDY_TYPE_OR_MODE';
                     $unmatchable[] = $item;
                 }
             }
@@ -236,11 +237,12 @@ final class HealthcareStudyProviderMatchingService
             return [];
         }
         $marks = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $this->pdo->prepare('SELECT study_type_id,is_active FROM clinical_study_types WHERE study_type_id IN ('.$marks.')');
+        $stmt = $this->pdo->prepare('SELECT study_type_id,study_type_key,category_key,is_active FROM clinical_study_types WHERE study_type_id IN ('.$marks.')');
         $stmt->execute($ids);
         $status = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $status[(int)$row['study_type_id']] = (int)$row['is_active'] === 1;
+            $status[(int)$row['study_type_id']] = ['active'=>(int)$row['is_active'] === 1,
+                'key'=>(string)$row['study_type_key'],'category'=>(string)$row['category_key']];
         }
         return $status;
     }

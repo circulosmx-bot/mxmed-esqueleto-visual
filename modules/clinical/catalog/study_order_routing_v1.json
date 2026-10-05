@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "groups": {
     "CLINICAL_LAB": "Laboratorio clínico",
     "GENETICS_MOLECULAR": "Genética y diagnóstico molecular",
@@ -13,7 +13,9 @@
     "DIGESTIVE_ENDOSCOPY": "Endoscopia digestiva",
     "RESPIRATORY_DIAGNOSTIC_PROCEDURES": "Procedimientos respiratorios",
     "ENT_DIAGNOSTICS": "Diagnóstico otorrinolaringológico",
-    "DENTAL_DIAGNOSTICS": "Diagnóstico dental"
+    "DENTAL_DIAGNOSTICS": "Diagnóstico dental",
+    "GYNECOLOGY_DIAGNOSTICS": "Diagnóstico ginecológico",
+    "UROLOGY_DIAGNOSTICS": "Diagnóstico urológico"
   },
   "studies": {
     "abpm_mapa": "CARDIOVASCULAR_DIAGNOSTICS",
@@ -56,8 +58,10 @@
     "chol_total": "CLINICAL_LAB",
     "cma_microarray": "GENETICS_MOLECULAR",
     "colonoscopy_base": "DIGESTIVE_ENDOSCOPY",
+    "colposcopy_diagnostic": "GYNECOLOGY_DIAGNOSTICS",
     "cpet": "PULMONARY_FUNCTION",
     "creatinine": "CLINICAL_LAB",
+    "cystoscopy_diagnostic": "UROLOGY_DIAGNOSTICS",
     "crp_hs": "CLINICAL_LAB",
     "ct_abdomen_pelvis": "GENERAL_IMAGING",
     "ct_chest": "GENERAL_IMAGING",
@@ -120,6 +124,7 @@
     "hereditary_cancer_germline": "GENETICS_MOLECULAR",
     "hiv_ag_ac": "CLINICAL_LAB",
     "holter": "CARDIOVASCULAR_DIAGNOSTICS",
+    "hysteroscopy_diagnostic": "GYNECOLOGY_DIAGNOSTICS",
     "hsat": "SLEEP_DIAGNOSTICS",
     "iga": "CLINICAL_LAB",
     "igg": "CLINICAL_LAB",

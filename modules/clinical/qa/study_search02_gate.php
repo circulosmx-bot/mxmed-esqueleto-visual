@@ -33,7 +33,7 @@ $root = dirname(__DIR__, 3);
 $matrix = search02_rows($root.'/docs/clinical/STUDY_SEARCH01_AUTHORITY_MATRIX.csv');
 $expectations = search02_rows($root.'/docs/clinical/STUDY_SEARCH01_QUERY_EXPECTATIONS.csv');
 $authority = clinical_study_search_authority();
-search02_check($authority['config']['version'] === 1 && count($authority['by_key']) === 284, 'QA_AUTHORITY_VERSION_AND_COUNT');
+search02_check($authority['config']['version'] === 1 && count($authority['by_key']) === 287, 'QA_AUTHORITY_VERSION_AND_COUNT');
 search02_check(count($matrix) === 252 && count($expectations) === 47, 'QA_SOURCE_AUDIT_COUNTS');
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $pdo->exec('CREATE TABLE clinical_study_types (study_type_id INTEGER PRIMARY KEY, study_type_key TEXT, display_name_es TEXT, category_key TEXT, aliases_json TEXT, is_active INTEGER)');
@@ -47,6 +47,7 @@ foreach ($matrix as $index => $row) {
     $expectedDiscovery=json_decode($row['discovery_terms'], true, 512, JSON_THROW_ON_ERROR);
     if ($key === 'dental_cbct') $expectedDiscovery=array_merge($expectedDiscovery,['ATM','articulación temporomandibular']);
     if ($key === 'dental_cephalometric_xray') $expectedDiscovery[]='Cefalometría';
+    if ($key === 'egd_eda_base') $expectedDiscovery=array_merge($expectedDiscovery,['panendoscopia','gastroscopia','endoscopia alta']);
     if ($entry['canonical_display_name'] !== $row['canonical_display_name']
         || $entry['common_display_name'] !== ($row['common_display_name'] ?: null)
         || $entry['abbreviations'] !== array_values(array_unique(array_merge(json_decode($row['abbreviations'], true, 512, JSON_THROW_ON_ERROR), json_decode($row['proposed_abbreviations'], true, 512, JSON_THROW_ON_ERROR))))

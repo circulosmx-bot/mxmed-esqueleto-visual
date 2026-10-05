@@ -20,8 +20,8 @@
       {category:'NEUROFISIOLOGIA'},{category:'FUNCION_PULMONAR'},{category:'SUENO'},{category:'AUDIOLOGIA'}],
       ['cardiovascular','neurophysiology','pulmonary','sleep','audiovestibular'],
       'Evaluación de la función de órganos y sistemas.'),
-    procedures:group('procedures','PROCEDIMIENTOS DIAGNÓSTICOS','gastroenterology',[{category:'ENDOSCOPIA'}],
-      ['digestive_endoscopy','bronchoscopy','laryngoscopy','pleuroscopy'],
+    procedures:group('procedures','PROCEDIMIENTOS DIAGNÓSTICOS','gastroenterology',[{category:'ENDOSCOPIA'},{category:'PROCEDIMIENTOS_DIAGNOSTICOS'}],
+      ['digestive_endoscopy','bronchoscopy','laryngoscopy','pleuroscopy','gynecology','urology'],
       'Endoscopías y procedimientos instrumentales.'),
     chemistry:group('chemistry','Química clínica','science',lab('chemistry')),
     hematology:group('hematology','Hematología','bloodtype',lab('hematology')),
@@ -109,7 +109,11 @@
     laryngoscopy:group('laryngoscopy','Laringoscopía','gastroenterology',[
       {category:'ENDOSCOPIA',keys:['laryngoscopy_base']}]),
     pleuroscopy:group('pleuroscopy','Pleuroscopía','gastroenterology',[
-      {category:'ENDOSCOPIA',keys:['pleuroscopy_base']}])
+      {category:'ENDOSCOPIA',keys:['pleuroscopy_base']}]),
+    gynecology:group('gynecology','Ginecología','gynecology',[
+      {category:'PROCEDIMIENTOS_DIAGNOSTICOS',keys:['colposcopy_diagnostic','hysteroscopy_diagnostic']}]),
+    urology:group('urology','Urología','urology',[
+      {category:'PROCEDIMIENTOS_DIAGNOSTICOS',keys:['cystoscopy_diagnostic']}])
   };
   const root=['laboratory','imaging','pathology','functional','procedures'];
   const secondary={laboratory:['stool','tumor','drugs','panels']};
