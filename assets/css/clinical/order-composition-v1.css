@@ -20,7 +20,21 @@
 .ordcomp .tax03c-result-row span:first-child { min-width:0; overflow-wrap:anywhere; }
 .ordcomp .tax03c-result-row span:last-child { white-space:nowrap; color:#008a9e; font-size:.8rem; }
 .ordcomp .tax03c-result-row[aria-pressed=true] { background:#e9f9f5; opacity:1; }
+.ordcomp .tax03c-navigation-target { background:#eaf9fb; box-shadow:inset 3px 0 #008b9d; }
 .ordcomp .tax03c-result-row:focus-visible,.ordcomp summary:focus-visible { outline:2px solid #008b9d; outline-offset:2px; }
+.ordcomp .tax03c-family-results,.ordcomp .tax03c-rescue-results { min-width:0; }
+.ordcomp .tax03c-family-results h5,.ordcomp .tax03c-rescue-results h5 { margin:.7rem 0 .25rem; color:#0a4565; }
+.ordcomp .tax03c-family-empty { margin:.4rem 0; color:#506e84; }
+.ordcomp .tax03c-result-location { display:block; color:#506e84; font-size:.78rem; overflow-wrap:anywhere; }
+.ordcomp .tax03c-rescue-results { margin-top:.8rem; padding-top:.45rem; border-top:1px solid #badbe3; }
+.ordcomp .tax03c-rescue-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; min-width:0; padding:.55rem .4rem; border-bottom:1px solid #dfebef; }
+.ordcomp .tax03c-rescue-row .tax03c-result-copy { display:grid; gap:2px; min-width:0; flex:1 1 auto; overflow-wrap:anywhere; }
+.ordcomp .tax03c-rescue-action,.ordcomp .tax03c-rescue-more { min-height:44px; border:1px solid #a8cfdd; border-radius:.4rem; background:#f4fbfd; color:#087895; cursor:pointer; }
+.ordcomp .tax03c-rescue-action { flex:none; padding:.35rem .55rem; }
+.ordcomp .tax03c-rescue-action:disabled { cursor:default; color:#287a69; background:#e9f9f5; }
+.ordcomp .tax03c-rescue-more { display:block; margin-top:.4rem; padding:.35rem .7rem; }
+.ordcomp .tax03c-rescue-action:focus-visible,.ordcomp .tax03c-rescue-more:focus-visible { outline:2px solid #008b9d; outline-offset:2px; }
+@media(max-width:767px){.ordcomp .tax03c-rescue-row { align-items:flex-start; flex-wrap:wrap; }.ordcomp .tax03c-rescue-action { max-width:100%; white-space:normal; }}
 .ordcomp summary { cursor:pointer; padding:.6rem .3rem; font-weight:600; overflow-wrap:anywhere; }
 .ordcomp-full-catalog,.ordcomp-prepared-order { border:1px solid #d4e6eb; border-radius:.4rem; margin:.7rem 0; padding:.3rem; }
 .ordcomp-prepared-order { background:#fff; border-color:#c4dbe5; }

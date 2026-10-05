@@ -261,7 +261,8 @@ with sync_playwright() as p:
   assert page.locator('[data-tax03c-custom-route]').input_value()=='CLINICAL_LAB'
   page.locator('[data-tax03c-custom-add]').click()
   assert page.locator('[data-order-group="CLINICAL_LAB"]').count()==1
-  page.locator('[data-tax03c-global]').click();page.locator('[data-tax03c-custom-open]').click()
+  back();page.locator('.vis06-lower-links').get_by_role('button',name='Buscar en todo el catálogo').click()
+  page.locator('.ordcomp-full-catalog > summary').click();page.locator('[data-tax03c-custom-open]').click()
   # Global custom must not inherit the previous contextual group.
   page.locator('[data-tax03c-custom-name]').fill('Global custom');page.locator('[data-tax03c-custom-category]').select_option('OTROS')
   assert page.locator('[data-tax03c-custom-route]').input_value()==''

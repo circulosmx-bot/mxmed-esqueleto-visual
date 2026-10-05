@@ -808,6 +808,20 @@
           if(!view.hierMode||!hierarchy.nodes[id]||!hierarchy.root.includes(id))return;
           view.hierPath=[id];renderHierarchy(view);view.primaryCategories.querySelector('button')?.focus({preventScroll:true});
         },
+        onNavigateToStudy:destination=>{
+          if(view.composition.locked())return;
+          const entry=hierarchy.nodes[destination.leafId],dental=destination.rootId==='dental';
+          if(!entry&&!dental)return;
+          if(!dental){
+            const path=[];const visit=id=>{if(id===destination.leafId)return true;
+              for(const child of hierarchy.nodes[id]?.children||[])if(visit(child)){path.unshift(id);return true;}
+              return false;};
+            visit(destination.rootId);view.hierPath=path;
+            view.hierLeafLabel=entry.label;view.hierParentLabel=hierarchy.nodes[path.at(-1)]?.label||'tipos de estudio';
+          }else{view.hierPath=[];view.hierLeafLabel='Estudios dentales';view.hierParentLabel='tipos de estudio';}
+          const parts=entry?hierarchy.parts(destination.leafId):[{category:destination.category,keys:[destination.studyKey]}];
+          void openGeneralOrder(view.hierDraftButton,{id:destination.leafId,label:entry?.label||'Estudios dentales',parts,searchQuery:destination.query,focusStudyKey:destination.studyKey},null,dental||destination.rootId==='laboratory',true);
+        },
         onDone:()=>setOrderFlow(view,'HOME'),
         onIssued:patientId=>window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:'orders',source:'ord_comp01'}}))
       });

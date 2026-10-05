@@ -18,7 +18,7 @@
 
   function mount(host,options={}){
     const embedded=options.presentation==='embedded';
-    let embeddedGlobal=false,embeddedRows=null,embeddedSearchRows=null,fullOpen=embedded&&!!options.customDraft?.open,openGroup='';
+    let embeddedGlobal=false,embeddedRows=null,embeddedSearchRows=null,fullOpen=embedded&&!!options.customDraft?.open,openGroup='',rescueExpanded=false,focusPending=!!options.focusStudyKey;
     const doctorId=String(options.doctorId||'').trim();
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
@@ -82,7 +82,7 @@
       if(embedded){
         const finalLeaf=!!options.featuredNavigation?.leaves?.[options.leafId];
         navigationScope.textContent=embeddedGlobal?'Catálogo general':finalLeaf?'':options.navigationGroup?.label||'Catálogo general';
-        $('[data-tax03c-global]').hidden=embeddedGlobal||!navigationParts?.length;
+        $('[data-tax03c-global]').hidden=true; // Family search and rescue replace the final selector's global-search shortcut.
         $('[data-tax03c-dental-back]').hidden=!embeddedGlobal;
         $('[data-tax03c-dental-back]').textContent='Volver a '+(options.navigationGroup?.label||'esta familia');
       }else if(dentalScope?.length){
@@ -234,6 +234,30 @@
       if(common){const secondary=document.createElement('small');secondary.className='tax03c-common-name';secondary.textContent=common;copy.append(secondary);}
       return copy;
     };
+    const hierarchy=window.mxmedStudyNavigationHierarchyV2;
+    const featuredLeaves=options.featuredNavigation?.leaves||{};
+    const currentFamily=hierarchy?.root.find(root=>{
+      const visit=id=>id===options.leafId||hierarchy.nodes[id]?.children.some(visit);
+      return visit(root);
+    })||featuredLeaves[options.leafId]?.root_family||'';
+    const familyLabel=id=>id==='dental'?'Estudios dentales':({laboratory:'Laboratorio',imaging:'Imagenología',pathology:'Patología y biopsias',functional:'Estudios funcionales',procedures:'Procedimientos diagnósticos'})[id]||hierarchy?.nodes[id]?.label||id;
+    const inParts=(item,parts)=>parts.some(part=>part.category===item.category_key&&(!part.keys||part.keys.includes(item.study_type_key)));
+    const studyLocation=item=>{
+      const dental=Object.entries(featuredLeaves).find(([,leaf])=>leaf.root_family==='dental'&&leaf.study_keys.includes(item.study_type_key));
+      if(dental)return {root:'dental',leaf:dental[0],label:dental[1].heading||'Estudios dentales'};
+      if(hierarchy)for(const root of hierarchy.root){
+        if(!inParts(item,hierarchy.parts(root)))continue;
+        const leaf=(function descend(id){
+          for(const child of hierarchy.nodes[id]?.children||[]){
+            if(inParts(item,hierarchy.parts(child)))return descend(child);
+          }
+          return id;
+        })(root);
+        return {root,leaf,label:hierarchy.nodes[leaf]?.label||hierarchy.nodes[root].label};
+      }
+      return null;
+    };
+    if(embedded&&options.initialQuery){search.value=String(options.initialQuery);}
     function renderEmbedded(){
       resultBox.replaceChildren();
       if(!embeddedRows)return;
@@ -241,18 +265,45 @@
       const scope=embeddedGlobal?null:navigationParts;
       const needle=search.value.trim();
       const candidates=needle?embeddedSearchRows||[]:embeddedRows;
-      results=candidates.filter(item=>!scope?.length||scope.some(part=>part.category===item.category_key&&(!part.keys||part.keys.has(item.study_type_key))));
+      results=candidates.filter(item=>needle&&currentFamily?studyLocation(item)?.root===currentFamily:!scope?.length||scope.some(part=>part.category===item.category_key&&(!part.keys||part.keys.has(item.study_type_key))));
       status.hidden=!!leaf&&!needle;
       status.textContent=needle?`${results.length} ${results.length===1?'estudio encontrado':'estudios encontrados'} para esta búsqueda.`:`${results.length} estudios disponibles.`;
-      const rowFor=item=>{
+      const rowFor=(item,location='')=>{
         const added=selected.some(row=>row.type==='canonical'&&Number(row.id)===Number(item.study_type_id));
-        const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);
-        row.setAttribute('aria-pressed',String(added));row.setAttribute('aria-label',resultLabel(item,added));
+        const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);row.dataset.tax03cKey=item.study_type_key;
+        row.setAttribute('aria-pressed',String(added));row.setAttribute('aria-label',resultLabel(item,added)+(location?`, ${location}`:''));
         row.disabled=readonly||added;
-        const copy=resultCopy(item),mark=document.createElement('span');mark.textContent=added?'✓ Agregado':'+ Agregar';row.append(copy,mark);return row;
+        const copy=resultCopy(item),mark=document.createElement('span');
+        if(location){const place=document.createElement('small');place.className='tax03c-result-location';place.textContent=location;copy.append(place);}
+        mark.textContent=added?'✓ Agregado':'+ Agregar';row.append(copy,mark);return row;
       };
       if(needle){
-        results.forEach(item=>resultBox.append(rowFor(item)));
+        const sectionName=currentFamily?`Resultados en ${familyLabel(currentFamily)}`:'Resultados del catálogo';
+        const same=document.createElement('section');same.className='tax03c-family-results';same.setAttribute('aria-label',sectionName);
+        const heading=document.createElement('h5');heading.textContent=sectionName;same.append(heading);
+        if(results.length)results.forEach(item=>{
+          const location=studyLocation(item);
+          same.append(rowFor(item,location?.leaf!==options.leafId?location?.label||'':''));
+        });
+        else{const empty=document.createElement('p');empty.className='tax03c-family-empty';empty.textContent=`No encontramos coincidencias en ${currentFamily?familyLabel(currentFamily):'el catálogo'}.`;same.append(empty);}
+        resultBox.append(same);
+        const outside=(embeddedSearchRows||[]).map(item=>({item,location:studyLocation(item)}))
+          .filter(({location})=>currentFamily&&location&&location.root!==currentFamily);
+        if(outside.length){
+          const rescue=document.createElement('section');rescue.className='tax03c-rescue-results';rescue.setAttribute('aria-label','Coincidencias en otras familias');
+          const rescueHeading=document.createElement('h5');rescueHeading.textContent='Coincidencias en otras familias';rescue.append(rescueHeading);
+          outside.slice(0,rescueExpanded?undefined:6).forEach(({item,location})=>{
+            const row=document.createElement('div');row.className='tax03c-rescue-row';
+            const copy=resultCopy(item),place=document.createElement('small');place.className='tax03c-result-location';place.textContent=`${familyLabel(location.root)} / ${location.label}`;copy.append(place);
+            const added=selected.some(chosen=>chosen.type==='canonical'&&Number(chosen.id)===Number(item.study_type_id));
+            const action=document.createElement('button');action.type='button';action.className='tax03c-rescue-action';
+            action.dataset.tax03cRescue=item.study_type_key;action.textContent=added?'✓ Agregado':`Ir a ${familyLabel(location.root)}`;
+            action.setAttribute('aria-label',added?`${item.display_name_es} ya agregado`:`Ir a ${familyLabel(location.root)} para ${item.display_name_es}`);
+            action.disabled=added;row.append(copy,action);rescue.append(row);
+          });
+          if(outside.length>6&&!rescueExpanded){const more=document.createElement('button');more.type='button';more.className='tax03c-rescue-more';more.dataset.tax03cRescueMore='';more.textContent='Ver más coincidencias';rescue.append(more);}
+          resultBox.append(rescue);
+        }
         if(leaf?.small){resultBox.append(customOpen,custom);}
         else if(embedded){
           if(!custom.hidden)resultBox.append(customOpen,custom);
@@ -317,6 +368,10 @@
         if(destroyed||seen!==request)return;
         const query=search.value.trim();embeddedSearchRows=query?await fetchAll(query):null;
         if(destroyed||seen!==request)return;renderEmbedded();
+        if(focusPending){focusPending=false;
+          const target=[...resultBox.querySelectorAll('[data-tax03c-key]')].find(row=>row.dataset.tax03cKey===options.focusStudyKey);
+          if(target){target.classList.add('tax03c-navigation-target');target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+        }
       }catch(error){if(error.name!=='AbortError'){status.textContent='No se pudo cargar el catálogo. Vuelve a esta familia para reintentar.';resultBox.replaceChildren();}}
     }
     function renderCategories(rows){
@@ -398,6 +453,9 @@
     }
     const onClick=event=>{
       const target=event.target.closest('button,[data-tax03c-custom-open]');if(!target||readonly)return;
+      if(target.dataset.tax03cRescue){const row=(embeddedSearchRows||[]).find(item=>item.study_type_key===target.dataset.tax03cRescue),location=row&&studyLocation(row);
+        if(location)options.onNavigateToStudy?.({rootId:location.root,leafId:location.leaf,query:search.value.trim(),studyKey:row.study_type_key,category:row.category_key});return;}
+      if(target.hasAttribute('data-tax03c-rescue-more')){rescueExpanded=true;renderEmbedded();return;}
       if(target.dataset.tax03cId){const row=results.find(item=>String(item.study_type_id)===target.dataset.tax03cId);if(!row)return;
         if(selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id)))return;
         if(selected.length>=100){status.textContent=embedded?'Máximo 100 estudios por composición.':'Máximo 100 estudios por orden.';return;}
@@ -431,7 +489,7 @@
     host.addEventListener('click',onClick);if(options.selectionHost)selectedBox.addEventListener('click',onClick);
     search.addEventListener('input',()=>{
       clearTimeout(timer);controller?.abort();request++;
-      resultBox.replaceChildren();results=[];embeddedSearchRows=null;status.textContent='Buscando estudios…';
+      resultBox.replaceChildren();results=[];embeddedSearchRows=null;rescueExpanded=false;status.textContent='Buscando estudios…';
       timer=setTimeout(()=>load(),250);
     });
     category.addEventListener('change',()=>{if(!labScope?.length||laboratoryGlobal)navigationParts=null;renderNavigationScope();$('[data-tax03c-all]').setAttribute('aria-pressed',String(!category.value));load();});

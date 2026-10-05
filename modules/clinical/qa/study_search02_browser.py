@@ -20,6 +20,8 @@ HTML = '''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name=
 <section class="ordcomp-catalog"><h2 id="qa-heading">Estudios de diagnóstico</h2><div id="qa-composer"></div></section>
 <aside class="ordcomp-summary"><h3>ÓRDENES EN PREPARACIÓN</h3><div id="qa-selected"></div></aside></div></div><div id="qa-modal"></div></main></div>
 <script src="/assets/js/clinical/dental-location-v1.js"></script>
+<script src="/assets/js/clinical/lab-cat02a-navigation-v1.js"></script>
+<script src="/assets/js/clinical/study-navigation-hierarchy-v2.js"></script>
 <script src="/assets/js/clinical/tax03c-study-composer.js?v=study-search02"></script>
 <script>window.qaReady=Promise.all([
  fetch('/modules/clinical/catalog/study_order_routing_v1.json').then(r=>r.json()),
@@ -89,8 +91,6 @@ with sync_playwright() as playwright:
         assert page.locator('#qa-composer .tax03c-common-name').count() == 0  # canonical already contains it
         search.focus()
         page.keyboard.press('Tab')
-        expect(page.locator('#qa-composer [data-tax03c-global]')).to_be_focused()
-        page.keyboard.press('Tab')
         expect(page.locator(f'#qa-composer [data-tax03c-id="{KEYS["hba1c"]}"]')).to_be_focused()
         assert 'nombre común' not in page.locator(f'#qa-composer [data-tax03c-id="{KEYS["hba1c"]}"]').get_attribute('aria-label')
         page.keyboard.press('Enter')
@@ -113,20 +113,16 @@ with sync_playwright() as playwright:
         search.fill('psa l')
         expect(page.locator('#qa-composer [data-tax03c-id]')).to_have_count(1)
         assert keys(page) == [KEYS['psa_free']]
-        page.locator('#qa-composer [data-tax03c-global]').click()
         search.fill('PCR')
         expect(page.locator('#qa-composer [data-tax03c-id]')).to_have_count(3)
         assert keys(page) == [KEYS['crp_hs'], KEYS['urine_protein_creatinine_panel'], KEYS['crp_standard']]
         page.evaluate("window.qaMount('chemistry')")
         search = page.locator('#qa-composer [data-tax03c-search]')
         search.fill('glu')
-        expect(page.locator('#qa-composer [data-tax03c-id]')).to_have_count(2)
-        assert KEYS['hba1c'] not in keys(page)
-        assert KEYS['glucose'] in keys(page)
-        page.locator('#qa-composer [data-tax03c-global]').click()
-        search.fill('glu')
         expect(page.locator('#qa-composer [data-tax03c-id]')).to_have_count(6)
         assert KEYS['hba1c'] in keys(page)
+        assert KEYS['glucose'] in keys(page)
+        assert page.locator('#qa-composer [data-tax03c-global]').is_hidden()
         page.evaluate('window.qaMountModal()')
         modal_search = page.locator('#qa-modal [data-tax03c-search]')
         modal_search.fill('ant pro')

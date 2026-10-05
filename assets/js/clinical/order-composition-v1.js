@@ -96,6 +96,7 @@
         options.onHeading?.(featuredConfig.leaves?.[scope.id]?.heading||scope.label||'Catálogo general');
         composer=window.mxmedStudyComposer.mount(selector,{doctorId:current.doctor,presentation:'embedded',routing:config,
           navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',featuredNavigation:featuredConfig,selectionHost:selection,specimenConfig,
+          initialQuery:scope.searchQuery||'',focusStudyKey:scope.focusStudyKey||'',onNavigateToStudy:destination=>options.onNavigateToStudy?.(destination),
           initialCategory:scope.parts?.length===1?scope.parts[0].category:'',selected,customDraft,
           onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.(),onReviewOrder:key=>review(key)});
         counts();selector.querySelector('input')?.focus({preventScroll:true});return true;
