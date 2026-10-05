@@ -22,8 +22,10 @@
     const doctorId=String(options.doctorId||'').trim();
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
+    let presetApplications=Array.isArray(options.presetApplications)?clone(options.presetApplications):[];
     let editingIndex=-1,activeDentalEditor=null;
     const specimen=options.specimenConfig;
+    const panels=options.panelConfig?.panels||{},presets=options.presetConfig?.presets||{};
     const pathology=window.mxmedPathologyParametersV1,pathologyAuthority=options.pathologyConfig;
     const pathologyRule=item=>item.type==='canonical'?pathology?.ruleFor(item.key,pathologyAuthority):null;
     const pathologyComplete=item=>!pathologyRule(item)||pathology.isComplete(item.key,item.pathologyParameters,pathologyAuthority);
@@ -39,6 +41,12 @@
         ||value.collection_mode==='TIMED'&&!Number.isInteger(value.requested_duration_minutes)
         ||rule.source_site==='REQUIRED_SELECTION'&&!value.source_site_key
         ||rule.source_site_text_required_keys?.includes(value.source_site_key)&&!value.source_site_text?.trim());
+    };
+    const oxygenComplete=item=>{
+      if(item.key!=='arterial_blood_gas')return true;
+      const value=item.oxygenContext||{mode:'UNKNOWN'},fio2=value.fio2_percent;
+      return (fio2===undefined||(Number(fio2)>21&&Number(fio2)<=100))
+        &&(value.mode!=='SUPPLEMENTAL_OXYGEN'||fio2!==undefined||!!value.delivery_device);
     };
     let results=[],offset=0,hasMore=false,request=0,controller=null,timer=null,destroyed=false;
     const dentalScope=Array.isArray(options.dentalScope)?options.dentalScope
@@ -159,6 +167,9 @@
         const row=document.createElement('div');row.className='tax03c-selected-row';
         const copy=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;
         copy.append(name);
+        if(panels[item.key]?.status==='ACTIVE'){
+          const type=document.createElement('small');type.textContent='Panel de laboratorio · 1 estudio';copy.append(type);
+        }
         if(item.specimenRequirements?.specimen_type_key){
           const specimenName=specimen?.specimen_types?.[item.specimenRequirements.specimen_type_key];
           if(specimenName){const context=document.createElement('small');context.className='specimen-item-summary';context.textContent=specimenName;copy.append(context);}
@@ -166,6 +177,25 @@
         if(!embedded){const sub=document.createElement('small');sub.textContent=categories[item.category]||'Otros';copy.append(sub);}
         else if(item.type==='custom'&&item.note){const sub=document.createElement('small');sub.textContent=item.note;copy.append(sub);}
         row.append(copy);
+        if(item.key==='arterial_blood_gas'&&!readonly){
+          const oxygen=document.createElement('div');oxygen.className='tax03c-oxygen-editor';
+          const modeLabel=document.createElement('label');modeLabel.textContent='Oxígeno al solicitar la gasometría';
+          const mode=document.createElement('select');mode.setAttribute('aria-label','Contexto de oxígeno');
+          [['UNKNOWN','Desconocido'],['ROOM_AIR','Aire ambiente'],['SUPPLEMENTAL_OXYGEN','Oxígeno suplementario']].forEach(([value,label])=>mode.add(new Option(label,value)));
+          item.oxygenContext ||= {version:1,mode:'UNKNOWN'};mode.value=item.oxygenContext.mode;
+          mode.addEventListener('change',()=>{item.oxygenContext={version:1,mode:mode.value};renderSelected();notify();});modeLabel.append(mode);oxygen.append(modeLabel);
+          if(item.oxygenContext.mode==='SUPPLEMENTAL_OXYGEN'){
+            const fio2Label=document.createElement('label');fio2Label.textContent='FiO₂ (%) si se conoce';
+            const fio2=document.createElement('input');fio2.type='number';fio2.min='21.1';fio2.max='100';fio2.step='0.1';fio2.value=item.oxygenContext.fio2_percent??'';
+            fio2.addEventListener('input',()=>{if(fio2.value==='')delete item.oxygenContext.fio2_percent;else item.oxygenContext.fio2_percent=Number(fio2.value);notify();});fio2Label.append(fio2);oxygen.append(fio2Label);
+            const deviceLabel=document.createElement('label');deviceLabel.textContent='Dispositivo si se conoce';
+            const device=document.createElement('select');device.add(new Option('Selecciona o indica FiO₂',''));
+            [['NASAL_CANNULA','Cánula nasal'],['SIMPLE_MASK','Mascarilla simple'],['NON_REBREATHER_MASK','Mascarilla con reservorio'],['HIGH_FLOW','Alto flujo'],['VENTILATOR','Ventilador'],['OTHER_CONTROLLED','Otro dispositivo']].forEach(([value,label])=>device.add(new Option(label,value)));
+            device.value=item.oxygenContext.delivery_device||'';
+            device.addEventListener('change',()=>{if(device.value)item.oxygenContext.delivery_device=device.value;else delete item.oxygenContext.delivery_device;notify();});deviceLabel.append(device);oxygen.append(deviceLabel);
+          }
+          row.append(oxygen);
+        }
         const dental=window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
         if(kind&&kind!=='NONE'&&!readonly){
           const configure=document.createElement('button');configure.type='button';configure.className='btn btn-outline-primary btn-sm dental-config-toggle';
@@ -270,8 +300,39 @@
       const name=document.createElement('strong');name.textContent=item.display_name_es;copy.append(name);
       const common=secondaryLabel(item);
       if(common){const secondary=document.createElement('small');secondary.className='tax03c-common-name';secondary.textContent=common;copy.append(secondary);}
+      const panel=panels[item.study_type_key];
+      if(panel?.status==='ACTIVE'){
+        const type=document.createElement('small');type.className='tax03c-panel-type';type.textContent='Panel de laboratorio · 1 estudio';copy.append(type);
+        if(item.study_type_key==='panel_quimica_6'){
+          const components=document.createElement('small');components.className='tax03c-panel-components';components.textContent=panel.components.map(part=>part.label).join(' · ');copy.append(components);
+        }
+      }
       return copy;
     };
+    const presetMatches=needle=>{
+      if(!embedded||currentFamily!=='laboratory')return [];
+      const query=displayFold(needle);
+      return Object.entries(presets).filter(([,rule])=>rule.status==='ACTIVE'&&
+        (query?[rule.display_name,...(rule.search_terms||[])].some(term=>displayFold(term).includes(query)||query.split(' ').every(token=>displayFold(term).split(' ').some(word=>word.startsWith(token))))
+          :options.leafId===rule.navigation_leaf));
+    };
+    function renderPresetSection(matches){
+      if(!matches.length)return;
+      const section=document.createElement('section');section.className='tax03c-preset-section';section.setAttribute('aria-label','Atajos para agregar varios estudios');
+      const heading=document.createElement('h5');heading.textContent='PRESETS · AGREGAN ESTUDIOS INDIVIDUALES';section.append(heading);
+      matches.forEach(([key,rule])=>{
+        const componentRows=rule.component_study_keys.map(component=>embeddedRows?.find(row=>row.study_type_key===component));
+        if(componentRows.some(row=>!row))return;
+        const already=componentRows.filter(row=>selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id))).length;
+        const row=document.createElement('button');row.type='button';row.className='tax03c-preset-row';row.dataset.tax03cPreset=key;
+        const copy=document.createElement('span');copy.className='tax03c-result-copy';
+        const name=document.createElement('strong');name.textContent=rule.display_name;
+        const composition=document.createElement('small');composition.textContent=componentRows.map(component=>component.display_name_es).join(' · ');
+        const kind=document.createElement('small');kind.className='tax03c-preset-type';kind.textContent='Preset · agrega estudios individuales';copy.append(name,composition,kind);
+        const action=document.createElement('span');action.textContent=already===componentRows.length?'✓ Todos agregados':`+ Agregar ${componentRows.length-already} ${componentRows.length-already===1?'estudio':'estudios'}${already?` · ${already} ya agregado${already===1?'':'s'}`:''}`;
+        row.append(copy,action);row.disabled=readonly||already===componentRows.length;section.append(row);
+      });resultBox.append(section);
+    }
     const hierarchy=window.mxmedStudyNavigationHierarchyV2;
     const featuredLeaves=options.featuredNavigation?.leaves||{};
     const currentFamily=hierarchy?.root.find(root=>{
@@ -304,8 +365,9 @@
       const needle=search.value.trim();
       const candidates=needle?embeddedSearchRows||[]:embeddedRows;
       results=candidates.filter(item=>needle&&currentFamily?studyLocation(item)?.root===currentFamily:!scope?.length||scope.some(part=>part.category===item.category_key&&(!part.keys||part.keys.has(item.study_type_key))));
+      const visiblePresets=presetMatches(needle);
       status.hidden=!!leaf&&!needle;
-      status.textContent=needle?`${results.length} ${results.length===1?'estudio encontrado':'estudios encontrados'} para esta búsqueda.`:`${results.length} estudios disponibles.`;
+      status.textContent=needle?`${results.length} ${results.length===1?'estudio encontrado':'estudios encontrados'}${visiblePresets.length?` · ${visiblePresets.length} preset${visiblePresets.length===1?'':'s'}`:''} para esta búsqueda.`:`${results.length} estudios disponibles.`;
       const rowFor=(item,location='')=>{
         const added=selected.some(row=>row.type==='canonical'&&Number(row.id)===Number(item.study_type_id));
         const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);row.dataset.tax03cKey=item.study_type_key;
@@ -316,6 +378,7 @@
         mark.textContent=added?'✓ Agregado':'+ Agregar';row.append(copy,mark);return row;
       };
       if(needle){
+        renderPresetSection(visiblePresets);
         const sectionName=currentFamily?`Resultados en ${familyLabel(currentFamily)}`:'Resultados del catálogo';
         const same=document.createElement('section');same.className='tax03c-family-results';same.setAttribute('aria-label',sectionName);
         const heading=document.createElement('h5');heading.textContent=sectionName;same.append(heading);
@@ -350,6 +413,7 @@
         }
         return;
       }
+      renderPresetSection(visiblePresets);
       if(leaf?.small){
         results.forEach(item=>resultBox.append(rowFor(item)));
         resultBox.append(customOpen,custom);
@@ -491,6 +555,18 @@
     }
     const onClick=event=>{
       const target=event.target.closest('button,[data-tax03c-custom-open]');if(!target||readonly)return;
+      if(target.dataset.tax03cPreset){
+        const key=target.dataset.tax03cPreset,rule=presets[key];if(rule?.status!=='ACTIVE'||!embeddedRows)return;
+        const components=rule.component_study_keys.map(component=>embeddedRows.find(row=>row.study_type_key===component));
+        if(components.some(component=>!component||options.routing.studies[component.study_type_key]!=='CLINICAL_LAB')){status.textContent='Este preset no está disponible en el catálogo actual.';return;}
+        const missing=components.filter(component=>!selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(component.study_type_id)));
+        if(selected.length+missing.length>100){status.textContent='Máximo 100 estudios por composición.';return;}
+        missing.forEach(component=>selected.push({type:'canonical',id:Number(component.study_type_id),key:component.study_type_key,name:component.display_name_es,category:component.category_key}));
+        if(!presetApplications.some(app=>app.preset_key===key))presetApplications.push({preset_key:key,preset_version:rule.preset_version});
+        options.onPresetApplications?.(clone(presetApplications));renderSelected();renderResults();notify();
+        status.textContent=`${missing.length} ${missing.length===1?'estudio agregado':'estudios agregados'}${components.length-missing.length?` · ${components.length-missing.length} ya incluidos`:''}.`;
+        search.focus({preventScroll:true});return;
+      }
       if(target.dataset.tax03cRescue){const row=(embeddedSearchRows||[]).find(item=>item.study_type_key===target.dataset.tax03cRescue),location=row&&studyLocation(row);
         if(location)options.onNavigateToStudy?.({rootId:location.root,leafId:location.leaf,query:search.value.trim(),studyKey:row.study_type_key,category:row.category_key});return;}
       if(target.hasAttribute('data-tax03c-rescue-more')){rescueExpanded=true;renderEmbedded();return;}
@@ -500,6 +576,7 @@
         if(selected.length>=100){status.textContent=embedded?'Máximo 100 estudios por composición.':'Máximo 100 estudios por orden.';return;}
         const pathologyRuleForRow=pathology?.ruleFor(row.study_type_key,pathologyAuthority);
         selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key,
+          ...(row.study_type_key==='arterial_blood_gas'?{oxygenContext:{version:1,mode:'UNKNOWN'}}:{}),
           ...(pathologyRuleForRow?{pathologyParameters:pathology.initial(row.study_type_key,pathologyAuthority)}:{}),...(imagingRule({type:'canonical',key:row.study_type_key})?.status==='ACTIVE_REQUIRED'?{imagingParameters:imaging.initial(row.study_type_key,imagingAuthority)}:{})});
         const kind=window.mxmedDentalLocationV1?.kindFor(row.study_type_key),rule=specimen?.studies?.[row.study_type_key];editingIndex=(kind&&kind!=='NONE'||rule?.specimen_mode==='REQUIRED_SELECTION'||rule?.collection_mode==='REQUIRED_SELECTION'||rule?.source_site==='REQUIRED_SELECTION')?selected.length-1:-1;
         if(pathologyRuleForRow)editingIndex=selected.length-1;
@@ -513,7 +590,9 @@
       if(target.dataset.tax03cSpecimen!==undefined){const index=Number(target.dataset.tax03cSpecimen);editingIndex=editingIndex===index?-1:index;renderSelected();selectedBox.querySelector(`[data-tax03c-specimen="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cPathology!==undefined){const index=Number(target.dataset.tax03cPathology);editingIndex=editingIndex===index?-1:index;renderSelected();selectedBox.querySelector(`[data-tax03c-pathology="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cImaging!==undefined){const index=Number(target.dataset.tax03cImaging);editingIndex=editingIndex===index?-1:index;renderSelected();selectedBox.querySelector(`[data-tax03c-imaging="${index}"]`)?.focus({preventScroll:true});}
-      if(target.dataset.tax03cRemove!==undefined){const index=Number(target.dataset.tax03cRemove);selected.splice(index,1);editingIndex=editingIndex===index?-1:editingIndex>index?editingIndex-1:editingIndex;activeDentalEditor=null;renderSelected();renderResults();notify();}
+      if(target.dataset.tax03cRemove!==undefined){const index=Number(target.dataset.tax03cRemove);selected.splice(index,1);
+        presetApplications=presetApplications.filter(app=>presets[app.preset_key]?.component_study_keys.every(key=>selected.some(item=>item.type==='canonical'&&item.key===key)));
+        options.onPresetApplications?.(clone(presetApplications));editingIndex=editingIndex===index?-1:editingIndex>index?editingIndex-1:editingIndex;activeDentalEditor=null;renderSelected();renderResults();notify();}
       if(target.hasAttribute('data-tax03c-custom-open')){event.preventDefault();openCustom();}
       if(target.hasAttribute('data-tax03c-custom-cancel')){custom.hidden=true;customName.value='';$('[data-tax03c-custom-note]').value='';$('[data-tax03c-custom-category]').value='';if(customRoute)customRoute.value='';}
       if(target.hasAttribute('data-tax03c-custom-add'))addCustom();
@@ -543,12 +622,12 @@
     return {
       customDraft,
       selected:()=>clone(selected),priority:()=>priority.value,indication:()=>indication.value,
-      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{}),...(item.pathologyParameters?{pathology_order_parameters:clone(item.pathologyParameters)}:{}),...(item.imagingParameters?{imaging_order_parameters:clone(item.imagingParameters)}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
+      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{}),...(item.pathologyParameters?{pathology_order_parameters:clone(item.pathologyParameters)}:{}),...(item.imagingParameters?{imaging_order_parameters:clone(item.imagingParameters)}:{}),...(item.key==='arterial_blood_gas'?{lab_arterial_oxygen_context:clone(item.oxygenContext||{version:1,mode:'UNKNOWN'})}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
       valid:()=>selected.length>0&&selected.length<=100&&selected.every(item=>{
         const kind=item.type==='canonical'?window.mxmedDentalLocationV1?.kindFor(item.key):null;
-        return (!kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation))&&specimenComplete(item)&&pathologyComplete(item)&&imagingComplete(item);
+        return (!kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation))&&specimenComplete(item)&&pathologyComplete(item)&&imagingComplete(item)&&oxygenComplete(item);
       })&&(!activeDentalEditor||activeDentalEditor.valid()),
-      validationMessage:()=>selected.length?(selected.some(item=>!imagingComplete(item))?'Completa los parámetros de imagen pendientes antes de continuar.':selected.some(item=>!pathologyComplete(item))?'Completa los parámetros de patología pendientes antes de continuar.':selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
+      validationMessage:()=>selected.length?(selected.some(item=>!oxygenComplete(item))?'Revisa el contexto de oxígeno y la FiO₂ de la gasometría.':selected.some(item=>!imagingComplete(item))?'Completa los parámetros de imagen pendientes antes de continuar.':selected.some(item=>!pathologyComplete(item))?'Completa los parámetros de patología pendientes antes de continuar.':selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
       destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();host.removeEventListener('click',onClick);if(options.selectionHost)selectedBox.removeEventListener('click',onClick);},
     };
   }

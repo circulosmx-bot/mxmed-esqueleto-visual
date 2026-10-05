@@ -3,7 +3,8 @@ declare(strict_types=1);
 require_once __DIR__.'/../../../api/_lib/clinical_study_contract.php';
 ob_start();
 
-$pdo = new PDO('mysql:host=localhost;dbname=mxmed_director_review_lon07c', 'root', '', [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+$database = getenv('LAB05C_DB') ?: 'mxmed_director_review_lon07c';
+$pdo = new PDO('mysql:host=localhost;dbname='.$database, 'root', '', [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 $pass = static function(bool $ok, string $name): void { if (!$ok) throw new RuntimeException($name); echo $name."=PASS\n"; };
 $reject = static function(callable $run, string $name) use ($pass): void {
     try { $run(); } catch (InvalidArgumentException|RuntimeException $error) { $pass(true, $name); return; }
@@ -20,7 +21,7 @@ $pass($specimens['version'] === 1 && isset($specimens['specimen_types']['ARTERIA
 foreach ($panel['panels'] as $key => $rule) {
     $snapshot = clinical_lab_panel_snapshot($pdo, $key, ['panel_definition_key'=>$key,'panel_definition_version'=>1], true);
     $pass($snapshot['panel_definition_key'] === $key && count($snapshot['components']) === count($rule['components']), 'QA_PANEL_'.strtoupper($key));
-    $reject(static fn()=>clinical_lab_panel_snapshot($pdo,$key,null), 'QA_PANEL_INACTIVE_'.strtoupper($key));
+    $pass(clinical_lab_panel_snapshot($pdo,$key,null)['panel_definition_key'] === $key, 'QA_PANEL_ACTIVE_'.strtoupper($key));
 }
 $reject(static fn()=>clinical_lab_panel_snapshot($pdo,'panel_quimica_6',['panel_definition_key'=>'panel_quimica_6','panel_definition_version'=>2],true), 'QA_PANEL_VERSION_REJECTED');
 $badPanel = $panel;
@@ -52,7 +53,7 @@ $requests = [
 foreach ($requests as $key=>$expected) {
     $rule = clinical_lab_preset_definition(['preset_key'=>$key,'preset_version'=>1],true);
     $pass($rule['component_study_keys'] === $expected, 'QA_PRESET_'.strtoupper($key));
-    $reject(static fn()=>clinical_lab_preset_definition(['preset_key'=>$key,'preset_version'=>1]), 'QA_PRESET_INACTIVE_'.strtoupper($key));
+    $pass(clinical_lab_preset_definition(['preset_key'=>$key,'preset_version'=>1])['preset_key'] === $key, 'QA_PRESET_ACTIVE_'.strtoupper($key));
 }
 $badPresets = $presets;
 $badPresets['presets']['preset_qs3_renal_v1']['component_study_keys'][] = 'glucose';
@@ -78,7 +79,7 @@ $hepatic = $expand([['study_type_key'=>'alt']],[$application('preset_hepatic_bas
 $pass(count($hepatic['items']) === 8 && $hepatic['preview'][0]['already_selected_keys'] === ['alt'], 'QA_HEPATIC_PRESELECTED');
 $pass(count($renal['preview'][0]['specimen_requirements']) === 3, 'QA_PRESET_SPECIMEN_AGGREGATION');
 $reject(static fn()=>clinical_lab_preset_expand($pdo,[],[$application('preset_qs3_renal_v1')],'IMAGING',true), 'QA_PRESET_WRONG_ROUTE');
-$reject(static fn()=>clinical_lab_preset_expand($pdo,[],[$application('preset_qs3_renal_v1')],'CLINICAL_LAB'), 'QA_PRESET_INACTIVE_EXPANSION');
+$pass(count(clinical_lab_preset_expand($pdo,[],[$application('preset_qs3_renal_v1')],'CLINICAL_LAB')['items']) === 3, 'QA_PRESET_ACTIVE_EXPANSION');
 $ordered = [];
 foreach ($renal['items'] as $index=>$input) {
     $item = clinical_study_order_snapshot($pdo,$input,$index+1);
@@ -106,7 +107,7 @@ $order = ['studies'=>[['name'=>'Química sanguínea de 6 elementos','panel_compo
 define('MXMED_PORTABLE_ORDER_TEMPLATE_ALLOWED',true);
 ob_start(); include __DIR__.'/../ui/portable-order-template.php'; $html=ob_get_clean();
 $pass(str_contains($html,'Incluye: Glucosa, Urea, Creatinina') && str_contains($html,'FiO₂: 35%') && !str_contains($html,'preset_qs3'), 'QA_PORTABLE_STORED_PANEL_AND_OXYGEN');
-$pass(!isset($specimens['studies']['panel_quimica_6']) && !isset($presets['presets']['panel_quimica_6']), 'QA_NO_PSEUDO_PRESET_PANEL');
+$pass(isset($specimens['studies']['panel_quimica_6']) && !isset($presets['presets']['panel_quimica_6']), 'QA_CANONICAL_PANEL_NOT_PSEUDO_PRESET');
 foreach (['cbc','ogtt','urine_albumin_creatinine_panel','urine_protein_creatinine_panel','csf_meningitis_encephalitis_panel'] as $key) {
     $current = clinical_study_order_snapshot($pdo,['study_type_key'=>$key],1);
     $pass($current['study_type_key'] === $key && !isset($current['lab_panel_definition']), 'QA_EXISTING_PANEL_'.strtoupper($key));

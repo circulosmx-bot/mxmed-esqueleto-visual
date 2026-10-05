@@ -505,9 +505,11 @@
       "root_family": "laboratory",
       "small": false,
       "study_keys": [
+        "arterial_blood_gas",
         "carrier_screening",
         "cbc",
         "hereditary_cancer_germline",
+        "panel_quimica_6",
         "pgx",
         "somatic_tumor_ngs",
         "thrombophilia",
@@ -519,7 +521,9 @@
           "key": "panels__general",
           "label": "Paneles generales",
           "keys": [
+            "arterial_blood_gas",
             "cbc",
+            "panel_quimica_6",
             "urinalysis"
           ]
         },

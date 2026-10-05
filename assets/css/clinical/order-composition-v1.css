@@ -22,6 +22,18 @@
 .ordcomp .tax03c-result-row[aria-pressed=true] { background:#e9f9f5; opacity:1; }
 .ordcomp .tax03c-navigation-target { background:#eaf9fb; box-shadow:inset 3px 0 #008b9d; }
 .ordcomp .tax03c-result-row:focus-visible,.ordcomp summary:focus-visible { outline:2px solid #008b9d; outline-offset:2px; }
+.ordcomp .tax03c-preset-section { margin:.6rem 0; padding:.55rem; border:1px solid #b7dce8; border-radius:10px; background:#eef9fc; }
+.ordcomp .tax03c-preset-section h5 { margin:0 0 .35rem; color:#0a4565; font-size:.8rem; }
+.ordcomp .tax03c-preset-row { display:flex; align-items:center; justify-content:space-between; gap:.65rem; width:100%; padding:.55rem .45rem; border:0; border-top:1px solid #d6e9ee; background:transparent; text-align:left; color:#123e57; }
+.ordcomp .tax03c-preset-row .tax03c-result-copy { display:grid; gap:2px; min-width:0; overflow-wrap:anywhere; }
+.ordcomp .tax03c-preset-row .tax03c-preset-type,.ordcomp .tax03c-result-row .tax03c-panel-type { color:#087f94; font-weight:700; }
+.ordcomp .tax03c-preset-row > span:last-child { flex:none; max-width:38%; text-align:right; color:#087f94; font-size:.78rem; }
+.ordcomp .tax03c-preset-row:hover:not(:disabled) { background:#e2f5f8; }
+.ordcomp .tax03c-preset-row:disabled { opacity:.72; cursor:default; }
+.ordcomp .tax03c-preset-row:focus-visible { outline:2px solid #008b9d; outline-offset:2px; }
+.ordcomp .tax03c-oxygen-editor { flex:1 1 100%; display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:.45rem; padding:.4rem 0; }
+.ordcomp .tax03c-oxygen-editor label { display:grid; gap:.2rem; font-size:.77rem; color:#31596c; }
+.ordcomp .tax03c-oxygen-editor input,.ordcomp .tax03c-oxygen-editor select { width:100%; min-width:0; padding:.35rem; border:1px solid #a9cedb; border-radius:6px; background:#fff; }
 .ordcomp .tax03c-family-results,.ordcomp .tax03c-rescue-results { min-width:0; }
 .ordcomp .tax03c-family-results h5,.ordcomp .tax03c-rescue-results h5 { margin:.7rem 0 .25rem; color:#0a4565; }
 .ordcomp .tax03c-family-empty { margin:.4rem 0; color:#506e84; }

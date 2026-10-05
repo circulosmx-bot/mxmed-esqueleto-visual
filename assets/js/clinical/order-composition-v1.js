@@ -10,7 +10,7 @@
   const featuredNavigation=()=>featuredPromise ||= fetch('/modules/clinical/catalog/study_featured_navigation_v1.json',{credentials:'same-origin'})
     .then(r=>{if(!r.ok)throw new Error('FEATURED_NAVIGATION_UNAVAILABLE');return r.json();}).catch(e=>{featuredPromise=null;throw e;});
   function mount(host,options){
-    let config=null,specimenConfig=null,pathologyConfig=null,imagingConfig=null,featuredConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
+    let config=null,specimenConfig=null,pathologyConfig=null,imagingConfig=null,featuredConfig=null,panelConfig=null,presetConfig=null,selected=[],presetApplications=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
     let busy=false,attempt=null,uncertain=false,issued=false,reviewReturnFocus=null,reviewScroll=null;const waiters=[];
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
     const selector=el('div');catalog.setAttribute('aria-label','Selección de estudios');catalog.append(selector);
@@ -71,7 +71,7 @@
       options.onChange?.({selected:structuredClone(selected),orders:n,studies:m});
     }
     function reset(){
-      epoch++;composer?.destroy();composer=null;selected=[];customDraft={};metadata={};context=null;attempt=null;uncertain=false;issued=false;lastScope=null;
+      epoch++;composer?.destroy();composer=null;selected=[];presetApplications=[];customDraft={};metadata={};context=null;attempt=null;uncertain=false;issued=false;lastScope=null;
       if(reviewBox.open)reviewBox.close();reviewBox.hidden=true;reviewReturnFocus=null;reviewScroll=null;
       closeChooser();host.hidden=true;selector.replaceChildren();selection.replaceChildren();reviewContent.replaceChildren();workspace.hidden=false;mobile.hidden=false;error.textContent='';counts();
     }
@@ -92,13 +92,13 @@
       host.classList.remove('ordcomp-show-summary');toggle.textContent='Ver órdenes';toggle.setAttribute('aria-expanded','false');
       selector.textContent='Cargando estudios…';
       try{
-        [config,specimenConfig,pathologyConfig,imagingConfig,featuredConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();}),fetch('/modules/clinical/catalog/pathology_order_parameters_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('PATHOLOGY_CONFIG_UNAVAILABLE');return r.json();}),window.mxmedImagingParametersV1.authority(),featuredNavigation()]);if(epoch!==seen)return false;
+        [config,specimenConfig,pathologyConfig,imagingConfig,featuredConfig,panelConfig,presetConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();}),fetch('/modules/clinical/catalog/pathology_order_parameters_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('PATHOLOGY_CONFIG_UNAVAILABLE');return r.json();}),window.mxmedImagingParametersV1.authority(),featuredNavigation(),fetch('/modules/clinical/catalog/lab_panel_definitions_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('PANEL_CONFIG_UNAVAILABLE');return r.json();}),fetch('/modules/clinical/catalog/lab_order_presets_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('PRESET_CONFIG_UNAVAILABLE');return r.json();})]);if(epoch!==seen)return false;
         options.onHeading?.(featuredConfig.leaves?.[scope.id]?.heading||scope.label||'Catálogo general');
         composer=window.mxmedStudyComposer.mount(selector,{doctorId:current.doctor,presentation:'embedded',routing:config,
-          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',featuredNavigation:featuredConfig,selectionHost:selection,specimenConfig,pathologyConfig,imagingConfig,
+          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',featuredNavigation:featuredConfig,selectionHost:selection,specimenConfig,pathologyConfig,imagingConfig,panelConfig,presetConfig,presetApplications,
           initialQuery:scope.searchQuery||'',focusStudyKey:scope.focusStudyKey||'',onNavigateToStudy:destination=>options.onNavigateToStudy?.(destination),
           initialCategory:scope.parts?.length===1?scope.parts[0].category:'',selected,customDraft,
-          onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.(),onReviewOrder:key=>review(key)});
+          onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onPresetApplications:apps=>{presetApplications=apps;attempt=null;},onDraftChange:()=>options.onDirty?.(),onReviewOrder:key=>review(key)});
         counts();selector.querySelector('input')?.focus({preventScroll:true});return true;
       }catch(_){selector.textContent='No se pudo preparar la selección. Vuelve a esta familia para reintentar.';return true;}
     }
@@ -152,7 +152,8 @@
         if(options.context().patient!==context.patient||options.context().doctor!==context.doctor){failure.textContent='Cambió el paciente. Abre de nuevo la composición.';return;}
         if(!attempt){
           const inputs=composer.orderItems();attempt={order_composition_batch_uuid:crypto.randomUUID(),order_routing_version:config.version,
-            orders:[...groups()].map(([key,items])=>({order_routing_group_key:key,...metadata[key],order_items:items.map(({index})=>inputs[index])}))};
+            orders:[...groups()].map(([key,items])=>({order_routing_group_key:key,...metadata[key],order_items:items.map(({index})=>inputs[index]),
+              ...(key==='CLINICAL_LAB'&&presetApplications.length?{lab_preset_applications:presetApplications}:{} )}))};
         }
         busy=true;failure.textContent='Emitiendo órdenes…';cards.forEach(({issue})=>issue.textContent='');
         reviewBox.querySelectorAll('button,input,textarea,select').forEach(c=>c.disabled=true);

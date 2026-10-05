@@ -3,21 +3,27 @@
   "version": 1,
   "presets": {
     "preset_qs3_renal_v1": {
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE",
       "preset_version": 1,
       "display_name": "Química sanguínea de 3 elementos — glucosa, urea y creatinina",
+      "navigation_leaf": "chemistry",
+      "search_terms": ["QS3", "QS3 renal", "química 3", "quimica 3", "química sanguínea de 3 elementos"],
       "component_study_keys": ["glucose", "urea", "creatinine"]
     },
     "preset_qs3_lipids_v1": {
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE",
       "preset_version": 1,
       "display_name": "Química sanguínea de 3 elementos — glucosa, colesterol y triglicéridos",
+      "navigation_leaf": "chemistry",
+      "search_terms": ["QS3", "QS3 lípidos", "química 3", "quimica 3", "química sanguínea de 3 elementos"],
       "component_study_keys": ["glucose", "chol_total", "triglycerides"]
     },
     "preset_hepatic_basic_v1": {
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE",
       "preset_version": 1,
       "display_name": "Perfil hepático básico (8 estudios)",
+      "navigation_leaf": "chemistry",
+      "search_terms": ["perfil hepático", "perfil hepatico", "PFH", "pruebas de función hepática"],
       "component_study_keys": ["ast", "alt", "alp", "ggt", "total_protein", "albumin", "bilirubin_total", "bilirubin_direct"]
     }
   }

@@ -2943,6 +2943,22 @@
         "Rayos X de muñeca"
       ],
       "discovery_terms": []
+    },
+    {
+      "study_key": "panel_quimica_6",
+      "canonical_display_name": "Química sanguínea de 6 elementos",
+      "common_display_name": "QS6",
+      "abbreviations": ["QS6"],
+      "equivalent_aliases": ["Química sanguínea 6", "Química 6", "6 elementos"],
+      "discovery_terms": ["química sanguínea", "quimica sanguinea"]
+    },
+    {
+      "study_key": "arterial_blood_gas",
+      "canonical_display_name": "Gasometría arterial",
+      "common_display_name": "Gas arterial",
+      "abbreviations": ["GSA", "ABG"],
+      "equivalent_aliases": ["Gas arterial", "Gases arteriales"],
+      "discovery_terms": ["gasometria arterial"]
     }
   ]
 }

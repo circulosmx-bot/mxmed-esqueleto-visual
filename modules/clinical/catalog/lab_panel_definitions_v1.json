@@ -3,7 +3,7 @@
   "version": 1,
   "panels": {
     "panel_quimica_6": {
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE",
       "definition_version": 1,
       "display_name": "Química sanguínea de 6 elementos",
       "routing_group": "CLINICAL_LAB",
@@ -20,7 +20,7 @@
       "optional_result_observations": ["bun"]
     },
     "arterial_blood_gas": {
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE",
       "definition_version": 1,
       "display_name": "Gasometría arterial",
       "routing_group": "CLINICAL_LAB",

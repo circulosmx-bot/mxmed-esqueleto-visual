@@ -70,6 +70,7 @@
     "total_t3": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
     "bicarbonate_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
     "apo_b": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
-    "arterial_blood_gas": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "ARTERIAL_BLOOD"}
+    "arterial_blood_gas": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "ARTERIAL_BLOOD"},
+    "panel_quimica_6": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"}
   }
 }

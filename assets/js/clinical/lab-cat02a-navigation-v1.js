@@ -410,7 +410,9 @@
         {
           "category": "LABORATORIO",
           "keys": [
+            "arterial_blood_gas",
             "cbc",
+            "panel_quimica_6",
             "urinalysis"
           ]
         }
