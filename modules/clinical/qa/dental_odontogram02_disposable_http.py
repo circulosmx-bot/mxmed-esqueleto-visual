@@ -57,7 +57,8 @@ orders=[
     {'order_routing_group_key':'PATHOLOGY_CYTOLOGY','priority':'Rutinaria','indication':'Regresión patología','order_items':[{'study_type_key':'histopath_biopsy','pathology_order_parameters':{'version':1,'specimens':[{'material_key':'TISSUE','anatomic_site_text':'Sitio QA'}]}}]},
     {'order_routing_group_key':'GENERAL_IMAGING','priority':'Rutinaria','indication':'Regresión imagen','order_items':[{'study_type_key':'rx_hip','imaging_order_parameters':{'version':1,'laterality':'RIGHT','xray_view_preset':'JOINT_STANDARD'}}]},
     {'order_routing_group_key':'CARDIOVASCULAR_DIAGNOSTICS','priority':'Rutinaria','indication':'Regresión funcional','order_items':[{'study_type_key':'echo_tte'}]},
+    {'order_routing_group_key':'DIGESTIVE_ENDOSCOPY','priority':'Rutinaria','indication':'Regresión procedimiento diagnóstico','order_items':[{'study_type_key':'anoscopy_base'}]},
 ]
 code,data=request({'order_composition_batch_uuid':str(uuid.uuid4()),'order_routing_version':1,'orders':orders})
-assert code==201 and len(data['data']['orders'])==4,(code,data)
-print('QA_LAB_PATHOLOGY_IMAGING_FUNCTIONAL_MIXED_ORDER=PASS',flush=True)
+assert code==201 and len(data['data']['orders'])==5,(code,data)
+print('QA_LAB_PATHOLOGY_IMAGING_FUNCTIONAL_DIAGNOSTIC_PROCEDURE_MIXED_ORDER=PASS',flush=True)
