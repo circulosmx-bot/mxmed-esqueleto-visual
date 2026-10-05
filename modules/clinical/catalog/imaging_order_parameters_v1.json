@@ -1,0 +1,1119 @@
+{
+  "contract": "imaging_order_parameters",
+  "version": 1,
+  "status": "IMPLEMENTED_CONTRACT_ONLY",
+  "field_labels": {
+    "laterality": "Lateralidad",
+    "contrast_intent": "Contraste",
+    "contrast_routes": "Vía de contraste",
+    "xray_views": "Proyecciones",
+    "xray_view_preset": "Serie de proyecciones",
+    "weight_bearing": "Carga",
+    "vascular_territory": "Territorio vascular",
+    "flow_type": "Tipo de flujo",
+    "ultrasound_approach": "Abordaje",
+    "breast_purpose": "Propósito",
+    "breast_tomosynthesis_relation": "Relación con mastografía",
+    "dxa_sites": "Sitios de densitometría",
+    "radiotracer": "Trazador",
+    "physician_protocol": "Protocolo solicitado",
+    "gestational_trimester": "Trimestre"
+  },
+  "value_labels": {
+    "laterality": {
+      "LEFT": "Izquierda",
+      "RIGHT": "Derecha",
+      "BILATERAL": "Bilateral",
+      "NOT_APPLICABLE": "No aplica"
+    },
+    "contrast_intent": {
+      "WITHOUT_CONTRAST": "Sin contraste",
+      "WITH_IV_CONTRAST": "Con contraste intravenoso",
+      "WITH_AND_WITHOUT_IV_CONTRAST": "Sin y con contraste intravenoso",
+      "WITH_ORAL_CONTRAST": "Con contraste oral",
+      "WITH_IV_AND_ORAL_CONTRAST": "Con contraste intravenoso y oral"
+    },
+    "contrast_route": {
+      "IV": "Intravenosa",
+      "ORAL": "Oral",
+      "RECTAL": "Rectal",
+      "INTRA_ARTICULAR": "Intraarticular",
+      "INTRACAVITARY": "Intracavitaria"
+    },
+    "xray_view": {
+      "AP": "AP",
+      "PA": "PA",
+      "LATERAL": "Lateral",
+      "OBLIQUE": "Oblicua",
+      "AXIAL": "Axial",
+      "SPECIAL": "Vista especial"
+    },
+    "xray_view_preset": {
+      "CHEST_STANDARD": "Tórax estándar PA y lateral",
+      "JOINT_STANDARD": "Serie articular estándar AP y lateral",
+      "SPINE_STANDARD": "Columna estándar AP y lateral"
+    },
+    "weight_bearing": {
+      "YES": "En carga",
+      "NO": "Sin carga",
+      "NOT_APPLICABLE": "No aplica"
+    },
+    "vascular_territory": {
+      "HEAD": "Cabeza",
+      "NECK": "Cuello",
+      "HEAD_AND_NECK": "Cabeza y cuello",
+      "CAROTID": "Carótidas",
+      "UPPER_EXTREMITY": "Miembros superiores",
+      "LOWER_EXTREMITY": "Miembros inferiores",
+      "RENAL": "Renal",
+      "PORTAL_HEPATIC": "Portal/hepático"
+    },
+    "flow_type": {
+      "ARTERIAL": "Arterial",
+      "VENOUS": "Venoso",
+      "ARTERIAL_AND_VENOUS": "Arterial y venoso"
+    },
+    "ultrasound_approach": {
+      "TRANSABDOMINAL": "Transabdominal",
+      "TRANSVAGINAL": "Transvaginal",
+      "TRANSRECTAL": "Transrectal",
+      "COMBINED": "Combinado"
+    },
+    "breast_purpose": {
+      "SCREENING": "Tamizaje",
+      "DIAGNOSTIC": "Diagnóstica"
+    },
+    "breast_tomosynthesis_relation": {
+      "WITH_2D_MAMMOGRAPHY": "Con mastografía 2D",
+      "STANDALONE_IF_PROVIDER_VALIDATED": "Independiente, sujeto a validación del proveedor"
+    },
+    "dxa_site": {
+      "LUMBAR_SPINE": "Columna lumbar",
+      "HIP_LEFT": "Cadera izquierda",
+      "HIP_RIGHT": "Cadera derecha",
+      "BILATERAL_HIPS": "Ambas caderas",
+      "WHOLE_BODY": "Cuerpo completo"
+    },
+    "radiotracer": {
+      "FDG": "FDG"
+    },
+    "physician_protocol": {
+      "UROGRAPHY": "Urografía",
+      "MORPHOLOGY": "Morfológico",
+      "STRESS_REST": "Esfuerzo y reposo",
+      "DYNAMIC": "Dinámico",
+      "STATIC": "Estático"
+    },
+    "gestational_trimester": {
+      "TRIMESTER_1": "Primer trimestre",
+      "TRIMESTER_2": "Segundo trimestre",
+      "TRIMESTER_3": "Tercer trimestre",
+      "UNKNOWN": "Trimestre no confirmado"
+    }
+  },
+  "list_fields": [
+    "contrast_routes",
+    "xray_views",
+    "dxa_sites"
+  ],
+  "authority_versions": {
+    "xray_views": 1,
+    "vascular_territory": 1,
+    "radiotracer": 1
+  },
+  "view_presets": {
+    "CHEST_STANDARD": [
+      "PA",
+      "LATERAL"
+    ],
+    "JOINT_STANDARD": [
+      "AP",
+      "LATERAL"
+    ],
+    "SPINE_STANDARD": [
+      "AP",
+      "LATERAL"
+    ]
+  },
+  "rules": {
+    "breast_us": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "ct_abdomen_pelvis": {
+      "modality": "CT",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST",
+          "WITH_ORAL_CONTRAST",
+          "WITH_IV_AND_ORAL_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV",
+          "ORAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "ct_chest": {
+      "modality": "CT",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "ct_head": {
+      "modality": "CT",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "ct_uro": {
+      "modality": "CT",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ],
+        "physician_protocol": [
+          "UROGRAPHY"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "dexa": {
+      "modality": "DXA",
+      "status": "ACTIVE",
+      "classification": "FUTURE_MIGRATION_CANDIDATE",
+      "allowed": {
+        "dxa_sites": [
+          "LUMBAR_SPINE",
+          "HIP_LEFT",
+          "HIP_RIGHT",
+          "BILATERAL_HIPS",
+          "WHOLE_BODY"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "fluoro_barium_enema": {
+      "modality": "FLUOROSCOPY",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "fluoro_hsg": {
+      "modality": "FLUOROSCOPY",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "fluoro_ugi": {
+      "modality": "FLUOROSCOPY",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "fluoro_vcug": {
+      "modality": "FLUOROSCOPY",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "mammo": {
+      "modality": "MAMMOGRAPHY",
+      "status": "ACTIVE",
+      "classification": "FUTURE_MIGRATION_CANDIDATE",
+      "allowed": {
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ],
+        "breast_purpose": [
+          "SCREENING",
+          "DIAGNOSTIC"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "mr_abdomen": {
+      "modality": "MRI",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "mr_brain": {
+      "modality": "MRI",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "mr_knee": {
+      "modality": "MRI",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "mr_shoulder": {
+      "modality": "MRI",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "nm_bone_scan": {
+      "modality": "NUCLEAR",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "nm_thyroid_uptake": {
+      "modality": "NUCLEAR",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "pet_ct": {
+      "modality": "PET_CT",
+      "status": "ACTIVE",
+      "classification": "FUTURE_MIGRATION_CANDIDATE",
+      "allowed": {
+        "radiotracer": [
+          "FDG"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_abdomen": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_ankle": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ],
+        "weight_bearing": [
+          "YES",
+          "NO"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_chest": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "CHEST_STANDARD"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_cspine": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "SPINE_STANDARD"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_hand": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_knee": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ],
+        "weight_bearing": [
+          "YES",
+          "NO"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_lspine": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "SPINE_STANDARD"
+        ],
+        "weight_bearing": [
+          "YES",
+          "NO"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_pelvis": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "rx_shoulder": {
+      "modality": "RX",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "us_abdomen": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "us_obstetric_study": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "FUTURE_MIGRATION_CANDIDATE",
+      "allowed": {
+        "physician_protocol": [
+          "MORPHOLOGY"
+        ],
+        "gestational_trimester": [
+          "TRIMESTER_1",
+          "TRIMESTER_2",
+          "TRIMESTER_3",
+          "UNKNOWN"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "us_pelvic": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "FUTURE_MIGRATION_CANDIDATE",
+      "allowed": {
+        "ultrasound_approach": [
+          "TRANSABDOMINAL",
+          "TRANSVAGINAL",
+          "COMBINED"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "us_renal": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL",
+          "NOT_APPLICABLE"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "us_soft_tissue": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL",
+          "NOT_APPLICABLE"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "us_testicular": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "us_thyroid": {
+      "modality": "US",
+      "status": "ACTIVE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "rx_hip": {
+      "modality": "RX",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [
+        "laterality"
+      ],
+      "fixed": {}
+    },
+    "ct_sinuses": {
+      "modality": "CT",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [
+        "contrast_intent"
+      ],
+      "fixed": {}
+    },
+    "mr_lumbar_spine": {
+      "modality": "MRI",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [
+        "contrast_intent"
+      ],
+      "fixed": {}
+    },
+    "rx_foot": {
+      "modality": "RX",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ],
+        "weight_bearing": [
+          "YES",
+          "NO"
+        ]
+      },
+      "required": [
+        "laterality"
+      ],
+      "fixed": {}
+    },
+    "rx_wrist": {
+      "modality": "RX",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [
+        "laterality"
+      ],
+      "fixed": {}
+    },
+    "rx_elbow": {
+      "modality": "RX",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "JOINT_STANDARD"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [
+        "laterality"
+      ],
+      "fixed": {}
+    },
+    "mr_cervical_spine": {
+      "modality": "MRI",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [
+        "contrast_intent"
+      ],
+      "fixed": {}
+    },
+    "ct_neck": {
+      "modality": "CT",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [
+        "contrast_intent"
+      ],
+      "fixed": {}
+    },
+    "cta_head_neck": {
+      "modality": "CTA",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITH_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ],
+        "vascular_territory": [
+          "HEAD",
+          "NECK",
+          "HEAD_AND_NECK"
+        ]
+      },
+      "required": [
+        "contrast_intent",
+        "vascular_territory"
+      ],
+      "fixed": {
+        "contrast_intent": "WITH_IV_CONTRAST"
+      }
+    },
+    "mra_brain": {
+      "modality": "MRA",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ],
+        "vascular_territory": [
+          "HEAD"
+        ]
+      },
+      "required": [
+        "contrast_intent",
+        "vascular_territory"
+      ],
+      "fixed": {
+        "vascular_territory": "HEAD"
+      }
+    },
+    "mr_pelvis": {
+      "modality": "MRI",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "contrast_intent": [
+          "WITHOUT_CONTRAST",
+          "WITH_IV_CONTRAST",
+          "WITH_AND_WITHOUT_IV_CONTRAST"
+        ],
+        "contrast_routes": [
+          "IV"
+        ]
+      },
+      "required": [
+        "contrast_intent"
+      ],
+      "fixed": {}
+    },
+    "breast_tomosynthesis": {
+      "modality": "MAMMOGRAPHY",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ],
+        "breast_purpose": [
+          "SCREENING",
+          "DIAGNOSTIC"
+        ],
+        "breast_tomosynthesis_relation": [
+          "WITH_2D_MAMMOGRAPHY",
+          "STANDALONE_IF_PROVIDER_VALIDATED"
+        ]
+      },
+      "required": [
+        "laterality",
+        "breast_purpose",
+        "breast_tomosynthesis_relation"
+      ],
+      "fixed": {}
+    },
+    "rx_tspine": {
+      "modality": "RX",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "xray_views": [
+          "AP",
+          "PA",
+          "LATERAL",
+          "OBLIQUE",
+          "AXIAL",
+          "SPECIAL"
+        ],
+        "xray_view_preset": [
+          "SPINE_STANDARD"
+        ],
+        "weight_bearing": [
+          "YES",
+          "NO"
+        ]
+      },
+      "required": [],
+      "fixed": {}
+    },
+    "nm_renal_scan": {
+      "modality": "NUCLEAR",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "physician_protocol": [
+          "DYNAMIC",
+          "STATIC"
+        ]
+      },
+      "required": [
+        "physician_protocol"
+      ],
+      "fixed": {}
+    },
+    "nm_myocardial_perfusion": {
+      "modality": "NUCLEAR",
+      "status": "FUTURE_INACTIVE",
+      "classification": "PARAMETER_READY",
+      "allowed": {
+        "physician_protocol": [
+          "STRESS_REST"
+        ]
+      },
+      "required": [
+        "physician_protocol"
+      ],
+      "fixed": {
+        "physician_protocol": "STRESS_REST"
+      }
+    },
+    "carotid_doppler": {
+      "modality": "US_DOPPLER",
+      "status": "ACTIVE_CROSS_ROUTE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "vascular_territory": [
+          "CAROTID"
+        ]
+      },
+      "required": [],
+      "fixed": {
+        "vascular_territory": "CAROTID"
+      }
+    },
+    "lower_ext_art_doppler": {
+      "modality": "US_DOPPLER",
+      "status": "ACTIVE_CROSS_ROUTE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "vascular_territory": [
+          "LOWER_EXTREMITY"
+        ],
+        "flow_type": [
+          "ARTERIAL"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {
+        "vascular_territory": "LOWER_EXTREMITY",
+        "flow_type": "ARTERIAL"
+      }
+    },
+    "lower_ext_venous_doppler": {
+      "modality": "US_DOPPLER",
+      "status": "ACTIVE_CROSS_ROUTE",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "vascular_territory": [
+          "LOWER_EXTREMITY"
+        ],
+        "flow_type": [
+          "VENOUS"
+        ],
+        "laterality": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": [],
+      "fixed": {
+        "vascular_territory": "LOWER_EXTREMITY",
+        "flow_type": "VENOUS"
+      }
+    },
+    "echo_tte": {
+      "modality": "US_CARDIAC",
+      "status": "ACTIVE_CROSS_ROUTE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "echo_tes": {
+      "modality": "US_CARDIAC",
+      "status": "ACTIVE_CROSS_ROUTE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    },
+    "stress_echo": {
+      "modality": "US_CARDIAC",
+      "status": "ACTIVE_CROSS_ROUTE",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": [],
+      "fixed": {}
+    }
+  }
+}
