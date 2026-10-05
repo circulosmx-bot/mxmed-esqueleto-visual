@@ -98,6 +98,8 @@ final class HealthcareStudyProviderMatchingService
                     trim(implode(' ', array_filter([$row['street'], $row['exterior_number'], $row['interior_number']]))),
                     $row['colonia'], $row['municipality'], $row['state_name'], $row['postal_code'],
                 ], static fn ($part) => is_string($part) && trim($part) !== '')));
+                $unverifiedParameterItems = array_values(array_filter($matched,
+                    static fn (array $item): bool => $item['parameter_capability_unverified']));
                 $candidates[] = [
                     'organization' => ['group_id' => $row['group_id'], 'display_name' => $row['organization_name'],
                         'organization_type_key' => $row['organization_type_key']],
@@ -108,6 +110,8 @@ final class HealthcareStudyProviderMatchingService
                     'service_mode' => $serviceMode,
                     'coverage' => [
                         'classification' => $classification,
+                        'parameter_capability_status' => $unverifiedParameterItems === [] ? 'NOT_APPLICABLE' : 'UNVERIFIED',
+                        'parameter_unverified_order_item_ids' => array_column($unverifiedParameterItems, 'order_item_id'),
                         'total_order_item_count' => $total,
                         'cataloged_item_count' => count($activeItems),
                         'matched_item_count' => $matchedCount,
@@ -225,6 +229,7 @@ final class HealthcareStudyProviderMatchingService
             $items[] = ['order_item_id' => $entry['order_item_id'], 'item_key' => $entry['order_item_id'],
                 'sequence' => $index + 1, 'study_type_id' => $canonicalId,
                 'study_display_name' => trim($entry['study_display_name']),
+                'parameter_capability_unverified' => isset($entry['functional_order_parameters']) && is_array($entry['functional_order_parameters']),
                 'reason' => $canonicalId === null ? 'UNMATCHABLE_CUSTOM' : null];
         }
         return $items;

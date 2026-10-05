@@ -17,8 +17,8 @@
       'Citologías y análisis de tejidos o muestras.'),
     functional:group('functional','ESTUDIOS FUNCIONALES','monitor_heart',[
       {category:'CARDIOVASCULAR',keys:['ecg_12lead','ecg_rhythm_strip','holter','abpm_mapa','stress_test','tilt_table','ankle_brachial_index']},
-      {category:'NEUROFISIOLOGIA'},{category:'FUNCION_PULMONAR'},{category:'SUENO'},{category:'AUDIOLOGIA'}],
-      ['cardiovascular','neurophysiology','pulmonary','sleep','audiovestibular'],
+      {category:'NEUROFISIOLOGIA'},{category:'FUNCION_PULMONAR'},{category:'FUNCION_DIGESTIVA'},{category:'SUENO'},{category:'AUDIOLOGIA'}],
+      ['cardiovascular','neurophysiology','pulmonary','sleep','audiovestibular','gi_motility'],
       'Evaluación de la función de órganos y sistemas.'),
     procedures:group('procedures','PROCEDIMIENTOS DIAGNÓSTICOS','gastroenterology',[{category:'ENDOSCOPIA'},{category:'PROCEDIMIENTOS_DIAGNOSTICOS'}],
       ['digestive_endoscopy','bronchoscopy','laryngoscopy','pleuroscopy','gynecology','urology'],
@@ -101,6 +101,7 @@
     pulmonary:group('pulmonary','Función pulmonar','pulmonology',[{category:'FUNCION_PULMONAR'}]),
     sleep:group('sleep','Sueño','bedtime',[{category:'SUENO'}]),
     audiovestibular:group('audiovestibular','Audiología y función vestibular','hearing',[{category:'AUDIOLOGIA'}]),
+    gi_motility:group('gi_motility','Motilidad gastrointestinal','gastroenterology',[{category:'FUNCION_DIGESTIVA',keys:['esophageal_manometry','esophageal_ph_monitoring']}]),
     digestive_endoscopy:group('digestive_endoscopy','Endoscopia digestiva','gastroenterology',[
       {category:'ENDOSCOPIA',keys:['egd_eda_base','colonoscopy_base','flex_sig_base','anoscopy_base','proctoscopy_base',
         'ercp_cpre_base','eus_use_base','capsule_base','enteroscopy_base']}]),
@@ -124,7 +125,7 @@
     imaging:{cardio:['ultrasound']},
     ultrasound:{cardio:['ultrasound_cardiac','ultrasound_vascular']},
     functional:{cardio:['cardiovascular'],neuro:['neurophysiology','sleep'],peds_neuro:['neurophysiology','sleep'],
-      pulm:['pulmonary','sleep'],ent:['audiovestibular','sleep']},
+      pulm:['pulmonary','sleep'],ent:['audiovestibular','sleep'],gi:['gi_motility']},
     procedures:{gi:['digestive_endoscopy'],pulm:['bronchoscopy'],ent:['laryngoscopy']}
   };
   function parts(id){

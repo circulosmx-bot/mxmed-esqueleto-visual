@@ -45,7 +45,10 @@
       "canonical_display_name": "Audiometría verbal",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Logoaudiometría",
+        "Audiometría del habla"
+      ],
       "discovery_terms": []
     },
     {
@@ -63,7 +66,9 @@
       "abbreviations": [
         "OEA"
       ],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Otoemisiones"
+      ],
       "discovery_terms": []
     },
     {
@@ -84,7 +89,9 @@
         "VNG"
       ],
       "equivalent_aliases": [],
-      "discovery_terms": []
+      "discovery_terms": [
+        "prueba calórica vestibular"
+      ]
     },
     {
       "study_key": "abpm_mapa",
@@ -95,7 +102,8 @@
         "MAPA"
       ],
       "equivalent_aliases": [
-        "MAPA 24 h (presión arterial ambulatoria)"
+        "MAPA 24 h (presión arterial ambulatoria)",
+        "Holter de presión"
       ],
       "discovery_terms": []
     },
@@ -124,13 +132,17 @@
       "common_display_name": "Electrocardiograma de 12 derivaciones",
       "abbreviations": [
         "ECG 12 derivaciones",
-        "EKG 12 derivaciones"
+        "EKG 12 derivaciones",
+        "ECG",
+        "EKG"
       ],
       "equivalent_aliases": [
-        "Electrocardiograma de 12 derivaciones"
+        "Electrocardiograma de 12 derivaciones",
+        "Electrocardiograma"
       ],
       "discovery_terms": [
-        "arritmia"
+        "arritmia",
+        "electrocardiografía"
       ]
     },
     {
@@ -166,7 +178,10 @@
       "canonical_display_name": "Holter / monitorización ECG ambulatoria",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Holter cardíaco",
+        "Holter ECG"
+      ],
       "discovery_terms": [
         "arritmia"
       ]
@@ -200,7 +215,10 @@
       "canonical_display_name": "Prueba de esfuerzo (ECG de esfuerzo)",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Ergometría",
+        "Prueba de caminadora"
+      ],
       "discovery_terms": []
     },
     {
@@ -285,23 +303,36 @@
       "canonical_display_name": "Colposcopia diagnóstica",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": ["colposcopía", "videocolposcopia"],
-      "discovery_terms": ["video colpo"]
+      "equivalent_aliases": [
+        "colposcopía",
+        "videocolposcopia"
+      ],
+      "discovery_terms": [
+        "video colpo"
+      ]
     },
     {
       "study_key": "cystoscopy_diagnostic",
       "canonical_display_name": "Cistoscopia diagnóstica",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": ["cistouretroscopia diagnóstica", "videocistoscopia simple"],
-      "discovery_terms": ["video cisto"]
+      "equivalent_aliases": [
+        "cistouretroscopia diagnóstica",
+        "videocistoscopia simple"
+      ],
+      "discovery_terms": [
+        "video cisto"
+      ]
     },
     {
       "study_key": "hysteroscopy_diagnostic",
       "canonical_display_name": "Histeroscopia diagnóstica",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": ["histeroscopía diagnóstica", "histeroscopia de consultorio"],
+      "equivalent_aliases": [
+        "histeroscopía diagnóstica",
+        "histeroscopia de consultorio"
+      ],
       "discovery_terms": []
     },
     {
@@ -326,7 +357,11 @@
       "equivalent_aliases": [
         "Esofagogastroduodenoscopia"
       ],
-      "discovery_terms": ["panendoscopia", "gastroscopia", "endoscopia alta"]
+      "discovery_terms": [
+        "panendoscopia",
+        "gastroscopia",
+        "endoscopia alta"
+      ]
     },
     {
       "study_key": "enteroscopy_base",
@@ -434,9 +469,13 @@
       "common_display_name": "Pruebas de función pulmonar completas",
       "abbreviations": [
         "PFR completo",
-        "PFT completo"
+        "PFT completo",
+        "PFP",
+        "PFR"
       ],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Pruebas de función pulmonar"
+      ],
       "discovery_terms": [
         "PFT"
       ]
@@ -474,7 +513,8 @@
       "abbreviations": [],
       "equivalent_aliases": [],
       "discovery_terms": [
-        "PFT"
+        "PFT",
+        "pruebas de función pulmonar"
       ]
     },
     {
@@ -2438,9 +2478,12 @@
       "canonical_display_name": "EEG rutinario",
       "common_display_name": null,
       "abbreviations": [
-        "EEG rutinario"
+        "EEG rutinario",
+        "EEG"
       ],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Electroencefalograma"
+      ],
       "discovery_terms": []
     },
     {
@@ -2460,10 +2503,13 @@
       "abbreviations": [
         "EMG + Velocidades de conducción nerviosa",
         "VCN",
-        "EMG + VCN"
+        "EMG + VCN",
+        "EMG"
       ],
       "equivalent_aliases": [
-        "EMG + VCN (estudio completo)"
+        "EMG + VCN (estudio completo)",
+        "Electromiografía",
+        "Electroneuromiografía"
       ],
       "discovery_terms": []
     },
@@ -2473,10 +2519,15 @@
       "common_display_name": null,
       "abbreviations": [
         "PEAT",
-        "BAEP"
+        "BAEP",
+        "PEATC",
+        "ABR"
       ],
       "equivalent_aliases": [],
-      "discovery_terms": []
+      "discovery_terms": [
+        "audiología",
+        "potenciales evocados auditivos"
+      ]
     },
     {
       "study_key": "evoked_ssep",
@@ -2487,7 +2538,9 @@
         "SSEP"
       ],
       "equivalent_aliases": [],
-      "discovery_terms": []
+      "discovery_terms": [
+        "potenciales evocados"
+      ]
     },
     {
       "study_key": "evoked_visual",
@@ -2497,7 +2550,9 @@
         "PEV"
       ],
       "equivalent_aliases": [],
-      "discovery_terms": []
+      "discovery_terms": [
+        "potenciales evocados"
+      ]
     },
     {
       "study_key": "repetitive_nerve_stimulation",
@@ -3067,6 +3122,34 @@
         "serie de 14",
         "serie de 16",
         "serie de 18"
+      ]
+    },
+    {
+      "study_key": "esophageal_manometry",
+      "canonical_display_name": "Manometría esofágica",
+      "common_display_name": null,
+      "abbreviations": [
+        "HRM"
+      ],
+      "equivalent_aliases": [
+        "Manometría esofágica de alta resolución"
+      ],
+      "discovery_terms": [
+        "motilidad esofágica"
+      ]
+    },
+    {
+      "study_key": "esophageal_ph_monitoring",
+      "canonical_display_name": "Monitoreo de pH esofágico",
+      "common_display_name": "pHmetría esofágica",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Monitoreo de pH",
+        "pH-impedancia",
+        "Impedancia-pH"
+      ],
+      "discovery_terms": [
+        "reflujo esofágico"
       ]
     }
   ]

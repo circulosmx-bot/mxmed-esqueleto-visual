@@ -8,7 +8,7 @@ function clinical_study_search_authority(): array
     if ($authority !== null) return $authority;
     $path = __DIR__.'/../../modules/clinical/catalog/study_search_authority_v1.json';
     $decoded = json_decode((string)file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-    if (($decoded['version'] ?? null) !== 1 || count($decoded['studies'] ?? []) !== 287) {
+    if (($decoded['version'] ?? null) !== 1 || count($decoded['studies'] ?? []) !== 289) {
         throw new RuntimeException('STUDY_SEARCH_AUTHORITY_INVALID');
     }
     $byKey = [];
@@ -114,6 +114,9 @@ function clinical_study_search_score(array $row, string $query, array $authority
     foreach (clinical_study_search_phrases($row, $authority) as [$kind, $phrase]) {
         $text = clinical_study_search_normalize($phrase);
         if ($text === '') continue;
+        // The qualified pressure nickname must never make a bare Holter query match MAPA.
+        if ($text === 'holter de presion' && !array_filter($queryTokens,
+            static fn(string $token): bool => str_starts_with('presion',$token) && strlen($token) >= 4)) continue;
         $phraseTokens = explode(' ', $text);
         if ($modalityHeads !== null && ($kind !== 'ABBREVIATION' || !in_array($phraseTokens[0], $modalityHeads, true))) continue;
         if ($exactShortTerm && ($text !== $normalized || in_array($kind, ['DISCOVERY_TERM', 'STABLE_KEY'], true))) continue;

@@ -1092,7 +1092,10 @@
       "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / GINECOLOGÍA",
       "root_family": "procedures",
       "small": true,
-      "study_keys": ["colposcopy_diagnostic", "hysteroscopy_diagnostic"],
+      "study_keys": [
+        "colposcopy_diagnostic",
+        "hysteroscopy_diagnostic"
+      ],
       "featured": [],
       "groups": []
     },
@@ -1100,7 +1103,9 @@
       "heading": "PROCEDIMIENTOS DIAGNÓSTICOS / UROLOGÍA",
       "root_family": "procedures",
       "small": true,
-      "study_keys": ["cystoscopy_diagnostic"],
+      "study_keys": [
+        "cystoscopy_diagnostic"
+      ],
       "featured": [],
       "groups": []
     },
@@ -1318,6 +1323,17 @@
       "small": true,
       "study_keys": [
         "tmj_comparative_xray"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "gi_motility": {
+      "heading": "ESTUDIOS FUNCIONALES / MOTILIDAD GASTROINTESTINAL",
+      "root_family": "functional",
+      "small": true,
+      "study_keys": [
+        "esophageal_manometry",
+        "esophageal_ph_monitoring"
       ],
       "featured": [],
       "groups": []

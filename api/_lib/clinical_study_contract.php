@@ -15,7 +15,7 @@ require_once __DIR__ . '/clinical_diagnostic_procedure.php';
 function clinical_study_categories(): array
 {
     return ['LABORATORIO','IMAGEN','CARDIOVASCULAR','OFTALMOLOGIA','NEUROFISIOLOGIA',
-        'FUNCION_PULMONAR','AUDIOLOGIA','DENTAL','PATOLOGIA','ENDOSCOPIA','PROCEDIMIENTOS_DIAGNOSTICOS','SUENO','GENETICA','OTROS'];
+        'FUNCION_PULMONAR','FUNCION_DIGESTIVA','AUDIOLOGIA','DENTAL','PATOLOGIA','ENDOSCOPIA','PROCEDIMIENTOS_DIAGNOSTICOS','SUENO','GENETICA','OTROS'];
 }
 
 function clinical_study_category_labels_es(): array
@@ -23,7 +23,7 @@ function clinical_study_category_labels_es(): array
     return [
         'LABORATORIO'=>'Laboratorio', 'IMAGEN'=>'Imagenología', 'CARDIOVASCULAR'=>'Cardiovascular',
         'OFTALMOLOGIA'=>'Oftalmología', 'NEUROFISIOLOGIA'=>'Neurofisiología',
-        'FUNCION_PULMONAR'=>'Función pulmonar', 'AUDIOLOGIA'=>'Audiología', 'DENTAL'=>'Dental',
+        'FUNCION_PULMONAR'=>'Función pulmonar', 'FUNCION_DIGESTIVA'=>'Motilidad gastrointestinal', 'AUDIOLOGIA'=>'Audiología', 'DENTAL'=>'Dental',
         'PATOLOGIA'=>'Patología', 'ENDOSCOPIA'=>'Endoscopía', 'PROCEDIMIENTOS_DIAGNOSTICOS'=>'Procedimientos diagnósticos', 'SUENO'=>'Medicina del sueño',
         'GENETICA'=>'Genética', 'OTROS'=>'Otros',
     ];

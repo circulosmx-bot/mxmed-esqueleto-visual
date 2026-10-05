@@ -22,7 +22,7 @@ foreach ($leaves as $leaf=>$category) foreach ($nav[$leaf]['study_keys'] as $key
 }
 check(count($current)===35,'CURRENT_35_KEYS');
 check(array_keys($a['rules'])===array_keys($current+['esophageal_manometry'=>true,'esophageal_ph_monitoring'=>true]),'NO_EXTRA_OR_MISSING_RULES');
-foreach (['esophageal_manometry','esophageal_ph_monitoring'] as $key) check($a['rules'][$key]['status']==='FUTURE_REQUIRED','DORMANT_GI_'.$key);
+foreach (['esophageal_manometry','esophageal_ph_monitoring'] as $key) check($a['rules'][$key]['status']==='ACTIVE_REQUIRED','ACTIVE_GI_'.$key);
 foreach ($a['value_labels'] as $field=>$labels) check(count($labels)===count(array_unique(array_keys($labels))),'UNIQUE_ENUM_'.$field);
 foreach ($a['rules'] as $key=>$rule) {
     foreach ($rule['allowed'] as $field=>$choices) {
@@ -65,7 +65,7 @@ foreach ([
     ['esophageal_ph_monitoring',['version'=>1,'gi_technique'=>'PH_ONLY','duration'=>'24_HOURS']],
     ['cbc',['version'=>1,'duration'=>'24_HOURS']],
 ] as $i=>$case) reject(static fn()=>clinical_functional_validate($case[0],$case[1]),'REJECT_'.$i);
-foreach (['esophageal_manometry','esophageal_ph_monitoring'] as $key) reject(static fn()=>clinical_functional_validate($key,null),'FUTURE_REQUIRED_'.$key);
+foreach (['esophageal_manometry','esophageal_ph_monitoring'] as $key) reject(static fn()=>clinical_functional_validate($key,null),'ACTIVE_REQUIRED_'.$key);
 check(clinical_functional_validate('esophageal_manometry',null,false)===null,'FUTURE_RESULT_TAXONOMY_CAN_OMIT');
 
 $pdo=new PDO('sqlite::memory:');$pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
@@ -97,7 +97,7 @@ $full=['study_type_key'=>'full_pft','display_name_es'=>'Pruebas funcionales resp
 $spiro=['study_type_key'=>'spirometry','display_name_es'=>'Espirometría','aliases_json'=>'[]'];
 $ranked=clinical_study_search_ranked_rows([$spiro,$full],'PFT',$search);
 check($ranked[0]['study_type_key']==='full_pft','PFT_EXACT_ALIAS_WINS_OVER_SPIROMETRY_DISCOVERY');
-check(clinical_study_search_ranked_rows([$spiro,$full],'PFP',$search)===[],'PFP_FUTURE_SEARCH_TERM_NOT_YET_ACTIVE');
+check(clinical_study_search_ranked_rows([$spiro,$full],'PFP',$search)[0]['study_type_key']==='full_pft','PFP_SEARCH_TERM_ACTIVE');
 check(clinical_study_search_ranked_rows([$spiro,$full],'pruebas de función pulmonar',$search)[0]['study_type_key']==='full_pft','FULL_PHRASE_CURRENT_PREFIX_DISCOVERY');
 $pdo->exec('CREATE TABLE clinical_documents (id INTEGER PRIMARY KEY, document_uuid TEXT, document_type TEXT, version INTEGER, status TEXT, patient_id TEXT, appointment_id TEXT, encounter_id TEXT, encounter_ref_id TEXT, created_by_user_id TEXT, generated_at TEXT, payload_json TEXT)');
 $pdo->exec('CREATE TABLE patients_doctor_links (doctor_id TEXT, patient_id TEXT, status TEXT)');

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "groups": {
     "CLINICAL_LAB": "Laboratorio clínico",
     "GENETICS_MOLECULAR": "Genética y diagnóstico molecular",
@@ -15,7 +15,8 @@
     "ENT_DIAGNOSTICS": "Diagnóstico otorrinolaringológico",
     "DENTAL_DIAGNOSTICS": "Diagnóstico dental",
     "GYNECOLOGY_DIAGNOSTICS": "Diagnóstico ginecológico",
-    "UROLOGY_DIAGNOSTICS": "Diagnóstico urológico"
+    "UROLOGY_DIAGNOSTICS": "Diagnóstico urológico",
+    "FUNCTIONAL_GI_PHYSIOLOGY": "Fisiología gastrointestinal"
   },
   "studies": {
     "abpm_mapa": "CARDIOVASCULAR_DIAGNOSTICS",
@@ -304,7 +305,9 @@
     "rx_foot": "GENERAL_IMAGING",
     "rx_hip": "GENERAL_IMAGING",
     "rx_tspine": "GENERAL_IMAGING",
-    "rx_wrist": "GENERAL_IMAGING"
+    "rx_wrist": "GENERAL_IMAGING",
+    "esophageal_manometry": "FUNCTIONAL_GI_PHYSIOLOGY",
+    "esophageal_ph_monitoring": "FUNCTIONAL_GI_PHYSIOLOGY"
   },
   "catalog": {
     "urine": {

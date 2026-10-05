@@ -1,0 +1,4 @@
+.functional-item-summary{flex-basis:100%;min-width:0;overflow-wrap:anywhere;color:#31596c;font-size:.75rem}
+.functional-parameter-panel{flex-basis:100%;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:.45rem;padding:.55rem;border:1px solid #b9e3ea;border-radius:8px;background:#fff}
+.functional-parameter-field{display:grid;gap:.2rem;min-width:0;font-size:.8rem;color:#244c5d}
+.functional-parameter-field select{width:100%;min-width:0;max-width:100%;padding:.35rem;border:1px solid #b8d4dd;border-radius:5px;background:#fff;color:#06334f}

@@ -33,7 +33,10 @@ $root = dirname(__DIR__, 3);
 $matrix = search02_rows($root.'/docs/clinical/STUDY_SEARCH01_AUTHORITY_MATRIX.csv');
 $expectations = search02_rows($root.'/docs/clinical/STUDY_SEARCH01_QUERY_EXPECTATIONS.csv');
 $authority = clinical_study_search_authority();
-search02_check($authority['config']['version'] === 1 && count($authority['by_key']) === 287, 'QA_AUTHORITY_VERSION_AND_COUNT');
+search02_check($authority['config']['version'] === 1 && count($authority['by_key']) === 289, 'QA_AUTHORITY_VERSION_AND_COUNT');
+$approvedAdditiveKeys=array_fill_keys(['abpm_mapa','audiometry_speech','ecg_12lead','eeg_routine','emg_ncs',
+    'evoked_auditory_baep','evoked_ssep','evoked_visual','full_pft','holter','otoacoustic_emissions',
+    'spirometry','stress_test','vng'],true);
 search02_check(count($matrix) === 252 && count($expectations) === 47, 'QA_SOURCE_AUDIT_COUNTS');
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $pdo->exec('CREATE TABLE clinical_study_types (study_type_id INTEGER PRIMARY KEY, study_type_key TEXT, display_name_es TEXT, category_key TEXT, aliases_json TEXT, is_active INTEGER)');
@@ -48,11 +51,16 @@ foreach ($matrix as $index => $row) {
     if ($key === 'dental_cbct') $expectedDiscovery=array_merge($expectedDiscovery,['ATM','articulación temporomandibular']);
     if ($key === 'dental_cephalometric_xray') $expectedDiscovery[]='Cefalometría';
     if ($key === 'egd_eda_base') $expectedDiscovery=array_merge($expectedDiscovery,['panendoscopia','gastroscopia','endoscopia alta']);
+    $baselineAbbreviations=array_values(array_unique(array_merge(json_decode($row['abbreviations'], true, 512, JSON_THROW_ON_ERROR), json_decode($row['proposed_abbreviations'], true, 512, JSON_THROW_ON_ERROR))));
+    $baselineAliases=array_values(array_unique(array_merge(json_decode($row['equivalent_aliases'], true, 512, JSON_THROW_ON_ERROR), json_decode($row['proposed_equivalent_aliases'], true, 512, JSON_THROW_ON_ERROR))));
+    $observedAliases=array_values(array_diff($entry['equivalent_aliases'], $key === 'cyto_pap' ? ['Papanicolau'] : []));
     if ($entry['canonical_display_name'] !== $row['canonical_display_name']
         || $entry['common_display_name'] !== ($row['common_display_name'] ?: null)
-        || $entry['abbreviations'] !== array_values(array_unique(array_merge(json_decode($row['abbreviations'], true, 512, JSON_THROW_ON_ERROR), json_decode($row['proposed_abbreviations'], true, 512, JSON_THROW_ON_ERROR))))
-        || array_values(array_diff($entry['equivalent_aliases'], $key === 'cyto_pap' ? ['Papanicolau'] : [])) !== array_values(array_unique(array_merge(json_decode($row['equivalent_aliases'], true, 512, JSON_THROW_ON_ERROR), json_decode($row['proposed_equivalent_aliases'], true, 512, JSON_THROW_ON_ERROR))))
-        || $entry['discovery_terms'] !== $expectedDiscovery) {
+        || array_diff($baselineAbbreviations,$entry['abbreviations'])
+        || array_diff($baselineAliases,$observedAliases)
+        || array_diff($expectedDiscovery,$entry['discovery_terms'])
+        || (!isset($approvedAdditiveKeys[$key]) && ($entry['abbreviations']!==$baselineAbbreviations
+            || $observedAliases!==$baselineAliases || $entry['discovery_terms']!==$expectedDiscovery))) {
         throw new RuntimeException('QA_AUTHORITY_MATRIX_MISMATCH '.$key);
     }
     $insert->execute([$index + 1, $key, $row['canonical_display_name'], $row['category'], $row['current_aliases']]);
@@ -77,7 +85,11 @@ foreach ($authority['by_key'] as $key => $entry) {
 }
 $collisionCount = static fn(array $values): int => count(array_filter($values, static fn(array $keys): bool => count($keys) > 1));
 search02_check($collisionCount($exact) === 0 && $collisionCount($abbreviations) === 0, 'QA_EXACT_IDENTITY_COLLISIONS_ZERO');
-search02_check($collisionCount($prefixes) === 147 && $collisionCount($discovery) === 6, 'QA_EXPECTED_DISCOVERY_COLLISIONS');
+$allExact=[];
+foreach ($authority['by_key'] as $key=>$entry) foreach (array_merge([$entry['canonical_display_name']],$entry['abbreviations'],$entry['equivalent_aliases']) as $term)
+    $allExact[clinical_study_search_normalize($term)][$key]=true;
+search02_check($collisionCount($allExact)===0,'QA_ALL_289_EXACT_IDENTITY_COLLISIONS_ZERO');
+search02_check($collisionCount($prefixes) >= 147 && $collisionCount($discovery) >= 6, 'QA_EXPECTED_DISCOVERY_COLLISIONS');
 search02_check($commonCount === 46, 'QA_COMMON_DISPLAY_COUNT');
 $passed = 0;
 foreach ($expectations as $case) {

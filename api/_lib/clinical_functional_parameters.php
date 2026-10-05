@@ -17,7 +17,7 @@ function clinical_functional_authority(): array
     }
     foreach ($decoded['rules'] as $key => $rule) {
         if (!is_string($key) || !is_array($rule)
-            || !in_array($rule['status'] ?? null, ['ACTIVE_OPTIONAL','FUTURE_REQUIRED'], true)
+            || !in_array($rule['status'] ?? null, ['ACTIVE_OPTIONAL','ACTIVE_REQUIRED'], true)
             || !is_array($rule['allowed'] ?? null) || !is_array($rule['required'] ?? null)) {
             throw new RuntimeException('FUNCTIONAL_AUTHORITY_INVALID');
         }
@@ -36,7 +36,7 @@ function clinical_functional_authority(): array
     return $authority = $decoded;
 }
 
-/** Null preserves every existing functional order; future GI keys require intent at activation. */
+/** Null preserves every existing functional order; GI studies require intent. */
 function clinical_functional_validate(?string $studyKey, mixed $raw, bool $requireOrderParameters = true): ?array
 {
     $rule = clinical_functional_authority()['rules'][$studyKey ?? ''] ?? null;
@@ -45,7 +45,7 @@ function clinical_functional_validate(?string $studyKey, mixed $raw, bool $requi
         return null;
     }
     if ($raw === null) {
-        if ($requireOrderParameters && $rule['status'] === 'FUTURE_REQUIRED') {
+        if ($requireOrderParameters && $rule['status'] === 'ACTIVE_REQUIRED') {
             throw new InvalidArgumentException('FUNCTIONAL_PARAMETERS_REQUIRED');
         }
         return null;

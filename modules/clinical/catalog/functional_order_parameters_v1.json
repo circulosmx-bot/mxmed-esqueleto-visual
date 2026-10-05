@@ -1,14 +1,14 @@
 {
   "version": 1,
   "contract": "functional_order_parameters",
-  "status": "ACTIVE_CURRENT_RULES_FUTURE_GI_DORMANT",
+  "status": "ACTIVE_37_STUDY_RULES",
   "field_labels": {
+    "gi_technique": "Técnica",
     "duration": "Duración",
     "body_site": "Región",
     "side": "Lado",
     "spirometry_protocol": "Protocolo",
     "caloric_intent": "Prueba calórica",
-    "gi_technique": "Técnica",
     "acid_suppression": "Tratamiento antisecretor"
   },
   "value_labels": {
@@ -39,8 +39,8 @@
     "gi_technique": {
       "CONVENTIONAL": "Convencional",
       "HIGH_RESOLUTION": "Alta resolución",
-      "PH_ONLY": "pH sin impedancia",
-      "PH_IMPEDANCE": "pH con impedancia"
+      "PH_ONLY": "pH",
+      "PH_IMPEDANCE": "pH + impedancia"
     },
     "acid_suppression": {
       "ON_THERAPY": "Con tratamiento antisecretor",
@@ -332,8 +332,8 @@
       "required": []
     },
     "esophageal_manometry": {
-      "status": "FUTURE_REQUIRED",
-      "classification": "FUTURE_REQUIRED_PARAMETER",
+      "status": "ACTIVE_REQUIRED",
+      "classification": "REQUIRED_PARAMETER",
       "allowed": {
         "gi_technique": [
           "CONVENTIONAL",
@@ -345,8 +345,8 @@
       ]
     },
     "esophageal_ph_monitoring": {
-      "status": "FUTURE_REQUIRED",
-      "classification": "FUTURE_REQUIRED_PARAMETER",
+      "status": "ACTIVE_REQUIRED",
+      "classification": "REQUIRED_PARAMETER",
       "allowed": {
         "gi_technique": [
           "PH_ONLY",
