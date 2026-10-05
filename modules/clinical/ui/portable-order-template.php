@@ -131,6 +131,8 @@ $continuationHeader = $order
         <?php if (!empty($study['specimen_context'])): ?><p class="study-context"><?php echo portable_escape($study['specimen_context']); ?></p><?php endif; ?>
         <?php if (!empty($study['pathology_context'])): ?><p class="study-context"><?php echo portable_escape($study['pathology_context']); ?></p><?php endif; ?>
         <?php if (!empty($study['imaging_context'])): ?><p class="study-context"><?php echo portable_escape($study['imaging_context']); ?></p><?php endif; ?>
+        <?php if (!empty($study['panel_components'])): ?><p class="study-context">Incluye: <?php echo portable_escape(implode(', ', $study['panel_components'])); ?></p><?php endif; ?>
+        <?php if (!empty($study['oxygen_context'])): ?><p class="study-context"><?php echo portable_escape($study['oxygen_context']); ?></p><?php endif; ?>
         <?php if (!empty($study['note'])): ?><p class="study-note"><?php echo portable_escape($study['note']); ?></p><?php endif; ?>
       </li><?php endforeach; ?>
     </ol></section>

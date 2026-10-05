@@ -8,7 +8,7 @@
     "SEMEN": "Semen", "SALIVA": "Saliva", "SPUTUM": "Esputo",
     "BRONCHOALVEOLAR_LAVAGE": "Lavado broncoalveolar", "BRONCHIAL_WASHING": "Lavado bronquial",
     "TRACHEAL_ASPIRATE": "Aspirado traqueal", "WHOLE_BLOOD": "Sangre total",
-    "SERUM": "Suero", "PLASMA": "Plasma"
+    "SERUM": "Suero", "PLASMA": "Plasma", "ARTERIAL_BLOOD": "Sangre arterial"
   },
   "collection_modes": {
     "SPOT": "Muestra aislada", "TIMED": "Recolección cronometrada",
@@ -69,6 +69,7 @@
     "procalcitonin_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
     "total_t3": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
     "bicarbonate_serum": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
-    "apo_b": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"}
+    "apo_b": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "SERUM"},
+    "arterial_blood_gas": {"specimen_mode": "FIXED", "fixed_specimen_type_key": "ARTERIAL_BLOOD"}
   }
 }

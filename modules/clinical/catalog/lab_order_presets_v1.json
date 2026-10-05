@@ -1,0 +1,24 @@
+{
+  "contract": "lab_order_presets",
+  "version": 1,
+  "presets": {
+    "preset_qs3_renal_v1": {
+      "status": "FUTURE_INACTIVE",
+      "preset_version": 1,
+      "display_name": "Química sanguínea de 3 elementos — glucosa, urea y creatinina",
+      "component_study_keys": ["glucose", "urea", "creatinine"]
+    },
+    "preset_qs3_lipids_v1": {
+      "status": "FUTURE_INACTIVE",
+      "preset_version": 1,
+      "display_name": "Química sanguínea de 3 elementos — glucosa, colesterol y triglicéridos",
+      "component_study_keys": ["glucose", "chol_total", "triglycerides"]
+    },
+    "preset_hepatic_basic_v1": {
+      "status": "FUTURE_INACTIVE",
+      "preset_version": 1,
+      "display_name": "Perfil hepático básico (8 estudios)",
+      "component_study_keys": ["ast", "alt", "alp", "ggt", "total_protein", "albumin", "bilirubin_total", "bilirubin_direct"]
+    }
+  }
+}

@@ -50,17 +50,20 @@ function clinical_order_composition_create(PDO $pdo, string $doctor, string $pat
                 $group=is_array($order)&&is_string($order['order_routing_group_key']??null)?$order['order_routing_group_key']:'';
                 try {
                     if(!isset($config['groups'][$group])||isset($groups[$group]))throw new InvalidArgumentException('ORDER_GROUP_INVALID_OR_DUPLICATE');
-                    if(array_diff(array_keys($order),['order_routing_group_key','priority','indication','order_items']))throw new InvalidArgumentException('ORDER_FIELDS_INVALID');
+                    if(array_diff(array_keys($order),['order_routing_group_key','priority','indication','order_items','lab_preset_applications']))throw new InvalidArgumentException('ORDER_FIELDS_INVALID');
                     $groups[$group]=true;
                     $priority=$order['priority']??'Rutinaria';
                     if(!in_array($priority,['Rutinaria','Urgente'],true))throw new InvalidArgumentException('ORDER_PRIORITY_INVALID');
                     $indication=clinical_study_optional_text($order['indication']??null,2000,'ORDER_INDICATION_INVALID')??'';
                     $inputs=$order['order_items']??null;
-                    if(!is_array($inputs)||!array_is_list($inputs)||!count($inputs)||count($inputs)>100)throw new InvalidArgumentException('ORDER_ITEMS_INVALID');
+                    if(!is_array($inputs)||!array_is_list($inputs)||count($inputs)>100)throw new InvalidArgumentException('ORDER_ITEMS_INVALID');
+                    $presetExpansion=clinical_lab_preset_expand($pdo,$inputs,$order['lab_preset_applications']??null,$group);
+                    $inputs=$presetExpansion['items'];
+                    if(!$inputs)throw new InvalidArgumentException('ORDER_ITEMS_INVALID');
                     $snapshots=[];
                     foreach($inputs as $i=>$item){
                         if(!is_array($item))throw new InvalidArgumentException('ORDER_ITEMS_INVALID');
-                        if(array_diff(array_keys($item),['study_type_id','study_type_key','study_category','study_display_name','note','dental_location','specimen_collection_requirements','pathology_order_parameters','imaging_order_parameters','custom_routing_confirmed']))throw new InvalidArgumentException('ORDER_ITEM_FIELDS_INVALID');
+                        if(array_diff(array_keys($item),['study_type_id','study_type_key','study_category','study_display_name','note','dental_location','specimen_collection_requirements','pathology_order_parameters','imaging_order_parameters','lab_panel_request','lab_arterial_oxygen_context','custom_routing_confirmed']))throw new InvalidArgumentException('ORDER_ITEM_FIELDS_INVALID');
                         $snapshot=clinical_study_order_snapshot($pdo,$item,$i+1);
                         if($snapshot['study_type_key']!==null){
                             if(($config['studies'][$snapshot['study_type_key']]??null)!==$group)throw new InvalidArgumentException('STUDY_ROUTING_MISMATCH');
@@ -78,7 +81,8 @@ function clinical_order_composition_create(PDO $pdo, string $doctor, string $pat
                     $prepared[]=['document_type'=>$type,'title'=>mb_substr(count($snapshots)===1?$snapshots[0]['study_display_name']:$config['groups'][$group].' ('.count($snapshots).')',0,128),
                         'summary'=>count($snapshots).' estudios · '.$priority,
                         'payload'=>['source'=>'ord_comp01','order_routing_group_key'=>$group,'order_routing_version'=>$config['version'],
-                            'order_composition_batch_uuid'=>$uuid,'order_area'=>$config['groups'][$group],'priority'=>$priority,'indication'=>$indication,'order_items'=>$inputs]];
+                            'order_composition_batch_uuid'=>$uuid,'order_area'=>$config['groups'][$group],'priority'=>$priority,'indication'=>$indication,'order_items'=>$inputs,
+                            ...($presetExpansion['applications'] ? ['lab_preset_applications'=>$presetExpansion['applications']] : [])]];
                 }catch(InvalidArgumentException $e){throw new ClinicalOrderCompositionException($e->getMessage(),$group?:null);}
             }
             // All validation above, then all canonical writes and child ledger records in one transaction.

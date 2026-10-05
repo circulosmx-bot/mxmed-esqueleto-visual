@@ -1,0 +1,42 @@
+{
+  "contract": "lab_panel_definitions",
+  "version": 1,
+  "panels": {
+    "panel_quimica_6": {
+      "status": "FUTURE_INACTIVE",
+      "definition_version": 1,
+      "display_name": "Química sanguínea de 6 elementos",
+      "routing_group": "CLINICAL_LAB",
+      "specimen_type_key": "SERUM",
+      "component_model": "CANONICAL_ANALYTE",
+      "components": [
+        {"semantic_key": "glucose", "label": "Glucosa"},
+        {"semantic_key": "urea", "label": "Urea"},
+        {"semantic_key": "creatinine", "label": "Creatinina"},
+        {"semantic_key": "uric_acid", "label": "Ácido úrico"},
+        {"semantic_key": "chol_total", "label": "Colesterol total"},
+        {"semantic_key": "triglycerides", "label": "Triglicéridos"}
+      ],
+      "optional_result_observations": ["bun"]
+    },
+    "arterial_blood_gas": {
+      "status": "FUTURE_INACTIVE",
+      "definition_version": 1,
+      "display_name": "Gasometría arterial",
+      "routing_group": "CLINICAL_LAB",
+      "specimen_type_key": "ARTERIAL_BLOOD",
+      "component_model": "RESULT_OBSERVATION",
+      "components": [
+        {"semantic_key": "arterial_ph", "label": "pH arterial"},
+        {"semantic_key": "arterial_paco2", "label": "PaCO₂"},
+        {"semantic_key": "arterial_pao2", "label": "PaO₂"},
+        {"semantic_key": "arterial_hco3", "label": "HCO₃⁻ arterial"},
+        {"semantic_key": "arterial_oxygen_saturation", "label": "Saturación de oxígeno arterial"},
+        {"semantic_key": "arterial_base_excess", "label": "Exceso de base", "required_result": false}
+      ],
+      "optional_result_observations": [],
+      "order_context_contract": "arterial_oxygen_context_v1",
+      "collection_time_owner": "SPECIMEN_COLLECTION_RUNTIME"
+    }
+  }
+}

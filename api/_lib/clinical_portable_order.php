@@ -223,7 +223,10 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
                 'dental_context' => clinical_portable_text($item['dental_location_label'] ?? '') ?: null,
                 'specimen_context' => clinical_specimen_print_context(is_array($item['specimen_collection_requirements'] ?? null) ? $item['specimen_collection_requirements'] : null, (string)$item['study_display_name']),
                 'pathology_context' => clinical_portable_text($item['pathology_order_parameters_label'] ?? '') ?: null,
-                'imaging_context' => clinical_portable_text($item['imaging_order_parameters_label'] ?? '') ?: null];
+                'imaging_context' => clinical_portable_text($item['imaging_order_parameters_label'] ?? '') ?: null,
+                'panel_components' => is_array($item['lab_panel_definition']['components'] ?? null)
+                    ? array_values(array_filter(array_map(static fn($component): string => clinical_portable_text($component['label'] ?? ''), $item['lab_panel_definition']['components']))) : [],
+                'oxygen_context' => clinical_portable_text($item['lab_arterial_oxygen_label'] ?? '') ?: null];
         }
         usort($items, static fn(array $a, array $b): int => $a['sequence'] <=> $b['sequence']);
         foreach ($items as $index => $item) {
@@ -266,7 +269,7 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
         'patient' => ['name' => $patient['name'], 'birthdate' => $patient['birthdate'] ?? null],
         'physician' => array_diff_key($physician, ['doctor_id' => true]),
         'consultorio' => $snapshot['consultorio'] ?? null,
-        'studies' => array_map(static fn(array $item): array => ['name' => $item['name'], 'note' => $item['note'], 'dental_context' => $item['dental_context'], 'specimen_context' => $item['specimen_context'] ?? null, 'pathology_context' => $item['pathology_context'] ?? null, 'imaging_context' => $item['imaging_context'] ?? null], $items),
+        'studies' => array_map(static fn(array $item): array => ['name' => $item['name'], 'note' => $item['note'], 'dental_context' => $item['dental_context'], 'specimen_context' => $item['specimen_context'] ?? null, 'pathology_context' => $item['pathology_context'] ?? null, 'imaging_context' => $item['imaging_context'] ?? null, 'panel_components' => $item['panel_components'] ?? [], 'oxygen_context' => $item['oxygen_context'] ?? null], $items),
         'priority' => $priority ?: null, 'indication' => clinical_portable_text($payload['indication'] ?? '') ?: null,
         'display_reference' => $reference,
     ];

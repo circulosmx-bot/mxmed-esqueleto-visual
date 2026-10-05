@@ -5,6 +5,8 @@ require_once __DIR__ . '/clinical_dental_location.php';
 require_once __DIR__ . '/clinical_specimen_requirements.php';
 require_once __DIR__ . '/clinical_pathology_parameters.php';
 require_once __DIR__ . '/clinical_imaging_parameters.php';
+require_once __DIR__ . '/clinical_lab_panel.php';
+require_once __DIR__ . '/clinical_lab_presets.php';
 
 /** TAX03A: document-payload study identity. No legacy payload is rewritten. */
 function clinical_study_categories(): array
@@ -63,6 +65,7 @@ function clinical_study_optional_text($value, int $max, string $error): ?string
 
 function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bool $resultTaxonomy = false): array
 {
+    if (array_key_exists('lab_panel_definition', $input)) throw new InvalidArgumentException('LAB_PANEL_SNAPSHOT_SERVER_OWNED');
     if (array_key_exists('sequence', $input) && (int)$input['sequence'] !== $sequence) {
         throw new InvalidArgumentException('ORDER_ITEM_SEQUENCE_INVALID');
     }
@@ -111,6 +114,8 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
     $specimenRequirements = clinical_specimen_validate($key, $input['specimen_collection_requirements'] ?? null);
     $pathologyParameters = clinical_pathology_validate($key, $input['pathology_order_parameters'] ?? null);
     $imagingParameters = clinical_imaging_validate($key, $input['imaging_order_parameters'] ?? null, !$resultTaxonomy);
+    $labPanel = $resultTaxonomy ? null : clinical_lab_panel_snapshot($pdo, $key, $input['lab_panel_request'] ?? null);
+    $arterialOxygen = $resultTaxonomy ? null : clinical_lab_arterial_oxygen_validate($key, $input['lab_arterial_oxygen_context'] ?? null);
     return [
         'order_item_id' => null, 'sequence' => $sequence,
         'study_type_id' => $typeId, 'study_type_key' => $key,
@@ -130,6 +135,9 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
             'imaging_order_parameters' => $imagingParameters,
             'imaging_order_parameters_label' => clinical_imaging_summary($imagingParameters),
         ]),
+        ...($labPanel === null ? [] : ['lab_panel_definition' => $labPanel]),
+        ...($arterialOxygen === null ? [] : ['lab_arterial_oxygen_context' => $arterialOxygen,
+            'lab_arterial_oxygen_label' => clinical_lab_arterial_oxygen_summary($arterialOxygen)]),
     ];
 }
 
@@ -137,6 +145,10 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
 function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, array $payload, ?array $source = null): array
 {
     if (!clinical_study_order_type($documentType)) return $payload;
+    if (array_key_exists('lab_preset_provenance', $payload)) {
+        if ($source === null || ($payload['lab_preset_provenance'] ?? null) !== ($source['lab_preset_provenance'] ?? null)) throw new InvalidArgumentException('LAB_PRESET_PROVENANCE_SERVER_OWNED');
+        unset($payload['lab_preset_provenance']);
+    }
     $structured = array_key_exists('order_items', $payload);
     $legacy = array_key_exists('requested_studies', $payload);
     if ($source !== null && (int)($source['order_payload_version'] ?? 0) === 2 && !$structured && !$legacy) {
@@ -165,7 +177,7 @@ function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, 
                 $old = $prior[$claimed];
                 $item = $old;
                 $item['sequence'] = $index + 1;
-                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label','imaging_order_parameters','imaging_order_parameters_label'] as $field) {
+                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label','imaging_order_parameters','imaging_order_parameters_label','lab_panel_definition','lab_arterial_oxygen_context','lab_arterial_oxygen_label'] as $field) {
                     if (($raw[$field] ?? null) !== ($old[$field] ?? null)) throw new InvalidArgumentException('ORDER_ITEM_ID_MEANING_CHANGED');
                 }
             } else {
@@ -195,6 +207,21 @@ function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, 
     $payload['order_items'] = $items;
     $payload['requested_studies'] = array_column($items, 'study_display_name');
     $payload['selection_count'] = count($items);
+    $applications = $payload['lab_preset_applications'] ?? [];
+    unset($payload['lab_preset_applications']);
+    if ($source !== null && isset($source['lab_preset_provenance'])) {
+        if ($applications !== []) throw new InvalidArgumentException('LAB_PRESET_SUCCESSOR_REAPPLICATION_INVALID');
+        $issued = [];
+        foreach ($items as $item) $issued[$item['order_item_id']] = $item['study_type_key'];
+        foreach ($source['lab_preset_provenance'] as $application) {
+            foreach ($application['components'] as $component) {
+                if (($issued[$component['order_item_id']] ?? null) !== $component['study_type_key']) throw new InvalidArgumentException('LAB_PRESET_SUCCESSOR_ITEM_CHANGED');
+            }
+        }
+        $payload['lab_preset_provenance'] = $source['lab_preset_provenance'];
+    } elseif ($applications !== []) {
+        $payload['lab_preset_provenance'] = clinical_lab_preset_snapshot($pdo, $applications, $items);
+    }
     return $payload;
 }
 
