@@ -1,6 +1,6 @@
 # FUNC-CAT01 — Functional studies domain, navigation and parameter audit
 
-**AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED.** Source HEAD: `9c7204855d7db9fb9fa7d3bb985dc8ebddab000d`. No catalog, navigation, routing, writer, reader, schema or UI implementation is authorized by this document.
+**AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED.** Follow-up status: `PARAMETER_CONTRACT_IMPLEMENTED_PENDING_QUALITY_AND_GI_ACTIVATION` (FUNC-CAT02A). Source HEAD: `9c7204855d7db9fb9fa7d3bb985dc8ebddab000d`. No catalog, navigation, routing, writer, reader, schema or UI implementation is authorized by this document.
 
 ## Director summary
 
@@ -12,7 +12,7 @@
 | New identity recommendation | Add `esophageal_manometry` and `esophageal_ph_monitoring` only after approving a functional GI category, navigation, routing and parameter contract. Do not create high-resolution, 24-hour or pH-impedance variants as default identities. |
 | Parameter contract | **Required before activation.** Propose a bounded `functional_order_parameters_v1` keyed by canonical study identity, with allowlisted fields and exact serialized labels. |
 | Routing / navigation | **No current route correction.** Future GI studies need a dedicated `FUNCTIONAL_GI_PHYSIOLOGY` route and “Motilidad gastrointestinal” leaf; neither belongs in `DIGESTIVE_ENDOSCOPY`. Surface BAEP in audiology discovery without duplicate identity or route. |
-| Search | Add qualified Mexican terms for ECG, Holter, MAPA, stress testing, EMG, PEATC, speech audiometry and full PFT. Remove ambiguous `PFT` equivalence from `spirometry` only after regression QA. |
+| Search | Add qualified Mexican terms for ECG, Holter, MAPA, stress testing, EMG, PEATC, speech audiometry and full PFT. Verify `PFT` ranking and add other bounded search terms in the quality phase; FUNC-CAT02A confirmed that `PFT` is only a discovery term for spirometry. |
 | Next task | **FUNC-CAT02A-CONTRACT**, then a separately approved activation of GI identities and quality fixes. |
 
 ## Evidence and current authority
@@ -35,7 +35,7 @@ Keep routine EEG, sleep-deprived EEG and video EEG as existing identities. The n
 
 ### Pulmonary and sleep
 
-Keep `spirometry` as one identity and represent baseline vs pre/post bronchodilator as a structured protocol choice. `full_pft`, `dlco` and `plethysmography` remain distinct capability keys. `PFT` is currently an equivalent alias of **both** `spirometry` and `full_pft`; disambiguate it to the full test after search regression QA. Preserve six-minute walk, CPET, FeNO, capnography and overnight oximetry. [INER spirometry guidance](https://www.iner.salud.gob.mx/descargas/dirmedica/fisiologiarespiratoria/guiastecnicas/2-Espirometria.pdf) and its [functional-test review](https://iner.salud.gob.mx/descargas/dirmedica/fisiologiarespiratoria/guiastecnicas/1-PFRCual_Quien.pdf) support a protocol distinction and separate lung-volume/diffusion capabilities.
+Keep `spirometry` as one identity and represent baseline vs pre/post bronchodilator as a structured protocol choice. `full_pft`, `dlco` and `plethysmography` remain distinct capability keys. `PFT` is an equivalent alias of `full_pft` and a discovery term for `spirometry`; exact-alias ranking already prefers full PFT. FUNC-CAT02A confirmed this and left search unchanged. Preserve six-minute walk, CPET, FeNO, capnography and overnight oximetry. [INER spirometry guidance](https://www.iner.salud.gob.mx/descargas/dirmedica/fisiologiarespiratoria/guiastecnicas/2-Espirometria.pdf) and its [functional-test review](https://iner.salud.gob.mx/descargas/dirmedica/fisiologiarespiratoria/guiastecnicas/1-PFRCual_Quien.pdf) support a protocol distinction and separate lung-volume/diffusion capabilities.
 
 Keep `psg_diagnostic`, `hsat`, `psg_titration`, `mslt` and `mwt` separate. Overnight oximetry is under pulmonary navigation and cannot imply full PSG/HSAT. PAP titration as a sleep study differs from later CPAP/BPAP therapeutic setup. The [IMSS sleep overview](https://www.imss.gob.mx/node/103473) distinguishes home and laboratory testing; the [INER sleep service manual](https://iner.salud.gob.mx/descargas/normatecainterna/MPdirmedica/MP_SERVMEDICINASUENO_28102025.pdf) describes PSG delivery and reporting.
 

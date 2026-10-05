@@ -6,6 +6,7 @@ require_once __DIR__ . '/clinical_dental_acquisition.php';
 require_once __DIR__ . '/clinical_specimen_requirements.php';
 require_once __DIR__ . '/clinical_pathology_parameters.php';
 require_once __DIR__ . '/clinical_imaging_parameters.php';
+require_once __DIR__ . '/clinical_functional_parameters.php';
 require_once __DIR__ . '/clinical_lab_panel.php';
 require_once __DIR__ . '/clinical_lab_presets.php';
 require_once __DIR__ . '/clinical_diagnostic_procedure.php';
@@ -123,6 +124,7 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
     $specimenRequirements = clinical_specimen_validate($key, $input['specimen_collection_requirements'] ?? null);
     $pathologyParameters = clinical_pathology_validate($key, $input['pathology_order_parameters'] ?? null);
     $imagingParameters = clinical_imaging_validate($key, $input['imaging_order_parameters'] ?? null, !$resultTaxonomy);
+    $functionalParameters = clinical_functional_validate($key, $input['functional_order_parameters'] ?? null, !$resultTaxonomy);
     $labPanel = $resultTaxonomy ? null : clinical_lab_panel_snapshot($pdo, $key, $input['lab_panel_request'] ?? null);
     $arterialOxygen = $resultTaxonomy ? null : clinical_lab_arterial_oxygen_validate($key, $input['lab_arterial_oxygen_context'] ?? null);
     return [
@@ -158,6 +160,10 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
         ...($imagingParameters === null ? [] : [
             'imaging_order_parameters' => $imagingParameters,
             'imaging_order_parameters_label' => clinical_imaging_summary($imagingParameters),
+        ]),
+        ...($functionalParameters === null ? [] : [
+            'functional_order_parameters' => $functionalParameters,
+            'functional_order_parameters_label' => clinical_functional_summary($functionalParameters),
         ]),
         ...($labPanel === null ? [] : ['lab_panel_definition' => $labPanel]),
         ...($arterialOxygen === null ? [] : ['lab_arterial_oxygen_context' => $arterialOxygen,
@@ -201,7 +207,7 @@ function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, 
                 $old = $prior[$claimed];
                 $item = $old;
                 $item['sequence'] = $index + 1;
-                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','dental_study_policy_version','dental_location_authority_version','dental_acquisition_protocol','dental_acquisition_protocol_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label','imaging_order_parameters','imaging_order_parameters_label','lab_panel_definition','lab_arterial_oxygen_context','lab_arterial_oxygen_label'] as $field) {
+                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','dental_study_policy_version','dental_location_authority_version','dental_acquisition_protocol','dental_acquisition_protocol_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label','imaging_order_parameters','imaging_order_parameters_label','functional_order_parameters','functional_order_parameters_label','lab_panel_definition','lab_arterial_oxygen_context','lab_arterial_oxygen_label'] as $field) {
                     if (($raw[$field] ?? null) !== ($old[$field] ?? null)) throw new InvalidArgumentException('ORDER_ITEM_ID_MEANING_CHANGED');
                 }
             } else {

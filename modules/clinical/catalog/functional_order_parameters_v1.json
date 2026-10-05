@@ -1,0 +1,370 @@
+{
+  "version": 1,
+  "contract": "functional_order_parameters",
+  "status": "ACTIVE_CURRENT_RULES_FUTURE_GI_DORMANT",
+  "field_labels": {
+    "duration": "Duración",
+    "body_site": "Región",
+    "side": "Lado",
+    "spirometry_protocol": "Protocolo",
+    "caloric_intent": "Prueba calórica",
+    "gi_technique": "Técnica",
+    "acid_suppression": "Tratamiento antisecretor"
+  },
+  "value_labels": {
+    "duration": {
+      "24_HOURS": "24 horas",
+      "48_HOURS": "48 horas",
+      "72_HOURS": "72 horas"
+    },
+    "body_site": {
+      "UPPER_EXTREMITY": "Extremidad superior",
+      "LOWER_EXTREMITY": "Extremidad inferior",
+      "FACE": "Cara"
+    },
+    "side": {
+      "LEFT": "Izquierdo",
+      "RIGHT": "Derecho",
+      "BILATERAL": "Bilateral",
+      "NOT_APPLICABLE": "No aplica"
+    },
+    "spirometry_protocol": {
+      "BASELINE": "Basal",
+      "PRE_POST_BRONCHODILATOR": "Pre y post broncodilatador"
+    },
+    "caloric_intent": {
+      "WITH_CALORIC": "Con prueba calórica",
+      "WITHOUT_CALORIC": "Sin prueba calórica"
+    },
+    "gi_technique": {
+      "CONVENTIONAL": "Convencional",
+      "HIGH_RESOLUTION": "Alta resolución",
+      "PH_ONLY": "pH sin impedancia",
+      "PH_IMPEDANCE": "pH con impedancia"
+    },
+    "acid_suppression": {
+      "ON_THERAPY": "Con tratamiento antisecretor",
+      "OFF_THERAPY": "Sin tratamiento antisecretor"
+    }
+  },
+  "rules": {
+    "abpm_mapa": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "ankle_brachial_index": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "ecg_12lead": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "ecg_rhythm_strip": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "holter": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "duration": [
+          "24_HOURS",
+          "48_HOURS",
+          "72_HOURS"
+        ]
+      },
+      "required": []
+    },
+    "stress_test": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "tilt_table": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "eeg_routine": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "eeg_sleep_deprived": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "emg_ncs": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "body_site": [
+          "UPPER_EXTREMITY",
+          "LOWER_EXTREMITY",
+          "FACE"
+        ],
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "evoked_auditory_baep": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "evoked_ssep": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "body_site": [
+          "UPPER_EXTREMITY",
+          "LOWER_EXTREMITY"
+        ],
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "evoked_visual": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "repetitive_nerve_stimulation": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "sfemg": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "video_eeg": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "duration": [
+          "24_HOURS",
+          "48_HOURS",
+          "72_HOURS"
+        ]
+      },
+      "required": []
+    },
+    "capnography": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "cpet": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "dlco": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "feno": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "full_pft": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "overnight_oximetry": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "plethysmography": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "six_min_walk": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "spirometry": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "spirometry_protocol": [
+          "BASELINE",
+          "PRE_POST_BRONCHODILATOR"
+        ]
+      },
+      "required": []
+    },
+    "hsat": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "mslt": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "mwt": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "psg_diagnostic": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "psg_titration": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "audiometry_speech": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "audiometry_tonal": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "otoacoustic_emissions": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "side": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL"
+        ]
+      },
+      "required": []
+    },
+    "tympanometry": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "NO_PARAMETER_NEEDED",
+      "allowed": {},
+      "required": []
+    },
+    "vng": {
+      "status": "ACTIVE_OPTIONAL",
+      "classification": "OPTIONAL_PARAMETER_ENHANCEMENT",
+      "allowed": {
+        "caloric_intent": [
+          "WITH_CALORIC",
+          "WITHOUT_CALORIC"
+        ]
+      },
+      "required": []
+    },
+    "esophageal_manometry": {
+      "status": "FUTURE_REQUIRED",
+      "classification": "FUTURE_REQUIRED_PARAMETER",
+      "allowed": {
+        "gi_technique": [
+          "CONVENTIONAL",
+          "HIGH_RESOLUTION"
+        ]
+      },
+      "required": [
+        "gi_technique"
+      ]
+    },
+    "esophageal_ph_monitoring": {
+      "status": "FUTURE_REQUIRED",
+      "classification": "FUTURE_REQUIRED_PARAMETER",
+      "allowed": {
+        "gi_technique": [
+          "PH_ONLY",
+          "PH_IMPEDANCE"
+        ],
+        "duration": [
+          "24_HOURS"
+        ],
+        "acid_suppression": [
+          "ON_THERAPY",
+          "OFF_THERAPY"
+        ]
+      },
+      "required": [
+        "gi_technique",
+        "duration",
+        "acid_suppression"
+      ]
+    }
+  }
+}

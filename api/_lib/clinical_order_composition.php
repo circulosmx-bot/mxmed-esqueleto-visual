@@ -76,7 +76,7 @@ function clinical_order_composition_create(PDO $pdo, string $doctor, string $pat
                     $snapshots=[];
                     foreach($inputs as $i=>$item){
                         if(!is_array($item))throw new InvalidArgumentException('ORDER_ITEMS_INVALID');
-                        if(array_diff(array_keys($item),['study_type_id','study_type_key','study_category','study_display_name','note','dental_location','dental_study_policy_version','dental_acquisition_protocol','specimen_collection_requirements','pathology_order_parameters','imaging_order_parameters','lab_panel_request','lab_arterial_oxygen_context','custom_routing_confirmed']))throw new InvalidArgumentException('ORDER_ITEM_FIELDS_INVALID');
+                        if(array_diff(array_keys($item),['study_type_id','study_type_key','study_category','study_display_name','note','dental_location','dental_study_policy_version','dental_acquisition_protocol','specimen_collection_requirements','pathology_order_parameters','imaging_order_parameters','functional_order_parameters','lab_panel_request','lab_arterial_oxygen_context','custom_routing_confirmed']))throw new InvalidArgumentException('ORDER_ITEM_FIELDS_INVALID');
                         $snapshot=clinical_study_order_snapshot($pdo,$item,$i+1);
                         if($snapshot['study_type_key']!==null){
                             if(($config['studies'][$snapshot['study_type_key']]??null)!==$group)throw new InvalidArgumentException('STUDY_ROUTING_MISMATCH');
