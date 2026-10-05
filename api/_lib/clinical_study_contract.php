@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_dental_location.php';
 require_once __DIR__ . '/clinical_specimen_requirements.php';
+require_once __DIR__ . '/clinical_pathology_parameters.php';
 
 /** TAX03A: document-payload study identity. No legacy payload is rewritten. */
 function clinical_study_categories(): array
@@ -107,6 +108,7 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence): a
     }
     $dentalLocation = clinical_dental_validate_location($key, $input['dental_location'] ?? null);
     $specimenRequirements = clinical_specimen_validate($key, $input['specimen_collection_requirements'] ?? null);
+    $pathologyParameters = clinical_pathology_validate($key, $input['pathology_order_parameters'] ?? null);
     return [
         'order_item_id' => null, 'sequence' => $sequence,
         'study_type_id' => $typeId, 'study_type_key' => $key,
@@ -118,6 +120,10 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence): a
             'dental_location_label' => clinical_dental_location_summary($dentalLocation),
         ]),
         ...($specimenRequirements === null ? [] : ['specimen_collection_requirements' => $specimenRequirements]),
+        ...($pathologyParameters === null ? [] : [
+            'pathology_order_parameters' => $pathologyParameters,
+            'pathology_order_parameters_label' => clinical_pathology_summary($pathologyParameters, $key),
+        ]),
     ];
 }
 
@@ -153,7 +159,7 @@ function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, 
                 $old = $prior[$claimed];
                 $item = $old;
                 $item['sequence'] = $index + 1;
-                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','specimen_collection_requirements'] as $field) {
+                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label'] as $field) {
                     if (($raw[$field] ?? null) !== ($old[$field] ?? null)) throw new InvalidArgumentException('ORDER_ITEM_ID_MEANING_CHANGED');
                 }
             } else {

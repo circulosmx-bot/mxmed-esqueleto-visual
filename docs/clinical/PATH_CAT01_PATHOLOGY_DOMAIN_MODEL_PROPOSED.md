@@ -1,6 +1,6 @@
 # PATH-CAT01 — Patología y biopsia: modelo de dominio y catálogo mínimo
 
-**Estado: AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED.** Este documento es una propuesta de contrato para revisión del Director. No autoriza ni ejecuta cambios de catálogo, interfaz, rutas, lectores, escritores o esquema.
+**Estado: AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED | CONTRACT_IMPLEMENTED_PENDING_CATALOG.** PATH-CAT01 fue una propuesta de contrato. PATH-CAT02A añadió posteriormente la [autoridad versionada de parámetros](PATH_CAT02A_PATHOLOGY_PARAMETER_CONTRACT_IMPLEMENTED.md); las identidades propuestas siguen sin activarse en el catálogo. El alcance de esta auditoría original no ejecutó cambios de catálogo, interfaz, rutas, lectores, escritores ni esquema.
 
 ## Resumen para el Director
 

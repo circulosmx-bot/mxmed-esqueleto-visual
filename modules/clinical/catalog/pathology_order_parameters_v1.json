@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "contract": "pathology_order_parameters",
+  "material_classes": {
+    "TISSUE": "Tejido",
+    "CYTOLOGY_SPECIMEN": "Muestra para citología",
+    "PARAFFIN_BLOCK": "Bloque de parafina previsto",
+    "GLASS_SLIDE": "Laminilla prevista"
+  },
+  "anatomic_sites": {
+    "BREAST": "Mama", "SKIN": "Piel", "KIDNEY": "Riñón", "LUNG": "Pulmón",
+    "BRONCHUS": "Bronquio", "GI_TRACT": "Tubo digestivo", "LYMPH_NODE": "Ganglio linfático",
+    "BONE_MARROW": "Médula ósea", "THYROID": "Tiroides", "GU_TRACT": "Tracto genitourinario",
+    "GYN_TRACT": "Tracto ginecológico", "SOFT_TISSUE": "Tejido blando",
+    "OTHER_ANATOMICAL_SITE": "Otro sitio anatómico"
+  },
+  "laterality": {
+    "LEFT": "Izquierda", "RIGHT": "Derecha", "BILATERAL": "Bilateral",
+    "MIDLINE": "Línea media", "NOT_APPLICABLE": "No aplica",
+    "UNSPECIFIED_IF_ALLOWED": "No especificada"
+  },
+  "lateralized_site_keys": ["BREAST", "KIDNEY", "LUNG", "BRONCHUS"],
+  "specimen_contexts": {
+    "BIOPSY": "Biopsia para examen", "RESECTION": "Pieza quirúrgica para examen",
+    "CYTOLOGY": "Muestra para citología", "OUTSIDE_MATERIAL": "Material externo para revisión",
+    "IHC": "Material para inmunohistoquímica", "SPECIAL_STAIN": "Material para tinción especial",
+    "IMMUNOFLUORESCENCE": "Tejido para inmunofluorescencia"
+  },
+  "ihc_marker_authority": {
+    "version": 1,
+    "other_allowed": false,
+    "markers": {"ER": "Receptor de estrógeno", "PR": "Receptor de progesterona", "HER2": "HER2", "KI67": "Ki-67"}
+  },
+  "breast_ihc_profile": {"version": 1, "components": ["ER", "PR", "HER2", "KI67"]},
+  "special_stain_authority": {
+    "version": 1,
+    "other_allowed": false,
+    "stains": {"PAS": "PAS", "GROCOTT": "Grocott", "MASSON": "Masson"}
+  },
+  "prior_report_statuses": {"PROVIDED": "Informe previo disponible", "PENDING": "Informe previo pendiente"},
+  "rules": {
+    "histopath_biopsy": {"materials": ["TISSUE"], "context": "BIOPSY", "site_required": true, "max_specimens": 10},
+    "histopath_resection": {"materials": ["TISSUE"], "context": "RESECTION", "site_required": true, "description_required": true, "max_specimens": 10},
+    "cyto_fna": {"materials": ["CYTOLOGY_SPECIMEN"], "context": "CYTOLOGY", "site_required": true, "max_specimens": 10},
+    "cyto_bronchial_brushing": {"materials": ["CYTOLOGY_SPECIMEN"], "context": "CYTOLOGY", "fixed_site": "BRONCHUS", "max_specimens": 1},
+    "cyto_bronchial_washing": {"materials": ["CYTOLOGY_SPECIMEN"], "context": "CYTOLOGY", "fixed_site": "BRONCHUS", "max_specimens": 1},
+    "ihc_single_marker": {"materials": ["PARAFFIN_BLOCK"], "context": "IHC", "site_required": true, "parameter": "marker_key", "max_specimens": 1},
+    "ihc_breast_profile": {"materials": ["PARAFFIN_BLOCK"], "context": "IHC", "fixed_site": "BREAST", "site_required": true, "parameter": "profile_version", "max_specimens": 1},
+    "histochemical_special_stain": {"materials": ["TISSUE", "PARAFFIN_BLOCK"], "context": "SPECIAL_STAIN", "site_required": true, "parameter": "stain_key", "max_specimens": 1},
+    "if_renal": {"materials": ["TISSUE"], "context": "IMMUNOFLUORESCENCE", "fixed_site": "KIDNEY", "max_specimens": 1, "handling_notice": "Coordinar manejo y transporte de tejido para IF renal con el proveedor antes de la toma"},
+    "if_skin": {"materials": ["TISSUE"], "context": "IMMUNOFLUORESCENCE", "fixed_site": "SKIN", "site_required": true, "max_specimens": 1, "handling_notice": "Coordinar manejo y transporte de tejido para IF cutánea con el proveedor antes de la toma"},
+    "pathology_outside_review": {"materials": ["PARAFFIN_BLOCK", "GLASS_SLIDE"], "context": "OUTSIDE_MATERIAL", "parameter": "outside_review", "max_specimens": 10}
+  }
+}
