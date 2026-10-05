@@ -1,0 +1,64 @@
+# PROC-CAT02A — Diagnostic procedure routing and provider capability authority
+
+**AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED**
+
+Source HEAD: `e23014e0667fc1799216ba037cd48e15be158b19`. PROC-CAT01 clinically approved the three candidate identities in principle. This document closes their proposed implementation contract; it does not activate a study, route, offering, search entry or UI leaf.
+
+## Current implementation and why new boundaries are required
+
+`study_order_routing_v1.json` has 13 group keys: `CLINICAL_LAB`, `GENETICS_MOLECULAR`, `PATHOLOGY_CYTOLOGY`, `GENERAL_IMAGING`, `CARDIOVASCULAR_DIAGNOSTICS`, `NEUROPHYSIOLOGY`, `PULMONARY_FUNCTION`, `SLEEP_DIAGNOSTICS`, `AUDIOLOGY_VESTIBULAR`, `DIGESTIVE_ENDOSCOPY`, `RESPIRATORY_DIAGNOSTIC_PROCEDURES`, `ENT_DIAGNOSTICS`, `DENTAL_DIAGNOSTICS`. The 13 active procedure keys are assigned 9 to `DIGESTIVE_ENDOSCOPY`, 3 to `RESPIRATORY_DIAGNOSTIC_PROCEDURES` and 1 to `ENT_DIAGNOSTICS`; none needs reassignment. Neither gynecology nor urology belongs to those groups or `GENERAL_IMAGING`.
+
+The existing provider authority is **not a group-level capability**. `HealthcareOrganizationMasterService` and `HealthcareOrganizationDirectoryService` bind an active canonical `study_type_id` to a master service and then to a location offering. The offering carries service mode and active/verified state. `HealthcareStudyProviderMatchingService` checks current order version, active catalog identity, active/verified organization and location, commercial matching eligibility, active master service, and active/verified **exact study offering** at the requested location/mode/region. It classifies each exact `order_item_id` as matched or unmatched. It does not infer a sibling study from the same routing group and does not recommend a provider. `HealthcareStudyInteropService` independently requires exact active/verified `ON_SITE` offerings for referred item IDs. A provider organization type, physician specialty, commercial entitlement, broad group label, or unverified provider claim is insufficient.
+
+`order-composition-v1.js` groups selected studies by routing key; `clinical_order_composition_create()` rejects duplicate group orders and study/group mismatches, then persists one order per group in a batch. Existing results use exact `related_order_item_ids`, with source-order version preserved. Portable HTML/PDF prints saved study names and indication/notes. These paths need no new performed-procedure architecture for the three diagnostic orders.
+
+## Closed routing decision
+
+| Proposed key | Display | Operational meaning | Future eligible family | Exact offering remains required? |
+|---|---|---|---|---|
+| `GYNECOLOGY_DIAGNOSTICS` | Diagnóstico ginecológico | One physician-issued gynecologic diagnostic order and one operational queue; may contain colposcopy and office diagnostic hysteroscopy | Approved gynecologic diagnostic procedures only; no treatment, pathology or imaging inferred | Yes, independently for each study at each location |
+| `UROLOGY_DIAGNOSTICS` | Diagnóstico urológico | Separate physician-issued urologic diagnostic order and operational queue | Approved urologic diagnostic procedures only; no biopsy, stent, stone extraction or therapy inferred | Yes, independently for each study at each location |
+
+Both are justified new routing groups: they represent separate service ownership and future neighboring diagnostic scopes, and ORD-COMP must produce a separate urology order. A gynecology organization may advertise the group, but it cannot match hysteroscopy from a verified colposcopy offering or vice versa. A urology group may later include other *approved* diagnostic services; membership alone conveys no ability. These proposed group keys are repository-consistent with existing uppercase operational keys. In PROC-CAT02B add them to the routing authority and map only the three approved identities; bump `order_routing_version` from 1 to 2 because the mapping authority changes. Previously issued V1 orders retain their saved version and routing snapshot; do not rewrite them.
+
+This decision resolves the provisional PROC-CAT01 spelling `GYNECOLOGIC_DIAGNOSTICS` to **`GYNECOLOGY_DIAGNOSTICS`**. Only the latter is the proposed final key; do not create both.
+
+With both gynecologic studies selected, ORD-COMP produces **one** `GYNECOLOGY_DIAGNOSTICS` order with **two distinct order items**. Cystoscopy in the same batch produces a **second** `UROLOGY_DIAGNOSTICS` order. The existing batch/idempotency and per-group priority/indication behavior applies. Grouping never substitutes for exact provider coverage: a candidate may cover one of the two gynecologic items and be classified partial. Referring both items requires each exact offering at the selected location.
+
+## Closed category and diagnostic-scope decision
+
+The current 13 procedure studies use catalog `category_key=ENDOSCOPIA`, but colposcopy is not an endoscopy in the catalog sense. Do not misclassify any of the three as `ENDOSCOPIA` or `OTROS`. Future rows use **`category_key=PROCEDIMIENTOS_DIAGNOSTICOS`**, display label **“Procedimientos diagnósticos”**. `clinical_study_types.category_key` is `VARCHAR(32)`, so this is an additive catalog/category contract, not DDL. In PROC-CAT02B extend the server category allowlist/label and HIER03 procedure root to include the new category while retaining the existing `ENDOSCOPIA` rows and their routes. Add only populated Ginecología and Urología leaves. No empty leaf and no current procedure recategorization.
+
+Proposed source-controlled `diagnostic_procedure_scope_v1` authority is an **immutable server-owned map keyed by `study_type_key`**. Its only three rows in V1 have `scope=DIAGNOSTIC_ONLY`, `allowed_service_modes=[ON_SITE]`, `optional_biopsy_intent=NONE_V1`, and an explicit excluded-act list (below). There is no client-supplied `diagnostic_only` flag, generic action selector, or therapeutic catalog identity. The writer resolves the canonical study key then validates it against this authority before issuing; the saved study name/identity makes the diagnostic scope readable in the portable order. The provider offering writer/verification and matching/referral paths must reject or exclude `HOME_SERVICE` and `MOBILE` for these three keys, including a previously created inconsistent offering. The exact study ID and verification process, rather than a new permission table, govern location capability. Unknown or missing scope policy denies activation/matching for the new keys; existing 13 remain on their current contracts.
+
+The proposed machine shape is `{version:1, studies:{<each approved study_key>:{scope:"DIAGNOSTIC_ONLY", allowed_service_modes:["ON_SITE"], optional_biopsy_intent:"NONE_V1"}}}`. The three keys are an exact allowlist, not a wildcard rule for every `ENDOSCOPIA` or procedure-category row. A contract gate should assert parity among this map, the three active catalog rows and their routing assignments before activation.
+
+| Study | Excluded acts — no implication from the diagnostic order or offering |
+|---|---|
+| `colposcopy_diagnostic` | Cervical biopsy, LEEP, conization, ablation, other therapeutic gynecology |
+| `hysteroscopy_diagnostic` | Operative hysteroscopy, resection, adhesiolysis, tissue acquisition, anesthesia service |
+| `cystoscopy_diagnostic` | Bladder biopsy, ureteric stent/catheter placement, stone extraction, resection, other intervention |
+
+The excluded-act list defines what the identity and provider match **do not claim**. It is not a procedural action order menu. A performed biopsy needs provider consent and performed-event authority; its pathology examination/order and result are separate. No V1 `BIOPSY_IF_INDICATED` field. Fasting, medication adjustment, sedation/anesthesia and other preparation belong to provider-level instructions/consent and future versioned metadata, not new study identities or required physician order parameters. The current offering/master service already have optional preparation instructions; these do not determine diagnostic scope or exact capability.
+
+## Provider capability semantics and verification
+
+`provider_capability_key` in the accompanying matrix is the **canonical `study_type_key` itself**, a stable semantic reference. It is not a new role permission, new provider table or asserted text field. At runtime it resolves to the server-owned `study_type_id`; the authoritative proof is a location offering for that exact ID, `ON_SITE`, active and verified, backed by an active master service, active/verified location and organization, and applicable commercial matching eligibility. Verification must attest the *diagnostic-only* service described by the approved name/scope policy. An advertised specialty, provider profile, organization type or adjacent offering cannot satisfy it. Revoked/inactive/unverified offers fail closed. Provider matching is a factual coverage read, not referral, booking or recommendation.
+
+PROC-CAT02B must include negative gates: only colposcopy offered does not match hysteroscopy; operative-only hysteroscopy does not verify diagnostic hysteroscopy; cystoscopy with stent/biopsy does not verify simple diagnostic cystoscopy; no diagnostic-scope policy, `HOME_SERVICE`/`MOBILE`, inactive/unverified master/offering/location/provider, or replaced/voided order yields eligible coverage. These gates use the existing exact-offering authority; no new provider schema is needed. An organization can own both gynecologic services while a location offers only one.
+
+## Per-identity implementation authority
+
+| Key | Portable display / aliases and controlled search | Leaf → route | Physician parameter / result | Priority / Mexican evidence |
+|---|---|---|---|---|
+| `colposcopy_diagnostic` | Colposcopia diagnóstica; aliases `colposcopía`, `videocolposcopia`; search `colposcopia`, `colposcopía`, `videocolposcopia` | Ginecología → `GYNECOLOGY_DIAGNOSTICS` | `NONE_V1`; private canonical PDF report sufficient, structured findings/media additive | P1; HGM colposcopy clinic/form and Médica Sur gynecology |
+| `hysteroscopy_diagnostic` | Histeroscopia diagnóstica; aliases `histeroscopía diagnóstica`, `histeroscopia de consultorio`; search `histeroscopia`, `histeroscopía`, `histeroscopia de consultorio` | Ginecología → `GYNECOLOGY_DIAGNOSTICS` | `NONE_V1`; private canonical PDF report sufficient, structured findings/media additive | P2; HGM diagnostic/operative split and Médica Sur gynecology |
+| `cystoscopy_diagnostic` | Cistoscopia diagnóstica; aliases `cistouretroscopia diagnóstica`, `videocistoscopia simple`; search `cistoscopia`, `cistouretroscopia`, `videocistoscopia` | Urología → `UROLOGY_DIAGNOSTICS` | `NONE_V1`; private canonical PDF report sufficient, structured findings/media additive | P2; HGM simple/biopsy/stent split and Médica Sur urology |
+
+Search terms are proposed for the new canonical keys only. They must not return inactive future rows. Existing EGD/EUS/CPRE and the other 13 procedure routes remain unchanged. Each proposed order item gets one canonical item ID; a result uses the existing exact source-order version and `related_order_item_ids`. The PDF report may be uploaded via the current private result mechanism. A completed-procedure event, operative note, consent, sedation record and specimen acquisition are future authorities and are **not** created by the order or result.
+
+## Readiness and evidence
+
+**IMPLEMENTATION_AUTHORITY_COMPLETE=true** for PROC-CAT02B: stable keys, names, aliases/search, category, two route keys, exact capability semantics, diagnostic-only scope policy shape, ON_SITE restriction, V1 parameter/result model and negative gates are decided here. This is a proposed contract requiring Director review; there is no remaining *domain-definition* blocker. Implementation and QA are still required before any activation. No schema migration is required for category/routing/scope; catalog insertion is data-only. No existing 13 routing assignment changes.
+
+Mexican clinical boundary evidence: [HGM colposcopy service](https://hgm.salud.gob.mx/interna/unidades/onco/onco.html) and [pathology/colposcopy form](https://hgm.salud.gob.mx/normateca/manuales_de_procedimientos/DCM/MAN_PROC_SERV_PAT_2024.pdf); [HGM gynecology manual](https://hgm.salud.gob.mx/normateca/manuales_de_procedimientos/DCM/MAN_PROC_SERV_GIN_2023.pdf) separates office diagnostic from operative hysteroscopy; [HGM urology manual](https://hgm.salud.gob.mx/normateca/manuales_de_procedimientos/DCM/MAN_PROC_SERV_URO_2022.pdf) separates simple diagnostic cystoscopy from biopsy and double-J catheter procedures; [Médica Sur gynecology](https://laboratorio.medicasur.com.mx/es/ms/Atencion_Ginecologica_Tlalpan) lists colposcopy and hysteroscopy as services. These sources establish distinct clinical capabilities, not that an arbitrary provider location has a verified offering.
