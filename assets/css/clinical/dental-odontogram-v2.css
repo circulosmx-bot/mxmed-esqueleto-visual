@@ -44,6 +44,8 @@
 .dental-location-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:12px}
 .dental-location-dialog-head strong{font-size:20px}
 .dental-location-dialog-close{min-height:44px;padding:7px 14px;border:1px solid #9acbd8;border-radius:7px;background:#fff;color:#084365;cursor:pointer}
+.dental-location-dialog :focus-visible{outline:3px solid #0755ba;outline-offset:2px}
+.dental-location-duplicate-warning:not(:empty){color:#9b2c2c;margin:8px 0}
 .dental-location-aux{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
 .dental-location-aux label{display:grid;gap:4px;min-width:160px}
 .dental-location-aux input,.dental-location-aux select{min-height:44px;border:1px solid #b9d9e5;border-radius:7px;padding:6px}

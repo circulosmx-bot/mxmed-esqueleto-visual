@@ -4,7 +4,9 @@
   const legacy=window.mxmedDentalLocationV1;
   const selector=window.mxmedDentalOdontogramV2;
   if(!legacy||!selector)return;
-  const policies={CBCT:'dental_cbct',TMJ:'tmj_comparative_xray',SCAN:'dental_intraoral_scan',MODEL:'dental_study_model'};
+  const policies={CBCT:'dental_cbct',TMJ:'tmj_comparative_xray',SCAN:'dental_intraoral_scan',MODEL:'dental_study_model',
+    PERIAPICAL:'dental_periapical_xray',BITEWING:'dental_bitewing_xray',OCCLUSAL:'dental_occlusal_xray'};
+  const kinds={dental_periapical_xray:'PERIAPICAL',dental_bitewing_xray:'BITEWING',dental_occlusal_xray:'OCCLUSAL'};
   const coverageFor=value=>{
     if(value.location_type==='TOOTH_LOCATION'||value.location_type==='QUADRANT_LOCATION')return 'LOCALIZED';
     if(value.location_type==='ARCH_LOCATION')return {MAXILLARY:'MAXILLARY_ARCH',MANDIBULAR:'MANDIBULAR_ARCH',BOTH_ARCHES:'BOTH_ARCHES'}[value.arch_key];
@@ -47,6 +49,9 @@
     if(kind==='TMJ')return !!value.tmj_side&&['LATERAL','PA'].includes(value.projection);
     if(kind==='SCAN')return !!value.arch_key;
     if(kind==='MODEL')return !value||!!value.arch_key;
+    if(kind==='PERIAPICAL')return value.location_type==='TOOTH_LOCATION'&&value.tooth_fdi_codes?.length>=1&&value.tooth_fdi_codes.length<=8&&!!value.dentition_mode;
+    if(kind==='BITEWING')return value.location_type==='REGION_LOCATION'&&value.region_key==='POSTERIOR'&&value.arch_key==='BOTH_ARCHES'&&['LEFT','RIGHT','BILATERAL'].includes(value.side_key)&&!!value.dentition_mode;
+    if(kind==='OCCLUSAL')return value.location_type==='ARCH_LOCATION'&&['MAXILLARY','MANDIBULAR'].includes(value.arch_key)&&!!value.dentition_mode;
     return legacy.isComplete(kind,value);
   }
   function mount(host,kind,initial,onChange){
@@ -68,9 +73,13 @@
       const warning=host.querySelector('[data-dental-v2-warning]');if(warning)warning.textContent=issue();
     };
     host.textContent='Cargando autoridad dental…';
-    selector.authority().then(({config})=>{
+    Promise.all([selector.authority(),fetch('/assets/data/clinical/dental-study-location-policies-v1.json',{credentials:'same-origin'})
+      .then(response=>response.ok?response.json():Promise.reject(new Error('DENTAL_STUDY_POLICY_UNAVAILABLE')))])
+      .then(([{config},studyPolicies])=>{
       if(destroyed)return;
-      const policy=config.study_policies[policies[kind]];
+      if(studyPolicies.contract_version!==1||studyPolicies.location_authority_version!==2)throw Error('DENTAL_STUDY_POLICY_INVALID');
+      const policy=studyPolicies.study_policies[policies[kind]]||config.study_policies[policies[kind]];
+      if(!policy)throw Error('DENTAL_STUDY_POLICY_MISSING');
       const initialLocation=initialV2(kind,initial);
       host.innerHTML=`<div class="dental-location-aux"></div><div data-dental-v2-selector></div><p data-dental-v2-warning role="status"></p>`;
       const aux=host.querySelector('.dental-location-aux');
@@ -89,6 +98,8 @@
       inner=selector.mount(host.querySelector('[data-dental-v2-selector]'),{
         authorityVersion:2,allowedDentitionModes:policy.allowed_dentition_modes,
         allowedLocationModes:policy.allowed_location_modes,minSelection:policy.min_selection,maxSelection:policy.max_selection,
+        allowedRegions:policy.allowed_regions,allowedArches:policy.allowed_arches,allowedSides:policy.allowed_sides,
+        requireDentition:!!policy.required_fields?.includes('dentition_mode'),
         required:policy.required,value:initialLocation,onChange:emit,
       });
       inner.ready.then(()=>{if(!destroyed){loaded=true;host.querySelector('[data-dental-v2-warning]').textContent=issue();}});
@@ -97,7 +108,8 @@
       }
     }).catch(()=>{if(!destroyed)host.textContent='No se pudo cargar la autoridad dental.';});
     return {location:()=>current,valid:()=>loaded&&(!dirty&&initial?.contract_version===1?legacy.isComplete(kind,current):!!inner?.valid())&&issue()==='',issue,kind,
+      dentitionMode:()=>inner?.dentitionMode?.()||null,
       destroy:()=>{destroyed=true;inner?.destroy();}};
   }
-  window.mxmedDentalLocation=Object.freeze({kindFor:legacy.kindFor,mount,summary,isComplete});
+  window.mxmedDentalLocation=Object.freeze({kindFor:key=>kinds[key]||legacy.kindFor(key),mount,summary,isComplete});
 })();

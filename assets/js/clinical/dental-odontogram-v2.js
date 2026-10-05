@@ -42,7 +42,7 @@
       const base={contract_version:2,location_type:modeType[mode],selection_mode:mode};
       if(isTooth())return selected.size?{...base,numbering_system:'FDI_ISO_3950',dentition_mode:dentition,tooth_fdi_codes:codes()}:null;
       if(mode==='QUADRANT')return key?{...base,dentition_mode:dentition,quadrant_key:key}:null;
-      if(mode==='ARCH')return key?{...base,arch_key:key}:null;
+      if(mode==='ARCH')return key?{...base,...(options.requireDentition&&hasDentitionSelection?{dentition_mode:dentition}:{}),arch_key:key}:null;
       if(mode==='TMJ_REGION')return key?{...base,tmj_side:key}:null;
       if(mode==='REGION'||mode==='BILATERAL_REGION'){
         if(!hasRegionSelection||!region||region==='OTHER_SPECIFIED'&&!detail.trim()||
@@ -63,13 +63,15 @@
       const current=value();
       if(!current)return required?'Seleccione la ubicación antes de continuar.':'';
       if(!allowed.includes(mode)||dentitions.length>0&&current.dentition_mode&&!dentitions.includes(current.dentition_mode))return 'Ubicación no permitida para este uso.';
+      if(options.requireDentition&&!current.dentition_mode)return 'Seleccione la dentición antes de continuar.';
       if(isTooth()){
         if(selected.size<min||selected.size>max||mode==='SINGLE_TOOTH'&&selected.size!==1)return `Seleccione entre ${min} y ${max} piezas.`;
         const map=toothByCode();
         if(codes().some(code=>!map.has(code)||dentition!=='MIXED'&&(map.get(code).dentition==='DECIDUOUS'?'PRIMARY':'PERMANENT')!==dentition))return 'La pieza no corresponde a la dentición seleccionada.';
       }
-      if(mode==='QUADRANT'&&!config.quadrants.includes(key)||mode==='ARCH'&&!config.arches.includes(key)||mode==='TMJ_REGION'&&!config.tmj_sides.includes(key))return 'Ubicación no válida.';
+      if(mode==='QUADRANT'&&!config.quadrants.includes(key)||mode==='ARCH'&&!(options.allowedArches||config.arches).includes(key)||mode==='TMJ_REGION'&&!config.tmj_sides.includes(key))return 'Ubicación no válida.';
       if((mode==='REGION'||mode==='BILATERAL_REGION')&&(!(options.allowedRegions||config.regions).includes(region)||mode==='BILATERAL_REGION'&&region==='MAXILLOFACIAL'))return 'Región no permitida.';
+      if((mode==='REGION'||mode==='BILATERAL_REGION')&&region!=='MAXILLOFACIAL'&&(!(options.allowedArches||config.arches).includes(arch)||!(options.allowedSides||config.sides).includes(current.side_key)))return 'Lado o arcada no permitidos.';
       return '';
     }
     const valid=()=>!!config&&issue()==='';
@@ -104,7 +106,7 @@
       if(!live.isConnected)host.replaceChildren(live);
       else host.querySelector('.odontogram-v2')?.remove();
       host.insertAdjacentHTML('afterbegin',`<section class="odontogram-v2" aria-label="Selector dental FDI">
-        ${dentitions.length>1&&mode!=='TMJ_REGION'?`<div class="odontogram-segment" role="group" aria-label="Dentición">${dentitions.map(item=>`<button type="button" data-odontogram-dentition="${item}" aria-pressed="${dentition===item}">${{PERMANENT:'Permanente',PRIMARY:'Temporal',MIXED:'Mixta'}[item]}</button>`).join('')}</div>`:''}
+        ${dentitions.length>1&&mode!=='TMJ_REGION'?`<div class="odontogram-segment" role="group" aria-label="Dentición">${dentitions.map(item=>`<button type="button" data-odontogram-dentition="${item}" aria-pressed="${dentition===item&&(!options.requireDentition||hasDentitionSelection)}">${{PERMANENT:'Permanente',PRIMARY:'Temporal',MIXED:'Mixta'}[item]}</button>`).join('')}</div>`:''}
         ${allowed.length>1?`<div class="odontogram-mode-list" role="group" aria-label="Tipo de ubicación">${allowed.map(item=>`<button type="button" data-odontogram-mode="${item}" aria-pressed="${mode===item}">${labels[item]}</button>`).join('')}</div>`:''}
         <p class="odontogram-prompt">${isTooth()?mode==='SINGLE_TOOTH'?'Seleccione la pieza':'Seleccione la pieza o piezas':mode==='TMJ_REGION'?'Seleccione la ATM':mode==='REGION'||mode==='BILATERAL_REGION'?'Seleccione la región':'Seleccione la ubicación'}</p>
         <div class="odontogram-location"></div>
@@ -128,13 +130,13 @@
         const lower=document.createElement('strong');lower.className='odontogram-arch-title lower';lower.textContent='Mandíbula (inferior)';stage.append(lower);
         viewport.append(stage);target.append(viewport);
       }else if(mode==='QUADRANT'||mode==='ARCH'||mode==='TMJ_REGION'){
-        const group=document.createElement('div');group.className='odontogram-choices';group.innerHTML=optionButtons(mode==='QUADRANT'?config.quadrants:mode==='ARCH'?config.arches:config.tmj_sides,mode);
+        const group=document.createElement('div');group.className='odontogram-choices';group.innerHTML=optionButtons(mode==='QUADRANT'?config.quadrants:mode==='ARCH'?(options.allowedArches||config.arches):config.tmj_sides,mode);
         target.append(group);
       }else if(mode==='REGION'||mode==='BILATERAL_REGION'){
         const form=document.createElement('div');form.className='odontogram-region';
         const select=(field,list,chosen)=>`<label>${{region:'Región',arch:'Arcada',side:'Lado'}[field]}<select data-odontogram-select="${field}"><option value="">${{region:'Seleccione la región',arch:'Seleccione la arcada',side:'Seleccione el lado'}[field]}</option>${list.map(item=>`<option value="${item}" ${item===chosen?'selected':''}>${labels[item]}</option>`).join('')}</select></label>`;
         const allowedRegions=options.allowedRegions||config.regions;
-        form.innerHTML=select('region',mode==='BILATERAL_REGION'?allowedRegions.filter(item=>item!=='MAXILLOFACIAL'):allowedRegions,region)+(region==='MAXILLOFACIAL'?'':select('arch',config.arches,arch)+(mode==='BILATERAL_REGION'?'':select('side',config.sides.filter(item=>item!=='BILATERAL'),side)))+
+        form.innerHTML=select('region',mode==='BILATERAL_REGION'?allowedRegions.filter(item=>item!=='MAXILLOFACIAL'):allowedRegions,region)+(region==='MAXILLOFACIAL'?'':select('arch',options.allowedArches||config.arches,arch)+(mode==='BILATERAL_REGION'?'':select('side',(options.allowedSides||config.sides).filter(item=>item!=='BILATERAL'),side)))+
           (region==='OTHER_SPECIFIED'?`<label>Especifique la región<input data-odontogram-detail maxlength="120" value="${String(detail).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}"></label>`:'');
         target.append(form);
       }
@@ -179,7 +181,7 @@
     host.addEventListener('click',click);host.addEventListener('change',change);host.addEventListener('input',input);host.addEventListener('keydown',keydown);
     host.textContent='Cargando odontograma FDI…';
     const ready=authority().then(data=>{if(destroyed)return;config=data.config;teeth=data.teeth;render();}).catch(()=>{if(!destroyed)host.textContent='No se pudo cargar la autoridad dental.';});
-    return {ready,value,valid,issue,destroy:()=>{destroyed=true;host.removeEventListener('click',click);host.removeEventListener('change',change);host.removeEventListener('input',input);host.removeEventListener('keydown',keydown);}};
+    return {ready,value,valid,issue,dentitionMode:()=>hasDentitionSelection?dentition:null,destroy:()=>{destroyed=true;host.removeEventListener('click',click);host.removeEventListener('change',change);host.removeEventListener('input',input);host.removeEventListener('keydown',keydown);}};
   }
   window.mxmedDentalOdontogramV2=Object.freeze({mount,authority});
 })();

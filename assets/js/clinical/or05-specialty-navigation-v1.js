@@ -170,8 +170,14 @@
           }
         ]
       },
-      "D2": {"id":"dental-radiology","label":"Radiología dental 2D","icon":"radiology","parts":[
-        {"category":"IMAGEN","keys":["dental_panoramic_xray","dental_cephalometric_xray","tmj_comparative_xray"]}]},
+      "DI": {"id":"dental-intraoral","label":"Radiografía intraoral","icon":"radiology","parts":[
+        {"category":"IMAGEN","keys":["dental_periapical_xray","dental_bitewing_xray","dental_occlusal_xray","dental_full_periapical_series"]}]},
+      "D2": {"id":"dental-radiology","label":"Radiografía panorámica","icon":"radiology","parts":[
+        {"category":"IMAGEN","keys":["dental_panoramic_xray"]}]},
+      "CE": {"id":"dental-cephalometry","label":"Cefalometría","icon":"radiology","parts":[
+        {"category":"IMAGEN","keys":["dental_cephalometric_xray"]}]},
+      "AT": {"id":"dental-tmj","label":"ATM","icon":"radiology","parts":[
+        {"category":"IMAGEN","keys":["tmj_comparative_xray"]}]},
       "CB": {"id":"dental-cbct","label":"Cone Beam / CBCT","icon":"view_in_ar","parts":[
         {"category":"IMAGEN","keys":["dental_cbct"]}]},
       "RO": {"id":"dental-records","label":"Registros ortodóncicos","icon":"dentistry","parts":[
@@ -283,12 +289,12 @@
       ]
     },
     "dental": {
-      "quick": ["D2","CB","EM"],
-      "promoted": ["dental_panoramic_xray","dental_intraoral_scan","dental_cbct"]
+      "quick": ["DI","D2","CE","CB","AT","EM"],
+      "promoted": ["dental_periapical_xray","dental_panoramic_xray","dental_intraoral_scan","dental_cbct"]
     },
     "dental_ortho": {"quick":["RO","D2","EM","CB"],"promoted":["dental_panoramic_xray","dental_cephalometric_xray","dental_clinical_photographs","dental_intraoral_scan","dental_study_model"]},
     "dental_implant": {"quick":["CB","D2","EM"],"promoted":["dental_cbct","dental_panoramic_xray","dental_intraoral_scan","dental_study_model"]},
-    "dental_endo": {"quick":["D2","CB"],"promoted":["dental_panoramic_xray"]},
+    "dental_endo": {"quick":["DI","D2","CB"],"promoted":["dental_periapical_xray","dental_panoramic_xray"]},
     "dental_perio": {"quick":["D2","CB"],"promoted":["dental_panoramic_xray","dental_clinical_photographs"]},
     "dental_maxillofacial": {"quick":["CB","D2"],"promoted":["dental_cbct","dental_panoramic_xray","tmj_comparative_xray"]},
     "dental_prosthetic": {"quick":["EM","D2"],"promoted":["dental_intraoral_scan","dental_study_model","dental_clinical_photographs"]},

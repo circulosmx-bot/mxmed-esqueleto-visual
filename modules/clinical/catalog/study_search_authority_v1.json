@@ -15,7 +15,10 @@
     "anti cc",
     "t4 lib",
     "t4 l",
-    "t3 l"
+    "t3 l",
+    "serie de 14",
+    "serie de 16",
+    "serie de 18"
   ],
   "short_modality_heads": {
     "tc": [
@@ -644,7 +647,10 @@
         "Tomografía dental",
         "Tomografía computarizada de haz cónico dental"
       ],
-      "discovery_terms": []
+      "discovery_terms": [
+        "ATM",
+        "articulación temporomandibular"
+      ]
     },
     {
       "study_key": "dental_cephalometric_xray",
@@ -656,7 +662,9 @@
         "Lateral de cráneo",
         "Radiografía lateral de cráneo"
       ],
-      "discovery_terms": []
+      "discovery_terms": [
+        "Cefalometría"
+      ]
     },
     {
       "study_key": "dental_panoramic_xray",
@@ -2948,17 +2956,94 @@
       "study_key": "panel_quimica_6",
       "canonical_display_name": "Química sanguínea de 6 elementos",
       "common_display_name": "QS6",
-      "abbreviations": ["QS6"],
-      "equivalent_aliases": ["Química sanguínea 6", "Química 6", "6 elementos"],
-      "discovery_terms": ["química sanguínea", "quimica sanguinea"]
+      "abbreviations": [
+        "QS6"
+      ],
+      "equivalent_aliases": [
+        "Química sanguínea 6",
+        "Química 6",
+        "6 elementos"
+      ],
+      "discovery_terms": [
+        "química sanguínea",
+        "quimica sanguinea"
+      ]
     },
     {
       "study_key": "arterial_blood_gas",
       "canonical_display_name": "Gasometría arterial",
       "common_display_name": "Gas arterial",
-      "abbreviations": ["GSA", "ABG"],
-      "equivalent_aliases": ["Gas arterial", "Gases arteriales"],
-      "discovery_terms": ["gasometria arterial"]
+      "abbreviations": [
+        "GSA",
+        "ABG"
+      ],
+      "equivalent_aliases": [
+        "Gas arterial",
+        "Gases arteriales"
+      ],
+      "discovery_terms": [
+        "gasometria arterial"
+      ]
+    },
+    {
+      "study_key": "dental_periapical_xray",
+      "canonical_display_name": "Radiografía periapical",
+      "common_display_name": "Radiografía periapical",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Rx periapical",
+        "Radiografía dental periapical"
+      ],
+      "discovery_terms": [
+        "periapical",
+        "periapicales"
+      ]
+    },
+    {
+      "study_key": "dental_bitewing_xray",
+      "canonical_display_name": "Radiografía interproximal de aleta de mordida",
+      "common_display_name": "Radiografía bitewing",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Aleta de mordida",
+        "Radiografía interproximal"
+      ],
+      "discovery_terms": [
+        "bitewing",
+        "aleta",
+        "aleta de mordida",
+        "interproximal"
+      ]
+    },
+    {
+      "study_key": "dental_occlusal_xray",
+      "canonical_display_name": "Radiografía oclusal dental",
+      "common_display_name": "Radiografía oclusal",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Radiografía oclusal dental",
+        "Rx oclusal"
+      ],
+      "discovery_terms": [
+        "oclusal"
+      ]
+    },
+    {
+      "study_key": "dental_full_periapical_series",
+      "canonical_display_name": "Serie radiográfica intraoral de boca completa",
+      "common_display_name": "Serie periapical completa",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Serie radiográfica intraoral de boca completa",
+        "Serie completa"
+      ],
+      "discovery_terms": [
+        "serie periapical",
+        "serie completa",
+        "serie de 14",
+        "serie de 16",
+        "serie de 18"
+      ]
     }
   ]
 }

@@ -1165,13 +1165,11 @@
       "groups": []
     },
     "dental-radiology": {
-      "heading": "DENTAL / RADIOLOGÍA DENTAL 2D",
+      "heading": "DENTAL / RADIOGRAFÍA PANORÁMICA",
       "root_family": "dental",
       "small": true,
       "study_keys": [
-        "dental_cephalometric_xray",
-        "dental_panoramic_xray",
-        "tmj_comparative_xray"
+        "dental_panoramic_xray"
       ],
       "featured": [],
       "groups": []
@@ -1271,6 +1269,39 @@
       "small": true,
       "study_keys": [
         "pathology_outside_review"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-intraoral": {
+      "heading": "DENTAL / RADIOGRAFÍA INTRAORAL",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "dental_periapical_xray",
+        "dental_bitewing_xray",
+        "dental_occlusal_xray",
+        "dental_full_periapical_series"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-cephalometry": {
+      "heading": "DENTAL / CEFALOMETRÍA",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "dental_cephalometric_xray"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "dental-tmj": {
+      "heading": "DENTAL / ATM",
+      "root_family": "dental",
+      "small": true,
+      "study_keys": [
+        "tmj_comparative_xray"
       ],
       "featured": [],
       "groups": []

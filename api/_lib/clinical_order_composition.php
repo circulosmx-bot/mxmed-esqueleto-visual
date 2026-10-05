@@ -11,6 +11,19 @@ function clinical_order_routing_config(): array
     static $config;
     return $config ??= json_decode(file_get_contents(__DIR__.'/../../modules/clinical/catalog/study_order_routing_v1.json'), true, 512, JSON_THROW_ON_ERROR);
 }
+/** Only this validated dental location is allowed to distinguish repeated canonical study items. */
+function clinical_order_composition_identity(array $snapshot): string
+{
+    if ($snapshot['study_type_key'] === 'dental_occlusal_xray') {
+        $location = $snapshot['dental_location'] ?? null;
+        if (!is_array($location) || ($location['location_type'] ?? null) !== 'ARCH_LOCATION'
+            || !in_array($location['arch_key'] ?? null, ['MAXILLARY','MANDIBULAR'], true)) {
+            throw new InvalidArgumentException('DENTAL_OCCLUSAL_LOCATION_INVALID');
+        }
+        return 'id:'.$snapshot['study_type_id'].':ARCH:'.$location['arch_key'];
+    }
+    return 'id:'.$snapshot['study_type_id'];
+}
 function clinical_order_composition_create(PDO $pdo, string $doctor, string $patient, string $actor, array $command, string $key): array
 {
     $uuid = $command['order_composition_batch_uuid'] ?? null;
@@ -67,7 +80,7 @@ function clinical_order_composition_create(PDO $pdo, string $doctor, string $pat
                         $snapshot=clinical_study_order_snapshot($pdo,$item,$i+1);
                         if($snapshot['study_type_key']!==null){
                             if(($config['studies'][$snapshot['study_type_key']]??null)!==$group)throw new InvalidArgumentException('STUDY_ROUTING_MISMATCH');
-                            $identity='id:'.$snapshot['study_type_id'];
+                            $identity=clinical_order_composition_identity($snapshot);
                         }else{
                             if(($item['custom_routing_confirmed']??false)!==true)throw new InvalidArgumentException('CUSTOM_ROUTING_CONFIRMATION_REQUIRED');
                             $identity='custom:'.$snapshot['study_category'].':'.mb_strtolower($snapshot['study_display_name']);

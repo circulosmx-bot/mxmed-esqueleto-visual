@@ -102,7 +102,7 @@
         counts();selector.querySelector('input')?.focus({preventScroll:true});return true;
       }catch(_){selector.textContent='No se pudo preparar la selección. Vuelve a esta familia para reintentar.';return true;}
     }
-    function hide(){if(busy||uncertain)return false;sync();closeReview(false);closeChooser();host.hidden=true;return true;}
+    function hide(){if(busy||uncertain)return false;composer?.closeDentalDialog?.();sync();closeReview(false);closeChooser();host.hidden=true;return true;}
     function review(focusKey='',origin=null){
       sync();error.textContent='';
       const grouped=groups(),single=grouped.size===1,focused=focusKey&&grouped.has(focusKey);
@@ -123,7 +123,7 @@
       for(const [key,items] of reviewed){
         const service=config.groups[key]||'Servicio pendiente',card=el('section','','ordcomp-review-order');card.dataset.reviewGroup=key;card.append(el('h5',service));
         const list=el('ul');items.forEach(({item})=>{const li=el('li',item.name+(item.type==='custom'?' · Estudio personalizado':''));
-          if(item.dentalLocation)li.append(el('small',window.mxmedDentalLocationV1.summary(item.dentalLocation)));
+          const dentalSummary=composer?.dentalSummary(item);if(dentalSummary)li.append(el('small',dentalSummary));
           if(item.specimenRequirements){const request=item.specimenRequirements,detail=[(request.specimen_type_key&&specimenConfig.specimen_types[request.specimen_type_key]),(request.collection_mode==='TIMED'&&`${request.requested_duration_minutes/60} horas`),(request.source_site_text&&`Sitio: ${request.source_site_text}`)].filter(Boolean).join(' · ');if(detail)li.append(el('small',detail));}
           if(item.pathologyParameters)li.append(el('small',window.mxmedPathologyParametersV1.summary(item.key,item.pathologyParameters,pathologyConfig)));
           if(item.imagingParameters)li.append(el('small',window.mxmedImagingParametersV1.summary(item.key,item.imagingParameters,imagingConfig)));
@@ -185,7 +185,7 @@
       for(const doc of data.orders){
         const key=doc.order_routing_group_key,items=grouped.get(key)||[],card=el('article','','ordcomp-issued-order');
         card.append(el('h5',config.groups[key]),el('p',`${items.length} estudios · Emitida`));
-        const list=el('ul');items.forEach(({item})=>list.append(el('li',item.name)));card.append(list);
+        const list=el('ul');items.forEach(({item})=>{const li=el('li',item.name),summary=composer?.dentalSummary(item);if(summary)li.append(el('small',summary));list.append(li);});card.append(list);
         card.append(el('small',`Referencia: ${doc.document_uuid}`));
         const query=new URLSearchParams({uuid:doc.document_uuid,doctor_id:context.doctor});
         const print=el('a','Imprimir','btn btn-outline-primary btn-sm');print.href='/modules/clinical/ui/portable-order.php?'+query;print.target='_blank';print.rel='noopener';

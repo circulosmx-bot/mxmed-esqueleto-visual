@@ -74,7 +74,7 @@ $insert=$pdo->prepare('INSERT INTO clinical_study_types VALUES(?,?,?,?,1)');
 foreach(['dental_periapical_xray','dental_bitewing_xray','dental_occlusal_xray','dental_full_periapical_series','dental_cbct'] as $i=>$key)$insert->execute([$i+1,$key,$key,'IMAGEN']);
 $item=clinical_study_order_snapshot($pdo,['study_type_key'=>'dental_periapical_xray','dental_location'=>$tooth(['16','17']),'dental_study_policy_version'=>1],1);
 $pass($item['dental_location_authority_version']===2&&$item['dental_study_policy_version']===1&&$item['dental_location']['tooth_fdi_codes']===['16','17'],'QA_LOCATION_POLICY_SNAPSHOT');
-$pass($item['dental_location_label']==='Piezas 16, 17','QA_LOCATION_LABEL_SNAPSHOT');
+$pass($item['dental_location_label']==='Piezas: 16, 17','QA_LOCATION_LABEL_SNAPSHOT');
 $reject(fn()=>clinical_study_order_snapshot($pdo,['study_type_key'=>'dental_periapical_xray','dental_location'=>$tooth(['16']),'dental_study_policy_version'=>2],1),'QA_REJECT_POLICY_VERSION');
 $series=clinical_study_order_snapshot($pdo,['study_type_key'=>'dental_full_periapical_series','dental_acquisition_protocol'=>$protocol('FULL_MOUTH_18')],1);
 $pass($series['dental_study_policy_version']===1&&$series['dental_location_authority_version']===2&&$series['dental_acquisition_protocol']['nominal_image_count']===18,'QA_SERIES_SNAPSHOT');

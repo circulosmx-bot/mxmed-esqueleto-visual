@@ -131,7 +131,14 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
         'external_code_version' => $version, 'note' => $note,
         ...($dentalLocation === null ? [] : [
             'dental_location' => $dentalLocation,
-            'dental_location_label' => clinical_dental_location_summary($dentalLocation),
+            'dental_location_label' => match ($key) {
+                'dental_periapical_xray' => 'Piezas: '.implode(', ', $dentalLocation['tooth_fdi_codes']),
+                'dental_bitewing_xray' => 'Región: Posterior '.match ($dentalLocation['side_key']) {
+                    'LEFT' => 'izquierda', 'RIGHT' => 'derecha', 'BILATERAL' => 'bilateral',
+                },
+                'dental_occlusal_xray' => 'Arcada: '.($dentalLocation['arch_key'] === 'MAXILLARY' ? 'Maxilar' : 'Mandíbula'),
+                default => clinical_dental_location_summary($dentalLocation),
+            },
         ]),
         ...($policyVersion === null || (($dentalLocation['contract_version'] ?? null) !== 2 && $dentalProtocol === null) ? [] : [
             'dental_study_policy_version' => $policyVersion,

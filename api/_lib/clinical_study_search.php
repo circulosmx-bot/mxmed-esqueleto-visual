@@ -8,7 +8,7 @@ function clinical_study_search_authority(): array
     if ($authority !== null) return $authority;
     $path = __DIR__.'/../../modules/clinical/catalog/study_search_authority_v1.json';
     $decoded = json_decode((string)file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-    if (($decoded['version'] ?? null) !== 1 || count($decoded['studies'] ?? []) !== 280) {
+    if (($decoded['version'] ?? null) !== 1 || count($decoded['studies'] ?? []) !== 284) {
         throw new RuntimeException('STUDY_SEARCH_AUTHORITY_INVALID');
     }
     $byKey = [];

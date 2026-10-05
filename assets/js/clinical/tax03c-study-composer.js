@@ -22,8 +22,23 @@
     const doctorId=String(options.doctorId||'').trim();
     const readonly=!!options.readonly;
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
+    const locationRepeatKey='dental_occlusal_xray';
+    const locationFingerprint=item=>item.key===locationRepeatKey&&item.dentalLocation?.location_type==='ARCH_LOCATION'
+      ?`ARCH:${item.dentalLocation.arch_key||''}`:null;
+    const hasLocationDraft=key=>selected.some(item=>item.type==='canonical'&&item.key===key&&!locationFingerprint(item));
+    const selectedLimit=row=>row.study_type_key===locationRepeatKey
+      ?hasLocationDraft(locationRepeatKey)||selected.filter(item=>item.type==='canonical'&&item.key===locationRepeatKey).length>=2
+      :selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id));
+    let dentalAcquisitionConfig=null,dentalAcquisitionRequest=null,dentalAcquisitionError=false;
+    const ensureDentalAcquisition=()=>{
+      if(dentalAcquisitionConfig||dentalAcquisitionRequest||dentalAcquisitionError)return;
+      dentalAcquisitionRequest=fetch('/assets/data/clinical/dental-acquisition-protocols-v1.json',{credentials:'same-origin'})
+        .then(response=>response.ok?response.json():Promise.reject(new Error('DENTAL_PROTOCOL_UNAVAILABLE')))
+        .then(config=>{if(config.authority!=='DENTAL_ACQUISITION_PROTOCOLS_V1'||config.contract_version!==1)throw Error('DENTAL_PROTOCOL_INVALID');if(!destroyed){dentalAcquisitionConfig=config;renderSelected();}})
+        .catch(()=>{dentalAcquisitionRequest=null;dentalAcquisitionError=true;if(!destroyed)renderSelected();});
+    };
     let presetApplications=Array.isArray(options.presetApplications)?clone(options.presetApplications):[];
-    let editingIndex=-1,activeDentalEditor=null;
+    let editingIndex=-1,activeDentalEditor=null,activeDentalDialog=null,invalidDentalSelection=false;
     const specimen=options.specimenConfig;
     const panels=options.panelConfig?.panels||{},presets=options.presetConfig?.presets||{};
     const pathology=window.mxmedPathologyParametersV1,pathologyAuthority=options.pathologyConfig;
@@ -144,6 +159,10 @@
     custom.addEventListener('input',()=>options.onDraftChange?.());
 
     function renderSelected(){
+      if(selected.some(item=>item.key==='dental_full_periapical_series'))ensureDentalAcquisition();
+      invalidDentalSelection=false;
+      const previousDialog=activeDentalDialog;activeDentalDialog=null;
+      if(previousDialog){if(previousDialog.open)previousDialog.close();previousDialog.remove();}
       activeDentalEditor?.destroy?.();activeDentalEditor=null;
       selectedBox.replaceChildren();
       if(!selected.length){const p=document.createElement('p');p.textContent='Todavía no has agregado estudios.';selectedBox.append(p);return;}
@@ -197,6 +216,15 @@
           row.append(oxygen);
         }
         const dental=window.mxmedDentalLocation||window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
+        if(item.key==='dental_full_periapical_series'){
+          const label=document.createElement('label');label.className='dental-acquisition-editor';label.textContent='Protocolo de serie · dentición permanente';
+          const select=document.createElement('select');select.setAttribute('aria-label','Protocolo de serie periapical completa');
+          select.add(new Option(dentalAcquisitionConfig?'Seleccione 14, 16 o 18 imágenes':dentalAcquisitionError?'No se pudieron cargar los protocolos':'Cargando protocolos…',''));
+          for(const [key,variant] of Object.entries(dentalAcquisitionConfig?.variants||{}))select.add(new Option(variant.label_es,key));
+          select.value=item.dentalAcquisitionProtocol?.protocol_key||'';select.disabled=readonly||!dentalAcquisitionConfig;
+          select.addEventListener('change',()=>{item.dentalAcquisitionProtocol=select.value?{contract_version:1,protocol_key:select.value,dentition_mode:'PERMANENT'}:null;notify();});
+          label.append(select);row.append(label);
+        }
         if(kind&&kind!=='NONE'&&!readonly){
           const configure=document.createElement('button');configure.type='button';configure.className='btn btn-outline-primary btn-sm dental-config-toggle';
           configure.dataset.tax03cDental=String(index);configure.textContent=editingIndex===index?'Ocultar ubicación':'Configurar ubicación';
@@ -211,11 +239,21 @@
             const head=document.createElement('div');head.className='dental-location-dialog-head';
             const title=document.createElement('strong');title.textContent=`Ubicación · ${item.name}`;
             const close=document.createElement('button');close.type='button';close.className='dental-location-dialog-close';close.textContent='Cerrar';close.addEventListener('click',()=>dialog.close());head.append(title,close);dialog.append(head);
-            const panel=document.createElement('div');panel.className='dental-location-host';dialog.append(panel);row.append(dialog);
-            dialog.addEventListener('close',()=>{if(editingIndex===index){editingIndex=-1;configure.textContent='Configurar ubicación';configure.setAttribute('aria-expanded','false');activeDentalEditor?.destroy?.();activeDentalEditor=null;configure.focus({preventScroll:true});}});
+            const panel=document.createElement('div');panel.className='dental-location-host';dialog.append(panel);document.body.append(dialog);activeDentalDialog=dialog;
+            const duplicateWarning=document.createElement('p');duplicateWarning.setAttribute('role','status');duplicateWarning.className='dental-location-duplicate-warning';dialog.append(duplicateWarning);
+            dialog.addEventListener('close',()=>{if(activeDentalDialog!==dialog)return;activeDentalDialog=null;invalidDentalSelection=false;dialog.remove();if(editingIndex===index){editingIndex=-1;const toggle=row.querySelector('[data-tax03c-dental]');if(toggle){toggle.textContent='Configurar ubicación';toggle.setAttribute('aria-expanded','false');toggle.focus({preventScroll:true});}activeDentalEditor?.destroy?.();activeDentalEditor=null;}});
             activeDentalEditor=dental.mount(panel,kind,item.dentalLocation||null,location=>{
-              item.dentalLocation=location;summary.textContent=dental.summary(location)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');notify();
+              if(item.key===locationRepeatKey&&location?.arch_key&&selected.some((other,otherIndex)=>otherIndex!==index&&other.key===locationRepeatKey&&locationFingerprint(other)===`ARCH:${location.arch_key}`)){
+                invalidDentalSelection=true;duplicateWarning.textContent='Esta arcada ya está agregada. Seleccione la otra arcada.';return;
+              }
+              invalidDentalSelection=false;duplicateWarning.textContent='';
+              item.dentalLocation=location;summary.textContent=dental.summary(location)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');renderResults();notify();
             });
+            if(item.key===locationRepeatKey){
+              const both=document.createElement('button');both.type='button';both.className='btn btn-outline-primary btn-sm';both.dataset.tax03cBothArches=String(index);both.textContent='Ambas arcadas';
+              both.setAttribute('aria-label','Agregar radiografías oclusales de maxilar y mandíbula');both.addEventListener('click',onClick);dialog.append(both);
+              const hint=document.createElement('small');hint.textContent='Seleccione la dentición y después use Ambas arcadas para crear dos estudios separados.';dialog.append(hint);
+            }
             queueMicrotask(()=>{if(dialog.isConnected&&!dialog.open)dialog.showModal();});
           }
         }
@@ -285,7 +323,7 @@
       resultBox.replaceChildren();
       if(!results.length){if(status.dataset.error!=='true')status.textContent=search.value.trim()?'No encontramos un estudio con ese nombre.':category.value?'No hay estudios catalogados todavía en esta categoría.':'No hay estudios catalogados disponibles.';return;}
       results.forEach(item=>{
-        const added=selected.some(row=>row.type==='canonical'&&Number(row.id)===Number(item.study_type_id));
+        const added=selectedLimit(item);
         const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);
         row.setAttribute('aria-pressed',String(added));row.setAttribute('aria-label',resultLabel(item,added));
         row.disabled=readonly||added;
@@ -375,7 +413,7 @@
       status.hidden=!!leaf&&!needle;
       status.textContent=needle?`${results.length} ${results.length===1?'estudio encontrado':'estudios encontrados'}${visiblePresets.length?` · ${visiblePresets.length} preset${visiblePresets.length===1?'':'s'}`:''} para esta búsqueda.`:`${results.length} estudios disponibles.`;
       const rowFor=(item,location='')=>{
-        const added=selected.some(row=>row.type==='canonical'&&Number(row.id)===Number(item.study_type_id));
+        const added=selectedLimit(item);
         const row=document.createElement('button');row.type='button';row.className='tax03c-result-row';row.dataset.tax03cId=String(item.study_type_id);row.dataset.tax03cKey=item.study_type_key;
         row.setAttribute('aria-pressed',String(added));row.setAttribute('aria-label',resultLabel(item,added)+(location?`, ${location}`:''));
         row.disabled=readonly||added;
@@ -576,8 +614,23 @@
       if(target.dataset.tax03cRescue){const row=(embeddedSearchRows||[]).find(item=>item.study_type_key===target.dataset.tax03cRescue),location=row&&studyLocation(row);
         if(location)options.onNavigateToStudy?.({rootId:location.root,leafId:location.leaf,query:search.value.trim(),studyKey:row.study_type_key,category:row.category_key});return;}
       if(target.hasAttribute('data-tax03c-rescue-more')){rescueExpanded=true;renderEmbedded();return;}
+      if(target.dataset.tax03cBothArches!==undefined){
+        const index=Number(target.dataset.tax03cBothArches),item=selected[index];
+        if(item?.key!==locationRepeatKey)return;
+        const dentition=activeDentalEditor?.dentitionMode?.()||item.dentalLocation?.dentition_mode;
+        const dialogStatus=activeDentalDialog?.querySelector('.dental-location-duplicate-warning');
+        if(!dentition){if(dialogStatus)dialogStatus.textContent='Seleccione la dentición antes de agregar ambas arcadas.';return;}
+        const location=arch_key=>({contract_version:2,location_type:'ARCH_LOCATION',selection_mode:'ARCH',dentition_mode:dentition,arch_key});
+        const existing=new Set(selected.filter(row=>row.key===locationRepeatKey).map(locationFingerprint));
+        const missing=['MAXILLARY','MANDIBULAR'].filter(arch=>!existing.has(`ARCH:${arch}`));
+        if(!missing.length){if(dialogStatus)dialogStatus.textContent='Ambas arcadas ya están agregadas.';return;}
+        if(selected.length+missing.length-(item.dentalLocation?0:1)>100){status.textContent='Máximo 100 estudios por composición.';return;}
+        if(!item.dentalLocation){item.dentalLocation=location(missing.shift());}
+        missing.forEach(arch=>selected.push({...item,dentalLocation:location(arch)}));
+        editingIndex=-1;renderSelected();renderResults();notify();status.textContent='Radiografías oclusales de maxilar y mandíbula agregadas por separado.';return;
+      }
       if(target.dataset.tax03cId){const row=results.find(item=>String(item.study_type_id)===target.dataset.tax03cId);if(!row)return;
-        if(selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id)))return;
+        if(selectedLimit(row))return;
         if(!imagingAuthority&&imaging&&row.category_key==='IMAGEN'){status.textContent='Cargando parámetros de imagen. Intenta de nuevo en un momento.';return;}
         if(selected.length>=100){status.textContent=embedded?'Máximo 100 estudios por composición.':'Máximo 100 estudios por orden.';return;}
         const pathologyRuleForRow=pathology?.ruleFor(row.study_type_key,pathologyAuthority);
@@ -627,14 +680,20 @@
     renderSelected();if(!imagingAuthority&&imaging)imaging.authority().then(config=>{if(destroyed)return;imagingAuthority=config;renderSelected();renderResults();if(readonly)host.querySelectorAll('input,select,textarea,button').forEach(control=>control.disabled=true);}).catch(()=>{if(!destroyed)status.textContent='No se pudieron cargar los parámetros de imagen.';});if(readonly){host.querySelectorAll('input,select,textarea,button').forEach(control=>control.disabled=true);}else load();
     return {
       customDraft,
+      closeDentalDialog:()=>{if(activeDentalDialog?.open)activeDentalDialog.close();},
       selected:()=>clone(selected),priority:()=>priority.value,indication:()=>indication.value,
-      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{}),...(item.pathologyParameters?{pathology_order_parameters:clone(item.pathologyParameters)}:{}),...(item.imagingParameters?{imaging_order_parameters:clone(item.imagingParameters)}:{}),...(item.key==='arterial_blood_gas'?{lab_arterial_oxygen_context:clone(item.oxygenContext||{version:1,mode:'UNKNOWN'})}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
+      dentalSummary:item=>[
+        item.dentalLocation?(window.mxmedDentalLocation||window.mxmedDentalLocationV1)?.summary(item.dentalLocation):'',
+        item.dentalAcquisitionProtocol?.protocol_key&&dentalAcquisitionConfig?.variants?.[item.dentalAcquisitionProtocol.protocol_key]
+          ?'Protocolo: '+dentalAcquisitionConfig.variants[item.dentalAcquisitionProtocol.protocol_key].label_es:'',
+      ].filter(Boolean).join(' · '),
+      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.dentalAcquisitionProtocol?{dental_acquisition_protocol:clone(item.dentalAcquisitionProtocol)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{}),...(item.pathologyParameters?{pathology_order_parameters:clone(item.pathologyParameters)}:{}),...(item.imagingParameters?{imaging_order_parameters:clone(item.imagingParameters)}:{}),...(item.key==='arterial_blood_gas'?{lab_arterial_oxygen_context:clone(item.oxygenContext||{version:1,mode:'UNKNOWN'})}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
       valid:()=>selected.length>0&&selected.length<=100&&selected.every(item=>{
         const dental=window.mxmedDentalLocation||window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
-        return (!kind||dental.isComplete(kind,item.dentalLocation))&&specimenComplete(item)&&pathologyComplete(item)&&imagingComplete(item)&&oxygenComplete(item);
-      })&&(!activeDentalEditor||activeDentalEditor.valid()),
-      validationMessage:()=>selected.length?(selected.some(item=>!oxygenComplete(item))?'Revisa el contexto de oxígeno y la FiO₂ de la gasometría.':selected.some(item=>!imagingComplete(item))?'Completa los parámetros de imagen pendientes antes de continuar.':selected.some(item=>!pathologyComplete(item))?'Completa los parámetros de patología pendientes antes de continuar.':selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
-      destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();host.removeEventListener('click',onClick);if(options.selectionHost)selectedBox.removeEventListener('click',onClick);},
+        return (!kind||dental.isComplete(kind,item.dentalLocation))&&(item.key!=='dental_full_periapical_series'||!!dentalAcquisitionConfig?.variants?.[item.dentalAcquisitionProtocol?.protocol_key])&&specimenComplete(item)&&pathologyComplete(item)&&imagingComplete(item)&&oxygenComplete(item);
+      })&&!invalidDentalSelection&&(!activeDentalEditor||activeDentalEditor.valid())&&(()=>{const occlusal=selected.filter(item=>item.key===locationRepeatKey);return new Set(occlusal.map(item=>locationFingerprint(item)||'DRAFT')).size===occlusal.length;})(),
+      validationMessage:()=>selected.length?(invalidDentalSelection?'Esta arcada ya está agregada. Seleccione la otra arcada.':selected.some(item=>item.key==='dental_full_periapical_series'&&!dentalAcquisitionConfig?.variants?.[item.dentalAcquisitionProtocol?.protocol_key])?'Seleccione el protocolo de la serie periapical.':selected.some(item=>!oxygenComplete(item))?'Revisa el contexto de oxígeno y la FiO₂ de la gasometría.':selected.some(item=>!imagingComplete(item))?'Completa los parámetros de imagen pendientes antes de continuar.':selected.some(item=>!pathologyComplete(item))?'Completa los parámetros de patología pendientes antes de continuar.':selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
+      destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();if(activeDentalDialog){if(activeDentalDialog.open)activeDentalDialog.close();activeDentalDialog.remove();activeDentalDialog=null;}activeDentalEditor?.destroy?.();host.removeEventListener('click',onClick);if(options.selectionHost)selectedBox.removeEventListener('click',onClick);},
     };
   }
   window.mxmedStudyComposer={mount,title,documentType,orderArea,categories};
