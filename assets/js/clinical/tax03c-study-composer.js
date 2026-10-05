@@ -24,6 +24,9 @@
     let selected=Array.isArray(options.selected)?clone(options.selected):[];
     let editingIndex=-1,activeDentalEditor=null;
     const specimen=options.specimenConfig;
+    const pathology=window.mxmedPathologyParametersV1,pathologyAuthority=options.pathologyConfig;
+    const pathologyRule=item=>item.type==='canonical'?pathology?.ruleFor(item.key,pathologyAuthority):null;
+    const pathologyComplete=item=>!pathologyRule(item)||pathology.isComplete(item.key,item.pathologyParameters,pathologyAuthority);
     const specimenRule=item=>item.type==='canonical'?specimen?.studies?.[item.key]:null;
     const specimenComplete=item=>{
       const rule=specimenRule(item),value=item.specimenRequirements||{};
@@ -175,6 +178,25 @@
             activeDentalEditor=dental.mount(panel,kind,item.dentalLocation||null,location=>{
               item.dentalLocation=location;summary.textContent=dental.summary(location)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');notify();
             });
+          }
+        }
+        const pathologyRequirement=pathologyRule(item);
+        if(pathologyRequirement){
+          const detail=document.createElement('small');detail.className='pathology-item-summary';
+          detail.textContent=pathologyComplete(item)?pathology.summary(item.key,item.pathologyParameters,pathologyAuthority):'Completa los parámetros de patología';
+          row.append(detail);
+          if(!readonly){
+            const configure=document.createElement('button');configure.type='button';configure.className='btn btn-outline-primary btn-sm';
+            configure.dataset.tax03cPathology=String(index);configure.textContent=editingIndex===index?'Ocultar parámetros':'Configurar parámetros';
+            configure.setAttribute('aria-expanded',String(editingIndex===index));row.append(configure);
+            if(editingIndex===index){
+              const panel=document.createElement('div');row.append(panel);
+              pathology.mount(panel,item.key,pathologyAuthority,item.pathologyParameters,value=>{
+                item.pathologyParameters=value;
+                detail.textContent=pathologyComplete(item)?pathology.summary(item.key,value,pathologyAuthority):'Completa los parámetros de patología';
+                notify();
+              });
+            }
           }
         }
         const rule=specimenRule(item);
@@ -459,8 +481,11 @@
       if(target.dataset.tax03cId){const row=results.find(item=>String(item.study_type_id)===target.dataset.tax03cId);if(!row)return;
         if(selected.some(item=>item.type==='canonical'&&Number(item.id)===Number(row.study_type_id)))return;
         if(selected.length>=100){status.textContent=embedded?'Máximo 100 estudios por composición.':'Máximo 100 estudios por orden.';return;}
-        selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key});
+        const pathologyRuleForRow=pathology?.ruleFor(row.study_type_key,pathologyAuthority);
+        selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key,
+          ...(pathologyRuleForRow?{pathologyParameters:pathology.initial(row.study_type_key,pathologyAuthority)}:{})});
         const kind=window.mxmedDentalLocationV1?.kindFor(row.study_type_key),rule=specimen?.studies?.[row.study_type_key];editingIndex=(kind&&kind!=='NONE'||rule?.specimen_mode==='REQUIRED_SELECTION'||rule?.collection_mode==='REQUIRED_SELECTION'||rule?.source_site==='REQUIRED_SELECTION')?selected.length-1:-1;
+        if(pathologyRuleForRow)editingIndex=selected.length-1;
         const position=results.findIndex(item=>Number(item.study_type_id)===Number(row.study_type_id));
         renderSelected();renderResults();notify();
         const following=results.slice(position+1).find(item=>!selected.some(chosen=>chosen.type==='canonical'&&Number(chosen.id)===Number(item.study_type_id)));
@@ -468,6 +493,7 @@
         (next||search).focus({preventScroll:true});}
       if(target.dataset.tax03cDental!==undefined){const index=Number(target.dataset.tax03cDental);editingIndex=editingIndex===index?-1:index;activeDentalEditor=null;renderSelected();selectedBox.querySelector(`[data-tax03c-dental="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cSpecimen!==undefined){const index=Number(target.dataset.tax03cSpecimen);editingIndex=editingIndex===index?-1:index;renderSelected();selectedBox.querySelector(`[data-tax03c-specimen="${index}"]`)?.focus({preventScroll:true});}
+      if(target.dataset.tax03cPathology!==undefined){const index=Number(target.dataset.tax03cPathology);editingIndex=editingIndex===index?-1:index;renderSelected();selectedBox.querySelector(`[data-tax03c-pathology="${index}"]`)?.focus({preventScroll:true});}
       if(target.dataset.tax03cRemove!==undefined){const index=Number(target.dataset.tax03cRemove);selected.splice(index,1);editingIndex=editingIndex===index?-1:editingIndex>index?editingIndex-1:editingIndex;activeDentalEditor=null;renderSelected();renderResults();notify();}
       if(target.hasAttribute('data-tax03c-custom-open')){event.preventDefault();openCustom();}
       if(target.hasAttribute('data-tax03c-custom-cancel')){custom.hidden=true;customName.value='';$('[data-tax03c-custom-note]').value='';$('[data-tax03c-custom-category]').value='';if(customRoute)customRoute.value='';}
@@ -498,12 +524,12 @@
     return {
       customDraft,
       selected:()=>clone(selected),priority:()=>priority.value,indication:()=>indication.value,
-      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
+      orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{}),...(item.pathologyParameters?{pathology_order_parameters:clone(item.pathologyParameters)}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
       valid:()=>selected.length>0&&selected.length<=100&&selected.every(item=>{
         const kind=item.type==='canonical'?window.mxmedDentalLocationV1?.kindFor(item.key):null;
-        return (!kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation))&&specimenComplete(item);
+        return (!kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation))&&specimenComplete(item)&&pathologyComplete(item);
       })&&(!activeDentalEditor||activeDentalEditor.valid()),
-      validationMessage:()=>selected.length?(selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
+      validationMessage:()=>selected.length?(selected.some(item=>!pathologyComplete(item))?'Completa los parámetros de patología pendientes antes de continuar.':selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
       destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();host.removeEventListener('click',onClick);if(options.selectionHost)selectedBox.removeEventListener('click',onClick);},
     };
   }

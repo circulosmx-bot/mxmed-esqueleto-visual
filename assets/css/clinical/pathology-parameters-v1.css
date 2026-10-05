@@ -1,0 +1,12 @@
+.ordcomp .pathology-item-summary{flex-basis:100%;min-width:0;overflow-wrap:anywhere;color:#31596c;font-size:.75rem}
+.ordcomp .pathology-parameter-host{width:100%;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:.45rem .65rem;padding:.4rem;border:1px solid #c8e4e9;border-radius:.5rem;background:#f8fdfe}
+.ordcomp .pathology-parameter-heading{grid-column:1/-1;font-weight:700;color:#073b55}
+.ordcomp .pathology-specimen{min-width:0;margin:0;padding:.4rem .5rem;border:1px solid #d5e9ed;border-radius:.4rem;background:#fff;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem .5rem}
+.ordcomp .pathology-specimen legend{float:none;grid-column:1/-1;width:auto;margin:0;padding:0;font-size:.82rem;font-weight:700;color:#074960}
+.ordcomp .pathology-parameter-host label{display:grid;gap:.15rem;min-width:0;font-size:.76rem;color:#31556c}
+.ordcomp .pathology-parameter-host input,.ordcomp .pathology-parameter-host select{width:100%;min-width:0;min-height:2rem;padding:.25rem .35rem;border:1px solid #b8d9e1;border-radius:.3rem;background:#fff;color:#173f58}
+.ordcomp .pathology-fixed,.ordcomp .pathology-handling-notice{margin:0;font-size:.76rem;color:#31556c;overflow-wrap:anywhere}
+.ordcomp .pathology-handling-notice{grid-column:1/-1;padding:.4rem .55rem;border-left:3px solid #169bb0;background:#eaf8fa}
+.ordcomp .pathology-add,.ordcomp .pathology-remove{justify-self:start;min-height:2rem}
+.ordcomp .pathology-remove{grid-column:1/-1}
+@media(max-width:600px){.ordcomp .pathology-parameter-host,.ordcomp .pathology-specimen{grid-template-columns:minmax(0,1fr)}.ordcomp .pathology-specimen{padding:.35rem}}

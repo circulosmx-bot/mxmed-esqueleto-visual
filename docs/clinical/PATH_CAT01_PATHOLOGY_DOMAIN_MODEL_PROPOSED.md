@@ -1,6 +1,6 @@
 # PATH-CAT01 — Patología y biopsia: modelo de dominio y catálogo mínimo
 
-**Estado: AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED | CONTRACT_IMPLEMENTED_PENDING_CATALOG.** PATH-CAT01 fue una propuesta de contrato. PATH-CAT02A añadió posteriormente la [autoridad versionada de parámetros](PATH_CAT02A_PATHOLOGY_PARAMETER_CONTRACT_IMPLEMENTED.md); las identidades propuestas siguen sin activarse en el catálogo. El alcance de esta auditoría original no ejecutó cambios de catálogo, interfaz, rutas, lectores, escritores ni esquema.
+**Estado original: AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED. Estado actual: MINIMUM_SAFE_CATALOG_IMPLEMENTED.** PATH-CAT01 fue una propuesta de contrato y no ejecutó cambios. PATH-CAT02A implementó la [autoridad versionada de parámetros](PATH_CAT02A_PATHOLOGY_PARAMETER_CONTRACT_IMPLEMENTED.md); PATH-CAT02B activó posteriormente las 11 identidades aprobadas y documentó la [implementación y QA](PATH_CAT02B_PATHOLOGY_MINIMUM_SAFE_CATALOG_IMPLEMENTED.md). Las cifras y los pendientes descritos abajo conservan el contexto de la auditoría original.
 
 ## Resumen para el Director
 

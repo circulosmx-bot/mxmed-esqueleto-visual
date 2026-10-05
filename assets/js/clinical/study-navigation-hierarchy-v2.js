@@ -13,7 +13,7 @@
     imaging:group('imaging','IMAGENOLOGÍA','image',[{category:'IMAGEN'},{category:'CARDIOVASCULAR',keys:['echo_tte','echo_tes','stress_echo','carotid_doppler','lower_ext_art_doppler','lower_ext_venous_doppler']}],
       ['radiography','ultrasound','tomography','magnetic_resonance','nuclear','breast_imaging','densitometry'],
       'Radiografías, ultrasonido, tomografía y resonancia.'),
-    pathology:group('pathology','PATOLOGÍA Y BIOPSIAS','biotech',[{category:'PATOLOGIA'}],['cervical_cytology','fluid_cytology'],
+    pathology:group('pathology','PATOLOGÍA Y BIOPSIAS','biotech',[{category:'PATOLOGIA'}],['histopathology','cytology','immunohistochemistry','special_stains','immunofluorescence','outside_review'],
       'Citologías y análisis de tejidos o muestras.'),
     functional:group('functional','ESTUDIOS FUNCIONALES','monitor_heart',[
       {category:'CARDIOVASCULAR',keys:['ecg_12lead','ecg_rhythm_strip','holter','abpm_mapa','stress_test','tilt_table','ankle_brachial_index']},
@@ -54,10 +54,26 @@
     hereditary_oncology:group('hereditary_oncology','Oncología hereditaria','genetics',lab('hereditary_oncology')),
     pharmacogenomics:group('pharmacogenomics','Farmacogenómica','genetics',lab('pharmacogenomics')),
     molecular_oncology:group('molecular_oncology','Oncología molecular','genetics',lab('molecular_oncology')),
+    histopathology:group('histopathology','Histopatología','biotech',[
+      {category:'PATOLOGIA',keys:['histopath_biopsy','histopath_resection']}]),
+    cytology:group('cytology','Citología','biotech',[],
+      ['cervical_cytology','fluid_cytology','cytology_fna','respiratory_cytology']),
     cervical_cytology:group('cervical_cytology','Citología cervical','biotech',[
       {category:'PATOLOGIA',keys:['cyto_pap','cyto_liquid_based']}]),
     fluid_cytology:group('fluid_cytology','Citología de orina y líquidos','biotech',[
       {category:'PATOLOGIA',keys:['urine_cytology','csf_cytology','serous_fluid_cytology']}]),
+    cytology_fna:group('cytology_fna','Citología por aspiración','biotech',[
+      {category:'PATOLOGIA',keys:['cyto_fna']}]),
+    respiratory_cytology:group('respiratory_cytology','Citología respiratoria','biotech',[
+      {category:'PATOLOGIA',keys:['cyto_bronchial_brushing','cyto_bronchial_washing']}]),
+    immunohistochemistry:group('immunohistochemistry','Inmunohistoquímica','biotech',[
+      {category:'PATOLOGIA',keys:['ihc_single_marker','ihc_breast_profile']}]),
+    special_stains:group('special_stains','Tinciones especiales','biotech',[
+      {category:'PATOLOGIA',keys:['histochemical_special_stain']}]),
+    immunofluorescence:group('immunofluorescence','Inmunofluorescencia','biotech',[
+      {category:'PATOLOGIA',keys:['if_renal','if_skin']}]),
+    outside_review:group('outside_review','Revisión externa','biotech',[
+      {category:'PATOLOGIA',keys:['pathology_outside_review']}]),
     radiography:group('radiography','Radiografía y fluoroscopía','radiology',[
       {category:'IMAGEN',keys:['rx_chest','rx_abdomen','rx_pelvis','rx_cspine','rx_lspine','rx_shoulder','rx_knee','rx_ankle','rx_hand',
         'fluoro_hsg','fluoro_vcug','fluoro_ugi','fluoro_barium_enema']}]),

@@ -1176,6 +1176,80 @@
       ],
       "featured": [],
       "groups": []
+    },
+    "histopathology": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / HISTOPATOLOGÍA",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "histopath_biopsy",
+        "histopath_resection"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "cytology_fna": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / CITOLOGÍA / PAAF",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "cyto_fna"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "respiratory_cytology": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / CITOLOGÍA / RESPIRATORIA",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "cyto_bronchial_brushing",
+        "cyto_bronchial_washing"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "immunohistochemistry": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / INMUNOHISTOQUÍMICA",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "ihc_single_marker",
+        "ihc_breast_profile"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "special_stains": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / TINCIONES ESPECIALES",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "histochemical_special_stain"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "immunofluorescence": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / INMUNOFLUORESCENCIA",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "if_renal",
+        "if_skin"
+      ],
+      "featured": [],
+      "groups": []
+    },
+    "outside_review": {
+      "heading": "PATOLOGÍA Y BIOPSIAS / REVISIÓN EXTERNA",
+      "root_family": "pathology",
+      "small": true,
+      "study_keys": [
+        "pathology_outside_review"
+      ],
+      "featured": [],
+      "groups": []
     }
   }
 }

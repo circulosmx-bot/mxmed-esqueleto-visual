@@ -207,10 +207,16 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
                 || ($item['note'] ?? null) !== null && !is_string($item['note'])) {
                 throw new ClinicalPortableOrderException('Esta orden contiene estudios incompletos.');
             }
+            if (isset($item['pathology_order_parameters'])
+                && (!is_array($item['pathology_order_parameters'])
+                    || clinical_portable_text($item['pathology_order_parameters_label'] ?? '') === '')) {
+                throw new ClinicalPortableOrderException('Esta orden contiene parámetros de patología incompletos.');
+            }
             $items[] = ['sequence' => (int)$item['sequence'], 'name' => clinical_portable_text($item['study_display_name']),
                 'note' => clinical_portable_text($item['note'] ?? '') ?: null,
                 'dental_context' => clinical_portable_text($item['dental_location_label'] ?? '') ?: null,
-                'specimen_context' => clinical_specimen_print_context(is_array($item['specimen_collection_requirements'] ?? null) ? $item['specimen_collection_requirements'] : null, (string)$item['study_display_name'])];
+                'specimen_context' => clinical_specimen_print_context(is_array($item['specimen_collection_requirements'] ?? null) ? $item['specimen_collection_requirements'] : null, (string)$item['study_display_name']),
+                'pathology_context' => clinical_portable_text($item['pathology_order_parameters_label'] ?? '') ?: null];
         }
         usort($items, static fn(array $a, array $b): int => $a['sequence'] <=> $b['sequence']);
         foreach ($items as $index => $item) {
@@ -220,7 +226,7 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
         if (!array_is_list($payload['requested_studies'])) throw new ClinicalPortableOrderException('Esta orden contiene estudios incompletos.');
         foreach ($payload['requested_studies'] as $study) {
             if (!is_string($study) || trim($study) === '') throw new ClinicalPortableOrderException('Esta orden contiene estudios incompletos.');
-            $items[] = ['sequence' => count($items) + 1, 'name' => trim($study), 'note' => null, 'dental_context' => null, 'specimen_context' => null];
+            $items[] = ['sequence' => count($items) + 1, 'name' => trim($study), 'note' => null, 'dental_context' => null, 'specimen_context' => null, 'pathology_context' => null];
         }
     }
     if ($items === []) throw new ClinicalPortableOrderException('Esta orden no contiene estudios legibles para imprimir.');
@@ -253,7 +259,7 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
         'patient' => ['name' => $patient['name'], 'birthdate' => $patient['birthdate'] ?? null],
         'physician' => array_diff_key($physician, ['doctor_id' => true]),
         'consultorio' => $snapshot['consultorio'] ?? null,
-        'studies' => array_map(static fn(array $item): array => ['name' => $item['name'], 'note' => $item['note'], 'dental_context' => $item['dental_context'], 'specimen_context' => $item['specimen_context'] ?? null], $items),
+        'studies' => array_map(static fn(array $item): array => ['name' => $item['name'], 'note' => $item['note'], 'dental_context' => $item['dental_context'], 'specimen_context' => $item['specimen_context'] ?? null, 'pathology_context' => $item['pathology_context'] ?? null], $items),
         'priority' => $priority ?: null, 'indication' => clinical_portable_text($payload['indication'] ?? '') ?: null,
         'display_reference' => $reference,
     ];

@@ -444,7 +444,7 @@
       const body=dialog.querySelector('[data-tax03c-host]'),payload=full?.content?.payload||{};
       body.append(node('h5',full.title||'Orden de estudios'),node('p',`Versión ${row.result_source_order_version}`));
       const studies=Array.isArray(payload.order_items)&&payload.order_items.length?payload.order_items.map(item=>
-        `${item.study_display_name}${item.dental_location_label?' · '+item.dental_location_label:''}`):payload.requested_studies||[];
+        `${item.study_display_name}${item.dental_location_label?' · '+item.dental_location_label:''}${item.pathology_order_parameters_label?' · '+item.pathology_order_parameters_label:''}`):payload.requested_studies||[];
       if(studies.length){const list=node('ul','','vis06-study-list');studies.forEach(name=>list.append(node('li',String(name))));body.append(list);}
       dialog.querySelectorAll('button').forEach(control=>control.addEventListener('click',()=>dialog.close()));
       dialog.addEventListener('close',()=>{dialog.remove();trigger.focus({preventScroll:true});},{once:true});
@@ -514,6 +514,7 @@
           if(Object.prototype.hasOwnProperty.call(study,'study_type_id')&&study.study_type_id===null&&study.study_type_key===null)meta.append(node('span','Personalizado','vis06-study-custom'));
           content.append(meta);
           if(typeof study.dental_location_label==='string'&&study.dental_location_label.trim())content.append(node('p',study.dental_location_label.trim(),'vis06-study-note'));
+          if(typeof study.pathology_order_parameters_label==='string'&&study.pathology_order_parameters_label.trim())content.append(node('p',study.pathology_order_parameters_label.trim(),'vis06-study-note'));
           if(typeof study.note==='string'&&study.note.trim())content.append(node('p',study.note.trim(),'vis06-study-note'));
           const status=node('div','','vis06-study-status');status.append(node('span',itemCoverageLabel(study.coverage_state),'vis06-item-coverage'));
           const matches=exactItemResults(row,item.results||[],study);

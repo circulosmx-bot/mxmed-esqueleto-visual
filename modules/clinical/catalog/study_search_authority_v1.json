@@ -2515,7 +2515,9 @@
       "canonical_display_name": "Papanicolaou (convencional)",
       "common_display_name": null,
       "abbreviations": [],
-      "equivalent_aliases": [],
+      "equivalent_aliases": [
+        "Papanicolau"
+      ],
       "discovery_terms": []
     },
     {
@@ -2586,6 +2588,157 @@
       ],
       "equivalent_aliases": [],
       "discovery_terms": []
+    },
+    {
+      "study_key": "histopath_biopsy",
+      "canonical_display_name": "Estudio histopatológico de biopsia",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Histopatológico de biopsia",
+        "Patología de biopsia"
+      ],
+      "discovery_terms": [
+        "histopatología",
+        "estudio de tejido"
+      ]
+    },
+    {
+      "study_key": "histopath_resection",
+      "canonical_display_name": "Estudio histopatológico de pieza quirúrgica",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Pieza quirúrgica",
+        "Resección para patología"
+      ],
+      "discovery_terms": [
+        "histopatología",
+        "histopatológico"
+      ]
+    },
+    {
+      "study_key": "cyto_fna",
+      "canonical_display_name": "Citología por aspiración con aguja fina",
+      "common_display_name": "PAAF / BAAF",
+      "abbreviations": [
+        "PAAF",
+        "BAAF"
+      ],
+      "equivalent_aliases": [
+        "Citología aspirativa"
+      ],
+      "discovery_terms": [
+        "citología por aspiración"
+      ]
+    },
+    {
+      "study_key": "cyto_bronchial_brushing",
+      "canonical_display_name": "Citología de cepillado bronquial",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Citología de cepillado"
+      ],
+      "discovery_terms": [
+        "citología bronquial",
+        "cepillado bronquial"
+      ]
+    },
+    {
+      "study_key": "cyto_bronchial_washing",
+      "canonical_display_name": "Citología de lavado bronquial",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Citología de lavado"
+      ],
+      "discovery_terms": [
+        "citología bronquial",
+        "lavado bronquial"
+      ]
+    },
+    {
+      "study_key": "ihc_single_marker",
+      "canonical_display_name": "Inmunohistoquímica — marcador individual",
+      "common_display_name": "IHQ",
+      "abbreviations": [
+        "IHQ"
+      ],
+      "equivalent_aliases": [
+        "IHQ por anticuerpo"
+      ],
+      "discovery_terms": [
+        "inmunohistoquímica",
+        "marcador"
+      ]
+    },
+    {
+      "study_key": "ihc_breast_profile",
+      "canonical_display_name": "Perfil inmunohistoquímico mamario ER PR HER2 Ki-67",
+      "common_display_name": "Perfil IHQ mama",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Perfil IHQ mama"
+      ],
+      "discovery_terms": [
+        "perfil mamario",
+        "ER PR HER2 Ki67"
+      ]
+    },
+    {
+      "study_key": "histochemical_special_stain",
+      "canonical_display_name": "Tinción histoquímica especial",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Histoquímica especial",
+        "Tinciones especiales"
+      ],
+      "discovery_terms": [
+        "PAS",
+        "Grocott",
+        "Masson",
+        "tinción especial"
+      ]
+    },
+    {
+      "study_key": "if_renal",
+      "canonical_display_name": "Inmunofluorescencia directa renal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "IF renal"
+      ],
+      "discovery_terms": [
+        "inmunofluorescencia renal"
+      ]
+    },
+    {
+      "study_key": "if_skin",
+      "canonical_display_name": "Inmunofluorescencia directa cutánea",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "IF piel"
+      ],
+      "discovery_terms": [
+        "inmunofluorescencia cutánea"
+      ]
+    },
+    {
+      "study_key": "pathology_outside_review",
+      "canonical_display_name": "Revisión externa de laminillas o bloques",
+      "common_display_name": "Segunda opinión / revisión de laminillas y bloques",
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Segunda opinión de patología"
+      ],
+      "discovery_terms": [
+        "segunda opinión",
+        "laminillas",
+        "bloques"
+      ]
     }
   ]
 }
