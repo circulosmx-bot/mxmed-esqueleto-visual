@@ -1,0 +1,59 @@
+{
+  "authority": "DENTAL_STUDY_LOCATION_POLICIES_V1",
+  "contract_version": 1,
+  "location_authority_version": 2,
+  "study_policies": {
+    "dental_periapical_xray": {
+      "required": true,
+      "allowed_location_types": ["TOOTH_LOCATION"],
+      "allowed_location_modes": ["SINGLE_TOOTH", "MULTIPLE_TEETH"],
+      "allowed_dentition_modes": ["PERMANENT", "PRIMARY", "MIXED"],
+      "min_selection": 1,
+      "max_selection": 8,
+      "help_text_es": "Seleccione la pieza o piezas; el número de imágenes lo determina la adquisición."
+    },
+    "dental_bitewing_xray": {
+      "required": true,
+      "allowed_location_types": ["REGION_LOCATION"],
+      "allowed_location_modes": ["REGION", "BILATERAL_REGION"],
+      "allowed_dentition_modes": ["PERMANENT", "PRIMARY", "MIXED"],
+      "allowed_regions": ["POSTERIOR"],
+      "allowed_arches": ["BOTH_ARCHES"],
+      "allowed_sides": ["LEFT", "RIGHT", "BILATERAL"],
+      "required_fields": ["dentition_mode", "region_key", "arch_key", "side_key"],
+      "min_selection": 1,
+      "max_selection": 1,
+      "help_text_es": "Seleccione posterior derecha, izquierda o bilateral; ambas arcadas."
+    },
+    "dental_occlusal_xray": {
+      "required": true,
+      "allowed_location_types": ["ARCH_LOCATION"],
+      "allowed_location_modes": ["ARCH"],
+      "allowed_dentition_modes": ["PERMANENT", "PRIMARY", "MIXED"],
+      "allowed_arches": ["MAXILLARY", "MANDIBULAR"],
+      "required_fields": ["dentition_mode", "arch_key"],
+      "min_selection": 1,
+      "max_selection": 1,
+      "help_text_es": "Seleccione maxilar o mandíbula; solicite dos ítems si requiere ambas arcadas."
+    },
+    "dental_full_periapical_series": {
+      "required": false,
+      "allowed_location_types": [],
+      "allowed_location_modes": [],
+      "allowed_dentition_modes": [],
+      "min_selection": 0,
+      "max_selection": 0,
+      "help_text_es": "Seleccione un protocolo de serie; no marque cada pieza."
+    },
+    "dental_cbct": {
+      "required": true,
+      "allowed_location_types": ["TOOTH_LOCATION", "QUADRANT_LOCATION", "ARCH_LOCATION", "REGION_LOCATION", "TMJ_LOCATION"],
+      "allowed_location_modes": ["SINGLE_TOOTH", "MULTIPLE_TEETH", "QUADRANT", "ARCH", "REGION", "BILATERAL_REGION", "TMJ_REGION"],
+      "allowed_dentition_modes": ["PERMANENT", "PRIMARY", "MIXED"],
+      "allowed_tmj_sides": ["LEFT", "RIGHT", "BILATERAL"],
+      "min_selection": 1,
+      "max_selection": 52,
+      "help_text_es": "Seleccione piezas, cuadrante, arcada, región o ATM; el campo de visión es opcional."
+    }
+  }
+}

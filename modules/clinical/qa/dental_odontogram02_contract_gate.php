@@ -44,7 +44,7 @@ $reject(fn()=>clinical_dental_validate_location('tmj_comparative_xray',$arch),'Q
 $reject(fn()=>clinical_dental_validate_location('tmj_comparative_xray',$tooth(['16'])),'QA_REJECT_TOOTH_FOR_TMJ');
 $tmj=['contract_version'=>2,'location_type'=>'TMJ_LOCATION','selection_mode'=>'TMJ_REGION','tmj_side'=>'BILATERAL','projection'=>'PA'];
 foreach (['LEFT','RIGHT','BILATERAL'] as $side) $check(clinical_dental_validate_location('tmj_comparative_xray',array_replace($tmj,['tmj_side'=>$side]))['tmj_side']===$side,'QA_TMJ_'.$side);
-$reject(fn()=>clinical_dental_validate_location('dental_cbct',$tmj),'QA_REJECT_TMJ_FOR_CBCT');
+$check(clinical_dental_validate_location('dental_cbct',array_diff_key($tmj,['projection'=>true])+['coverage'=>'TMJ'])['coverage']==='TMJ','QA_CBCT_TMJ_ADDITIVE');
 $check(clinical_dental_validate_location('dental_intraoral_scan',array_diff_key($arch,['coverage'=>true]))['arch_key']==='BOTH_ARCHES','QA_SCAN');
 $check(clinical_dental_validate_location('dental_study_model',null)===null,'QA_MODEL_OPTIONAL');
 $reject(fn()=>clinical_dental_validate_location('dental_panoramic_xray',$arch),'QA_PANORAMIC_NO_SELECTOR');

@@ -218,9 +218,16 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
                     || clinical_portable_text($item['imaging_order_parameters_label'] ?? '') === '')) {
                 throw new ClinicalPortableOrderException('Esta orden contiene parámetros de imagen incompletos.');
             }
+            if ((isset($item['dental_acquisition_protocol']) || isset($item['dental_acquisition_protocol_label']))
+                && (!is_array($item['dental_acquisition_protocol'] ?? null)
+                    || ($item['dental_acquisition_protocol']['contract_version'] ?? null) !== 1
+                    || clinical_portable_text($item['dental_acquisition_protocol_label'] ?? '') === '')) {
+                throw new ClinicalPortableOrderException('Esta orden contiene un protocolo dental incompleto.');
+            }
             $items[] = ['sequence' => (int)$item['sequence'], 'name' => clinical_portable_text($item['study_display_name']),
                 'note' => clinical_portable_text($item['note'] ?? '') ?: null,
                 'dental_context' => clinical_portable_text($item['dental_location_label'] ?? '') ?: null,
+                'dental_protocol_context' => clinical_portable_text($item['dental_acquisition_protocol_label'] ?? '') ?: null,
                 'specimen_context' => clinical_specimen_print_context(is_array($item['specimen_collection_requirements'] ?? null) ? $item['specimen_collection_requirements'] : null, (string)$item['study_display_name']),
                 'pathology_context' => clinical_portable_text($item['pathology_order_parameters_label'] ?? '') ?: null,
                 'imaging_context' => clinical_portable_text($item['imaging_order_parameters_label'] ?? '') ?: null,
@@ -236,7 +243,7 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
         if (!array_is_list($payload['requested_studies'])) throw new ClinicalPortableOrderException('Esta orden contiene estudios incompletos.');
         foreach ($payload['requested_studies'] as $study) {
             if (!is_string($study) || trim($study) === '') throw new ClinicalPortableOrderException('Esta orden contiene estudios incompletos.');
-            $items[] = ['sequence' => count($items) + 1, 'name' => trim($study), 'note' => null, 'dental_context' => null, 'specimen_context' => null, 'pathology_context' => null, 'imaging_context' => null];
+            $items[] = ['sequence' => count($items) + 1, 'name' => trim($study), 'note' => null, 'dental_context' => null, 'dental_protocol_context' => null, 'specimen_context' => null, 'pathology_context' => null, 'imaging_context' => null];
         }
     }
     if ($items === []) throw new ClinicalPortableOrderException('Esta orden no contiene estudios legibles para imprimir.');
@@ -269,7 +276,7 @@ function clinical_portable_order_read(PDO $pdo, string $uuid, string $doctorId, 
         'patient' => ['name' => $patient['name'], 'birthdate' => $patient['birthdate'] ?? null],
         'physician' => array_diff_key($physician, ['doctor_id' => true]),
         'consultorio' => $snapshot['consultorio'] ?? null,
-        'studies' => array_map(static fn(array $item): array => ['name' => $item['name'], 'note' => $item['note'], 'dental_context' => $item['dental_context'], 'specimen_context' => $item['specimen_context'] ?? null, 'pathology_context' => $item['pathology_context'] ?? null, 'imaging_context' => $item['imaging_context'] ?? null, 'panel_components' => $item['panel_components'] ?? [], 'oxygen_context' => $item['oxygen_context'] ?? null], $items),
+        'studies' => array_map(static fn(array $item): array => ['name' => $item['name'], 'note' => $item['note'], 'dental_context' => $item['dental_context'], 'dental_protocol_context' => $item['dental_protocol_context'] ?? null, 'specimen_context' => $item['specimen_context'] ?? null, 'pathology_context' => $item['pathology_context'] ?? null, 'imaging_context' => $item['imaging_context'] ?? null, 'panel_components' => $item['panel_components'] ?? [], 'oxygen_context' => $item['oxygen_context'] ?? null], $items),
         'priority' => $priority ?: null, 'indication' => clinical_portable_text($payload['indication'] ?? '') ?: null,
         'display_reference' => $reference,
     ];

@@ -27,6 +27,10 @@ function clinical_dental_study_requirements(): array
         'dental_intraoral_scan' => 'SCAN',
         'dental_clinical_photographs' => 'PHOTO',
         'dental_study_model' => 'MODEL',
+        'dental_periapical_xray' => 'V2_ONLY',
+        'dental_bitewing_xray' => 'V2_ONLY',
+        'dental_occlusal_xray' => 'V2_ONLY',
+        'dental_full_periapical_series' => 'NONE',
     ];
 }
 
@@ -37,6 +41,12 @@ function clinical_dental_validate_location(?string $studyKey, mixed $raw): ?arra
         return clinical_dental_v2_validate_study($studyKey, $raw);
     }
     $kind = clinical_dental_study_requirements()[$studyKey ?? ''] ?? null;
+    if ($kind === 'V2_ONLY') {
+        if (!is_array($raw) || ($raw['contract_version'] ?? null) !== 2) {
+            throw new InvalidArgumentException('DENTAL_V2_LOCATION_REQUIRED');
+        }
+        return clinical_dental_v2_validate_study($studyKey, $raw);
+    }
     if ($kind === null || $kind === 'NONE') {
         if ($raw !== null) throw new InvalidArgumentException('DENTAL_LOCATION_STUDY_INCOMPATIBLE');
         return null;

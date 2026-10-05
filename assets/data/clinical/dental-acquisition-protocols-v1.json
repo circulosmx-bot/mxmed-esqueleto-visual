@@ -1,0 +1,38 @@
+{
+  "authority": "DENTAL_ACQUISITION_PROTOCOLS_V1",
+  "contract_version": 1,
+  "study_key": "dental_full_periapical_series",
+  "dentition_modes": ["PERMANENT"],
+  "variants": {
+    "FULL_MOUTH_14": {
+      "label_es": "Serie de 14 imágenes intraorales",
+      "nominal_image_count": 14,
+      "scope": "FULL_MOUTH",
+      "composition": "PROVIDER_PROTOCOL_SPECIFIC",
+      "bitewing_inclusion": "NOT_GUARANTEED",
+      "nominal_count_semantics": "PLANNED_ACQUISITION_NOT_FINAL_USABLE_IMAGE_COUNT",
+      "provider_confirmation_required": true,
+      "source_ids": ["S01", "S04", "S05", "S16"]
+    },
+    "FULL_MOUTH_16": {
+      "label_es": "Serie de 16 imágenes intraorales",
+      "nominal_image_count": 16,
+      "scope": "FULL_MOUTH",
+      "composition": "PROVIDER_PROTOCOL_SPECIFIC",
+      "bitewing_inclusion": "NOT_GUARANTEED",
+      "nominal_count_semantics": "PLANNED_ACQUISITION_NOT_FINAL_USABLE_IMAGE_COUNT",
+      "provider_confirmation_required": true,
+      "source_ids": ["S02", "S03", "S05"]
+    },
+    "FULL_MOUTH_18": {
+      "label_es": "Serie de 18 imágenes intraorales",
+      "nominal_image_count": 18,
+      "scope": "FULL_MOUTH",
+      "composition": "PROVIDER_PROTOCOL_SPECIFIC",
+      "bitewing_inclusion": "NOT_GUARANTEED",
+      "nominal_count_semantics": "PLANNED_ACQUISITION_NOT_FINAL_USABLE_IMAGE_COUNT",
+      "provider_confirmation_required": true,
+      "source_ids": ["S01", "S04", "S05"]
+    }
+  }
+}

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_dental_location.php';
+require_once __DIR__ . '/clinical_dental_acquisition.php';
 require_once __DIR__ . '/clinical_specimen_requirements.php';
 require_once __DIR__ . '/clinical_pathology_parameters.php';
 require_once __DIR__ . '/clinical_imaging_parameters.php';
@@ -111,6 +112,12 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
         if ($stmt->fetchColumn() === false) throw new InvalidArgumentException('STUDY_EXTERNAL_CODE_UNVERIFIED');
     }
     $dentalLocation = clinical_dental_validate_location($key, $input['dental_location'] ?? null);
+    $policyVersion = clinical_dental_study_policy_version($key);
+    if (array_key_exists('dental_study_policy_version', $input)
+        && ($policyVersion === null || $input['dental_study_policy_version'] !== $policyVersion)) {
+        throw new InvalidArgumentException('DENTAL_STUDY_POLICY_VERSION_INVALID');
+    }
+    $dentalProtocol = clinical_dental_acquisition_validate($key, $input['dental_acquisition_protocol'] ?? null);
     $specimenRequirements = clinical_specimen_validate($key, $input['specimen_collection_requirements'] ?? null);
     $pathologyParameters = clinical_pathology_validate($key, $input['pathology_order_parameters'] ?? null);
     $imagingParameters = clinical_imaging_validate($key, $input['imaging_order_parameters'] ?? null, !$resultTaxonomy);
@@ -125,6 +132,14 @@ function clinical_study_order_snapshot(PDO $pdo, array $input, int $sequence, bo
         ...($dentalLocation === null ? [] : [
             'dental_location' => $dentalLocation,
             'dental_location_label' => clinical_dental_location_summary($dentalLocation),
+        ]),
+        ...($policyVersion === null || (($dentalLocation['contract_version'] ?? null) !== 2 && $dentalProtocol === null) ? [] : [
+            'dental_study_policy_version' => $policyVersion,
+            'dental_location_authority_version' => 2,
+        ]),
+        ...($dentalProtocol === null ? [] : [
+            'dental_acquisition_protocol' => $dentalProtocol,
+            'dental_acquisition_protocol_label' => clinical_dental_acquisition_summary($dentalProtocol),
         ]),
         ...($specimenRequirements === null ? [] : ['specimen_collection_requirements' => $specimenRequirements]),
         ...($pathologyParameters === null ? [] : [
@@ -177,7 +192,7 @@ function clinical_study_normalize_order_payload(PDO $pdo, string $documentType, 
                 $old = $prior[$claimed];
                 $item = $old;
                 $item['sequence'] = $index + 1;
-                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label','imaging_order_parameters','imaging_order_parameters_label','lab_panel_definition','lab_arterial_oxygen_context','lab_arterial_oxygen_label'] as $field) {
+                foreach (['study_type_id','study_type_key','study_category','study_display_name','external_code_system','external_code','external_code_version','note','dental_location','dental_location_label','dental_study_policy_version','dental_location_authority_version','dental_acquisition_protocol','dental_acquisition_protocol_label','specimen_collection_requirements','pathology_order_parameters','pathology_order_parameters_label','imaging_order_parameters','imaging_order_parameters_label','lab_panel_definition','lab_arterial_oxygen_context','lab_arterial_oxygen_label'] as $field) {
                     if (($raw[$field] ?? null) !== ($old[$field] ?? null)) throw new InvalidArgumentException('ORDER_ITEM_ID_MEANING_CHANGED');
                 }
             } else {

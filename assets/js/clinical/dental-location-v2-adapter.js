@@ -8,6 +8,7 @@
   const coverageFor=value=>{
     if(value.location_type==='TOOTH_LOCATION'||value.location_type==='QUADRANT_LOCATION')return 'LOCALIZED';
     if(value.location_type==='ARCH_LOCATION')return {MAXILLARY:'MAXILLARY_ARCH',MANDIBULAR:'MANDIBULAR_ARCH',BOTH_ARCHES:'BOTH_ARCHES'}[value.arch_key];
+    if(value.location_type==='TMJ_LOCATION')return 'TMJ';
     return value.region_key==='MAXILLOFACIAL'?'MAXILLOFACIAL':'LOCALIZED';
   };
   function initialV2(kind,value){

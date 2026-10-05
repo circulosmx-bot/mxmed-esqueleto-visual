@@ -17,7 +17,29 @@ function clinical_dental_v2_authority(): array
 
 function clinical_dental_v2_study_policy(?string $studyKey): ?array
 {
-    return clinical_dental_v2_authority()['study_policies'][$studyKey ?? ''] ?? null;
+    $key = $studyKey ?? '';
+    return clinical_dental_study_policy_authority()['study_policies'][$key]
+        ?? clinical_dental_v2_authority()['study_policies'][$key] ?? null;
+}
+
+/** Contract-only overlay. Future keys remain dormant until the catalog activates them. */
+function clinical_dental_study_policy_authority(): array
+{
+    static $authority = null;
+    if ($authority !== null) return $authority;
+    $path = __DIR__ . '/../../assets/data/clinical/dental-study-location-policies-v1.json';
+    $source = json_decode((string)file_get_contents($path), true);
+    if (!is_array($source) || ($source['authority'] ?? null) !== 'DENTAL_STUDY_LOCATION_POLICIES_V1'
+        || ($source['contract_version'] ?? null) !== 1 || ($source['location_authority_version'] ?? null) !== 2
+        || !is_array($source['study_policies'] ?? null)) {
+        throw new RuntimeException('DENTAL_STUDY_POLICY_AUTHORITY_UNAVAILABLE');
+    }
+    return $authority = $source;
+}
+
+function clinical_dental_study_policy_version(?string $studyKey): ?int
+{
+    return isset(clinical_dental_study_policy_authority()['study_policies'][$studyKey ?? '']) ? 1 : null;
 }
 
 /** Also accepts a caller-supplied policy for isolated contract tests and future procedure adapters. */
@@ -40,6 +62,9 @@ function clinical_dental_v2_validate(array $raw, array $policy): array
     if (!in_array($mode, $policy['allowed_location_modes'] ?? [], true)) {
         throw new InvalidArgumentException('DENTAL_V2_MODE_FORBIDDEN');
     }
+    if (isset($policy['allowed_location_types']) && !in_array($type, $policy['allowed_location_types'], true)) {
+        throw new InvalidArgumentException('DENTAL_V2_TYPE_FORBIDDEN');
+    }
     $base = ['contract_version','location_type','selection_mode'];
     $specific = match ($type) {
         'TOOTH_LOCATION'=>['numbering_system','dentition_mode','tooth_fdi_codes'],
@@ -52,6 +77,11 @@ function clinical_dental_v2_validate(array $raw, array $policy): array
         : (($policy['study_kind'] ?? null) === 'TMJ' ? ['projection'] : []);
     if (array_diff(array_keys($raw), [...$base,...$specific,...$study])) {
         throw new InvalidArgumentException('DENTAL_V2_FIELD_INVALID');
+    }
+    foreach ($policy['required_fields'] ?? [] as $field) {
+        if (!array_key_exists($field, $raw) || $raw[$field] === null || $raw[$field] === '') {
+            throw new InvalidArgumentException('DENTAL_V2_FIELD_REQUIRED');
+        }
     }
     $dentition = $raw['dentition_mode'] ?? null;
     if ($dentition !== null && (!is_string($dentition) || !in_array($dentition, $authority['dentition_modes'], true)
@@ -130,6 +160,7 @@ function clinical_dental_v2_validate(array $raw, array $policy): array
                 'MAXILLARY'=>'MAXILLARY_ARCH','MANDIBULAR'=>'MANDIBULAR_ARCH','BOTH_ARCHES'=>'BOTH_ARCHES',
             },
             'REGION_LOCATION'=>$normalized['region_key'] === 'MAXILLOFACIAL' ? 'MAXILLOFACIAL' : 'LOCALIZED',
+            'TMJ_LOCATION'=>'TMJ',
             default=>null,
         };
         if ($coverage !== $expected) throw new InvalidArgumentException('DENTAL_V2_COVERAGE_CONFLICT');
@@ -153,7 +184,11 @@ function clinical_dental_v2_validate(array $raw, array $policy): array
 function clinical_dental_v2_validate_study(?string $studyKey, mixed $raw): ?array
 {
     $policy = clinical_dental_v2_study_policy($studyKey);
-    if ($policy === null || $policy['allowed_location_modes'] === []) throw new InvalidArgumentException('DENTAL_V2_STUDY_INCOMPATIBLE');
+    if ($policy === null) throw new InvalidArgumentException('DENTAL_V2_STUDY_INCOMPATIBLE');
+    if (($policy['allowed_location_modes'] ?? []) === []) {
+        if ($raw !== null) throw new InvalidArgumentException('DENTAL_V2_STUDY_INCOMPATIBLE');
+        return null;
+    }
     if ($raw === null) {
         if (!$policy['required']) return null;
         throw new InvalidArgumentException('DENTAL_V2_LOCATION_REQUIRED');
@@ -173,6 +208,7 @@ function clinical_dental_v2_summary(array $location): string
         'LEFT'=>'izquierda','RIGHT'=>'derecha','MIDLINE'=>'media','BILATERAL'=>'bilateral',
         'LOCALIZED'=>'Zona localizada','MAXILLARY_ARCH'=>'Maxilar superior',
         'MANDIBULAR_ARCH'=>'Mandíbula',
+        'TMJ'=>'ATM',
     ];
     $parts = [];
     if (isset($location['tooth_fdi_codes'])) $parts[] = 'Piezas '.implode(', ', $location['tooth_fdi_codes']);
@@ -181,8 +217,8 @@ function clinical_dental_v2_summary(array $location): string
     if (isset($location['region_key'])) $parts[] = 'Región '.$labels[$location['region_key']];
     if (isset($location['side_key'])) $parts[] = 'Lado '.$labels[$location['side_key']];
     if (isset($location['region_detail'])) $parts[] = $location['region_detail'];
-    if (isset($location['tmj_side'])) $parts[] = 'ATM '.$labels[$location['tmj_side']];
-    if (isset($location['coverage'])) $parts[] = 'Cobertura '.$labels[$location['coverage']];
+    if (isset($location['tmj_side'])) $parts[] = 'Región: ATM '.$labels[$location['tmj_side']];
+    if (isset($location['coverage']) && !isset($location['tmj_side'])) $parts[] = 'Cobertura '.$labels[$location['coverage']];
     if (isset($location['projection'])) $parts[] = 'Vista '.($location['projection'] === 'PA' ? 'posteroanterior' : 'lateral');
     if (isset($location['fov_cm'])) $parts[] = 'Campo solicitado '.$location['fov_cm'].' cm';
     return implode(' · ', $parts);

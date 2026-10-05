@@ -23,6 +23,26 @@ with urllib.request.urlopen(urllib.request.Request(BASE+'/modules/clinical/ui/po
     html=response.read().decode()
 assert 'Piezas 16, 54' in html and 'Zona localizada' in html
 print('QA_V2_PORTABLE_HTML_READ=PASS',flush=True)
+tmj_cbct={'contract_version':2,'location_type':'TMJ_LOCATION','selection_mode':'TMJ_REGION','tmj_side':'BILATERAL','coverage':'TMJ'}
+code,data=request(batch({'study_type_key':'dental_cbct','dental_location':tmj_cbct,'dental_study_policy_version':1}));assert code==201,(code,data)
+tmj_doc=data['data']['orders'][0]
+tmj_saved=json.loads(sql('SELECT payload_json FROM clinical_documents WHERE id='+str(tmj_doc['document_id'])))['order_items'][0]
+assert tmj_saved['dental_location']['coverage']=='TMJ' and tmj_saved['dental_study_policy_version']==1 and tmj_saved['dental_location_authority_version']==2
+query=urllib.parse.urlencode({'uuid':tmj_doc['document_uuid'],'doctor_id':'d_odonto02'})
+with urllib.request.urlopen(urllib.request.Request(BASE+'/modules/clinical/ui/portable-order.php?'+query,headers={'Cookie':'PHPSESSID=odonto02-owner'}),timeout=30) as response:
+    assert 'Región: ATM bilateral' in response.read().decode()
+print('QA_CBCT_TMJ_HTTP_SNAPSHOT_AND_PRINT=PASS',flush=True)
+for bad in [
+    {'study_type_key':'dental_cbct','dental_location':{**tmj_cbct,'tooth_fdi_codes':['16']}},
+    {'study_type_key':'dental_cbct','dental_location':{**tmj_cbct,'coverage':'LOCALIZED'}},
+    {'study_type_key':'dental_cbct','dental_location':tmj_cbct,'dental_study_policy_version':2},
+]:
+    before=count();code,error=request(batch(bad));assert code==422 and count()==before,(bad,code,error)
+print('QA_CBCT_TMJ_HTTP_INVALID_ZERO_WRITES=PASS',flush=True)
+assert sql('SELECT COUNT(*) FROM clinical_study_types WHERE is_active=1')=='280'
+for future in ['dental_periapical_xray','dental_bitewing_xray','dental_occlusal_xray','dental_full_periapical_series']:
+    assert sql("SELECT COUNT(*) FROM clinical_study_types WHERE study_type_key='"+future+"'")=='0'
+print('QA_FUTURE_STUDIES_DORMANT=PASS',flush=True)
 for bad in [
     {**tooth,'tooth_fdi_codes':['19']},
     {**tooth,'dentition_mode':'PERMANENT'},
