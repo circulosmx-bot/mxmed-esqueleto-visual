@@ -31,7 +31,7 @@
   }
   function mount(host,key,config,current,onChange){
     const rule=ruleFor(key,config);if(!rule||!Object.keys(rule.allowed||{}).length)return;
-    host.className='functional-parameter-panel';host.setAttribute('aria-label',`Parámetros funcionales de ${key}`);
+    host.className='functional-parameter-panel';host.setAttribute('aria-label','Parámetros funcionales del estudio');
     const value=copy(current||initial(key,config)||{version:1});
     Object.entries(rule.allowed).forEach(([field,choices])=>{
       const required=(rule.required||[]).includes(field);

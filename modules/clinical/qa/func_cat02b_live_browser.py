@@ -29,8 +29,12 @@ with sync_playwright() as playwright:
   page.locator('.ordcomp [data-tax03c-key="esophageal_manometry"]').click()
   if width==390:page.get_by_role('button',name='Ver órdenes').click()
   expect(page.locator('.functional-parameter-panel')).to_be_visible()
+  assert page.locator('.functional-parameter-panel').get_attribute('aria-label')=='Parámetros funcionales del estudio'
+  technique=page.locator('.functional-parameter-panel select[data-functional-field="gi_technique"]')
+  technique.focus()
+  assert technique.evaluate('(element)=>document.activeElement===element && element.labels.length===1 && element.labels[0].textContent.includes("Técnica")')
   assert 'Fisiología gastrointestinal (1)' in page.locator('.ordcomp-summary').inner_text()
-  page.locator('.functional-parameter-panel select[data-functional-field="gi_technique"]').select_option('HIGH_RESOLUTION')
+  technique.select_option('HIGH_RESOLUTION')
   expect(page.locator('.functional-item-summary')).to_contain_text('Alta resolución')
   if width==390:page.get_by_role('button',name='Volver al catálogo').click()
   page.locator('.ordcomp [data-tax03c-key="esophageal_ph_monitoring"]').click()
