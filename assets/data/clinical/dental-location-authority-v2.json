@@ -1,0 +1,21 @@
+{
+  "authority": "DENTAL_LOCATION_V2",
+  "contract_version": 2,
+  "numbering_system": "FDI_ISO_3950",
+  "dentition_modes": ["PERMANENT", "PRIMARY", "MIXED"],
+  "selection_modes": ["SINGLE_TOOTH", "MULTIPLE_TEETH", "QUADRANT", "ARCH", "REGION", "BILATERAL_REGION", "TMJ_REGION"],
+  "regions": ["ANTERIOR", "POSTERIOR", "MAXILLOFACIAL", "OTHER_SPECIFIED"],
+  "quadrants": ["UPPER_RIGHT", "UPPER_LEFT", "LOWER_LEFT", "LOWER_RIGHT"],
+  "arches": ["MAXILLARY", "MANDIBULAR", "BOTH_ARCHES"],
+  "sides": ["LEFT", "RIGHT", "MIDLINE", "BILATERAL"],
+  "tmj_sides": ["LEFT", "RIGHT", "BILATERAL"],
+  "study_policies": {
+    "dental_cbct": {"required": true, "allowed_location_modes": ["SINGLE_TOOTH", "MULTIPLE_TEETH", "QUADRANT", "ARCH", "REGION", "BILATERAL_REGION"], "allowed_dentition_modes": ["PERMANENT", "PRIMARY", "MIXED"], "min_selection": 1, "max_selection": 52},
+    "dental_panoramic_xray": {"required": false, "allowed_location_modes": [], "allowed_dentition_modes": [], "min_selection": 0, "max_selection": 0},
+    "dental_cephalometric_xray": {"required": false, "allowed_location_modes": [], "allowed_dentition_modes": [], "min_selection": 0, "max_selection": 0},
+    "tmj_comparative_xray": {"required": true, "allowed_location_modes": ["TMJ_REGION"], "allowed_dentition_modes": [], "min_selection": 1, "max_selection": 1},
+    "dental_intraoral_scan": {"required": true, "allowed_location_modes": ["ARCH"], "allowed_dentition_modes": [], "min_selection": 1, "max_selection": 1},
+    "dental_clinical_photographs": {"required": false, "allowed_location_modes": [], "allowed_dentition_modes": [], "min_selection": 0, "max_selection": 0},
+    "dental_study_model": {"required": false, "allowed_location_modes": ["ARCH"], "allowed_dentition_modes": [], "min_selection": 0, "max_selection": 1}
+  }
+}

@@ -144,7 +144,7 @@
     custom.addEventListener('input',()=>options.onDraftChange?.());
 
     function renderSelected(){
-      activeDentalEditor=null;
+      activeDentalEditor?.destroy?.();activeDentalEditor=null;
       selectedBox.replaceChildren();
       if(!selected.length){const p=document.createElement('p');p.textContent='Todavía no has agregado estudios.';selectedBox.append(p);return;}
       const boxes=new Map();
@@ -196,7 +196,7 @@
           }
           row.append(oxygen);
         }
-        const dental=window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
+        const dental=window.mxmedDentalLocation||window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
         if(kind&&kind!=='NONE'&&!readonly){
           const configure=document.createElement('button');configure.type='button';configure.className='btn btn-outline-primary btn-sm dental-config-toggle';
           configure.dataset.tax03cDental=String(index);configure.textContent=editingIndex===index?'Ocultar ubicación':'Configurar ubicación';
@@ -207,10 +207,16 @@
           const summary=document.createElement('small');summary.className='dental-item-summary';
           summary.textContent=dental.summary(item.dentalLocation)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');row.append(summary);
           if(editingIndex===index&&!readonly){
-            const panel=document.createElement('div');panel.className='dental-location-host';row.append(panel);
+            const dialog=document.createElement('dialog');dialog.className='dental-location-dialog';
+            const head=document.createElement('div');head.className='dental-location-dialog-head';
+            const title=document.createElement('strong');title.textContent=`Ubicación · ${item.name}`;
+            const close=document.createElement('button');close.type='button';close.className='dental-location-dialog-close';close.textContent='Cerrar';close.addEventListener('click',()=>dialog.close());head.append(title,close);dialog.append(head);
+            const panel=document.createElement('div');panel.className='dental-location-host';dialog.append(panel);row.append(dialog);
+            dialog.addEventListener('close',()=>{if(editingIndex===index){editingIndex=-1;configure.textContent='Configurar ubicación';configure.setAttribute('aria-expanded','false');activeDentalEditor?.destroy?.();activeDentalEditor=null;configure.focus({preventScroll:true});}});
             activeDentalEditor=dental.mount(panel,kind,item.dentalLocation||null,location=>{
               item.dentalLocation=location;summary.textContent=dental.summary(location)||(kind==='MODEL'?'Ubicación opcional':'Ubicación pendiente');notify();
             });
+            queueMicrotask(()=>{if(dialog.isConnected&&!dialog.open)dialog.showModal();});
           }
         }
         const pathologyRequirement=pathologyRule(item);
@@ -578,7 +584,7 @@
         selected.push({type:'canonical',id:Number(row.study_type_id),key:row.study_type_key,name:row.display_name_es,category:row.category_key,
           ...(row.study_type_key==='arterial_blood_gas'?{oxygenContext:{version:1,mode:'UNKNOWN'}}:{}),
           ...(pathologyRuleForRow?{pathologyParameters:pathology.initial(row.study_type_key,pathologyAuthority)}:{}),...(imagingRule({type:'canonical',key:row.study_type_key})?.status==='ACTIVE_REQUIRED'?{imagingParameters:imaging.initial(row.study_type_key,imagingAuthority)}:{})});
-        const kind=window.mxmedDentalLocationV1?.kindFor(row.study_type_key),rule=specimen?.studies?.[row.study_type_key];editingIndex=(kind&&kind!=='NONE'||rule?.specimen_mode==='REQUIRED_SELECTION'||rule?.collection_mode==='REQUIRED_SELECTION'||rule?.source_site==='REQUIRED_SELECTION')?selected.length-1:-1;
+        const kind=(window.mxmedDentalLocation||window.mxmedDentalLocationV1)?.kindFor(row.study_type_key),rule=specimen?.studies?.[row.study_type_key];editingIndex=(kind&&kind!=='NONE'||rule?.specimen_mode==='REQUIRED_SELECTION'||rule?.collection_mode==='REQUIRED_SELECTION'||rule?.source_site==='REQUIRED_SELECTION')?selected.length-1:-1;
         if(pathologyRuleForRow)editingIndex=selected.length-1;
         if(imagingRule(selected.at(-1))?.status==='ACTIVE_REQUIRED')editingIndex=selected.length-1;
         const position=results.findIndex(item=>Number(item.study_type_id)===Number(row.study_type_id));
@@ -624,8 +630,8 @@
       selected:()=>clone(selected),priority:()=>priority.value,indication:()=>indication.value,
       orderItems:()=>selected.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:clone(item.dentalLocation)}:{}),...(item.specimenRequirements?{specimen_collection_requirements:clone(item.specimenRequirements)}:{}),...(item.pathologyParameters?{pathology_order_parameters:clone(item.pathologyParameters)}:{}),...(item.imagingParameters?{imaging_order_parameters:clone(item.imagingParameters)}:{}),...(item.key==='arterial_blood_gas'?{lab_arterial_oxygen_context:clone(item.oxygenContext||{version:1,mode:'UNKNOWN'})}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{}),...(embedded?{custom_routing_confirmed:item.routingConfirmed===true}:{})}),
       valid:()=>selected.length>0&&selected.length<=100&&selected.every(item=>{
-        const kind=item.type==='canonical'?window.mxmedDentalLocationV1?.kindFor(item.key):null;
-        return (!kind||window.mxmedDentalLocationV1.isComplete(kind,item.dentalLocation))&&specimenComplete(item)&&pathologyComplete(item)&&imagingComplete(item)&&oxygenComplete(item);
+        const dental=window.mxmedDentalLocation||window.mxmedDentalLocationV1,kind=item.type==='canonical'?dental?.kindFor(item.key):null;
+        return (!kind||dental.isComplete(kind,item.dentalLocation))&&specimenComplete(item)&&pathologyComplete(item)&&imagingComplete(item)&&oxygenComplete(item);
       })&&(!activeDentalEditor||activeDentalEditor.valid()),
       validationMessage:()=>selected.length?(selected.some(item=>!oxygenComplete(item))?'Revisa el contexto de oxígeno y la FiO₂ de la gasometría.':selected.some(item=>!imagingComplete(item))?'Completa los parámetros de imagen pendientes antes de continuar.':selected.some(item=>!pathologyComplete(item))?'Completa los parámetros de patología pendientes antes de continuar.':selected.some(item=>!specimenComplete(item))?'Completa los datos de muestra pendientes antes de continuar.':'Configura la ubicación de cada estudio dental pendiente antes de solicitar la orden.'):'Agrega al menos un estudio antes de solicitar la orden.',
       destroy:()=>{destroyed=true;clearTimeout(timer);controller?.abort();host.removeEventListener('click',onClick);if(options.selectionHost)selectedBox.removeEventListener('click',onClick);},

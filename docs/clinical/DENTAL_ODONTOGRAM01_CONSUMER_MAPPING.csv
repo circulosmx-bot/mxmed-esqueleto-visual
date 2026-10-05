@@ -1,11 +1,11 @@
 status,consumer_type,consumer_key,current_v1_location,proposed_v2_modes,required,min_selection,max_selection,dentition_modes_allowed,additional_rule
-PROPOSED,ACTIVE_STUDY,dental_cbct,"CBCT: localized teeth or free-text region; arch/broad coverage","SINGLE_TOOTH|MULTIPLE_TEETH|QUADRANT|ARCH|REGION|BILATERAL_REGION",true,1,52,"PERMANENT|PRIMARY|MIXED",Coverage and optional FOV remain CBCT parameters; broad coverage does not require marking every tooth
-PROPOSED,ACTIVE_STUDY,dental_panoramic_xray,NONE,NONE,false,0,0,,Panoramic identity already covers the requested image; do not require odontogram
-PROPOSED,ACTIVE_STUDY,dental_cephalometric_xray,NONE,NONE,false,0,0,,Cephalometric acquisition has no tooth location selector
-PROPOSED,ACTIVE_STUDY,tmj_comparative_xray,"TMJ: projection LATERAL or PA; side absent",TMJ_REGION,true,1,1,,Keep projection as independent study parameter; V1 side remains unknown
-PROPOSED,ACTIVE_STUDY,dental_intraoral_scan,"SCAN: MAXILLARY or MANDIBULAR or BOTH",ARCH,true,1,1,,Preserve arch selection without forcing individual teeth
-PROPOSED,ACTIVE_STUDY,dental_clinical_photographs,"PHOTO: INTRAORAL or EXTRAORAL or BOTH",NONE,false,0,0,,Photograph scope remains separate study parameter; no odontogram by default
-PROPOSED,ACTIVE_STUDY,dental_study_model,"MODEL: optional arch",ARCH,false,0,1,,Keep optional arch; do not create location when absent
+IMPLEMENTED,ACTIVE_STUDY,dental_cbct,"CBCT: localized teeth or free-text region; arch/broad coverage","SINGLE_TOOTH|MULTIPLE_TEETH|QUADRANT|ARCH|REGION|BILATERAL_REGION",true,1,52,"PERMANENT|PRIMARY|MIXED",Coverage and optional FOV remain CBCT parameters; broad coverage does not require marking every tooth
+IMPLEMENTED,ACTIVE_STUDY,dental_panoramic_xray,NONE,NONE,false,0,0,,Panoramic identity already covers the requested image; do not require odontogram
+IMPLEMENTED,ACTIVE_STUDY,dental_cephalometric_xray,NONE,NONE,false,0,0,,Cephalometric acquisition has no tooth location selector
+IMPLEMENTED,ACTIVE_STUDY,tmj_comparative_xray,"TMJ: projection LATERAL or PA; side absent",TMJ_REGION,true,1,1,,Keep projection as independent study parameter; V1 side remains unknown
+IMPLEMENTED,ACTIVE_STUDY,dental_intraoral_scan,"SCAN: MAXILLARY or MANDIBULAR or BOTH",ARCH,true,1,1,,Preserve arch selection without forcing individual teeth
+IMPLEMENTED,ACTIVE_STUDY,dental_clinical_photographs,"PHOTO: INTRAORAL or EXTRAORAL or BOTH",NONE,false,0,0,,Photograph scope remains separate study parameter; no odontogram by default
+IMPLEMENTED,ACTIVE_STUDY,dental_study_model,"MODEL: optional arch",ARCH,false,0,1,,Keep optional arch; do not create location when absent
 PROPOSED,NOT_IN_CATALOG,dental_periapical_xray,NONE,"SINGLE_TOOTH|MULTIPLE_TEETH",true,1,8,"PERMANENT|PRIMARY|MIXED",Hypothetical policy only; clinical identity and max require future ratification
 PROPOSED,NOT_IN_CATALOG,dental_bitewing_xray,NONE,"REGION|BILATERAL_REGION",true,1,1,"PERMANENT|PRIMARY|MIXED",Hypothetical posterior region policy only; no catalog activation
 PROPOSED,FUTURE_PROCEDURE,EXTRACTION,NONE,"SINGLE_TOOTH|MULTIPLE_TEETH",true,1,16,"PERMANENT|PRIMARY|MIXED",Procedure authority and clinical rules require separate ratification

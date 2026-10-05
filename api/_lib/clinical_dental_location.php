@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/clinical_dental_location_v2.php';
 
 /** CAT02 order-location authority. The same explicit FDI map is served to the browser. */
 function clinical_dental_teeth(): array
@@ -32,6 +33,9 @@ function clinical_dental_study_requirements(): array
 /** Null means no dental location. No catalog or patient state is used to rebuild it later. */
 function clinical_dental_validate_location(?string $studyKey, mixed $raw): ?array
 {
+    if (is_array($raw) && ($raw['contract_version'] ?? null) === 2) {
+        return clinical_dental_v2_validate_study($studyKey, $raw);
+    }
     $kind = clinical_dental_study_requirements()[$studyKey ?? ''] ?? null;
     if ($kind === null || $kind === 'NONE') {
         if ($raw !== null) throw new InvalidArgumentException('DENTAL_LOCATION_STUDY_INCOMPATIBLE');
@@ -117,6 +121,7 @@ function clinical_dental_validate_location(?string $studyKey, mixed $raw): ?arra
 function clinical_dental_location_summary(?array $location): ?string
 {
     if ($location === null) return null;
+    if (($location['contract_version'] ?? null) === 2) return clinical_dental_v2_summary($location);
     $parts = [];
     $coverage = ['LOCALIZED'=>'Zona localizada','MAXILLARY_ARCH'=>'Maxilar superior',
         'MANDIBULAR_ARCH'=>'Mandíbula','BOTH_ARCHES'=>'Ambos maxilares','MAXILLOFACIAL'=>'Maxilofacial'];

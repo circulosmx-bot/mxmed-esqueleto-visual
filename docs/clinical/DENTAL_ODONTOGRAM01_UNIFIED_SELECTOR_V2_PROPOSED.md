@@ -1,7 +1,7 @@
 # DENTAL-ODONTOGRAM01 — selector unificado V2
 
-**AUDIT_ONLY · PROPOSED · DIRECTOR_REVIEW_REQUIRED**
-Base auditada: `2d73ffbca0da47a30f0dd7ad2fe32263294bf481`. Ningún contrato de producción, catálogo o interfaz cambia en esta tarea.
+**IMPLEMENTED · DENTAL-ODONTOGRAM02**
+Base auditada: `2d73ffbca0da47a30f0dd7ad2fe32263294bf481`. DENTAL-ODONTOGRAM01 fue una propuesta sin cambios de producción; la implementación aprobada y su QA se documentan en [DENTAL_ODONTOGRAM02_UNIFIED_SELECTOR_V2_IMPLEMENTED.md](DENTAL_ODONTOGRAM02_UNIFIED_SELECTOR_V2_IMPLEMENTED.md).
 
 ## Hallazgo en el código actual
 
