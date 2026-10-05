@@ -1,6 +1,7 @@
 """Read-only authenticated SEARCH02-R1 gate against the actual Director runtime."""
 import json
 import os
+from pathlib import Path
 from playwright.sync_api import expect, sync_playwright
 
 BASE = os.environ.get('STUDY_SEARCH02_R1_BASE', 'http://127.0.0.1:18148')
@@ -40,7 +41,9 @@ with sync_playwright() as playwright:
               return {count:rows.length,unmapped:unmapped.map(x=>x.study_type_key)};
             }''')
             print('REAL_CATALOG_COVERAGE=' + json.dumps(coverage))
-            assert coverage['count'] == 252 and not coverage['unmapped'], coverage
+            routing_path = Path(__file__).resolve().parents[1] / 'catalog/study_order_routing_v1.json'
+            expected_count = len(json.loads(routing_path.read_text())['studies'])
+            assert coverage['count'] == expected_count and not coverage['unmapped'], coverage
         observed = {}
         for query in QUERIES:
             search.fill(query)
