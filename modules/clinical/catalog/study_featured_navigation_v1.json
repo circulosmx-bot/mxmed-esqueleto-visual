@@ -702,6 +702,7 @@
       "root_family": "imaging",
       "small": true,
       "study_keys": [
+        "breast_tomosynthesis",
         "breast_us",
         "mammo"
       ],
@@ -725,8 +726,12 @@
       "study_keys": [
         "mr_abdomen",
         "mr_brain",
+        "mr_cervical_spine",
         "mr_knee",
-        "mr_shoulder"
+        "mr_lumbar_spine",
+        "mr_pelvis",
+        "mr_shoulder",
+        "mra_brain"
       ],
       "featured": [],
       "groups": []
@@ -737,6 +742,8 @@
       "small": true,
       "study_keys": [
         "nm_bone_scan",
+        "nm_myocardial_perfusion",
+        "nm_renal_scan",
         "nm_thyroid_uptake",
         "pet_ct"
       ],
@@ -756,11 +763,16 @@
         "rx_ankle",
         "rx_chest",
         "rx_cspine",
+        "rx_elbow",
+        "rx_foot",
         "rx_hand",
+        "rx_hip",
         "rx_knee",
         "rx_lspine",
         "rx_pelvis",
-        "rx_shoulder"
+        "rx_shoulder",
+        "rx_tspine",
+        "rx_wrist"
       ],
       "featured": [],
       "groups": [
@@ -776,7 +788,12 @@
             "rx_shoulder",
             "rx_knee",
             "rx_ankle",
-            "rx_hand"
+            "rx_hand",
+            "rx_hip",
+            "rx_foot",
+            "rx_wrist",
+            "rx_elbow",
+            "rx_tspine"
           ]
         },
         {
@@ -799,7 +816,10 @@
         "ct_abdomen_pelvis",
         "ct_chest",
         "ct_head",
-        "ct_uro"
+        "ct_neck",
+        "ct_sinuses",
+        "ct_uro",
+        "cta_head_neck"
       ],
       "featured": [],
       "groups": []

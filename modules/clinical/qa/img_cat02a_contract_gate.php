@@ -16,7 +16,7 @@ function rejects(callable $call, string $case): void
 }
 $a = clinical_imaging_authority();
 check($a['version'] === 1 && count($a['rules']) === 55, 'authority version and exact study map');
-check(count(array_filter($a['rules'], static fn($r) => $r['status'] === 'FUTURE_INACTIVE')) === 15, 'future identities mapped but inactive');
+check(count(array_filter($a['rules'], static fn($r) => $r['status'] === 'ACTIVE_REQUIRED')) === 15, 'new identities mapped with required parameters');
 foreach ($a['value_labels'] as $group => $values) check(count($values) === count(array_unique(array_keys($values))), 'unique ' . $group . ' values');
 foreach ($a['rules'] as $key => $rule) {
     foreach ($rule['allowed'] as $field => $choices) {

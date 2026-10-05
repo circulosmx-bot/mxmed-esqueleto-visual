@@ -278,7 +278,22 @@
     "if_skin": "PATHOLOGY_CYTOLOGY",
     "ihc_breast_profile": "PATHOLOGY_CYTOLOGY",
     "ihc_single_marker": "PATHOLOGY_CYTOLOGY",
-    "pathology_outside_review": "PATHOLOGY_CYTOLOGY"
+    "pathology_outside_review": "PATHOLOGY_CYTOLOGY",
+    "breast_tomosynthesis": "GENERAL_IMAGING",
+    "ct_neck": "GENERAL_IMAGING",
+    "ct_sinuses": "GENERAL_IMAGING",
+    "cta_head_neck": "GENERAL_IMAGING",
+    "mr_cervical_spine": "GENERAL_IMAGING",
+    "mr_lumbar_spine": "GENERAL_IMAGING",
+    "mr_pelvis": "GENERAL_IMAGING",
+    "mra_brain": "GENERAL_IMAGING",
+    "nm_myocardial_perfusion": "GENERAL_IMAGING",
+    "nm_renal_scan": "GENERAL_IMAGING",
+    "rx_elbow": "GENERAL_IMAGING",
+    "rx_foot": "GENERAL_IMAGING",
+    "rx_hip": "GENERAL_IMAGING",
+    "rx_tspine": "GENERAL_IMAGING",
+    "rx_wrist": "GENERAL_IMAGING"
   },
   "catalog": {
     "urine": {

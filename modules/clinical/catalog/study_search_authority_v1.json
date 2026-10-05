@@ -2739,6 +2739,210 @@
         "laminillas",
         "bloques"
       ]
+    },
+    {
+      "study_key": "breast_tomosynthesis",
+      "canonical_display_name": "Tomosíntesis mamaria",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Tomosintesis mamaria",
+        "Mastografía 3D"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ct_neck",
+      "canonical_display_name": "TAC de cuello",
+      "common_display_name": null,
+      "abbreviations": [
+        "TAC cuello",
+        "TC cuello",
+        "CT cuello"
+      ],
+      "equivalent_aliases": [
+        "TC cuello",
+        "Tomografía de cuello"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "ct_sinuses",
+      "canonical_display_name": "TAC de senos paranasales",
+      "common_display_name": null,
+      "abbreviations": [
+        "TAC senos paranasales",
+        "TC senos paranasales",
+        "CT senos paranasales"
+      ],
+      "equivalent_aliases": [
+        "TC de senos paranasales",
+        "Tomografía de senos paranasales"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "cta_head_neck",
+      "canonical_display_name": "Angio-TC de cabeza y cuello",
+      "common_display_name": null,
+      "abbreviations": [
+        "CTA cabeza y cuello",
+        "AngioTAC cabeza y cuello",
+        "Angio-TC cabeza y cuello"
+      ],
+      "equivalent_aliases": [
+        "AngioTAC de cabeza y cuello",
+        "CTA cabeza y cuello",
+        "Angiotomografía de cabeza y cuello"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_cervical_spine",
+      "canonical_display_name": "Resonancia magnética de columna cervical",
+      "common_display_name": null,
+      "abbreviations": [
+        "RM cervical",
+        "RMN cervical",
+        "MRI cervical"
+      ],
+      "equivalent_aliases": [
+        "RM cervical",
+        "RMN cervical"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_lumbar_spine",
+      "canonical_display_name": "Resonancia magnética de columna lumbar",
+      "common_display_name": null,
+      "abbreviations": [
+        "RM lumbar",
+        "RMN lumbar",
+        "MRI lumbar"
+      ],
+      "equivalent_aliases": [
+        "RM lumbar",
+        "RMN lumbar",
+        "Resonancia lumbar"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mr_pelvis",
+      "canonical_display_name": "Resonancia magnética de pelvis",
+      "common_display_name": null,
+      "abbreviations": [
+        "RM pelvis",
+        "RMN pelvis",
+        "MRI pelvis"
+      ],
+      "equivalent_aliases": [
+        "RM pelvis",
+        "RMN pelvis"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "mra_brain",
+      "canonical_display_name": "Angio-RM cerebral",
+      "common_display_name": null,
+      "abbreviations": [
+        "MRA cerebral",
+        "Angio-RM cerebral"
+      ],
+      "equivalent_aliases": [
+        "Angio-RM cerebral",
+        "MRA cerebral",
+        "Angiorresonancia cerebral"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "nm_myocardial_perfusion",
+      "canonical_display_name": "Perfusión miocárdica nuclear",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Gammagrama de perfusión miocárdica",
+        "Perfusión miocárdica"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "nm_renal_scan",
+      "canonical_display_name": "Gammagrama renal",
+      "common_display_name": null,
+      "abbreviations": [],
+      "equivalent_aliases": [
+        "Gammagrafía renal"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_elbow",
+      "canonical_display_name": "Radiografía de codo",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX codo"
+      ],
+      "equivalent_aliases": [
+        "RX codo",
+        "Rayos X de codo"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_foot",
+      "canonical_display_name": "Radiografía de pie",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX pie"
+      ],
+      "equivalent_aliases": [
+        "RX pie",
+        "Rayos X de pie"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_hip",
+      "canonical_display_name": "Radiografía de cadera",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX cadera"
+      ],
+      "equivalent_aliases": [
+        "RX cadera",
+        "Rayos X de cadera"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_tspine",
+      "canonical_display_name": "Radiografía de columna torácica",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX columna torácica"
+      ],
+      "equivalent_aliases": [
+        "RX columna torácica",
+        "RX dorsal"
+      ],
+      "discovery_terms": []
+    },
+    {
+      "study_key": "rx_wrist",
+      "canonical_display_name": "Radiografía de muñeca",
+      "common_display_name": null,
+      "abbreviations": [
+        "RX muñeca"
+      ],
+      "equivalent_aliases": [
+        "RX muñeca",
+        "Rayos X de muñeca"
+      ],
+      "discovery_terms": []
     }
   ]
 }

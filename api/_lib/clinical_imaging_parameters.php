@@ -18,8 +18,8 @@ function clinical_imaging_authority(): array
     return $authority;
 }
 
-/** Null preserves existing order behavior. Inactive future keys have rules but remain unorderable in the catalog. */
-function clinical_imaging_validate(?string $studyKey, mixed $raw, bool $requireFutureOrderParameters = true): ?array
+/** Null preserves existing order behavior except for active keys with required intent. */
+function clinical_imaging_validate(?string $studyKey, mixed $raw, bool $requireOrderParameters = true): ?array
 {
     $authority = clinical_imaging_authority();
     $rule = $authority['rules'][$studyKey ?? ''] ?? null;
@@ -28,7 +28,7 @@ function clinical_imaging_validate(?string $studyKey, mixed $raw, bool $requireF
         return null;
     }
     if ($raw === null) {
-        if ($requireFutureOrderParameters && ($rule['status'] ?? null) === 'FUTURE_INACTIVE') {
+        if ($requireOrderParameters && ($rule['status'] ?? null) === 'ACTIVE_REQUIRED') {
             throw new InvalidArgumentException('IMAGING_PARAMETERS_REQUIRED');
         }
         return null;

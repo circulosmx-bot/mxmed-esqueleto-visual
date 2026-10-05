@@ -2,7 +2,7 @@
 
 **Status:** `AUDIT_ONLY | PROPOSED | DIRECTOR_REVIEW_REQUIRED`
 **Source HEAD:** `d300a2d793aa31d9c8ea5ddc5475a88b05d24ca1`
-**Follow-up status:** `PARAMETER_CONTRACT_IMPLEMENTED_PENDING_CATALOG` (IMG-CAT02A)
+**Follow-up status:** `MINIMUM_SAFE_CATALOG_IMPLEMENTED` (IMG-CAT02B; IMG-CAT02A established the V1 parameter contract)
 **Scope:** Contract audit only. No catalog, alias, navigation, routing, schema, writer, reader, frontend or backend mutation.
 
 ## Director summary

@@ -280,7 +280,7 @@
       for(const o of state.orders){
         if(o.state==='SUCCESS')continue;
         const type=window.mxmedStudyComposer.documentType(o.items);
-        const orderItems=o.items.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:item.dentalLocation}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})});
+        const orderItems=o.items.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key,...(item.dentalLocation?{dental_location:item.dentalLocation}:{}),...(item.imagingParameters?{imaging_order_parameters:item.imagingParameters}:{})}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})});
         await run(o,`/api/clinical/index.php/encounters/${encodeURIComponent(c.key)}/documents`,{
           document_type:type,title:o.title.trim(),summary:Array.from(o.summary||'').slice(0,512).join(''),event_datetime:o.event,
           payload:{source:'m7_ws04',order_area:window.mxmedStudyComposer.orderArea(o.items),priority:o.priority||'Rutinaria',indication:o.indication||'',order_items:orderItems}

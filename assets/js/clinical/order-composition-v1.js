@@ -10,7 +10,7 @@
   const featuredNavigation=()=>featuredPromise ||= fetch('/modules/clinical/catalog/study_featured_navigation_v1.json',{credentials:'same-origin'})
     .then(r=>{if(!r.ok)throw new Error('FEATURED_NAVIGATION_UNAVAILABLE');return r.json();}).catch(e=>{featuredPromise=null;throw e;});
   function mount(host,options){
-    let config=null,specimenConfig=null,pathologyConfig=null,featuredConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
+    let config=null,specimenConfig=null,pathologyConfig=null,imagingConfig=null,featuredConfig=null,selected=[],customDraft={},metadata={},composer=null,context=null,lastScope=null,epoch=0;
     let busy=false,attempt=null,uncertain=false,issued=false,reviewReturnFocus=null,reviewScroll=null;const waiters=[];
     const workspace=el('div','','ordcomp-workspace'),catalog=el('section','','ordcomp-catalog'),aside=el('aside','','ordcomp-summary');
     const selector=el('div');catalog.setAttribute('aria-label','Selección de estudios');catalog.append(selector);
@@ -92,10 +92,10 @@
       host.classList.remove('ordcomp-show-summary');toggle.textContent='Ver órdenes';toggle.setAttribute('aria-expanded','false');
       selector.textContent='Cargando estudios…';
       try{
-        [config,specimenConfig,pathologyConfig,featuredConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();}),fetch('/modules/clinical/catalog/pathology_order_parameters_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('PATHOLOGY_CONFIG_UNAVAILABLE');return r.json();}),featuredNavigation()]);if(epoch!==seen)return false;
+        [config,specimenConfig,pathologyConfig,imagingConfig,featuredConfig]=await Promise.all([routing(),fetch('/modules/clinical/catalog/study_specimen_requirements_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('SPECIMEN_CONFIG_UNAVAILABLE');return r.json();}),fetch('/modules/clinical/catalog/pathology_order_parameters_v1.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('PATHOLOGY_CONFIG_UNAVAILABLE');return r.json();}),window.mxmedImagingParametersV1.authority(),featuredNavigation()]);if(epoch!==seen)return false;
         options.onHeading?.(featuredConfig.leaves?.[scope.id]?.heading||scope.label||'Catálogo general');
         composer=window.mxmedStudyComposer.mount(selector,{doctorId:current.doctor,presentation:'embedded',routing:config,
-          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',featuredNavigation:featuredConfig,selectionHost:selection,specimenConfig,pathologyConfig,
+          navigationGroup:{label:scope.label||'Catálogo general',parts:scope.parts||[]},leafId:scope.id||'',featuredNavigation:featuredConfig,selectionHost:selection,specimenConfig,pathologyConfig,imagingConfig,
           initialQuery:scope.searchQuery||'',focusStudyKey:scope.focusStudyKey||'',onNavigateToStudy:destination=>options.onNavigateToStudy?.(destination),
           initialCategory:scope.parts?.length===1?scope.parts[0].category:'',selected,customDraft,
           onChange:items=>{selected=items;attempt=null;error.textContent='';counts();},onDraftChange:()=>options.onDirty?.(),onReviewOrder:key=>review(key)});
@@ -126,6 +126,7 @@
           if(item.dentalLocation)li.append(el('small',window.mxmedDentalLocationV1.summary(item.dentalLocation)));
           if(item.specimenRequirements){const request=item.specimenRequirements,detail=[(request.specimen_type_key&&specimenConfig.specimen_types[request.specimen_type_key]),(request.collection_mode==='TIMED'&&`${request.requested_duration_minutes/60} horas`),(request.source_site_text&&`Sitio: ${request.source_site_text}`)].filter(Boolean).join(' · ');if(detail)li.append(el('small',detail));}
           if(item.pathologyParameters)li.append(el('small',window.mxmedPathologyParametersV1.summary(item.key,item.pathologyParameters,pathologyConfig)));
+          if(item.imagingParameters)li.append(el('small',window.mxmedImagingParametersV1.summary(item.key,item.imagingParameters,imagingConfig)));
           list.append(li);});card.append(list);
         const meta=metadata[key] ||= {priority:'Rutinaria',indication:''};
         const pl=el('fieldset','','ordcomp-priority');pl.append(el('legend','Prioridad'));

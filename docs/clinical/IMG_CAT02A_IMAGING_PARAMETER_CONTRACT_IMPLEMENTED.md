@@ -4,6 +4,8 @@
 **Baseline:** `7a6e038a9ff7a828585100869e243b2a789019e4`
 **Scope:** Versioned physician-intent contract only. No new study identities, aliases, routing, navigation, schema or frontend changes.
 
+**Later follow-up:** IMG-CAT02B activated the 15 previously inactive identities. The counts and `FUTURE_INACTIVE` descriptions below record the IMG-CAT02A baseline; current catalog status is documented in [IMG-CAT02B](IMG_CAT02B_IMAGING_MINIMUM_SAFE_CATALOG_IMPLEMENTED.md).
+
 ## Authority and item model
 
 `modules/clinical/catalog/imaging_order_parameters_v1.json` is the additive `imaging_order_parameters` authority, version **1**. It has 55 per-key rules: 34 active general imaging identities, 15 future inactive IMG-CAT01 identities, and six existing cardiovascular imaging cross-routes. The future keys are configuration only; `clinical_study_types` still controls what can be ordered. All 15 future keys have an explicit rule. Existing 34 keys accept an absent parameter object unchanged, with no historical rewrite.

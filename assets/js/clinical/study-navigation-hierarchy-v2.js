@@ -76,7 +76,7 @@
       {category:'PATOLOGIA',keys:['pathology_outside_review']}]),
     radiography:group('radiography','Radiografía y fluoroscopía','radiology',[
       {category:'IMAGEN',keys:['rx_chest','rx_abdomen','rx_pelvis','rx_cspine','rx_lspine','rx_shoulder','rx_knee','rx_ankle','rx_hand',
-        'fluoro_hsg','fluoro_vcug','fluoro_ugi','fluoro_barium_enema']}]),
+        'fluoro_hsg','fluoro_vcug','fluoro_ugi','fluoro_barium_enema','rx_hip','rx_foot','rx_wrist','rx_elbow','rx_tspine']}]),
     ultrasound:group('ultrasound','Ultrasonido','ultrasound',[],
       ['ultrasound_general','ultrasound_obgyn','ultrasound_cardiac','ultrasound_vascular']),
     ultrasound_general:group('ultrasound_general','Ultrasonido general','ultrasound',[
@@ -87,13 +87,13 @@
       {category:'CARDIOVASCULAR',keys:['echo_tte','echo_tes','stress_echo']}]),
     ultrasound_vascular:group('ultrasound_vascular','Ultrasonido vascular / Doppler','cardiology',[
       {category:'CARDIOVASCULAR',keys:['carotid_doppler','lower_ext_art_doppler','lower_ext_venous_doppler']}]),
-    tomography:group('tomography','Tomografía','clinical_notes',[{category:'IMAGEN',keys:['ct_head','ct_chest','ct_abdomen_pelvis','ct_uro']}]),
+    tomography:group('tomography','Tomografía','clinical_notes',[{category:'IMAGEN',keys:['ct_head','ct_chest','ct_abdomen_pelvis','ct_uro','ct_sinuses','ct_neck','cta_head_neck']}]),
     magnetic_resonance:group('magnetic_resonance','Resonancia magnética','image',[
-      {category:'IMAGEN',keys:['mr_brain','mr_knee','mr_shoulder','mr_abdomen']}]),
+      {category:'IMAGEN',keys:['mr_brain','mr_knee','mr_shoulder','mr_abdomen','mr_lumbar_spine','mr_cervical_spine','mra_brain','mr_pelvis']}]),
     nuclear:group('nuclear','Medicina nuclear y PET','biotech',[
-      {category:'IMAGEN',keys:['nm_bone_scan','nm_thyroid_uptake','pet_ct']}]),
+      {category:'IMAGEN',keys:['nm_bone_scan','nm_thyroid_uptake','pet_ct','nm_renal_scan','nm_myocardial_perfusion']}]),
     breast_imaging:group('breast_imaging','Imagen mamaria','image',[
-      {category:'IMAGEN',keys:['mammo','breast_us']}]),
+      {category:'IMAGEN',keys:['mammo','breast_us','breast_tomosynthesis']}]),
     densitometry:group('densitometry','Densitometría','image',[{category:'IMAGEN',keys:['dexa']}]),
     cardiovascular:group('cardiovascular','Cardiovascular','cardiology',[
       {category:'CARDIOVASCULAR',keys:['ecg_12lead','ecg_rhythm_strip','holter','abpm_mapa','stress_test','tilt_table','ankle_brachial_index']}]),

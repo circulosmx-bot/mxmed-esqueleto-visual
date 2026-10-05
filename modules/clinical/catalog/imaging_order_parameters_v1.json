@@ -696,7 +696,7 @@
     },
     "rx_hip": {
       "modality": "RX",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "xray_views": [
@@ -723,7 +723,7 @@
     },
     "ct_sinuses": {
       "modality": "CT",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -742,7 +742,7 @@
     },
     "mr_lumbar_spine": {
       "modality": "MRI",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -761,7 +761,7 @@
     },
     "rx_foot": {
       "modality": "RX",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "xray_views": [
@@ -792,7 +792,7 @@
     },
     "rx_wrist": {
       "modality": "RX",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "xray_views": [
@@ -819,7 +819,7 @@
     },
     "rx_elbow": {
       "modality": "RX",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "xray_views": [
@@ -846,7 +846,7 @@
     },
     "mr_cervical_spine": {
       "modality": "MRI",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -865,7 +865,7 @@
     },
     "ct_neck": {
       "modality": "CT",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -884,7 +884,7 @@
     },
     "cta_head_neck": {
       "modality": "CTA",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -909,7 +909,7 @@
     },
     "mra_brain": {
       "modality": "MRA",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -933,7 +933,7 @@
     },
     "mr_pelvis": {
       "modality": "MRI",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "contrast_intent": [
@@ -952,7 +952,7 @@
     },
     "breast_tomosynthesis": {
       "modality": "MAMMOGRAPHY",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "laterality": [
@@ -978,7 +978,7 @@
     },
     "rx_tspine": {
       "modality": "RX",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "xray_views": [
@@ -1002,7 +1002,7 @@
     },
     "nm_renal_scan": {
       "modality": "NUCLEAR",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "physician_protocol": [
@@ -1017,7 +1017,7 @@
     },
     "nm_myocardial_perfusion": {
       "modality": "NUCLEAR",
-      "status": "FUTURE_INACTIVE",
+      "status": "ACTIVE_REQUIRED",
       "classification": "PARAMETER_READY",
       "allowed": {
         "physician_protocol": [

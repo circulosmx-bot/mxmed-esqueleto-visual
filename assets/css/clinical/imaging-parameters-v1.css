@@ -1,0 +1,11 @@
+.imaging-item-summary{flex-basis:100%;min-width:0;overflow-wrap:anywhere;color:#31596c;font-size:.75rem}
+.imaging-parameter-panel{flex-basis:100%;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:.45rem;padding:.55rem;border:1px solid #b9e3ea;border-radius:8px;background:#fff}
+.imaging-parameter-field{display:grid;gap:.2rem;min-width:0;font-size:.8rem;color:#244c5d}
+.imaging-parameter-field select{width:100%;min-width:0;max-width:100%;padding:.35rem;border:1px solid #b8d4dd;border-radius:5px;background:#fff;color:#06334f}
+.imaging-parameter-field small{font-size:.8rem;color:#31596c}
+.imaging-parameter-options{display:flex;flex-wrap:wrap;gap:.25rem .7rem}
+.imaging-parameter-options label{display:inline-flex;align-items:center;gap:.25rem;font-size:.77rem}
+.imaging-parameter-extra{grid-column:1/-1;min-width:0}
+.imaging-parameter-extra summary{cursor:pointer;color:#006d86;font-size:.78rem}
+.imaging-parameter-extra[open]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:.45rem}
+.imaging-parameter-extra[open] summary{grid-column:1/-1}
