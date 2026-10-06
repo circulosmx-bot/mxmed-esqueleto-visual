@@ -1,0 +1,95 @@
+/* DG-VIS04: Documentos catalog language for diagnostic navigation choices only. */
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) {
+  box-sizing:border-box;
+  min-width:0;
+  padding:12px;
+  border:1px solid #b8dce3;
+  border-radius:11px;
+  background:#fff;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-primary-categories,.vis06-secondary-section,.lab-cat02a-priority,.lab-cat02a-compact,.lab-cat02a-special:not(:empty)) {
+  min-width:0;
+  padding:10px;
+  border:1px solid #dce8f3;
+  border-radius:10px;
+  background:#fcfdff;
+  align-self:start;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] .vis06-primary-categories,
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] .vis06-secondary-categories {gap:7px}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] .vis06-secondary-section {margin-top:9px}
+
+/* Match DOC-VIS03: neutral 44px icon box, 27px glyph and compact selector row. */
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary),
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-or-flow="category"] .vis06-category-screen[data-hier-level="root"] .vis06-category-primary[data-hier-node]:not([data-hier-node="dental"]),
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-or-flow="category"] .vis06-category-screen[data-hier-level="family"][data-hier-parent]:not([data-hier-parent="dental"]) :is(.vis06-category-primary,.vis06-category-secondary) {
+  --study-nav-icon-box:44px;
+  --study-nav-icon-size:27px;
+  box-sizing:border-box;
+  grid-template-columns:44px minmax(0,1fr) 22px;
+  column-gap:10px;
+  min-height:64px;
+  padding:8px 10px;
+  border:1px solid #b8dce3;
+  border-radius:9px;
+  background:#f7fbfc;
+  color:#12344e;
+  box-shadow:none;
+}
+#p-expediente #t-estudios .vis06-orders.diagnostic-family-color-trial[data-or-flow="category"] .vis06-category-screen[data-hier-level="root"] .vis06-primary-categories > .vis06-category-primary {
+  min-height:72px;
+  padding:10px 12px;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) > .material-symbols-rounded:first-child,
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-or-flow="category"] .vis06-category-screen[data-hier-level="root"] .vis06-category-primary[data-hier-node]:not([data-hier-node="dental"]) > .material-symbols-rounded:first-child,
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-or-flow="category"] .vis06-category-screen[data-hier-level="family"][data-hier-parent]:not([data-hier-parent="dental"]) :is(.vis06-category-primary,.vis06-category-secondary) > .material-symbols-rounded:first-child {
+  grid-row:1 / span 2;
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  border-radius:9px;
+  background:#f4f9ff;
+  color:#2e6aa4;
+  box-shadow:none;
+  font-size:27px;
+  line-height:1;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) .vis06-category-label,
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] .vis06-category-screen[data-hier-level="root"] .vis06-category-primary .vis06-category-label {
+  color:#12344e;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.2;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) small,
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] .vis06-category-screen[data-hier-level="root"] .vis06-category-primary small {
+  color:#678095;
+  font-size:12.48px;
+  line-height:1.25;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) .vis06-category-chevron {
+  grid-row:1 / span 2;
+  justify-self:center;
+  align-self:center;
+  margin:0;
+  color:#008fa4;
+  font-size:22px;
+  line-height:1;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary):hover:not(:disabled),
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-or-flow="category"] :is(.vis06-category-screen[data-hier-level="root"] .vis06-category-primary[data-hier-node]:not([data-hier-node="dental"]),.vis06-category-screen[data-hier-level="family"] :is(.vis06-category-primary,.vis06-category-secondary)):hover:not(:disabled) {
+  border-color:#008fa4;
+  background:#effbfe;
+  box-shadow:0 3px 10px rgb(16 58 103 / .08);
+}
+#p-expediente #t-estudios .vis06-orders.diagnostic-family-color-trial[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary):focus-visible {
+  outline:2px solid #008c9b;
+  outline-offset:2px;
+}
+#p-expediente #t-estudios .vis06-orders[data-or-flow="category"] :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary):disabled {
+  border-color:#dce7e9;
+  background:#f8fafb;
+  color:#678095;
+  cursor:not-allowed;
+}

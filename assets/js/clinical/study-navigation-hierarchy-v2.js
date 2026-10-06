@@ -77,11 +77,11 @@
     radiography:group('radiography','Radiografía y fluoroscopía','radiology',[
       {category:'IMAGEN',keys:['rx_chest','rx_abdomen','rx_pelvis','rx_cspine','rx_lspine','rx_shoulder','rx_knee','rx_ankle','rx_hand',
         'fluoro_hsg','fluoro_vcug','fluoro_ugi','fluoro_barium_enema','rx_hip','rx_foot','rx_wrist','rx_elbow','rx_tspine']}]),
-    ultrasound:group('ultrasound','Ultrasonido','ultrasound',[],
+    ultrasound:group('ultrasound','Ultrasonido','image',[],
       ['ultrasound_general','ultrasound_obgyn','ultrasound_cardiac','ultrasound_vascular']),
-    ultrasound_general:group('ultrasound_general','Ultrasonido general','ultrasound',[
+    ultrasound_general:group('ultrasound_general','Ultrasonido general','image',[
       {category:'IMAGEN',keys:['us_abdomen','us_renal','us_thyroid','us_soft_tissue','us_testicular']}]),
-    ultrasound_obgyn:group('ultrasound_obgyn','Ultrasonido obstétrico y ginecológico','ultrasound',[
+    ultrasound_obgyn:group('ultrasound_obgyn','Ultrasonido obstétrico y ginecológico','image',[
       {category:'IMAGEN',keys:['us_pelvic','us_obstetric_study']}]),
     ultrasound_cardiac:group('ultrasound_cardiac','Ultrasonido cardíaco','cardiology',[
       {category:'CARDIOVASCULAR',keys:['echo_tte','echo_tes','stress_echo']}]),
