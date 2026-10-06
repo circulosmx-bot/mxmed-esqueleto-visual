@@ -31,3 +31,106 @@
   #p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="family"] .vis06-primary-categories,
   #p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="family"] .vis06-secondary-categories {grid-template-columns:minmax(0,1fr)}
 }
+
+/* STUDY-NAV-VIS01: Step 6 action-card hierarchy at navigation density. */
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) {
+  --study-nav-icon-box:48px;
+  --study-nav-icon-size:30px;
+  display:grid;
+  grid-template-columns:var(--study-nav-icon-box) minmax(0,1fr) 18px;
+  align-items:center;
+  column-gap:12px;
+  min-width:0;
+  min-height:78px;
+  padding:10px 12px;
+  border-width:1px;
+  border-radius:10px;
+  font-family:inherit;
+  text-align:left;
+  cursor:pointer;
+  transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease;
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary)>.material-symbols-rounded:first-child {
+  grid-column:1;
+  grid-row:1 / span 2;
+  display:grid;
+  place-items:center;
+  width:var(--study-nav-icon-box);
+  height:var(--study-nav-icon-box);
+  border-radius:11px;
+  background:#ddf5f4;
+  color:#008fa4;
+  font-size:var(--study-nav-icon-size);
+  line-height:1;
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) .vis06-category-label {
+  grid-column:2;
+  min-width:0;
+  font-size:16px;
+  font-weight:650;
+  line-height:1.25;
+  overflow-wrap:normal;
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) small {
+  grid-column:2;
+  font-size:12px;
+  line-height:1.35;
+  color:#476783;
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) .vis06-category-chevron {
+  grid-column:3;
+  grid-row:1 / span 2;
+  align-self:center;
+  justify-self:center;
+  margin:0;
+  font-size:19px;
+  color:#287488;
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary):hover {
+  border-color:#00b8c9;
+  background:#f6fcfd;
+  box-shadow:0 2px 8px rgb(7 83 110 / .08);
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary):focus-visible {
+  outline:3px solid #008fa4;
+  outline-offset:2px;
+}
+#p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="root"] .vis06-category-primary {
+  --study-nav-icon-box:56px;
+  --study-nav-icon-size:36px;
+  min-height:98px;
+  padding:12px 14px;
+  column-gap:14px;
+}
+#p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="root"] .vis06-category-primary .vis06-category-label {font-size:17px}
+#p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="root"] .vis06-category-primary small {font-size:13px}
+#p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="family"] .vis06-category-primary,
+#p-expediente #t-estudios .vis06-orders .lab-cat02a-screen .lab-cat02a-priority .vis06-category-primary {
+  grid-template-columns:48px minmax(0,1fr) 18px;
+  column-gap:12px;
+  min-height:78px;
+  padding:10px 12px;
+}
+#p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="family"] .vis06-category-primary>.material-symbols-rounded:first-child {
+  grid-row:1 / span 2;
+  width:48px;
+  height:48px;
+  font-size:30px;
+}
+#p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="family"] .vis06-category-chevron {grid-row:1 / span 2}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) .vis06-category-secondary {
+  --study-nav-icon-box:44px;
+  --study-nav-icon-size:27px;
+  min-height:68px;
+  padding:9px 11px;
+  background:#fff;
+}
+#p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) .vis06-category-secondary .vis06-category-label {font-size:14px}
+@media (max-width:430px) {
+  #p-expediente #t-estudios .vis06-orders :is(.vis06-category-screen,.lab-cat02a-screen) :is(.vis06-category-primary,.vis06-category-secondary) {
+    grid-template-columns:48px minmax(0,1fr) 18px;
+    min-height:78px;
+    column-gap:11px;
+  }
+  #p-expediente #t-estudios .vis06-orders .vis06-category-screen[data-hier-level="root"] .vis06-category-primary {min-height:94px}
+}
