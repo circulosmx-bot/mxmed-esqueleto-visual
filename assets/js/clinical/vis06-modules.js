@@ -700,15 +700,146 @@
     }catch(e){if(seen===ordersRequest)view.notice.textContent=e.message;}
     finally{if(seen===ordersRequest)ordersPageLoading=false;}
   }
+  function setDocumentsMode(view,mode) {
+    view.docMode=mode;
+    view.module.dataset.docMode=mode.toLowerCase();
+    view.host.classList.toggle('vis06-capture-open',mode==='CATALOG');
+    view.docHome.hidden=mode!=='HOME';
+    view.docChoices.hidden=mode!=='CREATE_ATTACH';
+    view.attachPane.hidden=mode!=='ATTACH';
+    view.docBack.hidden=mode==='HOME';
+    view.docBack.textContent=mode==='CATALOG'||mode==='ATTACH'?'← Volver a crear o adjuntar':'← Volver a Documentos';
+    const headings={
+      HOME:['DOCUMENTOS','Selecciona lo que deseas hacer con los documentos de este paciente.'],
+      CREATE_ATTACH:['CREAR O ADJUNTAR DOCUMENTO','Elige cómo incorporar un documento al expediente.'],
+      CATALOG:['CREAR DOCUMENTO CLÍNICO','Selecciona el tipo documental para iniciar su captura o emisión.'],
+      ATTACH:['ADJUNTAR ARCHIVO','Adjunta un PDF o imagen al expediente del paciente.'],
+      CONSULT:['CONSULTAR DOCUMENTOS','Revisa documentos anteriores, archivos y sus versiones.']
+    };
+    [view.headTitle.textContent,view.headCopy.textContent]=headings[mode];
+    if(mode!=='CONSULT')view.detail.hidden=true;
+  }
+  function setupDocumentsNavigation(view) {
+    const intent=(title,description,icon,action,mode)=>{
+      const card=button('',()=>navigate(mode));card.className='vis06-intent-card docvis-intent-card';
+      card.append(symbol(icon),node('strong',title),node('span',description),node('span',`${action} →`,'vis06-intent-action'));
+      return card;
+    };
+    const navigate=mode=>{
+      if(view.docMode==='ATTACH'&&mode!=='ATTACH'&&view.attachBusy)return;
+      if(view.docMode==='ATTACH'&&mode!=='ATTACH'&&view.attachSuccess.hidden
+        &&(view.attachForm.elements.title.value||view.attachForm.elements.file.files.length)
+        &&!window.confirm('¿Descartar el archivo sin adjuntarlo?'))return;
+      if(mode==='ATTACH'&&view.docMode!=='ATTACH'){
+        view.attachForm.reset();view.attachAttempt=null;view.attachSuccess.hidden=true;
+        view.attachStatus.textContent='';
+      }
+      setDocumentsMode(view,mode);
+      if(mode==='CONSULT')load();
+      const target=mode==='CATALOG'?view.host.querySelector('#docs_catalog_panel .docs-launcher-row:not(.d-none)')
+        :mode==='ATTACH'?view.attachForm.elements.title
+        :mode==='CONSULT'?view.search
+        :mode==='CREATE_ATTACH'?view.docChoices.querySelector('button')
+        :view.docHome.querySelector('button');
+      target?.focus({preventScroll:true});
+    };
+    view.docBack=button('← Volver a Documentos',()=>navigate(view.docMode==='CATALOG'||view.docMode==='ATTACH'?'CREATE_ATTACH':'HOME'));
+    view.docBack.classList.add('vis06-flow-back','docvis-back');view.module.prepend(view.docBack);
+    view.docHome=node('div','','vis06-flow-home docvis-intents');
+    view.docHome.setAttribute('aria-label','Opciones de Documentos');
+    view.docHome.append(
+      intent('CREAR O ADJUNTAR DOCUMENTO','Genera un documento clínico o incorpora un archivo existente al expediente.','note_add','Crear o adjuntar documento','CREATE_ATTACH'),
+      intent('CONSULTAR DOCUMENTOS','Revisa documentos anteriores, archivos y sus versiones.','folder_open','Ver documentos','CONSULT'));
+    view.docChoices=node('div','','vis06-flow-home docvis-intents');
+    view.docChoices.setAttribute('aria-label','Crear o adjuntar documento');
+    view.docChoices.append(
+      intent('CREAR DOCUMENTO CLÍNICO','Genera un nuevo documento desde el sistema.','description','Crear documento','CATALOG'),
+      intent('ADJUNTAR ARCHIVO','Incorpora un PDF o imagen existente al expediente.','upload_file','Adjuntar archivo','ATTACH'));
+    view.attachPane=node('section','','docvis-attach');view.attachPane.setAttribute('aria-label','Adjuntar archivo al expediente');
+    view.attachPane.innerHTML=`<form class="docvis-attach-form" enctype="multipart/form-data">
+      <label>Título del documento<input class="form-control" name="title" maxlength="255" required autocomplete="off" placeholder="Ej. Informe externo"></label>
+      <label>Archivo PDF o imagen<input class="form-control" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required></label>
+      <p>Formatos admitidos: PDF, JPG, PNG o WebP.</p>
+      <button class="btn btn-primary" type="submit">Adjuntar archivo</button>
+      <p class="docvis-attach-status" role="status" aria-live="polite"></p>
+    </form>`;
+    view.attachForm=view.attachPane.querySelector('form');
+    view.attachStatus=view.attachPane.querySelector('[role="status"]');
+    view.attachSuccess=node('div','','docvis-success');view.attachSuccess.hidden=true;
+    view.attachSuccess.append(node('strong','Archivo adjuntado al expediente.'),
+      button('Ver documentos',()=>navigate('CONSULT')),
+      button('Adjuntar otro archivo',()=>{
+        view.attachForm.reset();view.attachAttempt=null;view.attachStatus.textContent='';
+        view.attachSuccess.hidden=true;view.attachForm.elements.title.focus();
+      }));
+    view.attachPane.append(view.attachSuccess);
+    pane.querySelector('[data-bs-target="#t-consent"]')?.addEventListener('hide.bs.tab',event=>{
+      if(view.docMode==='ATTACH'&&view.attachBusy){event.preventDefault();return;}
+      if(view.docMode==='ATTACH'&&view.attachSuccess.hidden
+        &&(view.attachForm.elements.title.value||view.attachForm.elements.file.files.length)
+        &&!window.confirm('¿Salir sin adjuntar el archivo?'))event.preventDefault();
+    });
+    view.attachForm.addEventListener('input',()=>{view.attachAttempt=null;});
+    view.attachForm.addEventListener('change',()=>{view.attachAttempt=null;});
+    view.attachForm.addEventListener('submit',async event=>{
+      event.preventDefault();
+      if(view.attachBusy||!view.attachForm.reportValidity())return;
+      const file=view.attachForm.elements.file.files[0];
+      const mime=file?.type||'';
+      if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(mime)){
+        view.attachStatus.textContent='Selecciona un PDF o una imagen JPG, PNG o WebP.';return;
+      }
+      if(!view.attachForm.elements.title.value.trim()){
+        view.attachStatus.textContent='Escribe un título para este archivo.';
+        view.attachForm.elements.title.focus();return;
+      }
+      const ownerPatient=selectedPatient(),ownerDoctor=professional;
+      if(!ownerPatient||!ownerDoctor){view.attachStatus.textContent='No se pudo confirmar el paciente o el profesional. Actualiza el expediente.';return;}
+      const type=mime==='application/pdf'?'pdf':'image';
+      if(!view.attachAttempt){
+        const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+        view.attachAttempt={key:`doc-vis01-${[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}`,
+          eventDatetime:new Date().toISOString().slice(0,19).replace('T',' ')};
+      }
+      const fields=new FormData();fields.set('file',file);fields.set('document_type',type);
+      fields.set('title',view.attachForm.elements.title.value.trim());
+      fields.set('event_datetime',view.attachAttempt.eventDatetime);
+      fields.set('payload',JSON.stringify({source:'documents_longitudinal_attachment'}));
+      if(type==='image')fields.set('media_tag_key','clinical_attachment');
+      view.attachBusy=true;view.attachStatus.textContent='Adjuntando archivo…';
+      view.attachForm.querySelector('button[type="submit"]').disabled=true;
+      try{
+        const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(ownerDoctor)}/patients/${encodeURIComponent(ownerPatient)}/documents`,
+          {method:'POST',credentials:'same-origin',headers:{'Idempotency-Key':view.attachAttempt.key},body:fields});
+        const body=await response.json();
+        if(selectedPatient()!==ownerPatient||professional!==ownerDoctor)return;
+        if(!response.ok||body?.ok!==true){
+          const code=body?.error?.code||'';
+          if(response.status>=400&&response.status<500&&code!=='IDEMPOTENCY_RESULT_NOT_READY')view.attachAttempt=null;
+          throw new Error(code==='IDEMPOTENCY_KEY_REUSED'?'Este intento cambió. Vuelve a seleccionar el archivo.':
+            response.status===403?'No tienes acceso para adjuntar a este paciente.':'No se pudo adjuntar el archivo. Intenta de nuevo.');
+        }
+        view.attachForm.reset();view.attachAttempt=null;
+        view.attachStatus.textContent='Archivo adjuntado correctamente.';view.attachSuccess.hidden=false;
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:ownerPatient,document_type:type,source:'doc_vis01'}}));
+        view.attachSuccess.querySelector('button').focus({preventScroll:true});
+      }catch(error){if(selectedPatient()===ownerPatient)view.attachStatus.textContent=error.message||'No se pudo adjuntar el archivo. Intenta de nuevo.';}
+      finally{view.attachBusy=false;view.attachForm.querySelector('button[type="submit"]').disabled=false;}
+    });
+    view.module.append(view.docHome,view.docChoices,view.attachPane);
+    view.studiesLink=button('Ver estudios de diagnóstico',()=>pane.querySelector('[data-bs-target="#t-estudios"]')?.click());
+    view.studiesLink.classList.add('docvis-studies-link');view.module.append(view.studiesLink);
+    setDocumentsMode(view,'HOME');
+  }
   async function load() {
     const id=selectedPatient(),seen=++generation;
-    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders'){v.hierCloseComposer?.();resetHierarchyDraft(v);setOrderFlow(v,'HOME');}else v.filter.value='';});
+    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';if(v.kind==='orders'){v.hierCloseComposer?.();resetHierarchyDraft(v);setOrderFlow(v,'HOME');}else if(v.kind==='documents'){v.attachForm?.reset();v.attachAttempt=null;v.attachSuccess.hidden=true;v.attachStatus.textContent='';setDocumentsMode(v,'HOME');v.filter.value='';}else v.filter.value='';});
     patient=id;professional='';rows=[];ordersRequest++;ordersItems=[];ordersCursor=null;ordersHasMore=false;ordersPageLoading=false;
     views.forEach(v=>{v.list.replaceChildren();if(v.kind==='orders'){v.selectedListId='';v.selectedRowId='';v.workspace.classList.remove('is-detail-open');emptyDetail(v,false);}else v.detail.hidden=true;v.notice.textContent=id?'Consultando registros…':'Selecciona un paciente.';});
     if(!id)return;
     try {
       const active=await get(`patients/${encodeURIComponent(id)}/encounters/active`);
-      const doctor=String(active?.doctor_id || window.mxmedStore?.activeProfessionalContext?.doctor_id || window.mxmedStore?.doctor_id || '').trim();
+      const doctor=String(active?.doctor_id || window.mxmedResolveActiveProfessionalContext?.()?.doctor_id || window.mxmedStore?.activeProfessionalContext?.doctor_id || window.mxmedStore?.doctor_id || '').trim();
       if(!doctor)throw new Error('No se pudo confirmar el contexto del profesional.');
       professional=doctor;
       const ordersView=views.get('orders');
@@ -727,7 +858,7 @@
       if(kind==='prescriptions'){host.querySelector('[data-action="tratamiento-alias-open-receta"]')?.click();return;}
       if(kind==='orders'){openGeneralOrder(create);return;}
       host.classList.add('vis06-capture-open');back.hidden=false;
-    });create.className='btn btn-primary';head.append(copy);if(kind!=='orders')head.append(create);
+    });create.className='btn btn-primary';head.append(copy);if(kind==='prescriptions')head.append(create);
     const back=button('Volver al listado',()=>{host.classList.remove('vis06-capture-open');back.hidden=true;create.hidden=false;create.focus();load();});back.hidden=true;
     const controls=node('div','','vis06-controls');const search=node('input');search.type='search';search.placeholder=kind==='orders'?'Buscar orden o resultado':'Buscar por nombre o descripción';search.setAttribute('aria-label',`Buscar en ${settings.title}`);search.className='form-control';
     let filter;
@@ -839,10 +970,15 @@
     }else{
       search.addEventListener('input',()=>render(view));filter.addEventListener('change',()=>render(view));
     }
-    if(kind==='documents'){const link=button('Ver estudios de diagnóstico',()=>pane.querySelector('[data-bs-target="#t-estudios"]')?.click());module.append(link);}
+    if(kind==='documents')setupDocumentsNavigation(view);
     if(kind==='prescriptions'){const link=button('Consultar medicación actual',()=>pane.querySelector('[data-bs-target="#t-medicamentos-longitudinal"]')?.click());module.append(link);}
     pane.querySelector(`[data-bs-target="#${settings.target}"]`)?.addEventListener('shown.bs.tab',()=>{
-      if(kind==='orders')setOrderFlow(view,'HOME');load();
+      if(kind==='orders')setOrderFlow(view,'HOME');
+      if(kind==='documents'){
+        view.attachForm.reset();view.attachAttempt=null;view.attachSuccess.hidden=true;
+        view.attachStatus.textContent='';setDocumentsMode(view,'HOME');
+      }
+      load();
     });
   }
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>window.addEventListener(name,load));

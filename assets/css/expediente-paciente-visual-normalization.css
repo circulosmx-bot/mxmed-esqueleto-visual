@@ -5060,3 +5060,33 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente > .body > [data-exp-return-to-patient]:focus-visible {
   outline-color:#07536e;
 }
+
+/* DOC-VIS01: Documentos modes share the existing patient module and catalog. */
+#p-expediente #t-consent .vis06-module [hidden] {display:none!important}
+#p-expediente #t-consent .vis06-module:not([data-doc-mode="consult"]) :is(.vis06-controls,.vis06-notice,.vis06-list,.vis06-detail,.docvis-studies-link) {display:none!important}
+#p-expediente #t-consent .vis06-module[data-doc-mode="consult"] :is(.docvis-intents,.docvis-attach) {display:none!important}
+#p-expediente #t-consent.vis06-capture-open > .vis01-secondary-links {display:none!important}
+#p-expediente #t-consent.vis06-capture-open > .exp-card:has(#ci_list) {display:none!important}
+#p-expediente #t-consent.vis06-capture-open #docs_catalog_panel .docs-catalog-intro {display:none}
+#p-expediente #t-consent .docvis-back {margin-bottom:10px}
+#p-expediente #t-consent .docvis-intents {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#p-expediente #t-consent .docvis-intent-card {display:grid;grid-template-columns:54px minmax(0,1fr);grid-template-rows:auto auto 1fr;column-gap:14px;min-height:180px;padding:18px;border:1px solid #b8dce3;border-radius:11px;background:#f4fbfc;color:#123f60;font-family:inherit;text-align:left;cursor:pointer}
+#p-expediente #t-consent .docvis-intent-card:nth-child(2) {background:#f2f9fd}
+#p-expediente #t-consent .docvis-intent-card > .material-symbols-rounded {grid-row:1/3;display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:#d8f4f1;color:#008fa4;font-size:30px}
+#p-expediente #t-consent .docvis-intent-card strong {font-size:17px;line-height:1.2}
+#p-expediente #t-consent .docvis-intent-card > span:not(.material-symbols-rounded):not(.vis06-intent-action) {font-size:13px;line-height:1.35;color:#476783}
+#p-expediente #t-consent .docvis-intent-card .vis06-intent-action {grid-column:1/-1;align-self:end;margin-top:18px;padding:9px 12px;border-radius:7px;background:#008fa4;color:#fff;font-size:14px;font-weight:700;text-align:center}
+#p-expediente #t-consent .docvis-attach-form {display:grid;gap:12px;max-width:660px;padding:18px;border:1px solid #b8dce3;border-radius:11px;background:#f5fafb}
+#p-expediente #t-consent .docvis-attach-form label {display:grid;gap:6px;color:#123f60;font-weight:600}
+#p-expediente #t-consent .docvis-attach-form input[type="file"]:invalid {border-color:#b8dce3}
+#p-expediente #t-consent .docvis-attach-form p {margin:0;color:#526976;font-size:13px}
+#p-expediente #t-consent .docvis-attach-form .btn {justify-self:start}
+#p-expediente #t-consent .docvis-attach-status {min-height:18px}
+#p-expediente #t-consent .docvis-success {display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px;color:#07536e}
+#p-expediente #t-consent .docvis-success[hidden] {display:none!important}
+#p-expediente #t-consent .docvis-success strong {flex-basis:100%}
+#p-expediente #t-consent .docvis-intent-card:hover {border-color:#008fa4;box-shadow:0 2px 8px rgb(0 143 164 / .12)}
+@media(max-width:700px){
+  #p-expediente #t-consent .docvis-intents {grid-template-columns:minmax(0,1fr)}
+  #p-expediente #t-consent .docvis-intent-card {min-height:150px}
+}
