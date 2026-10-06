@@ -18,9 +18,12 @@
     const addOther=button('+ Agregar estudios',()=>chooser.hidden?openChooser():closeChooser(true));addOther.classList.add('ordcomp-add-other');
     const chooser=el('section','','ordcomp-add-chooser');chooser.id='ordcomp-add-chooser';chooser.hidden=true;chooser.setAttribute('role','region');chooser.setAttribute('aria-label','Elegir dónde agregar estudios');
     addOther.setAttribute('aria-controls',chooser.id);addOther.setAttribute('aria-expanded','false');
-    const reviewAll=button('Revisar todas las órdenes',()=>review('',reviewAll));reviewAll.classList.add('ordcomp-review-all');reviewAll.hidden=true;
+    const addSlot=el('div','','ordcomp-add-slot');addSlot.append(addOther,chooser);
+    addSlot.addEventListener('click',event=>{if(addSlot.parentElement?.tagName==='SUMMARY'){event.preventDefault();event.stopPropagation();}});
+    const summaryHeader=el('div','','ordcomp-summary-header');summaryHeader.append(el('h4','ÓRDENES EN PREPARACIÓN'),addSlot);
+    const reviewAll=button('Revisar todas las órdenes',()=>review('',reviewAll));reviewAll.classList.add('ordcomp-review-all','btn-primary');reviewAll.classList.remove('btn-outline-primary');reviewAll.hidden=true;
     aside.setAttribute('aria-label','Órdenes en preparación');count.setAttribute('role','status');
-    aside.append(el('h4','ÓRDENES EN PREPARACIÓN'),count,selection,addOther,chooser,error,reviewAll);workspace.append(catalog,aside);
+    aside.append(summaryHeader,count,selection,error,reviewAll);workspace.append(catalog,aside);
     const mobile=el('div','','ordcomp-mobile-bar'),mobileCount=el('span'),toggle=button('Ver órdenes',()=>{
       host.classList.toggle('ordcomp-show-summary');const show=host.classList.contains('ordcomp-show-summary');
       toggle.textContent=show?'Volver al catálogo':'Ver órdenes';toggle.setAttribute('aria-expanded',String(show));
@@ -67,6 +70,8 @@
     function counts(){
       const n=groups().size,m=selected.length;count.textContent=`${n} ${n===1?'orden':'órdenes'} · ${m} ${m===1?'estudio seleccionado':'estudios seleccionados'}`;
       mobileCount.textContent=`${m} ${m===1?'estudio':'estudios'} · ${n} ${n===1?'orden':'órdenes'}`;
+      aside.dataset.orderCount=String(n);
+      ((n===1?selection.querySelector('.ordcomp-prepared-order > summary'):null)||summaryHeader).append(addSlot);
       reviewAll.hidden=n<=1;
       options.onChange?.({selected:structuredClone(selected),orders:n,studies:m});
     }

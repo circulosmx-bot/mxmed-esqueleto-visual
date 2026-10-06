@@ -177,12 +177,13 @@
           const service=options.routing.groups[key]||'Servicio pendiente';
           const heading=document.createElement('summary');
           const label=document.createElement('span');label.textContent=service+' ('+selected.filter(item=>(item.type==='canonical'?options.routing.studies[item.key]:item.routingGroup)===key).length+')';heading.append(label);
-          if(options.onReviewOrder){
-            const review=document.createElement('button');review.type='button';review.className='btn btn-outline-primary btn-sm ordcomp-review-one';review.textContent='Revisar orden';
-            review.setAttribute('aria-label',`Revisar orden de ${service}`);
-            review.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();options.onReviewOrder(key);});heading.append(review);
-          }
           const box=document.createElement('div');card.append(heading,box);selectedBox.append(card);boxes.set(key,box);
+          if(options.onReviewOrder){
+            const review=document.createElement('button');review.type='button';review.className='btn btn-outline-primary ordcomp-review-one';review.textContent='Revisar orden';
+            review.setAttribute('aria-label',`Revisar orden de ${service}`);
+            if(activeGroups.length===1){review.classList.remove('btn-outline-primary');review.classList.add('btn-primary');}
+            review.addEventListener('click',()=>options.onReviewOrder(key));selectedBox.append(review);
+          }
         });
       }
       selected.forEach((item,index)=>{
