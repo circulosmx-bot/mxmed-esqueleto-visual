@@ -54,6 +54,7 @@
     let group=typeof initialNavigation==='object'?initialNavigation:{};
     if(dentalMode&&!dentalMode.global&&!group.parts)group={label:'Estudios dentales',parts:navigation.dentalScope()};
     if(typeof initialNavigation==='string'&&initialNavigation)group={label:window.mxmedStudyComposer.categories[initialNavigation],parts:[{category:initialNavigation}]};
+    view.module.dataset.diagnosticFamily=hierarchyMode?(view.hierPath[0]||''):group.global?'':view.module.dataset.orFamily==='dental'&&dentalMode?'dental':labMode?'laboratory':'';
     view.categoryRequest++;view.categoryScreen.hidden=true;view.labScreen.hidden=true;
     view.categoryBack.textContent='Volver a '+(hierarchyMode?view.hierParentLabel||'tipos de estudio':'categorías');
     view.headTitle.textContent=group.label||'Catálogo general';
@@ -284,6 +285,7 @@
   function renderHierarchy(view){
     if(!hierarchy||!view.hierActive)return;
     const path=view.hierPath||[],parent=path.at(-1),active=view.hierActive;
+    view.module.dataset.diagnosticFamily=path[0]||'';
     const profile=parent==='laboratory'?view.hierResolved?.labProfile:view.hierResolved?.profile;
     const primary=parent?hierarchy.children(parent,active,profile).filter(id=>!hierarchy.secondary[parent]?.includes(id))
       :hierarchy.root.filter(id=>hierarchy.count(id,active)>0);
@@ -369,6 +371,7 @@
           view.primaryCategories.append(control);
         });
         view.module.dataset.orFamily='dental';
+        view.module.dataset.diagnosticFamily='dental';
         view.primaryCategories.style.setProperty('--dental-primary-count',String(view.primaryCategories.children.length||1));
         view.secondarySection.hidden=true;
         const all=button('Buscar en todo el catálogo',()=>openGeneralOrder(all,'',{global:true}));
@@ -744,7 +747,7 @@
     const notice=node('p','','vis06-notice');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
     const list=node('div','','vis06-list'),detail=node('section','','vis06-detail');let workspace=null;
     if(kind==='orders'){
-      module.classList.add('vis06-orders');workspace=node('div','','vis06-orders-workspace');
+      module.classList.add('vis06-orders','diagnostic-family-color-trial');workspace=node('div','','vis06-orders-workspace');
       const index=node('div','','vis06-orders-index');index.append(notice,list);detail.tabIndex=-1;workspace.append(index,detail);module.append(head,back,controls,workspace);
     }else{detail.hidden=true;module.append(head,back,controls,notice,list,detail);}
     host.prepend(module);host.classList.add('vis06-ready');

@@ -1,0 +1,90 @@
+/* Reversible visual trial. Remove this stylesheet and its modifier to restore the approved baseline. */
+#p-expediente #t-estudios .vis06-orders.diagnostic-family-color-trial {
+  --diagnostic-text:#013151;
+}
+
+/* Family identity is local to the diagnostic workflow; Dental keeps its baseline treatment. */
+#p-expediente #t-estudios .diagnostic-family-color-trial :is(
+  [data-hier-node="laboratory"],
+  [data-hier-parent="laboratory"],
+  [data-order-group="CLINICAL_LAB"],
+  [data-order-group="GENETICS_MOLECULAR"]
+) { --diagnostic-accent:#FF7034; --diagnostic-soft:#FF8C5C; --diagnostic-icon-ink:#013151; }
+#p-expediente #t-estudios .diagnostic-family-color-trial :is(
+  [data-hier-node="imaging"],
+  [data-hier-parent="imaging"],
+  [data-order-group="GENERAL_IMAGING"]
+) { --diagnostic-accent:#8B5CF6; --diagnostic-soft:#A78BFA; --diagnostic-icon-ink:#fff; }
+#p-expediente #t-estudios .diagnostic-family-color-trial :is(
+  [data-hier-node="pathology"],
+  [data-hier-parent="pathology"],
+  [data-order-group="PATHOLOGY_CYTOLOGY"]
+) { --diagnostic-accent:#F87171; --diagnostic-soft:#FCA5A5; --diagnostic-icon-ink:#013151; }
+#p-expediente #t-estudios .diagnostic-family-color-trial :is(
+  [data-hier-node="functional"],
+  [data-hier-parent="functional"],
+  [data-order-group="CARDIOVASCULAR_DIAGNOSTICS"],
+  [data-order-group="NEUROPHYSIOLOGY"],
+  [data-order-group="PULMONARY_FUNCTION"],
+  [data-order-group="SLEEP_DIAGNOSTICS"],
+  [data-order-group="AUDIOLOGY_VESTIBULAR"],
+  [data-order-group="FUNCTIONAL_GI_PHYSIOLOGY"]
+) { --diagnostic-accent:#0F6FA8; --diagnostic-soft:#3B82C4; --diagnostic-icon-ink:#fff; }
+#p-expediente #t-estudios .diagnostic-family-color-trial :is(
+  [data-hier-node="procedures"],
+  [data-hier-parent="procedures"],
+  [data-order-group="DIGESTIVE_ENDOSCOPY"],
+  [data-order-group="RESPIRATORY_DIAGNOSTIC_PROCEDURES"],
+  [data-order-group="ENT_DIAGNOSTICS"],
+  [data-order-group="GYNECOLOGY_DIAGNOSTICS"],
+  [data-order-group="UROLOGY_DIAGNOSTICS"]
+) { --diagnostic-accent:#2DD4BF; --diagnostic-soft:#5EEAD4; --diagnostic-icon-ink:#013151; }
+
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-diagnostic-family="laboratory"] { --diagnostic-accent:#FF7034; --diagnostic-soft:#FF8C5C; }
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-diagnostic-family="imaging"] { --diagnostic-accent:#8B5CF6; --diagnostic-soft:#A78BFA; }
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-diagnostic-family="pathology"] { --diagnostic-accent:#F87171; --diagnostic-soft:#FCA5A5; }
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-diagnostic-family="functional"] { --diagnostic-accent:#0F6FA8; --diagnostic-soft:#3B82C4; }
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-diagnostic-family="procedures"] { --diagnostic-accent:#2DD4BF; --diagnostic-soft:#5EEAD4; }
+
+/* Root cards: compact saturated icon only, neutral dark titles and a faint family surface. */
+#p-expediente #t-estudios .diagnostic-family-color-trial .vis06-category-screen[data-hier-level="root"] .vis06-category-primary[data-hier-node]:not([data-hier-node="dental"]) {
+  background:color-mix(in srgb,var(--diagnostic-accent) 6%,white);
+  border-color:color-mix(in srgb,var(--diagnostic-accent) 34%,#c5dce3);
+  color:var(--diagnostic-text);
+}
+#p-expediente #t-estudios .diagnostic-family-color-trial .vis06-category-screen[data-hier-level="root"] .vis06-category-primary[data-hier-node]:not([data-hier-node="dental"]) > .material-symbols-rounded:first-child {
+  background:var(--diagnostic-accent);
+  color:var(--diagnostic-icon-ink);
+}
+
+/* Every sibling in a family inherits the same accent, including secondary cards. */
+#p-expediente #t-estudios .diagnostic-family-color-trial .vis06-category-screen[data-hier-level="family"][data-hier-parent]:not([data-hier-parent="dental"]) :is(.vis06-category-primary,.vis06-category-secondary) {
+  background:color-mix(in srgb,var(--diagnostic-accent) 5%,white);
+  border-color:color-mix(in srgb,var(--diagnostic-accent) 30%,#c5dce3);
+  color:var(--diagnostic-text);
+}
+#p-expediente #t-estudios .diagnostic-family-color-trial .vis06-category-screen[data-hier-level="family"][data-hier-parent]:not([data-hier-parent="dental"]) :is(.vis06-category-primary,.vis06-category-secondary) > .material-symbols-rounded:first-child {
+  background:color-mix(in srgb,var(--diagnostic-soft) 25%,white);
+  color:var(--diagnostic-text);
+  box-shadow:inset 0 0 0 2px var(--diagnostic-accent);
+}
+
+/* Hover remains a distinct interaction state; focus keeps the established teal outline. */
+#p-expediente #t-estudios .diagnostic-family-color-trial :is(.vis06-category-screen[data-hier-level="root"] .vis06-category-primary[data-hier-node]:not([data-hier-node="dental"]),.vis06-category-screen[data-hier-level="family"] :is(.vis06-category-primary,.vis06-category-secondary)):hover:not(:disabled) {
+  background:color-mix(in srgb,var(--diagnostic-accent) 11%,white);
+  border-color:var(--diagnostic-accent);
+}
+
+/* The selector stays neutral and dense; its small context edge carries the family. */
+#p-expediente #t-estudios .diagnostic-family-color-trial[data-diagnostic-family]:not([data-diagnostic-family=""]):not([data-diagnostic-family="dental"]) .ordcomp-catalog {
+  border-top:3px solid var(--diagnostic-accent);
+}
+
+/* Each prepared order uses its own canonical routing group, not the current navigation context. */
+#p-expediente #t-estudios .diagnostic-family-color-trial .ordcomp-prepared-order[data-order-group]:not([data-order-group="DENTAL_DIAGNOSTICS"]) {
+  border-left:4px solid var(--diagnostic-accent);
+  background:color-mix(in srgb,var(--diagnostic-accent) 4%,white);
+}
+#p-expediente #t-estudios .diagnostic-family-color-trial .ordcomp-prepared-order[data-order-group]:not([data-order-group="DENTAL_DIAGNOSTICS"]) > summary {
+  color:var(--diagnostic-text);
+}
