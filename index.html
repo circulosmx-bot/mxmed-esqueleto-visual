@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=doc-vis01">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=doc-vis02">
 <link rel="stylesheet" href="assets/css/patient-workspace-navigation-guard.css?v=vis24">
 <link rel="stylesheet" href="assets/css/clinical/dental-location-v1.css?v=dental-cat02">
 <link rel="stylesheet" href="assets/css/clinical/dental-odontogram-v2.css?v=dental-odontogram02">
@@ -8571,11 +8571,7 @@
               <div class="tab-pane fade" id="t-consent">
                 <nav class="vis01-secondary-links" aria-label="Archivo de documentos"><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-archivo">Ver archivo</button></nav>
                 <div class="exp-card exp-card--secondary mb-3" id="docs_catalog_panel">
-                  <div class="exp-card-title mb-1">
-                    <span>Documentos clínicos</span>
-                  </div>
                   <div class="exp-card-body">
-                    <p class="docs-catalog-intro mb-3">Selecciona el tipo documental para iniciar su captura o emisión desde este módulo.</p>
                     <div class="docs-launcher-groups">
                     <div class="docs-launcher-section mb-3">
                       <div class="docs-launcher-group-title">Autorizaciones y respaldo médico-legal</div>
@@ -8586,7 +8582,6 @@
                             <span class="docs-launcher-row-title">Consentimiento informado</span>
                             <span class="docs-launcher-row-desc">Autorización informada de procedimientos clínicos.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-responsiva" data-doc-code="responsiva_medica" data-doc-title="Responsiva médica" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Documento de deslinde y aceptación de responsabilidad médica bajo condiciones específicas.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">gavel</span>
@@ -8594,7 +8589,6 @@
                             <span class="docs-launcher-row-title">Responsiva médica</span>
                             <span class="docs-launcher-row-desc">Deslinde y aceptación de responsabilidad.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="consentimiento_multimedia" data-doc-title="Consentimiento multimedia" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Consentimiento para uso de imagen, audio o video en contexto clínico y documental.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">videocam</span>
@@ -8602,7 +8596,7 @@
                             <span class="docs-launcher-row-title">Consentimiento multimedia</span>
                             <span class="docs-launcher-row-desc">Uso de imagen, audio y video clínico.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
                       </div>
                     </div>
@@ -8615,7 +8609,6 @@
                             <span class="docs-launcher-row-title">Certificado médico</span>
                             <span class="docs-launcher-row-desc">Certificación de estado de salud.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row d-none" data-action="documents-open-placeholder" data-doc-code="incapacidad_medica" data-doc-title="Incapacidad médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de incapacidad temporal para respaldo laboral o institucional." data-doc-hidden="certificado_subtipo">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">event_busy</span>
@@ -8623,7 +8616,7 @@
                             <span class="docs-launcher-row-title">Incapacidad médica</span>
                             <span class="docs-launcher-row-desc">Incapacidad temporal para actividad laboral.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
                         <button type="button" class="docs-launcher-row d-none" data-action="documents-open-placeholder" data-doc-code="constancia_medica" data-doc-title="Constancia médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Constancia clínica breve para situaciones administrativas o escolares." data-doc-hidden="certificado_subtipo">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">assignment</span>
@@ -8631,7 +8624,7 @@
                             <span class="docs-launcher-row-title">Constancia médica</span>
                             <span class="docs-launcher-row-desc">Constancia clínica de atención.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
                         <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="certificados_especiales" data-doc-title="Certificados especiales" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Certificados médicos para escenarios especiales o formatos normativos específicos.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">workspace_premium</span>
@@ -8639,7 +8632,7 @@
                             <span class="docs-launcher-row-title">Certificados especiales</span>
                             <span class="docs-launcher-row-desc">Formatos especiales normativos.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
                       </div>
                     </div>
@@ -8652,7 +8645,6 @@
                             <span class="docs-launcher-row-title">Interconsulta</span>
                             <span class="docs-launcher-row-desc">Referencia a otra especialidad.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-informe" data-doc-code="informe_medico" data-doc-title="Informe médico" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Resumen clínico estructurado de evolución, hallazgos y conducta médica.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">summarize</span>
@@ -8660,7 +8652,6 @@
                             <span class="docs-launcher-row-title">Informe médico</span>
                             <span class="docs-launcher-row-desc">Resumen clínico de evolución.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-nota" data-doc-code="nota_medica" data-doc-title="Nota médica" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Nota clínica estructurada de consulta, evolución y plan de manejo.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span>
@@ -8668,7 +8659,6 @@
                             <span class="docs-launcher-row-title">Nota médica</span>
                             <span class="docs-launcher-row-desc">Registro clínico por consulta y evolución.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-alta" data-doc-code="alta_medica" data-doc-title="Alta médica" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Documento de egreso con indicaciones, seguimiento y cierre clínico.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">exit_to_app</span>
@@ -8676,7 +8666,6 @@
                             <span class="docs-launcher-row-title">Alta médica</span>
                             <span class="docs-launcher-row-desc">Egreso clínico con indicaciones.</span>
                           </span>
-                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                       </div>
                     </div>
@@ -8689,7 +8678,7 @@
                             <span class="docs-launcher-row-title">Documento libre</span>
                             <span class="docs-launcher-row-desc">Formato clínico personalizado.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
                       </div>
                     </div>
@@ -10270,7 +10259,7 @@
                       </div>
                       <div class="modal-body">
                         <p class="mb-2" id="docs_placeholder_desc">Este documento se integrará progresivamente al sistema documental clínico.</p>
-                        <div class="small text-muted">El flujo definitivo incluirá captura, emisión y trazabilidad en clinical_documents.</div>
+                        <div class="small text-muted">Esta opción estará disponible próximamente.</div>
                       </div>
                       <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
@@ -10835,7 +10824,7 @@
 <script src="assets/js/clinical/study-navigation-hierarchy-v2.js?v=img-cat02b"></script>
 <script src="assets/js/review/classification-simulator.js?v=classification-sim01"></script>
 <script src="assets/js/clinical/order-composition-v1.js?v=ord-comp02-r4"></script>
-<script src="assets/js/clinical/vis06-modules.js?v=doc-vis01"></script>
+<script src="assets/js/clinical/vis06-modules.js?v=doc-vis02"></script>
 <script src="assets/js/clinical/vis07-administrative.js?v=vis19"></script>
 <script src="assets/js/clinical/vis01-navigation.js?v=vis32"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>

@@ -5086,6 +5086,44 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #t-consent .docvis-success[hidden] {display:none!important}
 #p-expediente #t-consent .docvis-success strong {flex-basis:100%}
 #p-expediente #t-consent .docvis-intent-card:hover {border-color:#008fa4;box-shadow:0 2px 8px rgb(0 143 164 / .12)}
+/* DOC-VIS02: visual density and hierarchy within the create/attach flows. */
+#p-expediente #t-consent .docvis-back {
+  display:inline-flex;align-items:center;justify-content:flex-start;
+  min-height:38px;margin:0 0 10px;padding:7px 11px;
+  border:1px solid #8fcbd4;border-radius:8px;background:#fff;
+  color:#07536e;font-family:inherit;font-size:13px;font-weight:600;line-height:1.25;text-align:left;
+}
+#p-expediente #t-consent .docvis-back:hover {background:#effbfe;border-color:#008fa4}
+#p-expediente #t-consent :is(.docvis-back,.docvis-intent-card):focus,
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row:focus {outline:2px solid #008c9b;outline-offset:2px}
+#p-expediente #t-consent .vis06-module[data-doc-mode="create_attach"] .docvis-intent-card {
+  min-height:140px;padding:14px;grid-template-rows:auto auto auto;
+}
+#p-expediente #t-consent .vis06-module[data-doc-mode="create_attach"] .docvis-intent-card .vis06-intent-action {margin-top:8px}
+#p-expediente #t-consent.vis06-capture-open #docs_catalog_panel .exp-card-body {padding:14px 16px}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-groups {align-items:start}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-section {align-self:start}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row {padding:.56rem .7rem}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row--active {border-color:#b8dce3;background:#f7fbfc}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row--active:hover,
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row--active:focus-visible {border-color:#008fa4;background:#effbfe}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row--active::after {
+  content:'chevron_right';flex:none;color:#008fa4;font:normal 22px/1 'Material Symbols Rounded';
+}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row-ico {font-size:1.35rem}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row-title {font-weight:700}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row[data-doc-entry="placeholder-flow"] {
+  background:#f8fafb;border-color:#dce7e9;cursor:help;
+}
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row[data-doc-entry="placeholder-flow"]:hover {background:#f8fafb;box-shadow:none}
+#p-expediente #t-consent .docvis-attach-form {
+  box-sizing:border-box;width:68%;max-width:none;gap:10px;padding:16px;
+}
+#p-expediente #t-consent .docvis-attach-form .btn {justify-self:end;margin-top:2px}
+#p-expediente #t-consent .docvis-attach-status:empty {display:none}
+@media(max-width:850px){
+  #p-expediente #t-consent .docvis-attach-form {width:100%}
+}
 @media(max-width:700px){
   #p-expediente #t-consent .docvis-intents {grid-template-columns:minmax(0,1fr)}
   #p-expediente #t-consent .docvis-intent-card {min-height:150px}

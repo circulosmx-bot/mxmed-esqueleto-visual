@@ -711,9 +711,9 @@
     view.docBack.textContent=mode==='CATALOG'||mode==='ATTACH'?'← Volver a crear o adjuntar':'← Volver a Documentos';
     const headings={
       HOME:['DOCUMENTOS','Selecciona lo que deseas hacer con los documentos de este paciente.'],
-      CREATE_ATTACH:['CREAR O ADJUNTAR DOCUMENTO','Elige cómo incorporar un documento al expediente.'],
-      CATALOG:['CREAR DOCUMENTO CLÍNICO','Selecciona el tipo documental para iniciar su captura o emisión.'],
-      ATTACH:['ADJUNTAR ARCHIVO','Adjunta un PDF o imagen al expediente del paciente.'],
+      CREATE_ATTACH:['Crear o adjuntar documento','Elige cómo incorporar un documento al expediente.'],
+      CATALOG:['Crear documento clínico','Selecciona el tipo documental para iniciar su captura o emisión.'],
+      ATTACH:['Adjuntar archivo','Adjunta un PDF o imagen al expediente del paciente.'],
       CONSULT:['CONSULTAR DOCUMENTOS','Revisa documentos anteriores, archivos y sus versiones.']
     };
     [view.headTitle.textContent,view.headCopy.textContent]=headings[mode];
@@ -753,12 +753,12 @@
     view.docChoices=node('div','','vis06-flow-home docvis-intents');
     view.docChoices.setAttribute('aria-label','Crear o adjuntar documento');
     view.docChoices.append(
-      intent('CREAR DOCUMENTO CLÍNICO','Genera un nuevo documento desde el sistema.','description','Crear documento','CATALOG'),
-      intent('ADJUNTAR ARCHIVO','Incorpora un PDF o imagen existente al expediente.','upload_file','Adjuntar archivo','ATTACH'));
+      intent('Crear documento clínico','Genera un nuevo documento desde el sistema.','description','Crear documento','CATALOG'),
+      intent('Adjuntar archivo','Incorpora un PDF o imagen existente al expediente.','upload_file','Adjuntar archivo','ATTACH'));
     view.attachPane=node('section','','docvis-attach');view.attachPane.setAttribute('aria-label','Adjuntar archivo al expediente');
     view.attachPane.innerHTML=`<form class="docvis-attach-form" enctype="multipart/form-data">
       <label>Título del documento<input class="form-control" name="title" maxlength="255" required autocomplete="off" placeholder="Ej. Informe externo"></label>
-      <label>Archivo PDF o imagen<input class="form-control" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required></label>
+      <label>Archivo<input class="form-control" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required></label>
       <p>Formatos admitidos: PDF, JPG, PNG o WebP.</p>
       <button class="btn btn-primary" type="submit">Adjuntar archivo</button>
       <p class="docvis-attach-status" role="status" aria-live="polite"></p>
