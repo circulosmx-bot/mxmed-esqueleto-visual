@@ -1,0 +1,22 @@
+/* UX-TITLE01: title typography for the six top-level Expediente panels only. */
+#p-expediente :is(
+  #lon02-summary > .lon02-head h3,
+  #lon01-history > .lon01-head h3,
+  #t-estudios .vis06-orders[data-or-flow="home"] > .vis06-head h3,
+  #t-consent .vis06-module[data-doc-mode="home"] > .vis06-head h3,
+  #t-tratamiento > .vis06-module > .vis06-head h3,
+  #t-datos .vis07-head h3
+) {
+  font-size:22.4px;
+  font-weight:700;
+  line-height:30px;
+  text-transform:uppercase;
+}
+#p-expediente :is(
+  #lon02-summary > .lon02-head h3,
+  #lon01-history > .lon01-head h3,
+  #t-estudios .vis06-orders[data-or-flow="home"] > .vis06-head h3,
+  #t-consent .vis06-module[data-doc-mode="home"] > .vis06-head h3,
+  #t-tratamiento > .vis06-module > .vis06-head h3,
+  #t-datos .vis07-head h3
+)::before {text-transform:none}
