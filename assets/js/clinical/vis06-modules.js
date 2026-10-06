@@ -744,7 +744,7 @@
       target?.focus({preventScroll:true});
     };
     view.docBack=button('← Volver a Documentos',()=>navigate(view.docMode==='CATALOG'||view.docMode==='ATTACH'?'CREATE_ATTACH':'HOME'));
-    view.docBack.classList.add('vis06-flow-back','docvis-back');view.module.prepend(view.docBack);
+    view.docBack.classList.add('vis06-flow-back','docvis-back');view.head.append(view.docBack);
     view.docHome=node('div','','vis06-flow-home docvis-intents');
     view.docHome.setAttribute('aria-label','Opciones de Documentos');
     view.docHome.append(
@@ -882,7 +882,7 @@
       const index=node('div','','vis06-orders-index');index.append(notice,list);detail.tabIndex=-1;workspace.append(index,detail);module.append(head,back,controls,workspace);
     }else{detail.hidden=true;module.append(head,back,controls,notice,list,detail);}
     host.prepend(module);host.classList.add('vis06-ready');
-    const view={kind,settings,host,module,headTitle:copy.querySelector('h3'),headCopy:copy.querySelector('p'),create,back,search,filter,notice,list,detail,workspace,lastTrigger:null,selectedListId:'',selectedRowId:'',detailRequest:0};views.set(kind,view);
+    const view={kind,settings,host,module,head,headTitle:copy.querySelector('h3'),headCopy:copy.querySelector('p'),create,back,search,filter,notice,list,detail,workspace,lastTrigger:null,selectedListId:'',selectedRowId:'',detailRequest:0};views.set(kind,view);
     if(kind==='orders'){
       view.categoryRequest=0;view.hierPath=[];view.hierMode=false;view.hierDraft={selected:[],priority:'Rutinaria',indication:''};
       view.hierContext='';view.hierSaving=false;view.hierCloseComposer=null;
@@ -890,7 +890,7 @@
       view.flowBack.classList.add('vis06-flow-back');
       view.categoryBack=button('Volver a opciones',()=>hierarchyBack(view));
       view.categoryBack.classList.add('vis06-flow-back');
-      module.prepend(view.flowBack);head.prepend(view.categoryBack);
+      head.append(view.flowBack,view.categoryBack);
       view.home=node('div','','vis06-flow-home');view.home.setAttribute('aria-label','Opciones de estudios de diagnóstico');
       const options=[
         ['Solicitar estudios','Solicita nuevos estudios para este paciente.','science','Elegir estudios','CATEGORY'],
