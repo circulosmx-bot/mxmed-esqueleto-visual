@@ -35,4 +35,13 @@ foreach ([['patient_id'=>''],['operation'=>'CREATE_OBSERVATION'],['context_type'
 $patient = array_replace($context,['operation'=>'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT','context_type'=>'PATIENT','context_id'=>'patient-qa']);
 m3b_check(clinical_multipart_semantic_request($patient,$binary)['context_type']==='PATIENT','patient replacement context');
 m3b_check($hash($patient,$binary)!==$base,'context type affects identity');
+foreach (['pdf','image'] as $type) {
+    $attachment=array_replace($patient,['operation'=>'CREATE_ENCOUNTER_DOCUMENT','document_type'=>$type]);
+    m3b_check(clinical_multipart_semantic_request($attachment,$binary)['context_type']==='PATIENT','patient attachment '.$type);
+}
+foreach (['order','result','prescription'] as $type) {
+    $wrong=array_replace($patient,['operation'=>'CREATE_ENCOUNTER_DOCUMENT','document_type'=>$type]);
+    try { $hash($wrong,$binary); throw new RuntimeException('invalid patient attachment accepted'); }
+    catch (InvalidArgumentException) { $count++; }
+}
 echo "MULTI03B_SEMANTIC_QA=PASS\nASSERTIONS=$count\nANY_DATABASE_CONNECTED=false\n";

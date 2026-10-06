@@ -9005,6 +9005,42 @@ try {
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
+                // DOC-IMP01: a patient file is independent of any ambient encounter.
+                // Keep result/order/prescription writers and the encounter route separate.
+                $attachmentType = strtolower(trim((string)($payload['document_type'] ?? '')));
+                if ($isMultipart && in_array($attachmentType, ['pdf','image'], true)) {
+                    require_once __DIR__.'/../_lib/clinical_encounter_multipart_adapter.php';
+                    try {
+                        $metadata = $payload['payload'] ?? null;
+                        if (!is_array($metadata) || ($metadata['source'] ?? null) !== 'documents_longitudinal_attachment')
+                            throw new InvalidArgumentException('PATIENT_ATTACHMENT_SOURCE_REQUIRED');
+                        if (trim((string)($payload['title'] ?? '')) === ''
+                            || preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', trim((string)($payload['event_datetime'] ?? ''))) !== 1)
+                            throw new InvalidArgumentException('PATIENT_ATTACHMENT_METADATA_REQUIRED');
+                        if ($attachmentType === 'image' && trim((string)($payload['media_tag_key'] ?? ($metadata['media_tag_key'] ?? ''))) === '')
+                            throw new InvalidArgumentException('MEDIA_TAG_REQUIRED');
+                        foreach ([$payload, is_array($payload['context'] ?? null) ? $payload['context'] : [],
+                                  $metadata, is_array($metadata['context'] ?? null) ? $metadata['context'] : []] as $scopeIndex => $scope) {
+                            foreach (['encounter_id','encounter_key','encounter_ref_id','appointment_id','hospital_stay_id',
+                                      'doctor_id','document_id','document_uuid','binary_uuid','storage_key','sha256','byte_length'] as $field) {
+                                if (array_key_exists($field, $scope)) throw new InvalidArgumentException('PATIENT_ATTACHMENT_CONTEXT_FORBIDDEN');
+                            }
+                            if ($scopeIndex >= 2 && array_key_exists('patient_id', $scope))
+                                throw new InvalidArgumentException('PATIENT_ATTACHMENT_CONTEXT_FORBIDDEN');
+                        }
+                        clinical_encounter_integrity_assert_schema_ready($pdo);
+                        $result = clinical_patient_attachment_multipart_execute($pdo,$scopedDoctorContext,$patientId,
+                            $payload,$_FILES,(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                        [$status,$body] = clinical_encounter_multipart_response($result);
+                        $body['meta']['route'] = 'doctors/{doctor_id}/patients/{patient_id}/documents';
+                        clinical_send_response($body,$status);
+                    } catch (Throwable $error) {
+                        [$status,$code] = clinical_encounter_multipart_error($error);
+                        clinical_send_response(['ok'=>false,'error'=>['code'=>$code,'message'=>$code],
+                            'data'=>null,'meta'=>$meta],$status);
+                    }
+                    return;
+                }
                 if($isMultipart && clinical_study_result_type((string)($payload['document_type']??''))
                     && is_array($payload['payload']??null)
                     && (string)($payload['payload']['source']??'')==='res02a_linked_result'){

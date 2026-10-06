@@ -25,6 +25,7 @@ function clinical_multipart_semantic_request(array $context, array $binary): arr
     $contextType = strtoupper(trim((string)($context['context_type'] ?? '')));
     if (!in_array($contextType, ['ENCOUNTER', 'PATIENT'], true)
         || ($contextType === 'PATIENT' && (!in_array($operation, ['CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT','CREATE_POST_ENCOUNTER_RESULT'], true)
+            && !($operation === 'CREATE_ENCOUNTER_DOCUMENT' && in_array($normalized['document_type'], ['pdf','image'], true))
             || $normalized['context_id'] !== $normalized['patient_id']))) {
         throw new InvalidArgumentException('MULTIPART_CONTEXT_INVALID');
     }

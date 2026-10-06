@@ -69,6 +69,46 @@ function clinical_patient_result_multipart_execute(PDO $pdo, array $doctor, stri
     }finally{clinical_clean_private_image($optimized);}
 }
 
+/** Canonical longitudinal PDF/image attachment; never infers an encounter. */
+function clinical_patient_attachment_multipart_execute(PDO $pdo, array $doctor, string $patientId,
+    array $payload, array $files, string $idempotencyKey): array
+{
+    $type=strtolower(trim((string)($payload['document_type']??'')));
+    if(!in_array($type,['pdf','image'],true))throw new InvalidArgumentException('PATIENT_ATTACHMENT_TYPE_INVALID');
+    $file=clinical_encounter_multipart_file($files);
+    $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    if(($type==='pdf' && $mime!=='application/pdf')
+        || ($type==='image' && !in_array($mime,['image/jpeg','image/png','image/webp'],true))) {
+        throw new InvalidArgumentException('PATIENT_ATTACHMENT_MIME_MISMATCH');
+    }
+    [$root,$ttl]=clinical_encounter_multipart_config();
+    $storage=new ClinicalPrivateBinaryStorage($root);
+    $optimized=null;
+    if($type==='image'){
+        $optimized=clinical_optimize_private_image($file);
+        $payload['payload']['original_audit']=$optimized['manifest']['original'];
+        $payload['payload']['image_optimization']=array_diff_key($optimized['manifest']['optimized'],['path'=>true]);
+        $file['tmp_name']=$optimized['main'];
+    }
+    try{
+        $context=['operation'=>'CREATE_ENCOUNTER_DOCUMENT','doctor_id'=>$doctor['doctor_id'],
+            'patient_id'=>$patientId,'context_type'=>'PATIENT','context_id'=>$patientId,
+            'document_type'=>$type,'metadata'=>clinical_document_semantic_request($payload,null)];
+        return (new ClinicalMultipartDocumentService($pdo,$storage))->execute($context,$idempotencyKey,
+            (string)$doctor['user_id'],$file['tmp_name'],$file['name'],
+            (new DateTimeImmutable('now',new DateTimeZone('UTC')))->modify('+'.$ttl.' seconds'),
+            function(PDO $transaction,string $documentUuid) use($patientId,$payload,$doctor):array {
+                if(!clinical_has_active_doctor_patient_link($transaction,(string)$doctor['doctor_id'],$patientId))
+                    throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+                $id=clinical_v1_document_insert($transaction,['patient_id'=>$patientId],$payload,
+                    (string)$doctor['user_id'],$documentUuid);
+                return ['document_id'=>$id,'document_uuid'=>$documentUuid,
+                    'result_column'=>'document_id','result_id'=>$id];
+            },
+            static fn(PDO $transaction,string $column,int $id):array=>clinical_v1_document_fetch($transaction,$id));
+    }finally{clinical_clean_private_image($optimized);}
+}
+
 /** Called only after the canonical route's authorization and operation policy pass. */
 function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array $doctor,
     array $payload, string $createOperation, string $policyOperation, string $documentClass,
@@ -191,7 +231,8 @@ function clinical_encounter_multipart_error(Throwable $error): array
     if ($error instanceof InvalidArgumentException &&
         (str_starts_with($code, 'ORDER_ITEM_') || str_starts_with($code, 'ORDER_ITEMS_')
             || str_starts_with($code, 'RESULT_ITEM_') || str_starts_with($code, 'RESULT_ORDER_')
-            || str_starts_with($code, 'STUDY_'))) return [400, $code];
+            || str_starts_with($code, 'STUDY_') || str_starts_with($code, 'PATIENT_ATTACHMENT_'))) return [400, $code];
+    if ($code === 'MEDIA_TAG_REQUIRED') return [400, $code];
     if ($code === 'V1_MULTIPART_STORAGE_NOT_READY' || str_starts_with($code, 'MULTIPART_STORAGE_SCHEMA_NOT_READY')) return [503, 'V1_MULTIPART_STORAGE_NOT_READY'];
     if ($code === 'MULTIPART_FILE_REQUIRED') return [400, $code];
     if (in_array($code, ['STAGING_MAX_BYTES_EXCEEDED', 'STAGING_MIME_NOT_ALLOWED', 'STAGING_SOURCE_NOT_REGULAR_FILE'], true)) return [400, 'MULTIPART_FILE_INVALID'];
