@@ -1,0 +1,35 @@
+/* UX-ALIGN02: one top-level header row and content origin for all six tabs. */
+#p-expediente :is(#lon02-summary .lon02-head,#lon01-history .lon01-head,#t-estudios .vis06-head,#t-consent .vis06-head,#t-tratamiento .vis06-head,#t-datos .vis07-head) {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-height:40px;
+  margin:0 0 10px;
+}
+#p-expediente #lon02-summary .lon02-head h3::before,
+#p-expediente #t-datos .vis07-head h3::before {
+  display:inline-grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  margin-right:10px;
+  border-radius:10px;
+  background:#effbfe;
+  color:#009db7;
+  font:normal 27px/1 'Material Symbols Rounded';
+  vertical-align:middle;
+}
+#p-expediente #lon02-summary .lon02-head h3::before {content:'summarize'}
+#p-expediente #t-datos .vis07-head h3::before {content:'settings'}
+#p-expediente #t-datos .vis07-head {justify-content:flex-start}
+#p-expediente #t-datos .vis07-head h3 {
+  margin:0;
+  font-size:28px;
+  font-weight:400;
+  line-height:30px;
+  color:#1e5369;
+}
+#p-expediente #t-datos .vis07-head .vis07-intro {margin:0 0 0 6px}
+@media (min-width:701px) and (max-height:800px) {
+  #p-expediente:has(:is(#t-resumen-longitudinal,#t-historial-atencion,#t-estudios,#t-consent,#t-tratamiento,#t-datos).active) > .body {padding-top:6px}
+}

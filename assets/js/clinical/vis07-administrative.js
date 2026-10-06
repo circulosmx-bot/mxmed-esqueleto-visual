@@ -9,7 +9,9 @@
   const button = (text, fn) => { const n = el('button', text, 'btn btn-outline-primary btn-sm'); n.type = 'button'; n.addEventListener('click', fn); return n; };
   const root = el('section', '', 'vis07-admin'); root.hidden = true; root.setAttribute('aria-label', 'Administrativo');
   const title = el('h3', 'Administrativo');
-  root.append(title, el('p', 'Datos de contacto y accesos de gestión del paciente.', 'vis07-intro'));
+  const intro = el('div', '', 'vis07-head');
+  intro.append(title, el('p', 'Datos de contacto y accesos de gestión del paciente.', 'vis07-intro'));
+  root.append(intro);
   const grid = el('div', '', 'vis07-grid');
   const contacts = el('section', '', 'vis07-card vis07-contact');
   const head = el('header', '', 'vis07-card-head'); head.append(el('h4', 'Datos administrativos'));
