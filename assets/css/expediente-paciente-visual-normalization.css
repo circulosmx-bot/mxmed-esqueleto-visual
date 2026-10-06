@@ -5110,7 +5110,11 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #t-consent.vis06-capture-open .docs-launcher-row--active::after {
   content:'chevron_right';flex:none;color:#008fa4;font:normal 22px/1 'Material Symbols Rounded';
 }
-#p-expediente #t-consent.vis06-capture-open .docs-launcher-row-ico {font-size:1.35rem}
+/* DOC-VIS03: mirror the 44px / 27px diagnostic selector icon scale. */
+#p-expediente #t-consent.vis06-capture-open .docs-launcher-row-ico {
+  display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;
+  border-radius:9px;background:#f4f9ff;font-size:27px;line-height:1;
+}
 #p-expediente #t-consent.vis06-capture-open .docs-launcher-row-title {font-weight:700}
 #p-expediente #t-consent.vis06-capture-open .docs-launcher-row[data-doc-entry="placeholder-flow"] {
   background:#f8fafb;border-color:#dce7e9;cursor:help;
