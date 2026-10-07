@@ -77,20 +77,115 @@
     move(alternatives, [`${prefix}alternativas`]);
     const extra = additional(root, prefix);
     const authorizations = section(root, 'authorizations', 'AUTORIZACIONES');
-    move(authorizations, [
-      `${prefix}aut_contingencias`, `${prefix}firmante_tipo`, `${prefix}firmante_nombre`,
-      `${prefix}firmante_parentesco`, `${prefix}confirm_informed`,
-      prefix === 'ci_' ? 'ci_signature_slot_step2' : 'ci_signature_slot_full',
-      prefix === 'ci_' ? 'ci_identity_slot_step2' : 'ci_identity_slot_full',
-      `${prefix}enable_witnesses`,
-      prefix === 'ci_' ? 'ci_witnesses_wrap_1' : 'ci_full_witnesses_wrap_1',
-      prefix === 'ci_' ? 'ci_witnesses_wrap_2' : 'ci_full_witnesses_wrap_2',
-      prefix === 'ci_' ? 'ci_doctor_signature_slot_step2' : 'ci_doctor_signature_slot_full'
-    ]);
+    move(authorizations, [`${prefix}aut_contingencias`]);
     sections.set(root.id, {procedure, extra, prefix});
   }
   build(guided, 'ci_');
   build(complete, 'ci_full_');
+
+  // The existing bound controls remain in the DOM for state synchronization.
+  // The review-phase controls are the single visible signer authority.
+  const legacyStorage = document.createElement('div');
+  legacyStorage.id = 'ci_legacy_signer_controls';
+  legacyStorage.hidden = true;
+  legacyStorage.inert = true;
+  modal.append(legacyStorage);
+  for (const prefix of ['ci_', 'ci_full_']) {
+    move(legacyStorage, [
+      `${prefix}firmante_tipo`, `${prefix}firmante_nombre`, `${prefix}firmante_parentesco`,
+      `${prefix}confirm_informed`, `${prefix}enable_witnesses`,
+      prefix === 'ci_' ? 'ci_signature_slot_step2' : 'ci_signature_slot_full',
+      prefix === 'ci_' ? 'ci_identity_slot_step2' : 'ci_identity_slot_full',
+      prefix === 'ci_' ? 'ci_witnesses_wrap_1' : 'ci_full_witnesses_wrap_1',
+      prefix === 'ci_' ? 'ci_witnesses_wrap_2' : 'ci_full_witnesses_wrap_2',
+      prefix === 'ci_' ? 'ci_doctor_signature_slot_step2' : 'ci_doctor_signature_slot_full'
+    ]);
+  }
+
+  const signerType = field('ci_review_firmante_tipo');
+  const signerName = field('ci_review_firmante_nombre');
+  const signerRelation = field('ci_review_firmante_parentesco');
+  const patientChoice = field('ci_signer_choice_patient');
+  const otherChoice = field('ci_signer_choice_other');
+  const representativeFields = field('ci_review_representative_fields');
+  const identityToggle = field('ci_identity_toggle');
+  const identitySlot = field('ci_identity_slot_review');
+  const witnessesToggle = field('ci_review_enable_witnesses');
+  const witnessesGroup = field('ci_review_witnesses_group');
+  const signatureHeading = field('ci_signature_block')?.querySelector('.ci-signature-heading');
+  const signerChangeNotice = field('ci_signer_change_notice');
+  let lastRepresentativeType = 'tutor';
+  let identityExpanded = null;
+
+  function setVisible(element, visible) {
+    if (!element) return;
+    element.classList.toggle('d-none', !visible);
+    element.inert = !visible;
+    element.setAttribute('aria-hidden', String(!visible));
+  }
+
+  function warnIfSigned() {
+    if (field('ci_signature_status')?.textContent?.trim() !== 'Sin firma') {
+      setVisible(signerChangeNotice, true);
+    }
+  }
+
+  function syncSignerFlow() {
+    if (!signerType) return;
+    const isPatient = signerType.value === 'paciente';
+    if (!isPatient && signerType.value) lastRepresentativeType = signerType.value;
+    if (patientChoice) patientChoice.checked = isPatient;
+    if (otherChoice) {
+      otherChoice.checked = !isPatient;
+      otherChoice.setAttribute('aria-expanded', String(!isPatient));
+    }
+    setVisible(representativeFields, !isPatient);
+    const selfOption = signerRelation?.querySelector('option[value="self"]');
+    if (selfOption) {
+      selfOption.hidden = !isPatient;
+      selfOption.disabled = !isPatient;
+    }
+    const patientOption = signerType.querySelector('option[value="paciente"]');
+    if (patientOption) patientOption.hidden = !isPatient;
+    if (signatureHeading) signatureHeading.textContent = isPatient ? 'Firma del paciente' : 'Firma del representante';
+    const patientName = field('ci_pac_nombre')?.value?.trim() || 'Paciente';
+    const identity = field('ci_signer_patient_identity');
+    if (identity) identity.textContent = `Paciente: ${patientName}`;
+
+    const hasIdentity = field('ci_identity_files_list')?.textContent?.trim() !== 'Sin anexos cargados.';
+    const showIdentity = identityExpanded === null ? hasIdentity : identityExpanded;
+    setVisible(identitySlot, showIdentity);
+    if (identityToggle) {
+      identityToggle.setAttribute('aria-expanded', String(showIdentity));
+      identityToggle.textContent = showIdentity ? 'Ocultar identificación' : '+ Adjuntar identificación';
+    }
+    const showWitnesses = !!witnessesToggle?.checked;
+    setVisible(witnessesGroup, showWitnesses);
+    witnessesToggle?.setAttribute('aria-expanded', String(showWitnesses));
+  }
+
+  patientChoice?.addEventListener('change', () => {
+    if (!patientChoice.checked || signerType?.value === 'paciente') return;
+    warnIfSigned();
+    signerType.value = 'paciente';
+    signerType.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  otherChoice?.addEventListener('change', () => {
+    if (!otherChoice.checked || !signerType || signerType.value !== 'paciente') return;
+    warnIfSigned();
+    signerType.value = lastRepresentativeType;
+    signerType.dispatchEvent(new Event('change', { bubbles: true }));
+    signerType.focus();
+  });
+  [signerType, signerName, signerRelation].forEach(control => {
+    control?.addEventListener(control?.tagName === 'INPUT' ? 'input' : 'change', warnIfSigned);
+  });
+  identityToggle?.addEventListener('click', () => {
+    identityExpanded = identityToggle.getAttribute('aria-expanded') !== 'true';
+    syncSignerFlow();
+    if (identityExpanded) field('ci_identity_files')?.focus();
+  });
+  witnessesToggle?.addEventListener('change', syncSignerFlow);
 
   function sync() {
     const full = !complete.classList.contains('d-none');
@@ -103,6 +198,7 @@
         : ['ci_full_motivo', 'ci_full_beneficios', 'ci_full_consecuencias', 'ci_full_riesgos'];
       extra.open = secondary.some(id => String(field(id)?.value || '').trim() !== '') || extra.dataset.engaged === '1';
     }
+    syncSignerFlow();
   }
   window.mxmedConsentFormHierarchySync = sync;
   for (const buttonId of ['ci_mode_guided', 'ci_mode_full']) {
@@ -110,6 +206,8 @@
   }
   modal.addEventListener('shown.bs.modal', () => window.requestAnimationFrame(sync));
   modal.addEventListener('hidden.bs.modal', () => {
+    identityExpanded = null;
+    setVisible(signerChangeNotice, false);
     for (const {extra} of sections.values()) {
       delete extra.dataset.engaged;
       extra.open = false;

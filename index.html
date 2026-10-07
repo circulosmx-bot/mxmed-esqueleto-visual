@@ -9014,6 +9014,23 @@
                       <h5>Firmas y confirmación</h5>
                       <p class="small text-muted">Confirma el contenido revisado y captura las firmas o selecciona la firma registrada.</p>
                       <div class="row g-3">
+                        <div class="col-12">
+                          <h6 class="mb-2">FIRMANTE</h6>
+                          <p class="small mb-2" id="ci_signer_patient_identity">Paciente: —</p>
+                          <fieldset class="border rounded p-2 mb-0" aria-describedby="ci_signer_patient_identity">
+                            <legend class="float-none w-auto px-1 fs-6 mb-1">¿Quién firma?</legend>
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="ci_signer_choice" id="ci_signer_choice_patient" value="patient" checked>
+                              <label class="form-check-label" for="ci_signer_choice_patient">Firma el paciente</label>
+                            </div>
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="ci_signer_choice" id="ci_signer_choice_other" value="other" aria-controls="ci_review_representative_fields" aria-expanded="false">
+                              <label class="form-check-label" for="ci_signer_choice_other">Firma otra persona</label>
+                            </div>
+                          </fieldset>
+                        </div>
+                        <div class="col-12 d-none" id="ci_review_representative_fields">
+                          <div class="row g-3">
                         <div class="col-md-4">
                           <label class="form-label" for="ci_review_firmante_tipo">Tipo de firmante</label>
                           <select class="form-select" id="ci_review_firmante_tipo">
@@ -9037,25 +9054,40 @@
                             <option value="otro_familiar">Otro familiar</option><option value="otro">Otro</option>
                           </select>
                         </div>
+                          </div>
+                        </div>
+                        <div class="col-12 d-none" id="ci_signer_change_notice" role="status" aria-live="polite">
+                          <div class="alert alert-warning mb-0">Cambió la identidad del firmante. Revisa que la firma capturada le corresponda; si cambió la persona, vuelve a firmar.</div>
+                        </div>
+                        <div class="col-12"><h6 class="mb-0">CONFIRMACIÓN</h6></div>
                         <div class="col-12 form-check ms-2">
                           <input class="form-check-input" type="checkbox" id="ci_review_confirm_informed">
                           <label class="form-check-label" for="ci_review_confirm_informed">Confirmo que el paciente ha sido informado y acepta el procedimiento revisado</label>
                         </div>
+                        <div class="col-12"><h6 class="mb-0">FIRMAS</h6></div>
                         <div class="col-12" id="ci_signature_slot_review"></div>
-                        <div class="col-12" id="ci_identity_slot_review"></div>
-                        <div class="col-12 form-check ms-2">
-                          <input class="form-check-input" type="checkbox" id="ci_review_enable_witnesses">
-                          <label class="form-check-label" for="ci_review_enable_witnesses">Agregar testigos</label>
-                        </div>
-                        <div class="col-md-6 d-none" id="ci_review_witnesses_wrap_1">
-                          <label class="form-label" for="ci_review_testigo_1_nombre">Testigo 1</label>
-                          <input class="form-control" id="ci_review_testigo_1_nombre">
-                        </div>
-                        <div class="col-md-6 d-none" id="ci_review_witnesses_wrap_2">
-                          <label class="form-label" for="ci_review_testigo_2_nombre">Testigo 2</label>
-                          <input class="form-control" id="ci_review_testigo_2_nombre">
-                        </div>
                         <div class="col-12" id="ci_doctor_signature_slot_review"></div>
+                        <div class="col-12">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_identity_toggle" aria-controls="ci_identity_slot_review" aria-expanded="false">+ Adjuntar identificación</button>
+                        </div>
+                        <div class="col-12 d-none" id="ci_identity_slot_review"></div>
+                        <div class="col-12 form-check ms-2">
+                          <input class="form-check-input" type="checkbox" id="ci_review_enable_witnesses" aria-controls="ci_review_witnesses_group" aria-expanded="false">
+                          <label class="form-check-label" for="ci_review_enable_witnesses">+ Agregar testigos</label>
+                        </div>
+                        <div class="col-12 d-none" id="ci_review_witnesses_group">
+                          <h6 class="mb-2">TESTIGOS</h6>
+                          <div class="row g-3">
+                            <div class="col-md-6 d-none" id="ci_review_witnesses_wrap_1">
+                              <label class="form-label" for="ci_review_testigo_1_nombre">Testigo 1</label>
+                              <input class="form-control" id="ci_review_testigo_1_nombre">
+                            </div>
+                            <div class="col-md-6 d-none" id="ci_review_witnesses_wrap_2">
+                              <label class="form-label" for="ci_review_testigo_2_nombre">Testigo 2</label>
+                              <input class="form-control" id="ci_review_testigo_2_nombre">
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_signatures_back">Volver al contenido</button>
@@ -9069,7 +9101,7 @@
                         <span class="small text-muted" id="ci_signature_status">Sin firma</span>
                       </div>
                       <div class="mx-signature-pad" data-signature-role="patient">
-                        <canvas id="ci_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                        <canvas id="ci_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none" aria-label="Firma del paciente o representante"></canvas>
                       </div>
                       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
                         <button type="button" class="btn btn-outline-dark btn-sm" data-action="ci-signature-open-qr">
@@ -9093,7 +9125,7 @@
                     <div id="ci_identity_block" class="border rounded p-2 d-none mt-2">
                       <div class="small fw-semibold mb-1">Anexos de identidad del firmante</div>
                       <div class="small text-muted mb-2">Adjunta INE, pasaporte u otro documento de identidad del firmante.</div>
-                      <input class="form-control" id="ci_identity_files" type="file" accept="image/*,.pdf" multiple>
+                      <input class="form-control" id="ci_identity_files" type="file" accept="image/*,.pdf" multiple aria-label="Adjuntar archivos de identificación del firmante">
                       <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                         <select class="form-select form-select-sm" id="ci_identity_doc_kind" style="max-width:260px;">
                           <option value="ine">Credencial de elector / INE</option>
@@ -9129,7 +9161,7 @@
                         >
                       </div>
                       <div class="mx-signature-pad" data-signature-role="doctor">
-                        <canvas id="ci_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                        <canvas id="ci_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none" aria-label="Firma del médico"></canvas>
                       </div>
                       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
                         <button type="button" class="btn btn-outline-dark btn-sm" data-action="ci-doctor-signature-open-qr">

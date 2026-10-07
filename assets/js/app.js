@@ -45044,10 +45044,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setConsentIdentityQrStatus('Escanea el código QR y sube el documento desde tu celular.', 'muted');
         updateConsentIdentityQrCountdown();
         syncConsentIdentityQrVerifyButton();
+        ensureModalAttachedToBody(els.identityQrModal);
         const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
-          ? window.bootstrap.Modal.getOrCreateInstance(els.identityQrModal)
-          : new window.bootstrap.Modal(els.identityQrModal);
+          ? window.bootstrap.Modal.getOrCreateInstance(els.identityQrModal, { backdrop: false, focus: true, keyboard: true })
+          : new window.bootstrap.Modal(els.identityQrModal, { backdrop: false, focus: true, keyboard: true });
         modal.show();
+        window.setTimeout(()=>{
+          const shownModals = document.querySelectorAll('.modal.show').length;
+          els.identityQrModal.style.zIndex = String(1200 + (shownModals * 20));
+        }, 0);
         startConsentIdentityQrPolling();
       }catch(error){
         setConsentIdentityQrStatus(sanitizeText(error?.message || 'No se pudo iniciar captura por celular.'), 'error');
@@ -46171,6 +46176,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.stepLabel.textContent = isFinal ? 'Revisión final' : (isSignatures ? 'Firmas' : (isContent ? 'Revisión de contenido' : (isFullMode ? 'Captura completa' : `Paso ${state.step} de 2`)));
       }
       refreshSaveAsTemplateAvailability();
+      window.mxmedConsentFormHierarchySync?.();
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.wizard));
     };
 
