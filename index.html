@@ -8575,6 +8575,7 @@
 
               <div class="tab-pane fade" id="t-consent">
                 <nav class="vis01-secondary-links" aria-label="Archivo de documentos"><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-archivo">Ver archivo</button></nav>
+                <div class="alert alert-success py-2 mb-3 d-none" id="ci_action_feedback" role="status" aria-live="polite"></div>
                 <div class="exp-card exp-card--secondary mb-3" id="docs_catalog_panel">
                   <div class="exp-card-body">
                     <div class="docs-launcher-groups">
@@ -10215,19 +10216,19 @@
                     </div>
                   </div>
                 </div>
-                <div class="modal fade" id="modalConsentDraftPrompt" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog modal-dialog-centered">
+                <div class="modal fade" id="modalConsentDraftPrompt" tabindex="-1" aria-labelledby="ci_draft_prompt_title" aria-describedby="ci_draft_prompt_text" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Borrador disponible</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title" id="ci_draft_prompt_title">Borrador disponible</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
-                        <p class="mb-0" id="ci_draft_prompt_text">Hay un borrador guardado. ¿Deseas reabrirlo?</p>
+                        <p class="mb-3" id="ci_draft_prompt_text">Existe un consentimiento informado sin finalizar para este paciente.</p>
+                        <div class="ci-draft-choices" id="ci_draft_choices"></div>
                       </div>
                       <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_draft_discard_btn">Descartar borrador y comenzar uno nuevo</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="ci_draft_reopen_btn">Reabrir borrador</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_draft_discard_btn">Crear nuevo consentimiento</button>
                       </div>
                     </div>
                   </div>

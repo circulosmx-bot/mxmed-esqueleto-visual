@@ -5132,3 +5132,10 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
   #p-expediente #t-consent .docvis-intents {grid-template-columns:minmax(0,1fr)}
   #p-expediente #t-consent .docvis-intent-card {min-height:150px}
 }
+#p-expediente #modalConsentDraftPrompt .ci-draft-choices{display:grid;gap:.65rem;max-height:min(55vh,430px);overflow:auto}
+#p-expediente #t-consent #ci_action_feedback:not(.d-none){display:block!important}
+#p-expediente #modalConsentDraftPrompt .ci-draft-choice{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem;border:1px solid #c8e2e9;border-radius:10px;background:#f8fcfd}
+#p-expediente #modalConsentDraftPrompt .ci-draft-choice__body{display:grid;gap:.15rem;min-width:0}
+#p-expediente #modalConsentDraftPrompt .ci-draft-choice__body>*{overflow-wrap:anywhere}
+#p-expediente #modalConsentDraftPrompt .ci-draft-choice__controls{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+@media(max-width:600px){#p-expediente #modalConsentDraftPrompt .ci-draft-choice{align-items:stretch;flex-direction:column}#p-expediente #modalConsentDraftPrompt .ci-draft-choice__controls{justify-content:space-between}}

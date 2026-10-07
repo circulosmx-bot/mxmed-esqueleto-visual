@@ -42079,9 +42079,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoModalEl: pane.querySelector('#modalCertificadoMedico'),
       certificadoModalBodySlot: pane.querySelector('#cm_modal_body_slot'),
       draftPromptModalEl: pane.querySelector('#modalConsentDraftPrompt'),
+      draftPromptTitle: pane.querySelector('#ci_draft_prompt_title'),
       draftPromptText: pane.querySelector('#ci_draft_prompt_text'),
-      draftPromptReopenBtn: pane.querySelector('#ci_draft_reopen_btn'),
+      draftChoices: pane.querySelector('#ci_draft_choices'),
       draftPromptDiscardBtn: pane.querySelector('#ci_draft_discard_btn'),
+      actionFeedback: root.querySelector('#ci_action_feedback'),
       docSessionRecoveryModalEl: pane.querySelector('#modalDocSessionRecovery'),
       docSessionRecoveryText: pane.querySelector('#doc_session_recovery_text'),
       docSessionRecoveryContinueBtn: pane.querySelector('#doc_session_recovery_continue_btn'),
@@ -45906,6 +45908,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }, 4500);
       }
     };
+    const showConsentActionFeedback = (message = '')=>{
+      if(!els.actionFeedback) return;
+      els.actionFeedback.textContent = message;
+      els.actionFeedback.classList.toggle('d-none', !message);
+      if(message){
+        window.setTimeout(()=> els.actionFeedback?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
+      }
+    };
     const askDoctorSignatureSaveDecision = async (options = {})=>{
       const preferModal = options?.preferModal === true;
       const inlinePromptEl = options?.inlinePromptEl || els.doctorSignatureInlinePrompt;
@@ -46224,6 +46234,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     const openConsentModal = async ({ draftRef = '' } = {})=>{
+      showConsentActionFeedback('');
       const patientId = resolveActivePatientIdForConsent();
       if(!patientId){
         startDraft();
@@ -46236,18 +46247,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       let shouldOpen = false;
       let selected = drafts.find((row)=> row.ref === sanitizeText(draftRef || '')) || null;
-      if(!selected && !draftRef && drafts.length > 1){
-        const choices = drafts.map((row, index)=> `${index + 1}. ${row.title} — ${formatDraftDateTime(row.event_datetime) || 'sin fecha'}`);
-        const answer = window.prompt(`Hay ${drafts.length} borradores de consentimiento. Escribe el número para continuar o 0 para crear otro:\n${choices.join('\n')}`, '1');
-        if(answer === null) return;
-        const number = Number(answer);
-        if(!Number.isInteger(number) || number < 0 || number > drafts.length) return;
-        selected = number === 0 ? null : drafts[number - 1];
-        if(number === 0) shouldOpen = startDraft() === true;
-      }else if(!selected && !draftRef && drafts.length === 1){
-        const decision = await askConsentDraftDecision(drafts[0]);
-        if(decision === 'reopen') selected = drafts[0];
-        else if(decision === 'discard' || decision === 'new') shouldOpen = startDraft() === true;
+      if(!selected && !draftRef && drafts.length){
+        const decision = await askConsentDraftDecision(drafts);
+        if(decision.action === 'resume') selected = drafts.find((row)=> row.ref === decision.ref) || null;
+        else if(decision.action === 'new') shouldOpen = startDraft() === true;
       }else if(drafts.length === 0 && !draftRef){
         shouldOpen = startDraft() === true;
       }
@@ -46300,6 +46303,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         version: Number(clinicalDoc.version || item.version || 1),
         created_by_user_id: sanitizeText(clinicalDoc.created_by_user_id || item.created_by_user_id || ''),
         event_datetime: sanitizeText(item?.event_datetime || item?.occurred_at || item?.created_at || ''),
+        updated_at: sanitizeText(clinicalDoc.updated_at || item.updated_at || ''),
+        procedure: sanitizeText(payload?.form_snapshot?.procedimiento || ''),
+        summary: sanitizeText(clinicalDoc.summary || item.summary || ''),
         title: sanitizeText(clinicalDoc.title || item?.title || 'Consentimiento informado')
       };
     };
@@ -46333,7 +46339,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           .map((item)=> extractConsentDraftRecord(item))
           .filter(Boolean)
           .filter((row)=> row.created_by_user_id === currentUser)
-          .sort((a, b)=> String(b.event_datetime || '').localeCompare(String(a.event_datetime || '')));
+          .sort((a, b)=> String(b.updated_at || b.event_datetime || '').localeCompare(String(a.updated_at || a.event_datetime || '')) || b.ref.localeCompare(a.ref));
         return drafts;
       }catch(_){
         return null;
@@ -46373,41 +46379,85 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const ss = String(dt.getSeconds()).padStart(2, '0');
       return `${datePart} - ${hh}:${mm}:${ss}`;
     };
-    const formatDraftDateTime = (rawValue = '')=> formatConsentUiDate(rawValue, { withTime: true });
-
-    const askConsentDraftDecision = async (draftRecord)=>{
-      if(!draftRecord) return 'new';
-      if(!els.draftPromptModalEl || !window.bootstrap?.Modal){
-        const msg = `Hay un borrador guardado del ${formatDraftDateTime(draftRecord.event_datetime) || 'registro reciente'}. ¿Deseas reabrirlo?`;
-        return window.confirm(msg) ? 'reopen' : 'discard';
+    const formatDraftDateTime = (rawValue = '', utc = false)=>{
+      const raw = sanitizeText(rawValue || '');
+      if(utc && raw){
+        const date = new Date(`${raw.replace(' ', 'T')}Z`);
+        if(!Number.isNaN(date.getTime())){
+          return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+        }
       }
+      return formatConsentUiDate(raw, { withTime: true });
+    };
+
+    const askConsentDraftDecision = async (drafts)=>{
+      if(!drafts.length || !els.draftPromptModalEl || !els.draftChoices || !window.bootstrap?.Modal){
+        showCatalogFeedback('No se puede abrir la selección de borradores en este momento.', 'error');
+        return { action: 'cancel' };
+      }
+      const many = drafts.length > 1;
+      els.draftPromptTitle.textContent = many ? 'BORRADORES DE CONSENTIMIENTO' : 'Borrador disponible';
+      els.draftPromptText.textContent = many
+        ? 'Selecciona el borrador que deseas continuar.'
+        : 'Existe un consentimiento informado sin finalizar para este paciente.';
+      els.draftChoices.replaceChildren();
+      drafts.forEach((draft)=>{
+        const row = document.createElement('div');
+        row.className = 'ci-draft-choice';
+        const body = document.createElement('div');
+        body.className = 'ci-draft-choice__body';
+        const title = document.createElement('strong');
+        title.textContent = draft.title || 'Consentimiento informado';
+        const context = document.createElement('span');
+        context.className = 'text-muted small';
+        context.textContent = draft.procedure || draft.summary || 'Consentimiento informado';
+        const meta = document.createElement('span');
+        meta.className = 'text-muted small';
+        meta.textContent = `Actualizado: ${formatDraftDateTime(draft.updated_at || draft.event_datetime, !!draft.updated_at) || 'fecha no disponible'}`;
+        body.append(title, context, meta);
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'btn btn-primary btn-sm';
+        action.textContent = many ? 'Continuar' : 'Continuar borrador';
+        action.setAttribute('aria-label', `Continuar borrador: ${draft.title || 'Consentimiento informado'}`);
+        action.dataset.draftRef = draft.ref;
+        const status = document.createElement('span');
+        status.className = 'badge bg-light text-dark border';
+        status.textContent = 'Borrador';
+        const controls = document.createElement('div');
+        controls.className = 'ci-draft-choice__controls';
+        controls.append(status, action);
+        row.append(body, controls);
+        els.draftChoices.append(row);
+      });
+      const returnFocus = document.activeElement;
       return await new Promise((resolve)=>{
         const modal = window.bootstrap.Modal.getOrCreateInstance(els.draftPromptModalEl);
-        if(els.draftPromptText){
-          const whenText = formatDraftDateTime(draftRecord.event_datetime);
-          els.draftPromptText.textContent = whenText
-            ? `Hay un borrador guardado del ${whenText}. ¿Deseas reabrirlo?`
-            : 'Hay un borrador guardado. ¿Deseas reabrirlo?';
-        }
-        let settled = false;
-        const finish = (choice)=>{
-          if(settled) return;
-          settled = true;
-          cleanup();
+        let focusTimer = null;
+        let choice = { action: 'cancel' };
+        const onSelect = (event)=>{
+          const button = event.target.closest('[data-draft-ref]');
+          if(!button) return;
+          choice = { action: 'resume', ref: button.dataset.draftRef };
+          modal.hide();
+        };
+        const onNew = ()=>{ choice = { action: 'new' }; modal.hide(); };
+        const onShown = ()=> els.draftChoices.querySelector('button')?.focus();
+        const onHidden = ()=>{
+          if(focusTimer !== null) window.clearTimeout(focusTimer);
+          els.draftChoices.removeEventListener('click', onSelect);
+          els.draftPromptDiscardBtn.removeEventListener('click', onNew);
+          els.draftPromptModalEl.removeEventListener('shown.bs.modal', onShown);
+          els.draftPromptModalEl.removeEventListener('hidden.bs.modal', onHidden);
+          if(returnFocus?.isConnected) returnFocus.focus();
           resolve(choice);
         };
-        const onReopen = (event)=>{ event.preventDefault(); modal.hide(); finish('reopen'); };
-        const onDiscard = (event)=>{ event.preventDefault(); modal.hide(); finish('discard'); };
-        const onHidden = ()=> finish('cancel');
-        const cleanup = ()=>{
-          els.draftPromptReopenBtn?.removeEventListener('click', onReopen);
-          els.draftPromptDiscardBtn?.removeEventListener('click', onDiscard);
-          els.draftPromptModalEl?.removeEventListener('hidden.bs.modal', onHidden);
-        };
-        els.draftPromptReopenBtn?.addEventListener('click', onReopen);
-        els.draftPromptDiscardBtn?.addEventListener('click', onDiscard);
-        els.draftPromptModalEl?.addEventListener('hidden.bs.modal', onHidden);
+        els.draftChoices.addEventListener('click', onSelect);
+        els.draftPromptDiscardBtn.addEventListener('click', onNew);
+        els.draftPromptModalEl.addEventListener('shown.bs.modal', onShown);
+        els.draftPromptModalEl.addEventListener('hidden.bs.modal', onHidden);
         modal.show();
+        focusTimer = window.setTimeout(onShown, 350);
       });
     };
 
@@ -52262,6 +52312,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.className = 'exp-card exp-card--secondary';
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `${isConsentDoc && status === 'draft' ? 'Continuar borrador' : 'Ver detalle'}: ${title}`);
         if(uuid) card.dataset.docUuid = uuid;
         card.innerHTML = `
           <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
@@ -52270,7 +52321,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
-          ${uuid ? `<div class="small mt-2"><span class="text-primary">${isConsentDoc && status === 'draft' ? 'Continuar borrador' : 'Abrir detalle'}</span></div>` : ''}
+          ${uuid ? `<div class="small fw-semibold mt-2"><span class="text-primary">${isConsentDoc && status === 'draft' ? 'Continuar borrador' : 'Ver detalle'}</span></div>` : ''}
         `;
         if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
         els.list.appendChild(card);
@@ -53236,6 +53287,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     const saveCanonicalConsent = async (targetStatus = 'draft')=>{
       if(state.saving) return;
+      showConsentActionFeedback('');
       const normalizedStatus = targetStatus === 'granted' ? 'granted' : 'draft';
       const isEmit = normalizedStatus === 'granted';
       pushCiDebug(isEmit ? '[CI] inicio emitConsent' : '[CI] inicio saveDraft');
@@ -53422,8 +53474,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         closeConsentModal();
         listCanonicalConsents();
         if(normalizedStatus === 'draft'){
+          showConsentActionFeedback('Borrador guardado. Podrás continuar este documento más adelante.');
           showCatalogFeedback('Borrador guardado', 'success');
         }else{
+          showConsentActionFeedback('Consentimiento emitido. Ya puedes consultarlo en Documentos recientes.');
           showCatalogFeedback('Consentimiento emitido', 'success');
         }
         try{
@@ -54895,7 +54949,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       else openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
 
-    window.addEventListener('expediente:patient-changed', ()=>{ listCanonicalConsents(); });
+    window.addEventListener('expediente:patient-changed', ()=>{
+      showConsentActionFeedback('');
+      listCanonicalConsents();
+    });
     window.addEventListener('mxmed:encounter-context-changed', ()=>{ listCanonicalConsents(); });
     pane.addEventListener('click', (event)=>{
       const tabBtn = event.target.closest('.nav-link[data-bs-target="#t-consent"]');
