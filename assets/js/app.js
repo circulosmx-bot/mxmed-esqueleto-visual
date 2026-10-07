@@ -42248,6 +42248,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       signatureClear: root.querySelector('#ci_signature_clear'),
       signatureStatus: root.querySelector('#ci_signature_status'),
       doctorSignatureSourceRegistered: root.querySelector('#ci_doctor_signature_source_registered'),
+      doctorSignatureApplyRegistered: root.querySelector('#ci_doctor_signature_apply_registered'),
       doctorSignatureSourceLocal: root.querySelector('#ci_doctor_signature_source_local'),
       doctorSignatureRegisteredWrap: root.querySelector('#ci_doctor_signature_registered_wrap'),
       doctorSignatureRegisteredPreview: root.querySelector('#ci_doctor_signature_registered_preview'),
@@ -42618,12 +42619,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       reviewedPrepared: null,
       signaturePad: null,
       signatureHasStroke: false,
+      signatureBinding: null,
+      signatureBindingState: 'absent',
+      signatureLocalData: '',
       remoteSignature: null,
       signaturePreferredSource: '',
       doctorSignaturePad: null,
       doctorSignatureHasStroke: false,
+      doctorSignatureBinding: null,
+      doctorSignatureBindingState: 'absent',
+      doctorSignatureLocalData: '',
       doctorSignaturePreferredSource: '',
       doctorRegisteredSignatureData: '',
+      doctorSignatureAppliedData: '',
       doctorRemoteSignature: null,
       doctorSignatureSavePrompted: false,
       activeDraftRef: '',
@@ -42631,6 +42639,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       firmanteAutoFromPatient: false,
       identityFiles: [],
       identityRemoteRefs: [],
+      signatureDocumentDate: '',
+      signatureBindingEpoch: 0,
+      signatureBindingRequests: { patient: 0, doctor: 0 },
+      signatureBindingTasks: [],
       riskFramework: null,
       riskUserEdited: {
         comunes: false,
@@ -44032,6 +44044,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     const updateSignatureStatus = ()=>{
       if(!els.signatureStatus) return;
+      if(state.signatureBindingState === 'valid_bound_signature'){
+        els.signatureStatus.textContent = 'Firma vinculada a esta versión';
+        return;
+      }
+      if(state.signatureBindingState === 'legacy_unbound'){
+        els.signatureStatus.textContent = 'Firma remota sin vinculación V1';
+        return;
+      }
+      if(state.signatureBindingState === 'legacy_unverified_binding'){
+        els.signatureStatus.textContent = 'Firma anterior: vinculación sin verificar';
+        return;
+      }
+      if(state.signatureBindingState === 'stale_or_unverified' && (state.signatureHasStroke || state.remoteSignature)){
+        els.signatureStatus.textContent = 'Firma requiere confirmación nuevamente';
+        return;
+      }
       if(state.signaturePreferredSource === 'remote' && state.remoteSignature){
         els.signatureStatus.textContent = 'Firma remota lista';
         return;
@@ -44053,6 +44081,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.doctorSignatureSourceRegistered){
         els.doctorSignatureSourceRegistered.disabled = !hasRegistered;
       }
+      if(els.doctorSignatureApplyRegistered) els.doctorSignatureApplyRegistered.disabled = !hasRegistered;
       if(els.doctorSignatureRegisteredWrap){
         els.doctorSignatureRegisteredWrap.classList.toggle('d-none', !hasRegistered);
       }
@@ -44063,17 +44092,26 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           els.doctorSignatureRegisteredPreview.removeAttribute('src');
         }
       }
-      if(!hasRegistered && state.doctorSignaturePreferredSource === 'registered'){
+      if(!hasRegistered && state.doctorSignaturePreferredSource === 'registered' && !state.doctorSignatureAppliedData){
         state.doctorSignaturePreferredSource = state.doctorSignatureHasStroke ? 'local' : '';
-      }
-      if(hasRegistered && !state.doctorSignaturePreferredSource && !state.doctorSignatureHasStroke){
-        state.doctorSignaturePreferredSource = 'registered';
       }
     };
     const updateDoctorSignatureStatus = ()=>{
       if(!els.doctorSignatureStatus) return;
+      if(state.doctorSignatureBinding?.authority
+        && state.doctorSignatureBinding.authority !== `${sanitizeText(window.resolveDoctorId?.() || '')}|${sanitizeText(resolveClinicalActorUserId() || '')}`){
+        state.doctorSignatureBindingState = 'stale_or_unverified';
+      }
       const hasRegistered = !!state.doctorRegisteredSignatureData;
-      if(state.doctorSignaturePreferredSource === 'remote' && state.doctorRemoteSignature){
+      if(state.doctorSignatureBindingState === 'valid_bound_signature'){
+        els.doctorSignatureStatus.textContent = 'Firma vinculada a esta versión';
+      }else if(state.doctorSignatureBindingState === 'legacy_unbound'){
+        els.doctorSignatureStatus.textContent = 'Firma remota sin vinculación V1';
+      }else if(state.doctorSignatureBindingState === 'legacy_unverified_binding'){
+        els.doctorSignatureStatus.textContent = 'Firma anterior: vinculación sin verificar';
+      }else if(state.doctorSignatureBindingState === 'stale_or_unverified' && (state.doctorSignatureHasStroke || state.doctorSignaturePreferredSource === 'registered')){
+        els.doctorSignatureStatus.textContent = 'Firma requiere confirmación nuevamente';
+      }else if(state.doctorSignaturePreferredSource === 'remote' && state.doctorRemoteSignature){
         els.doctorSignatureStatus.textContent = 'Firma remota lista';
       }else if(state.doctorSignaturePreferredSource === 'registered' && hasRegistered){
         els.doctorSignatureStatus.textContent = 'Firma registrada seleccionada';
@@ -44081,7 +44119,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.doctorSignatureStatus.textContent = 'Firma local capturada';
       }else if(state.doctorRemoteSignature){
         els.doctorSignatureStatus.textContent = 'Firma remota disponible';
-      }else if(hasRegistered){
+      }else if(state.doctorRegisteredSignatureData){
         els.doctorSignatureStatus.textContent = 'Firma registrada disponible';
       }else if(state.doctorSignatureHasStroke){
         els.doctorSignatureStatus.textContent = 'Firma local capturada';
@@ -44092,7 +44130,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.doctorSignatureSourceLocal) els.doctorSignatureSourceLocal.checked = state.doctorSignaturePreferredSource === 'local';
     };
     const setDoctorSignaturePreferredSource = (source = '')=>{
-      if(state.doctorSignaturePreferredSource !== source) invalidateConsentReview('final');
+      if(state.doctorSignaturePreferredSource !== source){
+        invalidateConsentReview('final');
+        state.signatureBindingRequests.doctor += 1;
+        if(state.doctorSignatureBinding) state.doctorSignatureBindingState = 'stale_or_unverified';
+      }
       const normalized = sanitizeText(source).toLowerCase();
       if(normalized === 'registered' && state.doctorRegisteredSignatureData){
         state.doctorSignaturePreferredSource = 'registered';
@@ -44102,8 +44144,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         state.doctorSignaturePreferredSource = 'remote';
       }else if(state.doctorRemoteSignature){
         state.doctorSignaturePreferredSource = 'remote';
-      }else if(state.doctorRegisteredSignatureData){
-        state.doctorSignaturePreferredSource = 'registered';
       }else if(state.doctorSignatureHasStroke){
         state.doctorSignaturePreferredSource = 'local';
       }else{
@@ -44120,11 +44160,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       state.doctorSignatureHasStroke = false;
+      state.doctorSignatureLocalData = '';
+      state.doctorSignatureBinding = null;
+      state.doctorSignatureBindingState = 'absent';
+      state.signatureBindingRequests.doctor += 1;
       if(state.doctorSignaturePreferredSource === 'local'){
         if(state.doctorRemoteSignature){
           state.doctorSignaturePreferredSource = 'remote';
         }else{
-          state.doctorSignaturePreferredSource = state.doctorRegisteredSignatureData ? 'registered' : '';
+          state.doctorSignaturePreferredSource = '';
         }
       }
       updateDoctorSignatureStatus();
@@ -44153,9 +44197,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ctx.lineJoin = 'round';
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#0f172a';
-      state.doctorSignatureHasStroke = false;
-      if(state.doctorSignaturePreferredSource === 'local'){
-        state.doctorSignaturePreferredSource = state.doctorRegisteredSignatureData ? 'registered' : '';
+      const savedDoctorInk = state.doctorSignatureLocalData;
+      state.doctorSignatureHasStroke = !!savedDoctorInk;
+      if(savedDoctorInk){
+        const image = new Image();
+        image.onload = ()=>{ if(state.doctorSignatureLocalData === savedDoctorInk) ctx.drawImage(image, 0, 0, width, height); };
+        image.src = savedDoctorInk;
+      }else if(state.doctorSignaturePreferredSource === 'local'){
+        state.doctorSignaturePreferredSource = '';
       }
       updateDoctorSignatureStatus();
     };
@@ -44176,10 +44225,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const start = (event)=>{
         if(state.saving) return;
         drawing = true;
+        if(state.doctorSignatureLocalData){
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         const pt = readPoint(event);
         ctx.beginPath();
         ctx.moveTo(pt.x, pt.y);
-        state.doctorSignatureHasStroke = true;
+        state.doctorSignatureHasStroke = false;
+        state.doctorSignatureLocalData = '';
+        state.doctorSignatureBinding = null;
+        state.doctorSignatureBindingState = 'stale_or_unverified';
+        state.signatureBindingRequests.doctor += 1;
         invalidateConsentReview('final');
         state.doctorSignaturePreferredSource = 'local';
         updateDoctorSignatureStatus();
@@ -44196,6 +44253,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(!drawing) return;
         drawing = false;
         ctx.closePath();
+        state.doctorSignatureHasStroke = !!window.mxmedConsentSignatureBinding?.hasInk(canvas);
+        state.doctorSignatureLocalData = state.doctorSignatureHasStroke ? canvas.toDataURL('image/png') : '';
+        state.doctorSignaturePreferredSource = state.doctorSignatureHasStroke ? 'local' : '';
+        if(state.doctorSignatureHasStroke) queueConsentSignatureBinding('doctor', 'local_canvas');
+        updateDoctorSignatureStatus();
         event.preventDefault();
       };
       canvas.addEventListener('pointerdown', start);
@@ -44209,7 +44271,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const exportDoctorSignatureData = ()=>{
       const canvas = els.doctorSignatureCanvas;
-      if(!canvas || !state.doctorSignatureHasStroke) return '';
+      if(!state.doctorSignatureHasStroke) return '';
+      if(state.doctorSignatureLocalData) return state.doctorSignatureLocalData;
+      if(!canvas) return '';
       try{
         return canvas.toDataURL('image/png');
       }catch(_){
@@ -44226,11 +44290,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           signed_at: sanitizeText(state.doctorRemoteSignature?.signed_at || signedAt)
         };
       }
-      if(state.doctorSignaturePreferredSource === 'registered' && state.doctorRegisteredSignatureData){
+      if(state.doctorSignaturePreferredSource === 'registered' && (state.doctorSignatureAppliedData || state.doctorRegisteredSignatureData)){
         return {
           type: 'drawn',
           role: 'doctor',
-          image_data: state.doctorRegisteredSignatureData,
+          image_data: state.doctorSignatureAppliedData || state.doctorRegisteredSignatureData,
           signed_at: signedAt,
           signer_name: signerName,
           source: 'registered_profile'
@@ -44451,6 +44515,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     const setConsentSignaturePreferredSource = (source = '')=>{
+      if(state.signaturePreferredSource !== source){
+        state.signatureBindingRequests.patient += 1;
+        if(state.signatureBinding) state.signatureBindingState = 'stale_or_unverified';
+      }
       const normalized = sanitizeText(source).toLowerCase();
       if(normalized === 'remote' && state.remoteSignature){
         state.signaturePreferredSource = 'remote';
@@ -44483,9 +44551,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setDoctorRemoteSignatureStatus('');
       }
       if(state.doctorSignaturePreferredSource === 'remote'){
-        if(state.doctorRegisteredSignatureData){
-          state.doctorSignaturePreferredSource = 'registered';
-        }else if(state.doctorSignatureHasStroke){
+        if(state.doctorSignatureHasStroke){
           state.doctorSignaturePreferredSource = 'local';
         }else{
           state.doctorSignaturePreferredSource = '';
@@ -44503,6 +44569,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       state.signatureHasStroke = false;
+      state.signatureLocalData = '';
+      state.signatureBinding = null;
+      state.signatureBindingState = 'absent';
+      state.signatureBindingRequests.patient += 1;
       if(state.signaturePreferredSource === 'local'){
         state.signaturePreferredSource = state.remoteSignature ? 'remote' : '';
       }
@@ -44533,8 +44603,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ctx.lineJoin = 'round';
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#0f172a';
-      state.signatureHasStroke = false;
-      if(state.signaturePreferredSource === 'local'){
+      const savedPatientInk = state.signatureLocalData;
+      state.signatureHasStroke = !!savedPatientInk;
+      if(savedPatientInk){
+        const image = new Image();
+        image.onload = ()=>{ if(state.signatureLocalData === savedPatientInk) ctx.drawImage(image, 0, 0, width, height); };
+        image.src = savedPatientInk;
+      }else if(state.signaturePreferredSource === 'local'){
         state.signaturePreferredSource = state.remoteSignature ? 'remote' : '';
       }
       updateSignatureStatus();
@@ -44557,10 +44632,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const start = (event)=>{
         if(state.saving) return;
         drawing = true;
+        if(state.signatureLocalData){
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         const pt = readPoint(event);
         ctx.beginPath();
         ctx.moveTo(pt.x, pt.y);
-        state.signatureHasStroke = true;
+        state.signatureHasStroke = false;
+        state.signatureLocalData = '';
+        state.signatureBinding = null;
+        state.signatureBindingState = 'stale_or_unverified';
+        state.signatureBindingRequests.patient += 1;
         invalidateConsentReview('final');
         state.signaturePreferredSource = 'local';
         updateSignatureStatus();
@@ -44577,6 +44660,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(!drawing) return;
         drawing = false;
         ctx.closePath();
+        state.signatureHasStroke = !!window.mxmedConsentSignatureBinding?.hasInk(canvas);
+        state.signatureLocalData = state.signatureHasStroke ? canvas.toDataURL('image/png') : '';
+        state.signaturePreferredSource = state.signatureHasStroke ? 'local' : '';
+        if(state.signatureHasStroke) queueConsentSignatureBinding('patient', 'local_canvas');
+        updateSignatureStatus();
         event.preventDefault();
       };
       canvas.addEventListener('pointerdown', start);
@@ -44591,7 +44679,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     const exportConsentSignatureData = ()=>{
       const canvas = els.signatureCanvas;
-      if(!canvas || !state.signatureHasStroke) return '';
+      if(!state.signatureHasStroke) return '';
+      if(state.signatureLocalData) return state.signatureLocalData;
+      if(!canvas) return '';
       try{
         return canvas.toDataURL('image/png');
       }catch(_){
@@ -44612,6 +44702,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         signer_name: sanitizeText(entry?.signer_name || state.form.firmante_nombre || ''),
         token: sanitizeText(entry?.token || consentSignatureQrState.token || '')
       };
+      state.signatureBindingEpoch += 1;
+      state.signatureBinding = null;
+      state.signatureBindingState = 'legacy_unbound';
       state.signaturePreferredSource = 'remote';
       renderConsentRemoteSignaturePreview();
       updateSignatureStatus();
@@ -44680,6 +44773,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         file_name: sanitizeText(entry.file_name || ''),
         preview_url: sanitizeText(entry.preview_url || ''),
         note_capture_token: sanitizeText(entry.note_capture_token || ''),
+        sha256: sanitizeText(entry.sha256 || ''),
         source: sanitizeText(entry.source || '')
       };
       if(!normalized.document_id && !normalized.document_uuid && !normalized.note_capture_token){
@@ -44690,6 +44784,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const mergeConsentIdentityRefs = (refs = [])=>{
       const incoming = Array.isArray(refs) ? refs : [];
       if(incoming.length === 0) return;
+      staleConsentSignatureBindings();
       invalidateConsentReview('final');
       const merged = [];
       const seen = new Set();
@@ -45257,6 +45352,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           signer_name: signerName,
           token
         };
+        state.signatureBindingEpoch += 1;
+        state.doctorSignatureBinding = null;
+        state.doctorSignatureBindingState = 'legacy_unbound';
         state.doctorSignaturePreferredSource = 'remote';
         updateDoctorSignatureStatus();
         applied = true;
@@ -45638,16 +45736,20 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       'alternativas','consecuencias_no_aceptar','autorizacion_contingencias',
       'doctor_place','doctor_institution','doctor_facility','doctor_license'
     ];
+    const staleConsentSignatureBindings = ()=>{
+      state.signatureBindingEpoch += 1;
+      if(state.signatureBinding) state.signatureBindingState = 'stale_or_unverified';
+      if(state.doctorSignatureBinding) state.doctorSignatureBindingState = 'stale_or_unverified';
+      updateSignatureStatus();
+      updateDoctorSignatureStatus();
+    };
     const invalidateConsentReview = (scope = 'final')=>{
       state.finalReviewFingerprint = '';
       state.reviewedPrepared = null;
       if(scope === 'content' || scope === 'context'){
+        staleConsentSignatureBindings();
         state.contentReviewFingerprint = '';
         state.form.confirm_informed = false;
-        clearConsentSignaturePad();
-        clearConsentRemoteSignature();
-        clearDoctorSignaturePad();
-        clearDoctorRemoteSignature();
         // A registered profile signature is reusable; the clinical confirmation is not.
         if(scope === 'context' || state.reviewPhase === 'final' || state.reviewPhase === 'signatures'){
           state.reviewPhase = scope === 'context' ? 'capture' : 'content';
@@ -45660,7 +45762,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const updateConsentFormState = (key, value)=>{
       if(state.form[key] !== value){
-        invalidateConsentReview(consentContentFieldKeys.includes(key) ? 'content' : 'final');
+        if(consentContentFieldKeys.includes(key)) invalidateConsentReview('content');
+        else{
+          staleConsentSignatureBindings();
+          invalidateConsentReview('final');
+        }
       }
       state.form[key] = value;
       syncFormStateToInputs();
@@ -46251,6 +46357,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.activeDraftRef = '';
       state.activeDraftVersion = 0;
       state.activeDraftLabel = '';
+      state.signatureDocumentDate = '';
+      state.signatureBindingEpoch += 1;
       state.firmanteAutoFromPatient = false;
       state.riskUserEdited = {
         comunes: false,
@@ -46259,6 +46367,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       state.doctorSignatureHasStroke = false;
       state.doctorSignaturePreferredSource = '';
+      state.doctorSignatureAppliedData = '';
       state.doctorSignatureSavePrompted = false;
       showNotice('');
       els.doctorSignatureInlinePrompt?.classList.add('d-none');
@@ -46329,6 +46438,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.activeDraftRef = '';
       state.activeDraftVersion = 0;
       state.activeDraftLabel = '';
+      state.signatureDocumentDate = '';
+      state.signatureBindingEpoch += 1;
+      state.doctorSignatureAppliedData = '';
       state.riskUserEdited = {
         comunes: false,
         poco_frecuentes: false,
@@ -46350,9 +46462,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       clearDoctorSignaturePad();
       clearConsentIdentityFiles();
       refreshDoctorRegisteredSignature();
-      if(state.doctorRegisteredSignatureData){
-        state.doctorSignaturePreferredSource = 'registered';
-      }
       state.doctorSignatureSavePrompted = false;
       updateDoctorSignatureStatus();
       if(els.doctorName){
@@ -47117,11 +47226,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     const hydrateDraftState = (draftRecord = null)=>{
+      state.signatureBindingEpoch += 1;
       state.reviewPhase = 'capture';
       state.contentReviewFingerprint = '';
       state.finalReviewFingerprint = '';
       state.reviewedPrepared = null;
       const payload = (draftRecord?.payload && typeof draftRecord.payload === 'object') ? draftRecord.payload : {};
+      state.signatureDocumentDate = sanitizeText(payload.signature_document_date || draftRecord?.event_datetime || '');
       const formSnapshot = (payload?.form_snapshot && typeof payload.form_snapshot === 'object') ? payload.form_snapshot : {};
       state.form = {
         ...state.form,
@@ -47191,21 +47302,68 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       applyProcedureRiskSuggestions(draftTemplate, { force: false });
       applyConsentRiskDefaults();
+      const draftPatientSignature = (payload?.signatures?.patient && typeof payload.signatures.patient === 'object')
+        ? payload.signatures.patient : null;
       const draftDoctorSignature = (payload?.signatures && typeof payload.signatures === 'object' && payload.signatures.doctor && typeof payload.signatures.doctor === 'object')
         ? payload.signatures.doctor
         : null;
       refreshDoctorRegisteredSignature();
+      clearConsentSignaturePad();
       clearDoctorSignaturePad();
-      const draftDoctorSourceSnapshot = sanitizeText(formSnapshot.doctor_signature_source || '').toLowerCase();
+      state.signatureBinding = draftPatientSignature?.binding || null;
+      state.doctorSignatureBinding = draftDoctorSignature?.binding || null;
+      state.signatureBindingState = 'stale_or_unverified';
+      state.doctorSignatureBindingState = 'stale_or_unverified';
+      state.signatureLocalData = sanitizeText(draftPatientSignature?.source || '') === 'local_canvas'
+        ? sanitizeText(draftPatientSignature?.image_data || '') : '';
+      state.signatureHasStroke = !!state.signatureLocalData;
+      state.remoteSignature = sanitizeText(draftPatientSignature?.source || '') === 'remote_qr'
+        ? draftPatientSignature : null;
+      state.signaturePreferredSource = state.remoteSignature ? 'remote' : (state.signatureLocalData ? 'local' : '');
+      state.doctorSignatureLocalData = sanitizeText(draftDoctorSignature?.source || '') === 'local_canvas'
+        ? sanitizeText(draftDoctorSignature?.image_data || '') : '';
+      state.doctorSignatureHasStroke = !!state.doctorSignatureLocalData;
+      state.doctorSignatureAppliedData = sanitizeText(draftDoctorSignature?.source || '') === 'registered_profile'
+        ? sanitizeText(draftDoctorSignature?.image_data || '') : '';
+      state.doctorRemoteSignature = sanitizeText(draftDoctorSignature?.source || '') === 'remote_qr'
+        ? draftDoctorSignature : null;
       const doctorSource = sanitizeText(draftDoctorSignature?.source || '').toLowerCase();
-      if((doctorSource === 'registered_profile' || draftDoctorSourceSnapshot === 'registered') && state.doctorRegisteredSignatureData){
+      if(doctorSource === 'registered_profile' && state.doctorSignatureAppliedData){
         state.doctorSignaturePreferredSource = 'registered';
-      }else if(doctorSource === 'local_canvas' || draftDoctorSourceSnapshot === 'local'){
+      }else if(doctorSource === 'local_canvas' && state.doctorSignatureLocalData){
         state.doctorSignaturePreferredSource = 'local';
+      }else if(doctorSource === 'remote_qr'){
+        state.doctorSignaturePreferredSource = 'remote';
+      }else{
+        state.doctorSignaturePreferredSource = '';
       }
       syncFormStateToInputs();
       clearConsentValidationFeedback();
       renderStep();
+      const restoreCanvas = (canvas, imageData)=>{
+        if(!canvas || !imageData) return;
+        const image = new Image();
+        image.onload = ()=>{
+          const ctx = canvas.getContext('2d');
+          if(!ctx) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0, canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height);
+        };
+        image.src = imageData;
+      };
+      restoreCanvas(els.signatureCanvas, state.signatureLocalData);
+      restoreCanvas(els.doctorSignatureCanvas, state.doctorSignatureLocalData);
+      renderConsentRemoteSignaturePreview();
+      updateSignatureStatus(); updateDoctorSignatureStatus();
+      const hydrationEpoch = state.signatureBindingEpoch;
+      void (async ()=>{
+        const prepared = await buildCanonicalConsentDocument('draft');
+        if(!prepared.error && hydrationEpoch === state.signatureBindingEpoch){
+          await classifyConsentPrepared(prepared, hydrationEpoch);
+        }
+      })().catch(error=> pushCiDebug('[CI] draft signature classification failed', 'warn', error));
       showNotice('Borrador reabierto. Puedes continuar editando.');
       els.wizard.classList.remove('d-none');
     };
@@ -53452,7 +53610,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         || window.mxmedDoctor?.full_name
         || actorName
       ) || 'Médico tratante';
-      const nowSql = formatNowSql();
+      const nowSql = state.signatureDocumentDate || (state.signatureDocumentDate = formatNowSql());
       const consentType = sanitizeText(els.template?.value || 'otro');
       const templateLabel = sanitizeText(els.template?.selectedOptions?.[0]?.textContent || consentType || 'Consentimiento');
       const consentTitleRaw = trimConsentInputValue(state.form.title || '');
@@ -53607,6 +53765,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         },
         patient_snapshot: {
           full_name: patientSnapshot.full_name,
+          age: sanitizeText(patientSnapshot.age || ''),
+          sexo: sanitizeText(patientSnapshot.sexo || ''),
           identifier: '',
           contact
         },
@@ -53689,9 +53849,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           witness_signed: false,
           signature_mode: signatureMode,
           doctor_signature_mode: doctorSignatureMode,
-          patient: patientSignature,
-          doctor: doctorSignature
+          patient: patientSignature ? { ...patientSignature, binding: state.signatureBinding } : null,
+          doctor: doctorSignature ? { ...doctorSignature, binding: state.doctorSignatureBinding } : null
         },
+        signature_document_date: nowSql,
+        signature_context: context,
         observations: motivo || ''
       };
       payload = buildClinicalCanonicalPayload({
@@ -53704,6 +53866,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         eventDatetime: nowSql
       });
       const identityRefs = Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs.slice() : [];
+      const pendingIdentityHashes = await Promise.all((state.identityFiles || []).map(async file => {
+        const digest = await window.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+        return { sha256: Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('') };
+      }));
+      payload.signer_identity_attachment_manifest = [
+        ...identityRefs.map(ref => ({ sha256: sanitizeText(ref.sha256 || ''),
+          document_uuid: sanitizeText(ref.document_uuid || ref.document_id || '') })),
+        ...pendingIdentityHashes
+      ];
       if(identityRefs.length){
         payload.signer_identity_attachments = identityRefs;
         payload.attachments = payload.attachments && typeof payload.attachments === 'object' ? payload.attachments : {};
@@ -53781,6 +53952,82 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           source: 'host_t_consent'
         })
       };
+    };
+
+    const consentPatientAuthority = ()=> JSON.stringify([
+      sanitizeText(state.form.firmante_tipo || 'paciente'),
+      trimConsentInputValue(state.form.firmante_nombre || ''),
+      trimConsentInputValue(state.form.firmante_parentesco || '')
+    ]);
+    const consentDoctorAuthority = ()=> `${sanitizeText(window.resolveDoctorId?.() || '')}|${sanitizeText(resolveClinicalActorUserId() || '')}`;
+    const queueConsentSignatureBinding = (role, source)=>{
+      const epoch = state.signatureBindingEpoch;
+      const requestId = ++state.signatureBindingRequests[role];
+      const isCurrent = ()=> epoch === state.signatureBindingEpoch
+        && requestId === state.signatureBindingRequests[role];
+      const markStale = ()=>{
+        if(!isCurrent()) return;
+        if(role === 'doctor') state.doctorSignatureBindingState = 'stale_or_unverified';
+        else state.signatureBindingState = 'stale_or_unverified';
+        updateDoctorSignatureStatus(); updateSignatureStatus();
+      };
+      const task = (async ()=>{
+        const tool = window.mxmedConsentSignatureBinding;
+        const isDoctor = role === 'doctor';
+        const imageData = isDoctor
+          ? (source === 'registered_profile' ? state.doctorRegisteredSignatureData : exportDoctorSignatureData())
+          : exportConsentSignatureData();
+        const authority = isDoctor ? consentDoctorAuthority() : consentPatientAuthority();
+        if(!tool || !imageData || !authority || (state.identityFiles || []).length
+          || !await tool.imageHasInk(imageData)){
+          markStale();
+          return;
+        }
+        const prepared = await buildCanonicalConsentDocument('draft');
+        if(prepared.error){ markStale(); return; }
+        if(!tool.stableAttachments(prepared.body)){
+          markStale();
+          return;
+        }
+        const binding = {
+          version: 1,
+          content_fingerprint: await tool.hash(prepared.body),
+          artifact_digest: await tool.imageDigest(imageData),
+          source, role, authority,
+          applied_at: formatNowSql()
+        };
+        if(!isCurrent() || !binding.artifact_digest) return;
+        if(isDoctor){
+          state.doctorSignatureBinding = binding;
+          state.doctorSignatureBindingState = 'valid_bound_signature';
+          if(source === 'registered_profile') state.doctorSignatureAppliedData = imageData;
+        }else{
+          state.signatureBinding = binding;
+          state.signatureBindingState = 'valid_bound_signature';
+        }
+        updateDoctorSignatureStatus(); updateSignatureStatus();
+      })().catch(error=>{
+        pushCiDebug('[CI] signature binding capture failed', 'warn', error);
+        markStale();
+      });
+      state.signatureBindingTasks.push(task);
+      task.finally(()=>{ state.signatureBindingTasks = state.signatureBindingTasks.filter(entry=>entry !== task); });
+      return task;
+    };
+    const classifyConsentPrepared = async (prepared, expectedEpoch = null)=>{
+      if(prepared?.error) return;
+      if(expectedEpoch !== null && expectedEpoch !== state.signatureBindingEpoch) return;
+      const tool = window.mxmedConsentSignatureBinding;
+      if(!tool) return;
+      const [patient, doctor] = await Promise.all([
+        tool.classify(prepared.body, 'patient', consentPatientAuthority()),
+        tool.classify(prepared.body, 'doctor', consentDoctorAuthority(), readRegisteredDoctorSignature())
+      ]);
+      if(expectedEpoch !== null && expectedEpoch !== state.signatureBindingEpoch) return;
+      prepared.body.payload.signature_binding_status = {patient, doctor};
+      state.signatureBindingState = patient;
+      state.doctorSignatureBindingState = doctor;
+      updateSignatureStatus(); updateDoctorSignatureStatus();
     };
 
     // Review hashes canonical consent inputs, never mutable DOM or rendered HTML.
@@ -54251,7 +54498,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       showNotice(isEmit ? 'Generando consentimiento…' : 'Guardando borrador…');
       let prepared = null;
       try{
+        await Promise.all([...state.signatureBindingTasks]);
         const current = await buildCanonicalConsentDocument(normalizedStatus);
+        if(!current?.error) await classifyConsentPrepared(current);
         if(isEmit){
           const currentFingerprint = current?.error ? '' : await fingerprintConsentReview(current, 'final');
           const contentMatches = await consentContentStillReviewed();
@@ -54264,6 +54513,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             return;
           }
           prepared = state.reviewedPrepared;
+          if(prepared?.body?.payload?.signatures && current?.body?.payload?.signatures){
+            for(const role of ['patient', 'doctor']){
+              if(prepared.body.payload.signatures[role]){
+                prepared.body.payload.signatures[role].binding = current.body.payload.signatures[role]?.binding || null;
+              }
+            }
+            prepared.body.payload.signature_binding_status = current.body.payload.signature_binding_status;
+          }
         }else{
           prepared = current;
         }
@@ -54556,6 +54813,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.identityFiles?.addEventListener('change', ()=>{
       const files = Array.from(els.identityFiles?.files || []);
       state.identityFiles = files;
+      staleConsentSignatureBindings();
       invalidateConsentReview('final');
       renderIdentityFilesList();
     });
@@ -55858,13 +56116,36 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.doctorSignatureSourceRegistered?.addEventListener('change', ()=>{
       if(els.doctorSignatureSourceRegistered?.checked){
         invalidateConsentReview('final');
+        state.doctorSignatureAppliedData = state.doctorRegisteredSignatureData;
+        state.doctorSignatureBinding = null;
         setDoctorSignaturePreferredSource('registered');
+        queueConsentSignatureBinding('doctor', 'registered_profile');
       }
+    });
+    els.doctorSignatureApplyRegistered?.addEventListener('click', event=>{
+      event.preventDefault();
+      refreshDoctorRegisteredSignature();
+      if(!state.doctorRegisteredSignatureData) return;
+      invalidateConsentReview('final');
+      state.doctorSignatureAppliedData = state.doctorRegisteredSignatureData;
+      state.doctorSignatureBinding = null;
+      setDoctorSignaturePreferredSource('registered');
+      queueConsentSignatureBinding('doctor', 'registered_profile');
+    });
+    document.addEventListener('mxmed:signature-changed', ()=>{
+      refreshDoctorRegisteredSignature();
+      if(state.doctorSignaturePreferredSource === 'registered' && state.doctorSignatureBinding
+        && state.doctorSignatureAppliedData !== state.doctorRegisteredSignatureData){
+        state.signatureBindingRequests.doctor += 1;
+        state.doctorSignatureBindingState = 'stale_or_unverified';
+      }
+      updateDoctorSignatureStatus();
     });
     els.doctorSignatureSourceLocal?.addEventListener('change', ()=>{
       if(els.doctorSignatureSourceLocal?.checked){
         invalidateConsentReview('final');
         setDoctorSignaturePreferredSource('local');
+        if(state.doctorSignatureHasStroke) queueConsentSignatureBinding('doctor', 'local_canvas');
       }
     });
     els.doctorSignatureClear?.addEventListener('click', (event)=>{
@@ -55872,11 +56153,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       invalidateConsentReview('final');
       clearDoctorSignaturePad();
       clearDoctorRemoteSignature();
-      if(state.doctorRegisteredSignatureData){
-        setDoctorSignaturePreferredSource('registered');
-      }else{
-        setDoctorSignaturePreferredSource('');
-      }
+      state.doctorSignatureAppliedData = '';
+      state.doctorSignaturePreferredSource = '';
+      state.doctorSignatureBinding = null;
+      state.doctorSignatureBindingState = 'absent';
+      updateDoctorSignatureStatus();
     });
     root.addEventListener('click', (event)=>{
       if(event.defaultPrevented) return;

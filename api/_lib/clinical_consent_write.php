@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_encounter_multipart_adapter.php';
+require_once __DIR__ . '/clinical_consent_signature_binding.php';
 
 /** The consent command owns its identity files in the same canonical create. */
 function clinical_consent_identity_files(array $files): array
@@ -245,12 +246,25 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                 }
                 foreach ($staged as $row) {
                     $refs[] = ['document_uuid' => $row['document_uuid'],
+                        'sha256' => $row['binary']['sha256'],
                         'title' => 'Anexo identidad firmante — ' . (string)($row['binary']['source_filename'] ?? 'archivo'),
                         'file_name' => (string)($row['binary']['source_filename'] ?? ''),
                         'source' => 'consentimiento_identidad_local'];
                 }
                 $consentPayload = $payload;
                 $consentPayload['signer_identity_attachments'] = $refs;
+                $consentPayload['signer_identity_attachment_manifest'] = [];
+                foreach ($refs as $ref) {
+                    if (!is_array($ref)) continue;
+                    $consentPayload['signer_identity_attachment_manifest'][] = [
+                        'document_uuid' => (string)($ref['document_uuid'] ?? ($ref['document_id'] ?? '')),
+                    ];
+                }
+                $consentPayload['signature_context'] = [
+                    'patient_id' => $patientId,
+                    'encounter_key' => (string)($context['encounter_key'] ?? ''),
+                    'appointment_id' => $appointmentId,
+                ];
                 $consentPayload['attachments'] = is_array($consentPayload['attachments'] ?? null)
                     ? $consentPayload['attachments'] : [];
                 $consentPayload['attachments']['signer_identity'] = $refs;
@@ -276,6 +290,14 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                 $consent = $body;
                 $consent['payload'] = $consentPayload;
                 $consent['context'] = $writeContext;
+                $patientAuthority = clinical_consent_binding_patient_authority($consentPayload);
+                $doctorAuthority = (string)$doctor['doctor_id'] . '|' . (string)$doctor['user_id'];
+                $consentPayload['signature_binding_status'] = [
+                    'patient' => clinical_consent_binding_classify($consent, 'patient', $patientAuthority),
+                    'doctor' => clinical_consent_binding_classify($consent, 'doctor', $doctorAuthority,
+                        $pdo, (string)$doctor['doctor_id']),
+                ];
+                $consent['payload'] = $consentPayload;
                 $nextStatus = $intent === 'draft' ? 'draft' : 'generated';
                 if ($existing === null) {
                     $parentId = clinical_v1_document_insert($pdo, $writeContext, $consent,

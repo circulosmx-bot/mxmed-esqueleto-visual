@@ -1,0 +1,39 @@
+[
+  {
+    "name": "accents_multiline_witness_attachment",
+    "body": {
+      "actor_user_id": "u-med-1",
+      "context": {"patient_id": "p-1", "encounter_key": "enc-1", "appointment_id": "apt-1"},
+      "payload": {
+        "signature_document_date": "2026-10-07 11:31:00",
+        "patient_snapshot": {"full_name": "María José Núñez", "age": "34", "sexo": "Femenino"},
+        "actor_snapshot": {"user_id": "u-med-1", "full_name": "Dra. Leticia Muñoz", "license": "CÉD-123"},
+        "place": "Ciudad de México", "institution_name": "Clínica Norte", "facility_name": "Consultorio 2",
+        "consent": {"document_title": "Consentimiento para cirugía"},
+        "form_snapshot": {"procedimiento": "Biopsia\nde piel", "motivo": "Lesión\nrecurrente", "objetivo": "Diagnóstico", "riesgos": "Dolor, infección", "risk_comunes": "Dolor", "risk_poco_frecuentes": "Infección", "risk_raros_graves": "Sangrado", "beneficios_esperados": "Diagnóstico oportuno", "alternativas": "Observación", "consecuencias_no_aceptar": "Retraso diagnóstico", "autorizacion_contingencias": true, "confirm_informed": true, "firmante_tipo": "paciente", "firmante_nombre": "María José Núñez", "firmante_parentesco": "self"},
+        "rendered_text": "Yo, María José Núñez, acepto.\nRiesgos: dolor e infección.",
+        "firmante": {"tipo": "paciente", "nombre": "María José Núñez", "relacion": "self"},
+        "testigos": [{"nombre": "Ana Pérez"}, {"nombre": "José Díaz"}],
+        "signature_context": {"patient_id": "p-1", "encounter_key": "enc-1", "appointment_id": "apt-1"},
+        "signer_identity_attachment_manifest": [{"document_uuid": "11111111-1111-4111-8111-111111111111"}, {"document_uuid": "22222222-2222-4222-8222-222222222222"}]
+      }
+    }
+  },
+  {
+    "name": "empty_optional_false",
+    "body": {
+      "actor_user_id": "u-2",
+      "context": {"patient_id": "p-2"},
+      "payload": {
+        "signature_document_date": "2026-10-07 11:31:00",
+        "patient_snapshot": {"full_name": "René López", "age": "", "sexo": ""},
+        "actor_snapshot": {"user_id": "u-2", "full_name": "Dr. René", "license": null},
+        "consent": {"document_title": "Consentimiento general"},
+        "form_snapshot": {"autorizacion_contingencias": false, "confirm_informed": false},
+        "firmante": {"tipo": "tutor", "nombre": "José López", "relacion": "padre"},
+        "testigos": [],
+        "signer_identity_attachment_manifest": []
+      }
+    }
+  }
+]
