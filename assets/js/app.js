@@ -42118,6 +42118,34 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       fullBackToStep1: root.querySelector('#ci_full_back_to_step1'),
       modeGuided: root.querySelector('#ci_mode_guided'),
       modeFull: root.querySelector('#ci_mode_full'),
+      reviewPanel: root.querySelector('#ci_review_panel'),
+      reviewHeading: root.querySelector('#ci_review_heading'),
+      reviewWarning: root.querySelector('#ci_review_warning'),
+      reviewHtml: root.querySelector('#ci_review_html'),
+      reviewAttachments: root.querySelector('#ci_review_attachments'),
+      reviewEdit: root.querySelector('#ci_review_edit'),
+      reviewEditFields: root.querySelector('#ci_review_edit_fields'),
+      reviewEditButton: root.querySelector('#ci_review_edit_button'),
+      reviewApply: root.querySelector('#ci_review_apply'),
+      reviewContinue: root.querySelector('#ci_review_continue'),
+      reviewBackEdit: root.querySelector('#ci_review_back_edit'),
+      reviewBackSignatures: root.querySelector('#ci_review_back_signatures'),
+      signaturesPanel: root.querySelector('#ci_signatures_panel'),
+      signaturesBack: root.querySelector('#ci_signatures_back'),
+      signaturesContinue: root.querySelector('#ci_signatures_continue'),
+      preview: root.querySelector('#ci_preview'),
+      reviewFirmanteTipo: root.querySelector('#ci_review_firmante_tipo'),
+      reviewFirmanteNombre: root.querySelector('#ci_review_firmante_nombre'),
+      reviewFirmanteParentesco: root.querySelector('#ci_review_firmante_parentesco'),
+      reviewLegalConfirm: root.querySelector('#ci_review_confirm_informed'),
+      reviewEnableWitnesses: root.querySelector('#ci_review_enable_witnesses'),
+      reviewWitnessesWrap1: root.querySelector('#ci_review_witnesses_wrap_1'),
+      reviewWitnessesWrap2: root.querySelector('#ci_review_witnesses_wrap_2'),
+      reviewTestigo1Nombre: root.querySelector('#ci_review_testigo_1_nombre'),
+      reviewTestigo2Nombre: root.querySelector('#ci_review_testigo_2_nombre'),
+      signatureSlotReview: root.querySelector('#ci_signature_slot_review'),
+      identitySlotReview: root.querySelector('#ci_identity_slot_review'),
+      doctorSignatureSlotReview: root.querySelector('#ci_doctor_signature_slot_review'),
       emitErrors: root.querySelector('#ci_emit_errors'),
       debugPanel: root.querySelector('#ci_debug_panel'),
       debugLog: root.querySelector('#ci_debug_log'),
@@ -42584,6 +42612,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       draftId: '',
       saving: false,
       mode: 'guided',
+      reviewPhase: 'capture',
+      contentReviewFingerprint: '',
+      finalReviewFingerprint: '',
+      reviewedPrepared: null,
       signaturePad: null,
       signatureHasStroke: false,
       remoteSignature: null,
@@ -44060,6 +44092,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.doctorSignatureSourceLocal) els.doctorSignatureSourceLocal.checked = state.doctorSignaturePreferredSource === 'local';
     };
     const setDoctorSignaturePreferredSource = (source = '')=>{
+      if(state.doctorSignaturePreferredSource !== source) invalidateConsentReview('final');
       const normalized = sanitizeText(source).toLowerCase();
       if(normalized === 'registered' && state.doctorRegisteredSignatureData){
         state.doctorSignaturePreferredSource = 'registered';
@@ -44147,6 +44180,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         ctx.beginPath();
         ctx.moveTo(pt.x, pt.y);
         state.doctorSignatureHasStroke = true;
+        invalidateConsentReview('final');
         state.doctorSignaturePreferredSource = 'local';
         updateDoctorSignatureStatus();
         event.preventDefault();
@@ -44527,6 +44561,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         ctx.beginPath();
         ctx.moveTo(pt.x, pt.y);
         state.signatureHasStroke = true;
+        invalidateConsentReview('final');
         state.signaturePreferredSource = 'local';
         updateSignatureStatus();
         event.preventDefault();
@@ -44567,6 +44602,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const setConsentRemoteSignatureFromToken = (entry = {})=>{
       const imageData = sanitizeText(entry?.image_data || '');
       if(!imageData) return false;
+      invalidateConsentReview('final');
       state.remoteSignature = {
         type: 'drawn',
         source: 'remote_qr',
@@ -44654,6 +44690,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const mergeConsentIdentityRefs = (refs = [])=>{
       const incoming = Array.isArray(refs) ? refs : [];
       if(incoming.length === 0) return;
+      invalidateConsentReview('final');
       const merged = [];
       const seen = new Set();
       const pushUnique = (entry)=>{
@@ -45205,6 +45242,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const token = sanitizeText(data?.token || consentSignatureQrState.token || '');
       let applied = false;
       if(role === 'doctor'){
+        invalidateConsentReview('final');
         state.doctorRemoteSignature = {
           type: 'drawn',
           source: 'remote_qr',
@@ -45487,18 +45525,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.fullDoctorLicense) els.fullDoctorLicense.value = f.doctor_license;
       if(els.firmanteTipo) els.firmanteTipo.value = f.firmante_tipo;
       if(els.fullFirmanteTipo) els.fullFirmanteTipo.value = f.firmante_tipo;
+      if(els.reviewFirmanteTipo) els.reviewFirmanteTipo.value = f.firmante_tipo;
       if(els.firmanteNombre) els.firmanteNombre.value = f.firmante_nombre;
       if(els.fullFirmanteNombre) els.fullFirmanteNombre.value = f.firmante_nombre;
+      if(els.reviewFirmanteNombre) els.reviewFirmanteNombre.value = f.firmante_nombre;
       if(els.firmanteParentesco) els.firmanteParentesco.value = f.firmante_parentesco;
       if(els.fullFirmanteParentesco) els.fullFirmanteParentesco.value = f.firmante_parentesco;
+      if(els.reviewFirmanteParentesco) els.reviewFirmanteParentesco.value = f.firmante_parentesco;
       if(els.enableWitnesses) els.enableWitnesses.checked = !!f.enable_witnesses;
       if(els.fullEnableWitnesses) els.fullEnableWitnesses.checked = !!f.enable_witnesses;
+      if(els.reviewEnableWitnesses) els.reviewEnableWitnesses.checked = !!f.enable_witnesses;
       if(els.testigo1Nombre) els.testigo1Nombre.value = f.testigo_1_nombre;
       if(els.fullTestigo1Nombre) els.fullTestigo1Nombre.value = f.testigo_1_nombre;
+      if(els.reviewTestigo1Nombre) els.reviewTestigo1Nombre.value = f.testigo_1_nombre;
       if(els.testigo2Nombre) els.testigo2Nombre.value = f.testigo_2_nombre;
       if(els.fullTestigo2Nombre) els.fullTestigo2Nombre.value = f.testigo_2_nombre;
+      if(els.reviewTestigo2Nombre) els.reviewTestigo2Nombre.value = f.testigo_2_nombre;
       if(els.legalConfirm) els.legalConfirm.checked = !!f.confirm_informed;
       if(els.fullLegalConfirm) els.fullLegalConfirm.checked = !!f.confirm_informed;
+      if(els.reviewLegalConfirm) els.reviewLegalConfirm.checked = !!f.confirm_informed;
       syncTemplateControls();
       syncSignerControls();
       syncWitnessControls();
@@ -45550,10 +45595,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.fullFirmanteParentesco.disabled = isPaciente;
         if(isPaciente) els.fullFirmanteParentesco.value = 'self';
       }
+      if(els.reviewFirmanteParentesco){
+        els.reviewFirmanteParentesco.disabled = isPaciente;
+        if(isPaciente) els.reviewFirmanteParentesco.value = 'self';
+      }
       if(els.firmanteNombre) els.firmanteNombre.value = state.form.firmante_nombre;
       if(els.fullFirmanteNombre) els.fullFirmanteNombre.value = state.form.firmante_nombre;
+      if(els.reviewFirmanteNombre) els.reviewFirmanteNombre.value = state.form.firmante_nombre;
       if(els.firmanteParentesco && !isPaciente) els.firmanteParentesco.value = state.form.firmante_parentesco;
       if(els.fullFirmanteParentesco && !isPaciente) els.fullFirmanteParentesco.value = state.form.firmante_parentesco;
+      if(els.reviewFirmanteParentesco && !isPaciente) els.reviewFirmanteParentesco.value = state.form.firmante_parentesco;
     };
 
     const syncWitnessControls = ()=>{
@@ -45562,6 +45613,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.witnessesWrap2?.classList.toggle('d-none', !enabled);
       els.fullWitnessesWrap1?.classList.toggle('d-none', !enabled);
       els.fullWitnessesWrap2?.classList.toggle('d-none', !enabled);
+      els.reviewWitnessesWrap1?.classList.toggle('d-none', !enabled);
+      els.reviewWitnessesWrap2?.classList.toggle('d-none', !enabled);
       if(!enabled){
         state.form.testigo_1_nombre = '';
         state.form.testigo_2_nombre = '';
@@ -45569,10 +45622,41 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(els.fullTestigo1Nombre) els.fullTestigo1Nombre.value = '';
         if(els.testigo2Nombre) els.testigo2Nombre.value = '';
         if(els.fullTestigo2Nombre) els.fullTestigo2Nombre.value = '';
+        if(els.reviewTestigo1Nombre) els.reviewTestigo1Nombre.value = '';
+        if(els.reviewTestigo2Nombre) els.reviewTestigo2Nombre.value = '';
       }
     };
 
+    const consentContentFieldKeys = [
+      'title','motivo','procedimiento','objetivo','riesgos','risk_comunes',
+      'risk_poco_frecuentes','risk_raros_graves','beneficios_esperados',
+      'alternativas','consecuencias_no_aceptar','autorizacion_contingencias',
+      'doctor_place','doctor_institution','doctor_facility','doctor_license'
+    ];
+    const invalidateConsentReview = (scope = 'final')=>{
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
+      if(scope === 'content' || scope === 'context'){
+        state.contentReviewFingerprint = '';
+        state.form.confirm_informed = false;
+        clearConsentSignaturePad();
+        clearConsentRemoteSignature();
+        clearDoctorSignaturePad();
+        clearDoctorRemoteSignature();
+        // A registered profile signature is reusable; the clinical confirmation is not.
+        if(scope === 'context' || state.reviewPhase === 'final' || state.reviewPhase === 'signatures'){
+          state.reviewPhase = scope === 'context' ? 'capture' : 'content';
+          renderStep();
+        }
+      }else if(state.reviewPhase === 'final'){
+        state.reviewPhase = 'signatures';
+        renderStep();
+      }
+    };
     const updateConsentFormState = (key, value)=>{
+      if(state.form[key] !== value){
+        invalidateConsentReview(consentContentFieldKeys.includes(key) ? 'content' : 'final');
+      }
       state.form[key] = value;
       syncFormStateToInputs();
     };
@@ -45581,9 +45665,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       patient_id: [],
       title: ['ci_title', 'ci_full_title'],
       procedimiento: ['ci_procedimiento', 'ci_full_procedimiento'],
-      firmante_nombre: ['ci_firmante_nombre', 'ci_full_firmante_nombre'],
-      firmante_parentesco: ['ci_firmante_parentesco', 'ci_full_firmante_parentesco'],
-      confirm_informed: ['ci_confirm_informed', 'ci_full_confirm_informed']
+      firmante_nombre: ['ci_review_firmante_nombre', 'ci_firmante_nombre', 'ci_full_firmante_nombre'],
+      firmante_parentesco: ['ci_review_firmante_parentesco', 'ci_firmante_parentesco', 'ci_full_firmante_parentesco'],
+      confirm_informed: ['ci_review_confirm_informed', 'ci_confirm_informed', 'ci_full_confirm_informed']
     };
 
     const escapeHtml = (value)=> String(value || '')
@@ -45600,9 +45684,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       const fields = [
         els.title, els.fullTitle, els.procedimiento, els.fullProcedimiento,
-        els.legalConfirm, els.fullLegalConfirm,
-        els.firmanteNombre, els.fullFirmanteNombre,
-        els.firmanteParentesco, els.fullFirmanteParentesco
+        els.legalConfirm, els.fullLegalConfirm, els.reviewLegalConfirm,
+        els.firmanteNombre, els.fullFirmanteNombre, els.reviewFirmanteNombre,
+        els.firmanteParentesco, els.fullFirmanteParentesco, els.reviewFirmanteParentesco
       ];
       fields.forEach((el)=> el?.classList?.remove('is-invalid'));
     };
@@ -45637,7 +45721,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const node = root.querySelector(`#${id}`);
         if(node?.classList){
           node.classList.add('is-invalid');
-          if(!firstInvalidNode) firstInvalidNode = node;
+          if(!firstInvalidNode && node.getClientRects().length) firstInvalidNode = node;
         }
       });
       if(firstInvalidNode){
@@ -46045,49 +46129,46 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     const renderStep = ()=>{
+      const phase = state.reviewPhase;
+      const isCapture = phase === 'capture';
+      const isContent = phase === 'content';
+      const isSignatures = phase === 'signatures';
+      const isFinal = phase === 'final';
       const isFullMode = state.mode === 'full';
       const isStep1 = state.step === 1;
-      els.step1?.classList.toggle('d-none', isFullMode || !isStep1);
-      els.step2?.classList.toggle('d-none', isFullMode || isStep1);
-      els.fullView?.classList.toggle('d-none', !isFullMode);
-      els.prevTop?.classList.toggle('d-none', isFullMode || isStep1);
+      els.step1?.classList.toggle('d-none', !isCapture || isFullMode || !isStep1);
+      els.step2?.classList.toggle('d-none', !isCapture || isFullMode || isStep1);
+      els.fullView?.classList.toggle('d-none', !isCapture || !isFullMode);
+      els.reviewPanel?.classList.toggle('d-none', !isContent && !isFinal);
+      els.signaturesPanel?.classList.toggle('d-none', !isSignatures);
+      els.modeGuided?.closest('[role="group"]')?.parentElement?.classList.toggle('d-none', !isCapture);
+      els.prevTop?.classList.toggle('d-none', !isCapture || isFullMode || isStep1);
       if(els.modeGuided) els.modeGuided.classList.toggle('active', !isFullMode);
       if(els.modeFull) els.modeFull.classList.toggle('active', isFullMode);
-
-      if(isFullMode){
-        if(els.prev) els.prev.disabled = true;
-        els.next?.classList.add('d-none');
-        els.save?.classList.remove('d-none');
-        els.emit?.classList.remove('d-none');
-        mountConsentSignatureBlock(els.signatureSlotFull);
-        mountConsentIdentityBlock(els.identitySlotFull);
-        mountConsentDoctorSignatureBlock(els.doctorSignatureSlotFull);
-      }else{
-        if(els.prev) els.prev.disabled = isStep1;
-        els.next?.classList.toggle('d-none', !isStep1);
-        els.save?.classList.toggle('d-none', isStep1);
-        els.emit?.classList.toggle('d-none', isStep1);
-        if(!isStep1){
-          mountConsentSignatureBlock(els.signatureSlotStep2);
-          mountConsentIdentityBlock(els.identitySlotStep2);
-          mountConsentDoctorSignatureBlock(els.doctorSignatureSlotStep2);
-        }
-      }
-
-      if(isFullMode || !isStep1){
+      els.prev?.classList.toggle('d-none', !isCapture);
+      els.next?.classList.toggle('d-none', !isCapture || isFullMode || !isStep1);
+      els.save?.classList.toggle('d-none', isCapture && !isFullMode && isStep1);
+      els.saveAsTemplate?.classList.toggle('d-none', isCapture && !isFullMode && isStep1);
+      els.preview?.classList.toggle('d-none', !isCapture || (!isFullMode && isStep1));
+      els.emit?.classList.toggle('d-none', !isFinal);
+      if(isSignatures){
+        mountConsentSignatureBlock(els.signatureSlotReview);
+        mountConsentIdentityBlock(els.identitySlotReview);
+        mountConsentDoctorSignatureBlock(els.doctorSignatureSlotReview);
         refreshDoctorRegisteredSignature();
         initConsentSignaturePad();
         initDoctorSignaturePad();
-        if(!state.signatureHasStroke){
-          syncConsentSignatureCanvasSize();
-        }
-        if(!state.doctorSignatureHasStroke){
-          syncDoctorSignatureCanvasSize();
-        }
+        if(!state.signatureHasStroke) syncConsentSignatureCanvasSize();
+        if(!state.doctorSignatureHasStroke) syncDoctorSignatureCanvasSize();
         updateDoctorSignatureStatus();
       }
+      if(isFullMode){
+        if(els.prev) els.prev.disabled = true;
+      }else{
+        if(els.prev) els.prev.disabled = isStep1;
+      }
       if(els.stepLabel){
-        els.stepLabel.textContent = isFullMode ? 'Vista completa' : `Paso ${state.step} de 2`;
+        els.stepLabel.textContent = isFinal ? 'Revisión final' : (isSignatures ? 'Firmas' : (isContent ? 'Revisión de contenido' : (isFullMode ? 'Captura completa' : `Paso ${state.step} de 2`)));
       }
       refreshSaveAsTemplateAvailability();
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.wizard));
@@ -46151,6 +46232,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const resetWizard = ()=>{
       state.step = 1;
       state.mode = 'guided';
+      state.reviewPhase = 'capture';
+      state.contentReviewFingerprint = '';
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
+      els.reviewEdit?.classList.add('d-none');
+      if(els.reviewWarning) els.reviewWarning.classList.add('d-none');
       state.draftId = '';
       state.activeDraftRef = '';
       state.activeDraftVersion = 0;
@@ -46218,6 +46305,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     const startDraft = ()=>{
+      state.reviewPhase = 'capture';
+      state.contentReviewFingerprint = '';
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
       const patientId = resolveActivePatientIdForConsent();
       const hasPatient = !!patientId;
       els.ctxNotice?.classList.toggle('d-none', hasPatient);
@@ -46849,6 +46940,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     const hydrateDraftState = (draftRecord = null)=>{
+      state.reviewPhase = 'capture';
+      state.contentReviewFingerprint = '';
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
       const payload = (draftRecord?.payload && typeof draftRecord.payload === 'object') ? draftRecord.payload : {};
       const formSnapshot = (payload?.form_snapshot && typeof payload.form_snapshot === 'object') ? payload.form_snapshot : {};
       state.form = {
@@ -53422,6 +53517,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         subtitle: consentTitle || templateLabel || '',
         eventDatetime: nowSql
       });
+      const identityRefs = Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs.slice() : [];
+      if(identityRefs.length){
+        payload.signer_identity_attachments = identityRefs;
+        payload.attachments = payload.attachments && typeof payload.attachments === 'object' ? payload.attachments : {};
+        payload.attachments.signer_identity = identityRefs;
+      }
       try{
         const institutionName = doctorInstitution || sanitizeText(
           window.mxmedStore?.institutionName
@@ -53467,7 +53568,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             witness1: useWitnesses ? (testigo1Nombre || '') : '',
             witness2: useWitnesses ? (testigo2Nombre || '') : '',
             patientSignature: patientSignature || null,
-            doctorSignature: doctorSignature || null
+            doctorSignature: doctorSignature || null,
+            identityAttachments: identityRefs
           })
         };
       }catch(error){
@@ -53493,6 +53595,196 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           source: 'host_t_consent'
         })
       };
+    };
+
+    // Review hashes canonical consent inputs, never mutable DOM or rendered HTML.
+    // The generated timestamp is intentionally omitted; the final reviewed body
+    // (including its frozen HTML and timestamp) is retained for emission.
+    const consentReviewFileIds = new WeakMap();
+    let nextConsentReviewFileId = 1;
+    const consentReviewFileKey = (file)=>{
+      if(!consentReviewFileIds.has(file)) consentReviewFileIds.set(file, nextConsentReviewFileId++);
+      return {
+        instance: consentReviewFileIds.get(file),
+        name: String(file.name || ''),
+        type: String(file.type || ''),
+        size: Number(file.size || 0),
+        modified: Number(file.lastModified || 0)
+      };
+    };
+    const consentReviewProjection = (prepared, level = 'final')=>{
+      const body = prepared.body || {};
+      const payload = body.payload || {};
+      const content = {};
+      for(const key of consentContentFieldKeys){
+        content[key] = typeof state.form[key] === 'boolean'
+          ? state.form[key] : trimConsentInputValue(state.form[key] || '');
+      }
+      const base = {
+        patient_id: prepared.patientId,
+        context: body.context || {},
+        actor_user_id: body.actor_user_id || '',
+        patient: payload.patient_snapshot || {},
+        patient_demographics: readPatientSnapshot(),
+        actor: payload.actor_snapshot || {},
+        contact: payload.patient_snapshot?.contact || {},
+        template: payload.template_snapshot || {},
+        consent_title: payload.consent?.document_title || '',
+        content,
+        risk_profile: payload.consent_legal?.risk_profile || {},
+        legal_values: payload.consent_legal || {}
+      };
+      if(level === 'content') return base;
+      const signature = (entry)=> entry && typeof entry === 'object' ? {
+        source: entry.source || '',
+        image_data: entry.image_data || '',
+        signer_name: entry.signer_name || '',
+        token: entry.token || '',
+        signed_at: entry.source === 'remote_qr' ? (entry.signed_at || '') : ''
+      } : null;
+      return {
+        ...base,
+        signer: payload.firmante || {},
+        witnesses: payload.testigos || [],
+        informed_confirmation: !!state.form.confirm_informed,
+        signatures: {
+          patient: signature(payload.signatures?.patient),
+          doctor: signature(payload.signatures?.doctor)
+        },
+        registered_doctor_signature: state.doctorSignaturePreferredSource === 'registered'
+          ? readRegisteredDoctorSignature() : '',
+        remote_identity: payload.signer_identity_attachments || [],
+        local_identity: (state.identityFiles || []).map(consentReviewFileKey),
+        identity_kind: sanitizeText(els.identityDocKind?.value || ''),
+        draft_ref: state.activeDraftRef || '',
+        draft_version: Number(state.activeDraftVersion || 0)
+      };
+    };
+    const fingerprintConsentReview = async (prepared, level = 'final')=>{
+      const bytes = new TextEncoder().encode(JSON.stringify(consentReviewProjection(prepared, level)));
+      const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest), (byte)=> byte.toString(16).padStart(2, '0')).join('');
+    };
+    const showConsentReviewWarning = (message = '')=>{
+      if(!els.reviewWarning) return;
+      els.reviewWarning.textContent = message;
+      els.reviewWarning.classList.toggle('d-none', !message);
+      if(message) showNotice(message);
+    };
+    const renderConsentReviewAttachments = ()=>{
+      if(!els.reviewAttachments) return;
+      els.reviewAttachments.replaceChildren();
+      const files = state.identityFiles || [];
+      if(!files.length) return;
+      const heading = document.createElement('strong');
+      heading.textContent = 'Anexos locales pendientes de inclusión:';
+      els.reviewAttachments.append(heading);
+      const list = document.createElement('ul');
+      list.className = 'mb-0';
+      files.forEach((file)=>{
+        const item = document.createElement('li');
+        item.textContent = `${file.name} · ${file.type || 'tipo no indicado'} · pendiente de guardar`;
+        list.append(item);
+      });
+      els.reviewAttachments.append(list);
+    };
+    const renderConsentReviewDocument = (prepared, final = false)=>{
+      els.reviewHtml.innerHTML = String(prepared?.body?.payload?.frozen_snapshot?.html || '');
+      renderConsentReviewAttachments();
+      els.reviewHeading.textContent = final ? 'Vista previa · Revisión final' : 'Vista previa · Revisión de contenido';
+      els.reviewEditButton?.classList.toggle('d-none', final);
+      els.reviewBackEdit?.classList.toggle('d-none', !final);
+      els.reviewBackSignatures?.classList.toggle('d-none', !final);
+      els.reviewContinue?.classList.toggle('d-none', final);
+      els.reviewEdit?.classList.add('d-none');
+      showNotice('');
+      clearConsentValidationFeedback();
+      showConsentReviewWarning('');
+    };
+    const openConsentContentReview = async ()=>{
+      if(!state.contentReviewFingerprint && state.form.confirm_informed){
+        // A confirmation made in a capture mode cannot authorize text
+        // that has not yet passed the content-review stage.
+        state.form.confirm_informed = false;
+        syncFormStateToInputs();
+      }
+      const prepared = await buildCanonicalConsentDocument('draft');
+      if(prepared?.error){
+        showNotice(prepared.error);
+        return false;
+      }
+      state.contentReviewFingerprint = await fingerprintConsentReview(prepared, 'content');
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
+      state.reviewPhase = 'content';
+      renderConsentReviewDocument(prepared);
+      renderStep();
+      return true;
+    };
+    const consentContentStillReviewed = async ()=>{
+      if(!state.contentReviewFingerprint) return false;
+      const prepared = await buildCanonicalConsentDocument('draft');
+      return !prepared?.error
+        && (await fingerprintConsentReview(prepared, 'content')) === state.contentReviewFingerprint;
+    };
+    const openConsentFinalReview = async ()=>{
+      if(!(await consentContentStillReviewed())){
+        state.reviewPhase = 'content';
+        renderStep();
+        showConsentReviewWarning('El consentimiento cambió desde la última revisión. Revísalo nuevamente antes de emitir.');
+        return false;
+      }
+      const prepared = await buildCanonicalConsentDocument('granted');
+      if(prepared?.error){
+        showConsentValidationFeedback(prepared.errors || [prepared.error], prepared.markTargets || []);
+        showNotice(prepared.error);
+        return false;
+      }
+      state.finalReviewFingerprint = await fingerprintConsentReview(prepared, 'final');
+      state.reviewedPrepared = prepared;
+      state.reviewPhase = 'final';
+      renderConsentReviewDocument(prepared, true);
+      renderStep();
+      return true;
+    };
+    const consentReviewEditFields = [
+      ['title','Título','input'],['procedimiento','Descripción del procedimiento','textarea'],
+      ['motivo','Motivo / diagnóstico','input'],['objetivo','Objetivo','input'],
+      ['riesgos','Riesgos generales','textarea'],['risk_comunes','Riesgos comunes','textarea'],
+      ['risk_poco_frecuentes','Riesgos poco frecuentes','textarea'],
+      ['risk_raros_graves','Complicaciones posibles','textarea'],
+      ['beneficios_esperados','Beneficios esperados','textarea'],
+      ['alternativas','Alternativas','textarea'],
+      ['consecuencias_no_aceptar','Consecuencias de no aceptar','textarea'],
+      ['autorizacion_contingencias','Autorización de contingencias','checkbox']
+    ];
+    const openConsentReviewEditor = ()=>{
+      els.reviewEditFields.replaceChildren();
+      consentReviewEditFields.forEach(([key,label,kind])=>{
+        const wrap = document.createElement('div');
+        wrap.className = kind === 'checkbox' ? 'col-12 form-check ms-2' : 'col-md-6';
+        const input = document.createElement(kind === 'textarea' ? 'textarea' : 'input');
+        input.id = `ci_review_edit_${key}`;
+        input.dataset.consentReviewKey = key;
+        if(kind === 'checkbox'){
+          input.type = 'checkbox';
+          input.className = 'form-check-input';
+          input.checked = !!state.form[key];
+        }else{
+          input.className = 'form-control';
+          input.value = String(state.form[key] || '');
+          if(kind === 'textarea') input.rows = 2;
+        }
+        const caption = document.createElement('label');
+        caption.className = kind === 'checkbox' ? 'form-check-label' : 'form-label';
+        caption.htmlFor = input.id;
+        caption.textContent = label;
+        if(kind === 'checkbox') wrap.append(input, caption);
+        else wrap.append(caption, input);
+        els.reviewEditFields.append(wrap);
+      });
+      els.reviewEdit.classList.remove('d-none');
+      els.reviewEditFields.querySelector('input,textarea')?.focus();
     };
 
     const uploadConsentIdentityAttachments = async (preparedBody)=>{
@@ -53677,11 +53969,30 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       showConsentActionFeedback('');
       const normalizedStatus = targetStatus === 'granted' ? 'granted' : 'draft';
       const isEmit = normalizedStatus === 'granted';
+      if(isEmit && (state.reviewPhase !== 'final' || !state.reviewedPrepared || !state.finalReviewFingerprint)){
+        showConsentReviewWarning('El consentimiento cambió desde la última revisión. Revísalo nuevamente antes de emitir.');
+        return;
+      }
       pushCiDebug(isEmit ? '[CI] inicio emitConsent' : '[CI] inicio saveDraft');
       showNotice(isEmit ? 'Generando consentimiento…' : 'Guardando borrador…');
       let prepared = null;
       try{
-        prepared = await buildCanonicalConsentDocument(normalizedStatus);
+        const current = await buildCanonicalConsentDocument(normalizedStatus);
+        if(isEmit){
+          const currentFingerprint = current?.error ? '' : await fingerprintConsentReview(current, 'final');
+          const contentMatches = await consentContentStillReviewed();
+          if(!contentMatches || currentFingerprint !== state.finalReviewFingerprint){
+            state.finalReviewFingerprint = '';
+            state.reviewedPrepared = null;
+            state.reviewPhase = contentMatches ? 'signatures' : 'content';
+            renderStep();
+            showConsentReviewWarning('El consentimiento cambió desde la última revisión. Revísalo nuevamente antes de emitir.');
+            return;
+          }
+          prepared = state.reviewedPrepared;
+        }else{
+          prepared = current;
+        }
       }catch(error){
         pushCiDebug('[CI] error preparando documento', 'error', error);
         try{ console.error('[mxmed-consent] save canonical build error', error); }catch(_){}
@@ -53720,84 +54031,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       showNotice('');
       try{
-        // The canonical consent command persists local identity files together with
-        // the consent. Only already captured remote references belong in this body.
-        const identityRefs = Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs.slice() : [];
-        if(identityRefs.length){
-          const payload = (prepared.body.payload && typeof prepared.body.payload === 'object') ? prepared.body.payload : {};
-          payload.signer_identity_attachments = identityRefs;
-          payload.attachments = payload.attachments && typeof payload.attachments === 'object' ? payload.attachments : {};
-          payload.attachments.signer_identity = identityRefs;
-          pushCiDebug('[CI] signer identity persisted path', 'log', {
-            signer_identity_attachments: Array.isArray(payload.signer_identity_attachments) ? payload.signer_identity_attachments.length : 0,
-            attachments_signer_identity: Array.isArray(payload.attachments?.signer_identity) ? payload.attachments.signer_identity.length : 0
-          });
-          try{
-            const frozenSnapshot = (payload.frozen_snapshot && typeof payload.frozen_snapshot === 'object') ? payload.frozen_snapshot : {};
-            const identitySource = (Array.isArray(payload.signer_identity_attachments) && payload.signer_identity_attachments.length)
-              ? payload.signer_identity_attachments
-              : (Array.isArray(payload.attachments?.signer_identity) ? payload.attachments.signer_identity : []);
-            const riskProfileSnapshot = (payload?.consent_legal?.risk_profile && typeof payload.consent_legal.risk_profile === 'object')
-              ? payload.consent_legal.risk_profile
-              : null;
-            const riskProfileSummary = riskProfileSnapshot
-              ? [
-                sanitizeText(riskProfileSnapshot?.comunes?.value || ''),
-                sanitizeText(riskProfileSnapshot?.poco_frecuentes?.value || ''),
-                sanitizeText(riskProfileSnapshot?.raros_graves?.value || '')
-              ].filter(Boolean).join('\n')
-              : '';
-            const resolvedRisksForSnapshot = sanitizeText(
-              riskProfileSummary
-              || payload?.form_snapshot?.riesgos
-              || payload?.template_snapshot?.body_text
-              || ''
-            );
-            pushCiDebug('[CI] printable attachment source', 'log', {
-              identity_source_count: identitySource.length,
-              has_preview_url: identitySource.some((entry)=> !!sanitizeText(entry?.preview_url || entry?.file_url || entry?.image_url || ''))
-            });
-            payload.frozen_snapshot = {
-              ...frozenSnapshot,
-              version: Number(frozenSnapshot.version || 1),
-              generated_at: sanitizeText(frozenSnapshot.generated_at || prepared.body.event_datetime || formatNowSql()),
-              html: buildConsentFrozenSnapshotHtml({
-                title: sanitizeText(payload?.consent?.document_title || prepared.body.title || ''),
-                status: sanitizeText(payload?.consent?.status || 'draft'),
-                date: sanitizeText(prepared.body.event_datetime || ''),
-                place: sanitizeText(payload?.place || ''),
-                institution: sanitizeText(payload?.institution?.name || payload?.institution_name || ''),
-                facility: sanitizeText(payload?.facility?.name || payload?.facility_name || ''),
-                patientName: sanitizeText(payload?.patient_snapshot?.full_name || ''),
-                doctorName: sanitizeText(payload?.actor_snapshot?.full_name || ''),
-                doctorLicense: sanitizeText(payload?.actor_snapshot?.license || ''),
-                procedure: sanitizeText(payload?.form_snapshot?.procedimiento || ''),
-                risks: resolvedRisksForSnapshot,
-                benefits: sanitizeText(payload?.consent_legal?.beneficios_esperados || ''),
-                alternatives: sanitizeText(payload?.consent_legal?.alternativas || ''),
-                consequences: sanitizeText(payload?.consent_legal?.consecuencias_no_aceptar || ''),
-                riskProfile: riskProfileSnapshot,
-                contingency: !!payload?.consent_legal?.autorizacion_contingencias,
-                renderedText: sanitizeText(payload?.rendered_text || payload?.text || ''),
-                signerTypeLabel: sanitizeText(payload?.firmante?.tipo || 'Paciente'),
-                signerTypeKey: sanitizeText(payload?.firmante?.tipo || 'paciente'),
-                signerName: sanitizeText(payload?.firmante?.nombre || ''),
-                signerRelation: sanitizeText(payload?.firmante?.relacion || payload?.firmante?.parentesco || ''),
-                witness1: sanitizeText(payload?.testigos?.[0]?.nombre || ''),
-                witness2: sanitizeText(payload?.testigos?.[1]?.nombre || ''),
-                patientSignature: (payload?.signatures?.patient && typeof payload.signatures.patient === 'object') ? payload.signatures.patient : null,
-                doctorSignature: (payload?.signatures?.doctor && typeof payload.signatures.doctor === 'object') ? payload.signatures.doctor : null,
-                identityAttachments: identitySource
-              })
-            };
-            pushCiDebug('[CI] printable attachment rendered', 'log', {
-              rendered: !!sanitizeText(payload?.frozen_snapshot?.html || '').includes('Documento de identidad del firmante')
-            });
-          }catch(error){
-            pushCiDebug('[CI] error regenerando frozen_snapshot con anexos identidad', 'warn', error);
-          }
-          prepared.body.payload = payload;
-        }
+        // Remote identity references are included by buildCanonicalConsentDocument,
+        // so the reviewed frozen HTML is the exact body sent to the writer.
         const localIdentityFiles = Array.isArray(state.identityFiles) ? state.identityFiles : [];
         if(state.activeDraftRef){
           prepared.body.draft_ref = sanitizeText(state.activeDraftRef);
@@ -54021,21 +54256,29 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindSharedField(els.fullAutContingencias, 'autorizacion_contingencias');
     bindSharedField(els.firmanteTipo, 'firmante_tipo');
     bindSharedField(els.fullFirmanteTipo, 'firmante_tipo');
+    bindSharedField(els.reviewFirmanteTipo, 'firmante_tipo');
     bindSharedField(els.firmanteNombre, 'firmante_nombre');
     bindSharedField(els.fullFirmanteNombre, 'firmante_nombre');
+    bindSharedField(els.reviewFirmanteNombre, 'firmante_nombre');
     bindSharedField(els.firmanteParentesco, 'firmante_parentesco');
     bindSharedField(els.fullFirmanteParentesco, 'firmante_parentesco');
+    bindSharedField(els.reviewFirmanteParentesco, 'firmante_parentesco');
     bindSharedField(els.enableWitnesses, 'enable_witnesses');
     bindSharedField(els.fullEnableWitnesses, 'enable_witnesses');
+    bindSharedField(els.reviewEnableWitnesses, 'enable_witnesses');
     bindSharedField(els.testigo1Nombre, 'testigo_1_nombre');
     bindSharedField(els.fullTestigo1Nombre, 'testigo_1_nombre');
+    bindSharedField(els.reviewTestigo1Nombre, 'testigo_1_nombre');
     bindSharedField(els.testigo2Nombre, 'testigo_2_nombre');
     bindSharedField(els.fullTestigo2Nombre, 'testigo_2_nombre');
+    bindSharedField(els.reviewTestigo2Nombre, 'testigo_2_nombre');
     bindSharedField(els.legalConfirm, 'confirm_informed');
     bindSharedField(els.fullLegalConfirm, 'confirm_informed');
+    bindSharedField(els.reviewLegalConfirm, 'confirm_informed');
     els.identityFiles?.addEventListener('change', ()=>{
       const files = Array.from(els.identityFiles?.files || []);
       state.identityFiles = files;
+      invalidateConsentReview('final');
       renderIdentityFilesList();
     });
     els.identityQrOpen?.addEventListener('click', (event)=>{
@@ -54182,6 +54425,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       closeSaveAsTemplateDialog(false);
       resetWizard();
     });
+    ['patient:selected','encounter:active','mxmed:encounter-changed','mxmed:encounter-context-changed'].forEach((name)=>{
+      window.addEventListener(name, ()=>{
+        if(!els.wizard?.classList.contains('d-none')) invalidateConsentReview('context');
+      });
+    });
 
     els.modeGuided?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -54192,6 +54440,68 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.modeFull?.addEventListener('click', (event)=>{
       event.preventDefault();
       state.mode = 'full';
+      renderStep();
+    });
+    els.preview?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsentContentReview().catch((error)=> showNotice(sanitizeText(error?.message || 'No se pudo mostrar la vista previa.')));
+    });
+    els.reviewEditButton?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsentReviewEditor();
+    });
+    els.reviewEditFields?.addEventListener('input', (event)=>{
+      const key = event.target?.dataset?.consentReviewKey || '';
+      if(!key || event.target.type === 'checkbox') return;
+      if(key === 'risk_comunes') state.riskUserEdited.comunes = true;
+      if(key === 'risk_poco_frecuentes') state.riskUserEdited.poco_frecuentes = true;
+      if(key === 'risk_raros_graves') state.riskUserEdited.raros_graves = true;
+      updateConsentFormState(key, normalizeConsentInputRaw(event.target.value || ''));
+    });
+    els.reviewEditFields?.addEventListener('change', (event)=>{
+      const key = event.target?.dataset?.consentReviewKey || '';
+      if(key && event.target.type === 'checkbox') updateConsentFormState(key, !!event.target.checked);
+    });
+    els.reviewApply?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsentContentReview().catch((error)=> showNotice(sanitizeText(error?.message || 'No se pudo actualizar la vista previa.')));
+    });
+    els.reviewContinue?.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      if(!els.reviewEdit?.classList.contains('d-none')){
+        showConsentReviewWarning('Aplica los cambios antes de continuar a firmas.');
+        return;
+      }
+      try{
+        if(!(await consentContentStillReviewed())){
+          showConsentReviewWarning('El consentimiento cambió desde la última revisión. Revísalo nuevamente antes de emitir.');
+          return;
+        }
+        state.reviewPhase = 'signatures';
+        renderStep();
+      }catch(error){ showNotice(sanitizeText(error?.message || 'No se pudo continuar a firmas.')); }
+    });
+    els.signaturesBack?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      state.reviewPhase = 'content';
+      renderStep();
+    });
+    els.signaturesContinue?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsentFinalReview().catch((error)=> showNotice(sanitizeText(error?.message || 'No se pudo mostrar la revisión final.')));
+    });
+    els.reviewBackEdit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      state.reviewPhase = 'capture';
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
+      renderStep();
+    });
+    els.reviewBackSignatures?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      state.reviewPhase = 'signatures';
+      state.finalReviewFingerprint = '';
+      state.reviewedPrepared = null;
       renderStep();
     });
     els.cancel?.addEventListener('click', (event)=>{
@@ -55245,26 +55555,31 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       renderCertificadoStep();
     });
     els.template?.addEventListener('change', (event)=>{
+      invalidateConsentReview('content');
       describeTemplate(event?.target?.value || '');
     });
     els.signatureClear?.addEventListener('click', (event)=>{
       event.preventDefault();
+      invalidateConsentReview('final');
       clearConsentSignaturePad();
       clearConsentRemoteSignature();
       setConsentSignaturePreferredSource('');
     });
     els.doctorSignatureSourceRegistered?.addEventListener('change', ()=>{
       if(els.doctorSignatureSourceRegistered?.checked){
+        invalidateConsentReview('final');
         setDoctorSignaturePreferredSource('registered');
       }
     });
     els.doctorSignatureSourceLocal?.addEventListener('change', ()=>{
       if(els.doctorSignatureSourceLocal?.checked){
+        invalidateConsentReview('final');
         setDoctorSignaturePreferredSource('local');
       }
     });
     els.doctorSignatureClear?.addEventListener('click', (event)=>{
       event.preventDefault();
+      invalidateConsentReview('final');
       clearDoctorSignaturePad();
       clearDoctorRemoteSignature();
       if(state.doctorRegisteredSignatureData){
@@ -55281,26 +55596,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         openSaveAsTemplateDialog();
         return;
       }
-      const saveBtn = event.target.closest('#ci_save');
-      if(saveBtn){
-        event.preventDefault();
-        handleSaveDraftClick().catch((error)=>{
-          pushCiDebug('[CI] saveDraft delegado error', 'error', error);
-        });
-        return;
-      }
-      const emitBtn = event.target.closest('#ci_emit');
-      if(emitBtn){
-        event.preventDefault();
-        handleEmitClick().catch((error)=>{
-          pushCiDebug('[CI] emit delegado error', 'error', error);
-        });
-        return;
-      }
       return;
     });
     window.addEventListener('resize', ()=>{
-      if(state.mode === 'full' || state.step === 2){
+      if(state.reviewPhase === 'signatures'){
         syncConsentSignatureCanvasSize();
         syncDoctorSignatureCanvasSize();
       }
