@@ -45548,15 +45548,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       syncSignerControls();
       syncWitnessControls();
       refreshSaveAsTemplateAvailability();
+      window.mxmedConsentFormHierarchySync?.();
     };
 
     const syncTemplateControls = ()=>{
       const templateValue = sanitizeText(els.template?.value || '');
       const isManual = templateValue === 'otro';
-      if(els.riesgosManualWrap) els.riesgosManualWrap.classList.toggle('d-none', !isManual);
-      if(els.riesgosManual){
-        els.riesgosManual.disabled = !isManual;
-      }
+      // CONS-FORM01: the legacy risk summary remains editable inside Información adicional.
+      if(els.riesgosManualWrap) els.riesgosManualWrap.classList.remove('d-none');
+      if(els.riesgosManual) els.riesgosManual.disabled = false;
       if(els.templateDesc){
         if(isManual){
           els.templateDesc.textContent = 'Tipo "Otro": captura manual de riesgos.';
@@ -54798,7 +54798,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       event.preventDefault();
       state.step = 2;
       renderStep();
-      describeTemplate(els.template?.value || '');
     });
     els.prev?.addEventListener('click', (event)=>{
       event.preventDefault();

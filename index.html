@@ -8769,8 +8769,8 @@
                           <div class="small text-muted mt-1" id="ci_template_desc">Selecciona un tipo de procedimiento para ver sus riesgos, beneficios y alternativas.</div>
                         </div>
                         <div class="col-12 d-none" id="ci_riesgos_manual_wrap">
-                          <label class="form-label" for="ci_riesgos_manual">Riesgos (captura manual)</label>
-                          <textarea class="form-control" id="ci_riesgos_manual" rows="3" placeholder="Describe riesgos específicos para este consentimiento."></textarea>
+                          <label class="form-label" for="ci_riesgos_manual">Resumen general de riesgos <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ci_riesgos_manual" rows="3" placeholder="Resume los riesgos generales explicados al paciente."></textarea>
                         </div>
                         <div class="col-12">
                           <div class="border rounded p-3 bg-light-subtle">
@@ -8785,7 +8785,7 @@
                                 <textarea class="form-control" id="ci_risk_infrequent" rows="2" placeholder="riesgos poco frecuentes como infección o sangrado"></textarea>
                               </div>
                               <div class="col-12">
-                                <label class="form-label small text-muted mb-1" for="ci_risk_rare_serious">Complicaciones posibles (poco comunes)</label>
+                                <label class="form-label small text-muted mb-1" for="ci_risk_rare_serious">Complicaciones posibles</label>
                                 <textarea class="form-control" id="ci_risk_rare_serious" rows="2" placeholder="complicaciones graves que pueden comprometer la vida"></textarea>
                               </div>
                             </div>
@@ -8810,7 +8810,7 @@
                         <div class="col-12">
                           <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="ci_aut_contingencias">
-                            <label class="form-check-label" for="ci_aut_contingencias">Autorizo la atención de contingencias y urgencias derivadas del procedimiento</label>
+                            <label class="form-check-label" for="ci_aut_contingencias">Autorizo la atención de contingencias y urgencias derivadas del procedimiento.</label>
                           </div>
                         </div>
                         <div class="col-md-4">
@@ -8890,8 +8890,8 @@
                           <textarea class="form-control" id="ci_full_procedimiento" rows="5" placeholder="Describe de forma clara el procedimiento, alcance y consideraciones principales."></textarea>
                         </div>
                         <div class="col-12">
-                          <label class="form-label" for="ci_full_riesgos">Riesgos</label>
-                          <textarea class="form-control" id="ci_full_riesgos" rows="3" placeholder="Riesgos explicados al paciente."></textarea>
+                          <label class="form-label" for="ci_full_riesgos">Resumen general de riesgos <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ci_full_riesgos" rows="3" placeholder="Resume los riesgos generales explicados al paciente."></textarea>
                         </div>
                         <div class="col-12">
                           <div class="border rounded p-3 bg-light-subtle">
@@ -8906,7 +8906,7 @@
                                 <textarea class="form-control" id="ci_full_risk_infrequent" rows="2" placeholder="riesgos poco frecuentes como infección o sangrado"></textarea>
                               </div>
                               <div class="col-12">
-                                <label class="form-label small text-muted mb-1" for="ci_full_risk_rare_serious">Complicaciones posibles (poco comunes)</label>
+                                <label class="form-label small text-muted mb-1" for="ci_full_risk_rare_serious">Complicaciones posibles</label>
                                 <textarea class="form-control" id="ci_full_risk_rare_serious" rows="2" placeholder="complicaciones graves que pueden comprometer la vida"></textarea>
                               </div>
                             </div>
@@ -8931,7 +8931,7 @@
                         <div class="col-12">
                           <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="ci_full_aut_contingencias">
-                            <label class="form-check-label" for="ci_full_aut_contingencias">Autorizo la atención de contingencias y urgencias derivadas del procedimiento</label>
+                            <label class="form-check-label" for="ci_full_aut_contingencias">Autorizo la atención de contingencias y urgencias derivadas del procedimiento.</label>
                           </div>
                         </div>
                         <div class="col-md-4">
@@ -10905,6 +10905,7 @@
 <script src="assets/js/clinical/patient-workspace-navigation-guard.js?v=vis24"></script>
 <script src="assets/js/app.js?v=ordprint02b"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help01"></script>
+<script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=step3-step5-micro-ux-r2"></script>
 <script src="assets/js/clinical/res02a-linked-result-composer.js?v=res02a"></script>

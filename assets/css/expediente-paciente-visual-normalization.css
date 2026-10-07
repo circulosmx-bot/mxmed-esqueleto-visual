@@ -5209,3 +5209,23 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #modalConsentimientoInformado .ci-example-section p{margin:0;font-size:13px;line-height:1.45}
 #p-expediente #modalConsentimientoInformado .ci-example-current{padding:2px 6px;border-radius:5px;background:#d6f3ef;color:#07536e;font-size:11px;font-weight:700}
 @media(max-width:600px){#p-expediente #modalConsentimientoInformado .ci-example-overlay{padding:8px}#p-expediente #modalConsentimientoInformado .ci-example-dialog{max-height:90vh}}
+/* CONS-FORM01: six purpose-led groups with optional details disclosed as needed. */
+#p-expediente #modalConsentimientoInformado .ci-form-section{padding:14px 16px;border:1px solid #c8e2e9;border-radius:10px;background:#fbfdfe}
+#p-expediente #modalConsentimientoInformado .ci-form-section-heading{display:block;margin:0 0 12px;color:#07536e;font-size:14px;font-weight:700;line-height:1.3;letter-spacing:.025em}
+#p-expediente #modalConsentimientoInformado .ci-form-section > .row{margin-top:0;row-gap:12px}
+#p-expediente #modalConsentimientoInformado .ci-form-section > .row > [class*="col-"]{padding-top:0}
+#p-expediente #modalConsentimientoInformado .ci-form-section[data-consent-section="procedure"] #ci_template_desc{font-size:12px}
+#p-expediente #modalConsentimientoInformado .ci-form-legacy-risk-heading{display:none}
+#p-expediente #modalConsentimientoInformado .ci-form-section[data-consent-section="risks"] .border.rounded{border:0!important;padding:0!important;background:transparent!important}
+#p-expediente #modalConsentimientoInformado .ci-form-section[data-consent-section="risks"] label[for]{color:#123f60!important}
+#p-expediente #modalConsentimientoInformado .ci-form-section--additional{padding:0}
+#p-expediente #modalConsentimientoInformado .ci-form-additional summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:13px 16px;cursor:pointer;list-style:none}
+#p-expediente #modalConsentimientoInformado .ci-form-additional summary::-webkit-details-marker{display:none}
+#p-expediente #modalConsentimientoInformado .ci-form-additional summary::after{content:'expand_more';font:normal 22px/1 'Material Symbols Rounded';color:#008fa4}
+#p-expediente #modalConsentimientoInformado .ci-form-additional[open] summary::after{content:'expand_less'}
+#p-expediente #modalConsentimientoInformado .ci-form-additional summary .ci-form-section-heading{margin:0}
+#p-expediente #modalConsentimientoInformado .ci-form-additional-hint{margin-right:auto;color:#526976;font-size:12px}
+#p-expediente #modalConsentimientoInformado .ci-form-additional summary:focus{outline:2px solid #008c9b;outline-offset:-3px;border-radius:8px}
+#p-expediente #modalConsentimientoInformado .ci-form-additional > .row{margin:0;padding:0 16px 16px;border-top:1px solid #d8e8ed}
+#p-expediente #modalConsentimientoInformado .ci-form-additional:not([open]) > .row{display:none}
+@media(max-width:600px){#p-expediente #modalConsentimientoInformado .ci-form-section{padding:12px}}
