@@ -725,6 +725,13 @@
       card.append(symbol(icon),node('strong',title),node('span',description),node('span',`${action} →`,'vis06-intent-action'));
       return card;
     };
+    const selector=(title,description,icon,mode)=>{
+      const row=button('',()=>navigate(mode));row.className='docvis-level2-selector';
+      const iconWrap=node('span','','docvis-level2-icon');iconWrap.setAttribute('aria-hidden','true');iconWrap.append(symbol(icon));
+      const copy=node('span','','docvis-level2-copy');copy.append(node('strong',title),node('span',description));
+      row.append(iconWrap,copy,symbol('chevron_right','docvis-level2-chevron'));
+      return row;
+    };
     const navigate=mode=>{
       if(view.docMode==='ATTACH'&&mode!=='ATTACH'&&view.attachBusy)return;
       if(view.docMode==='ATTACH'&&mode!=='ATTACH'&&view.attachSuccess.hidden
@@ -750,11 +757,11 @@
     view.docHome.append(
       intent('CREAR O ADJUNTAR DOCUMENTO','Genera un documento clínico o incorpora un archivo existente al expediente.','note_add','Crear o adjuntar documento','CREATE_ATTACH'),
       intent('CONSULTAR DOCUMENTOS','Revisa documentos anteriores, archivos y sus versiones.','folder_open','Ver documentos','CONSULT'));
-    view.docChoices=node('div','','vis06-flow-home docvis-intents');
+    view.docChoices=node('div','','vis06-flow-home docvis-intents docvis-level2');
     view.docChoices.setAttribute('aria-label','Crear o adjuntar documento');
     view.docChoices.append(
-      intent('Crear documento clínico','Genera un nuevo documento desde el sistema.','description','Crear documento','CATALOG'),
-      intent('Adjuntar archivo','Incorpora un PDF o imagen existente al expediente.','upload_file','Adjuntar archivo','ATTACH'));
+      selector('Crear documento clínico','Genera un nuevo documento desde el sistema.','description','CATALOG'),
+      selector('Adjuntar archivo','Incorpora un PDF o imagen existente al expediente.','upload_file','ATTACH'));
     view.attachPane=node('section','','docvis-attach');view.attachPane.setAttribute('aria-label','Adjuntar archivo al expediente');
     view.attachPane.innerHTML=`<form class="docvis-attach-form" enctype="multipart/form-data">
       <label>Título del documento<input class="form-control" name="title" maxlength="255" required autocomplete="off" placeholder="Ej. Informe externo"></label>

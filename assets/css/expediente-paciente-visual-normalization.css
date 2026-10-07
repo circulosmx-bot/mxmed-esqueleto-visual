@@ -5096,10 +5096,23 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #t-consent .docvis-back:hover {background:#effbfe;border-color:#008fa4}
 #p-expediente #t-consent :is(.docvis-back,.docvis-intent-card):focus,
 #p-expediente #t-consent.vis06-capture-open .docs-launcher-row:focus {outline:2px solid #008c9b;outline-offset:2px}
-#p-expediente #t-consent .vis06-module[data-doc-mode="create_attach"] .docvis-intent-card {
-  min-height:140px;padding:14px;grid-template-rows:auto auto auto;
+/* DOC-VIS04: the second navigation level uses compact, full-surface selectors. */
+#p-expediente #t-consent .docvis-level2 {grid-template-columns:minmax(0,1fr);gap:10px}
+#p-expediente #t-consent .docvis-level2-selector {
+  display:grid;grid-template-columns:44px minmax(0,1fr) 22px;align-items:center;gap:13px;
+  width:100%;min-height:76px;padding:12px 15px;border:1px solid #b8dce3;border-radius:10px;
+  background:#fff;color:#123f60;font-family:inherit;text-align:left;cursor:pointer;
 }
-#p-expediente #t-consent .vis06-module[data-doc-mode="create_attach"] .docvis-intent-card .vis06-intent-action {margin-top:8px}
+#p-expediente #t-consent .docvis-level2-icon {
+  display:grid;place-items:center;width:44px;height:44px;border-radius:9px;background:#f4f9ff;color:#008fa4;
+}
+#p-expediente #t-consent .docvis-level2-icon .material-symbols-rounded {font-size:27px;line-height:1}
+#p-expediente #t-consent .docvis-level2-copy {display:grid;gap:2px;min-width:0}
+#p-expediente #t-consent .docvis-level2-copy strong {font-size:15px;line-height:1.2}
+#p-expediente #t-consent .docvis-level2-copy > span {font-size:13px;line-height:1.35;color:#476783}
+#p-expediente #t-consent .docvis-level2-chevron {justify-self:end;color:#008fa4;font-size:22px;line-height:1}
+#p-expediente #t-consent .docvis-level2-selector:hover {border-color:#008fa4;background:#f7fcfd;box-shadow:0 2px 8px rgb(0 143 164 / .1)}
+#p-expediente #t-consent .docvis-level2-selector:focus {outline:2px solid #008c9b;outline-offset:2px}
 #p-expediente #t-consent.vis06-capture-open #docs_catalog_panel .exp-card-body {padding:14px 16px}
 #p-expediente #t-consent.vis06-capture-open .docs-launcher-groups {align-items:start}
 #p-expediente #t-consent.vis06-capture-open .docs-launcher-section {align-self:start}
