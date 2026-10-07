@@ -9005,6 +9005,27 @@ try {
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
+                if (($payload['document_type'] ?? null) === 'consentimiento_informado') {
+                    require_once __DIR__ . '/../_lib/clinical_consent_write.php';
+                    $consentBody = $isMultipart
+                        ? json_decode((string)($payload['document'] ?? ''), true, 64)
+                        : $payload;
+                    if (!is_array($consentBody)
+                        || clinical_documents_request_has_patient_mismatch($consentBody, $patientId)) {
+                        throw new InvalidArgumentException('CONSENT_PATIENT_SCOPE_INVALID');
+                    }
+                    $consentBody = clinical_documents_force_request_patient_id($consentBody, $patientId);
+                    $consentResult = clinical_consent_create($pdo, $scopedDoctorContext, $patientId,
+                        $consentBody, $isMultipart ? $_FILES : [],
+                        (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                    $replay = ($consentResult['_idempotency_replay'] ?? false) === true;
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$consentResult['document_uuid']);
+                    if ($document === null) throw new RuntimeException('CONSENT_DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
+                        'data' => ['document_id' => $consentResult['document_uuid'], 'document' => $document],
+                        'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
+                    return;
+                }
                 // DOC-IMP01: a patient file is independent of any ambient encounter.
                 // Keep result/order/prescription writers and the encounter route separate.
                 $attachmentType = strtolower(trim((string)($payload['document_type'] ?? '')));

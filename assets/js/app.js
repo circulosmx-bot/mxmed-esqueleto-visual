@@ -53232,7 +53232,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       showNotice('');
       try{
-        const identityRefs = await uploadConsentIdentityAttachments(prepared.body);
+        // The canonical consent command persists local identity files together with
+        // the consent. Only already captured remote references belong in this body.
+        const identityRefs = Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs.slice() : [];
         if(identityRefs.length){
           const payload = (prepared.body.payload && typeof prepared.body.payload === 'object') ? prepared.body.payload : {};
           payload.signer_identity_attachments = identityRefs;
@@ -53308,19 +53310,29 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           }
           prepared.body.payload = payload;
         }
+        const localIdentityFiles = Array.isArray(state.identityFiles) ? state.identityFiles : [];
+        const requestBody = localIdentityFiles.length ? new FormData() : JSON.stringify(prepared.body);
+        if(requestBody instanceof FormData){
+          requestBody.append('patient_id', prepared.patientId);
+          requestBody.append('document_type', 'consentimiento_informado');
+          requestBody.append('document', JSON.stringify(prepared.body));
+          localIdentityFiles.forEach((file)=> requestBody.append('identity_files[]', file));
+        }
+        const idempotencyKey = `consent:${window.crypto?.randomUUID?.() || `${Date.now()}:${Math.random().toString(36).slice(2)}`}`;
         const resp = await fetch(createUrl, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
-            'Content-Type': 'application/json'
+            'Idempotency-Key': idempotencyKey,
+            ...(requestBody instanceof FormData ? {} : { 'Content-Type': 'application/json' })
           },
-          body: JSON.stringify(prepared.body),
+          body: requestBody,
           credentials: 'same-origin'
         });
         const json = await resp.json().catch(()=> null);
         if(!resp.ok || !json || json.ok !== true){
-          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el consentimiento.';
-          throw new Error(msg);
+          console.error('[mxmed-consent] canonical write rejected', { status: resp.status, error: json?.error });
+          throw new Error('No se pudo guardar el consentimiento. Revisa los datos e intenta de nuevo.');
         }
         try{
           console.info('[mxmed-consent] save canonical ok', {
