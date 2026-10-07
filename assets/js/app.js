@@ -42124,8 +42124,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       reviewHtml: root.querySelector('#ci_review_html'),
       reviewAttachments: root.querySelector('#ci_review_attachments'),
       reviewEdit: root.querySelector('#ci_review_edit'),
-      reviewEditFields: root.querySelector('#ci_review_edit_fields'),
       reviewEditButton: root.querySelector('#ci_review_edit_button'),
+      reviewCancel: root.querySelector('#ci_review_cancel'),
       reviewApply: root.querySelector('#ci_review_apply'),
       reviewContinue: root.querySelector('#ci_review_continue'),
       reviewBackEdit: root.querySelector('#ci_review_back_edit'),
@@ -46236,7 +46236,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.contentReviewFingerprint = '';
       state.finalReviewFingerprint = '';
       state.reviewedPrepared = null;
+      consentReviewEditStartingValues = null;
+      consentReviewReadHtml = '';
       els.reviewEdit?.classList.add('d-none');
+      els.reviewHtml?.classList.remove('ci-review-sheet--editing');
       if(els.reviewWarning) els.reviewWarning.classList.add('d-none');
       state.draftId = '';
       state.activeDraftRef = '';
@@ -53865,8 +53868,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       });
       els.reviewAttachments.append(list);
     };
+    let consentReviewReadHtml = '';
+    let consentReviewEditStartingValues = null;
     const renderConsentReviewDocument = (prepared, final = false)=>{
       els.reviewHtml.innerHTML = String(prepared?.body?.payload?.frozen_snapshot?.html || '');
+      els.reviewHtml.classList.remove('ci-review-sheet--editing');
+      consentReviewReadHtml = els.reviewHtml.innerHTML;
+      consentReviewEditStartingValues = null;
       renderConsentReviewAttachments();
       els.reviewHeading.textContent = final ? 'Vista previa · Revisión final' : 'Vista previa · Revisión de contenido';
       els.reviewEditButton?.classList.toggle('d-none', final);
@@ -53926,7 +53934,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const consentReviewEditFields = [
       ['title','Título','input'],['procedimiento','Descripción del procedimiento','textarea'],
-      ['motivo','Motivo / diagnóstico','input'],['objetivo','Objetivo','input'],
+      ['motivo','Motivo / diagnóstico','textarea'],['objetivo','Objetivo','textarea'],
       ['riesgos','Riesgos generales','textarea'],['risk_comunes','Riesgos comunes','textarea'],
       ['risk_poco_frecuentes','Riesgos poco frecuentes','textarea'],
       ['risk_raros_graves','Complicaciones posibles','textarea'],
@@ -53935,33 +53943,116 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ['consecuencias_no_aceptar','Consecuencias de no aceptar','textarea'],
       ['autorizacion_contingencias','Autorización de contingencias','checkbox']
     ];
+    const resizeConsentReviewTextarea = (input)=>{
+      if(input?.tagName !== 'TEXTAREA') return;
+      input.style.height = 'auto';
+      input.style.height = `${Math.min(280, Math.max(76, input.scrollHeight + 2))}px`;
+    };
+    const closeConsentReviewEditor = ()=>{
+      if(!consentReviewEditStartingValues) return;
+      const scrollTop = els.reviewHtml.scrollTop;
+      els.reviewHtml.innerHTML = consentReviewReadHtml;
+      els.reviewHtml.scrollTop = scrollTop;
+      els.reviewHtml.classList.remove('ci-review-sheet--editing');
+      consentReviewEditStartingValues = null;
+      els.reviewEdit.classList.add('d-none');
+      els.reviewEditButton.classList.remove('d-none');
+      els.reviewContinue.classList.remove('d-none');
+      renderStep();
+      showConsentReviewWarning('');
+      els.reviewEditButton.focus();
+    };
     const openConsentReviewEditor = ()=>{
-      els.reviewEditFields.replaceChildren();
-      consentReviewEditFields.forEach(([key,label,kind])=>{
+      if(state.reviewPhase !== 'content' || consentReviewEditStartingValues) return;
+      const article = els.reviewHtml.querySelector('article');
+      const sections = article ? [...article.querySelectorAll(':scope > section')] : [];
+      const sectionFor = (heading)=> sections.find((section)=> section.firstElementChild?.textContent.trim() === heading);
+      const header = article?.querySelector(':scope > header');
+      const legal = sections.find((section)=> section.querySelector('div')?.textContent.trim() === 'AUTORIZACIÓN DE CONTINGENCIAS Y URGENCIAS');
+      const procedure = sectionFor('Descripción del procedimiento / tratamiento');
+      const risks = sectionFor('Riesgos');
+      const benefits = sectionFor('Beneficios esperados');
+      const alternatives = sectionFor('Alternativas');
+      if(!header?.children[1] || !legal || !procedure?.children[1] || !risks?.children[1]
+        || !benefits?.children[1] || !alternatives?.children[1]){
+        showNotice('No se pudo preparar la edición del documento. Intenta abrir la vista previa nuevamente.');
+        return;
+      }
+      consentReviewReadHtml = els.reviewHtml.innerHTML;
+      consentReviewEditStartingValues = Object.fromEntries(consentReviewEditFields.map(([key,,kind])=>
+        [key, kind === 'checkbox' ? !!state.form[key] : String(state.form[key] || '')]));
+      const createField = (key, label, kind)=>{
         const wrap = document.createElement('div');
-        wrap.className = kind === 'checkbox' ? 'col-12 form-check ms-2' : 'col-md-6';
+        wrap.className = `ci-review-inline-field${kind === 'checkbox' ? ' ci-review-inline-field--check' : ''}`;
         const input = document.createElement(kind === 'textarea' ? 'textarea' : 'input');
         input.id = `ci_review_edit_${key}`;
         input.dataset.consentReviewKey = key;
         if(kind === 'checkbox'){
           input.type = 'checkbox';
           input.className = 'form-check-input';
-          input.checked = !!state.form[key];
+          input.tabIndex = 0;
+          input.checked = consentReviewEditStartingValues[key];
         }else{
-          input.className = 'form-control';
-          input.value = String(state.form[key] || '');
-          if(kind === 'textarea') input.rows = 2;
+          input.className = 'form-control ci-review-inline-control';
+          input.value = consentReviewEditStartingValues[key];
+          if(kind === 'textarea') input.rows = 3;
         }
         const caption = document.createElement('label');
-        caption.className = kind === 'checkbox' ? 'form-check-label' : 'form-label';
+        caption.className = kind === 'checkbox' ? 'form-check-label' : 'ci-review-inline-label';
         caption.htmlFor = input.id;
         caption.textContent = label;
         if(kind === 'checkbox') wrap.append(input, caption);
         else wrap.append(caption, input);
-        els.reviewEditFields.append(wrap);
-      });
+        return wrap;
+      };
+      const field = (key, label = '')=>{
+        const [,defaultLabel,kind] = consentReviewEditFields.find(([candidate])=> candidate === key);
+        return createField(key,label || defaultLabel,kind);
+      };
+      header.children[1].replaceChildren(field('title'));
+      legal.lastElementChild.replaceWith(field('autorizacion_contingencias',
+        'Autorizo la atención de contingencias y urgencias derivadas del procedimiento.'));
+      procedure.children[1].replaceChildren(field('procedimiento'));
+      const clinicalDetails = document.createElement('section');
+      clinicalDetails.className = 'ci-review-inline-extra';
+      clinicalDetails.append(field('motivo'),field('objetivo'));
+      procedure.after(clinicalDetails);
+      let structured = sectionFor('Riesgos del procedimiento');
+      if(structured){
+        const note = document.createElement('p');
+        note.className = 'ci-review-inline-note';
+        note.textContent = 'Resumen generado a partir de los riesgos por nivel. Los riesgos generales se usan solo cuando no hay riesgos por nivel.';
+        risks.append(note,field('riesgos','Riesgos generales · respaldo'));
+      }else{
+        risks.children[1].replaceChildren(field('riesgos'));
+        structured = document.createElement('section');
+        risks.after(structured);
+      }
+      const riskHeading = document.createElement('div');
+      riskHeading.className = 'ci-review-inline-section-title';
+      riskHeading.textContent = 'Riesgos del procedimiento';
+      structured.replaceChildren(riskHeading,field('risk_comunes'),field('risk_poco_frecuentes'),field('risk_raros_graves'));
+      benefits.children[1].replaceChildren(field('beneficios_esperados'));
+      alternatives.children[1].replaceChildren(field('alternativas'));
+      const consequences = document.createElement('section');
+      consequences.className = 'ci-review-inline-extra';
+      consequences.append(field('consecuencias_no_aceptar'));
+      alternatives.after(consequences);
+      const declaration = sectionFor('Declaración legal integrada');
+      if(declaration){
+        const note = document.createElement('p');
+        note.className = 'ci-review-inline-note';
+        note.textContent = 'La declaración legal se actualizará al aplicar los cambios.';
+        declaration.append(note);
+      }
+      els.reviewHtml.classList.add('ci-review-sheet--editing');
       els.reviewEdit.classList.remove('d-none');
-      els.reviewEditFields.querySelector('input,textarea')?.focus();
+      els.reviewEditButton.classList.add('d-none');
+      els.reviewContinue.classList.add('d-none');
+      els.save?.classList.add('d-none');
+      els.saveAsTemplate?.classList.add('d-none');
+      els.reviewHtml.querySelectorAll('textarea').forEach(resizeConsentReviewTextarea);
+      els.reviewHtml.querySelector('#ci_review_edit_title')?.focus();
     };
 
     const uploadConsentIdentityAttachments = async (preparedBody)=>{
@@ -54308,6 +54399,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     };
     const handleSaveDraftClick = async ()=>{
+      if(consentReviewEditStartingValues){
+        showConsentReviewWarning('Aplica o cancela los cambios antes de guardar el borrador.');
+        return;
+      }
       pushCiDebug('[CI] click guardar borrador');
       await saveCanonicalConsent('draft');
     };
@@ -54627,21 +54722,34 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       event.preventDefault();
       openConsentReviewEditor();
     });
-    els.reviewEditFields?.addEventListener('input', (event)=>{
-      const key = event.target?.dataset?.consentReviewKey || '';
-      if(!key || event.target.type === 'checkbox') return;
-      if(key === 'risk_comunes') state.riskUserEdited.comunes = true;
-      if(key === 'risk_poco_frecuentes') state.riskUserEdited.poco_frecuentes = true;
-      if(key === 'risk_raros_graves') state.riskUserEdited.raros_graves = true;
-      updateConsentFormState(key, normalizeConsentInputRaw(event.target.value || ''));
+    els.reviewHtml?.addEventListener('input', (event)=>{
+      if(event.target?.dataset?.consentReviewKey) resizeConsentReviewTextarea(event.target);
     });
-    els.reviewEditFields?.addEventListener('change', (event)=>{
-      const key = event.target?.dataset?.consentReviewKey || '';
-      if(key && event.target.type === 'checkbox') updateConsentFormState(key, !!event.target.checked);
-    });
-    els.reviewApply?.addEventListener('click', (event)=>{
+    els.reviewCancel?.addEventListener('click', (event)=>{
       event.preventDefault();
-      openConsentContentReview().catch((error)=> showNotice(sanitizeText(error?.message || 'No se pudo actualizar la vista previa.')));
+      closeConsentReviewEditor();
+    });
+    els.reviewApply?.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      if(!consentReviewEditStartingValues) return;
+      const changes = consentReviewEditFields.map(([key,,kind])=>{
+        const input = els.reviewHtml.querySelector(`#ci_review_edit_${key}`);
+        const value = kind === 'checkbox' ? !!input?.checked : normalizeConsentInputRaw(input?.value || '');
+        const previous = consentReviewEditStartingValues[key];
+        return { key,value,changed:value !== previous };
+      }).filter((entry)=> entry.changed);
+      if(!changes.length){ closeConsentReviewEditor(); return; }
+      els.reviewApply.disabled = true;
+      try{
+        changes.forEach(({key,value})=>{
+          if(key === 'risk_comunes') state.riskUserEdited.comunes = true;
+          if(key === 'risk_poco_frecuentes') state.riskUserEdited.poco_frecuentes = true;
+          if(key === 'risk_raros_graves') state.riskUserEdited.raros_graves = true;
+          updateConsentFormState(key,value);
+        });
+        if(await openConsentContentReview()) els.reviewEditButton.focus();
+      }catch(error){ showNotice(sanitizeText(error?.message || 'No se pudo actualizar la vista previa.')); }
+      finally{ els.reviewApply.disabled = false; }
     });
     els.reviewContinue?.addEventListener('click', async (event)=>{
       event.preventDefault();
@@ -55770,6 +55878,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const saveAsTemplateBtn = event.target.closest('#ci_save_as_template');
       if(saveAsTemplateBtn){
         event.preventDefault();
+        if(consentReviewEditStartingValues){
+          showConsentReviewWarning('Aplica o cancela los cambios antes de guardar como plantilla.');
+          return;
+        }
         openSaveAsTemplateDialog();
         return;
       }
