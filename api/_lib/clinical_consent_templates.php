@@ -125,3 +125,17 @@ function clinical_consent_template_archive(PDO $pdo, string $doctorId, string $u
     if ($stmt->rowCount() !== 1) throw new ClinicalConsentTemplateException('version_conflict', 409);
     return clinical_consent_template_get($pdo,$doctorId,$uuid);
 }
+
+function clinical_consent_template_delete(PDO $pdo, string $doctorId, string $uuid, array $body): array
+{
+    $expected = $body['expected_version'] ?? null;
+    if (!is_int($expected) || $expected < 1 || count($body) !== 1) {
+        throw new ClinicalConsentTemplateException('expected_version_required', 400);
+    }
+    // This authority has no clinical-document FK; patient documents own their copied payloads.
+    clinical_consent_template_get($pdo, $doctorId, $uuid);
+    $stmt = $pdo->prepare('DELETE FROM clinical_consent_templates WHERE doctor_id=? AND template_uuid=? AND version=?');
+    $stmt->execute([$doctorId, $uuid, $expected]);
+    if ($stmt->rowCount() !== 1) throw new ClinicalConsentTemplateException('version_conflict', 409);
+    return ['uuid' => $uuid];
+}

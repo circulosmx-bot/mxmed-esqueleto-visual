@@ -8891,6 +8891,11 @@ try {
                     if (!$request['ok']) throw new ClinicalConsentTemplateException('invalid_json',400);
                     $result = clinical_consent_template_archive($pdo,$scopedDoctorId,$uuid,$request['data']);
                     $status = 200;
+                } elseif ($count === 4 && $uuid !== '' && $method === 'DELETE') {
+                    $request = clinical_read_json_body();
+                    if (!$request['ok']) throw new ClinicalConsentTemplateException('invalid_json',400);
+                    $result = clinical_consent_template_delete($pdo,$scopedDoctorId,$uuid,$request['data']);
+                    $status = 200;
                 } else {
                     throw new ClinicalConsentTemplateException('not_found',404);
                 }
