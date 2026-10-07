@@ -46504,10 +46504,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const title = els.templateFlowTitle;
       const modal = window.bootstrap.Modal.getOrCreateInstance(els.templateFlowModalEl);
       const returnFocus = document.activeElement;
-      let view = 'choice', editorRecord = null, editorReturnView = 'manage', deleteRecord = null;
+      let view = 'choice', editorRecord = null, deleteRecord = null, returnFocusAction = '';
       let deletePending = false;
       let notice = '', successNotice = '', result = { action:'cancel' };
       let records = [];
+      let librarySearch = '', libraryScrollTop = 0, libraryShowArchived = false;
       const normalizeTemplateSearch = (value)=> String(value || '').toLocaleLowerCase('es')
         .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
       const newestTemplateFirst = (left,right)=>
@@ -46518,7 +46519,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const paragraph = (copy, className = 'text-muted small')=>{
         const el = document.createElement('p'); el.className = className; el.textContent = copy; body.append(el); return el;
       };
-      const row = (item, management)=>{
+      const captureLibraryState = ()=>{
+        if(view !== 'library') return;
+        const search = body.querySelector('#ci_tpl_search');
+        if(search) librarySearch = search.value;
+        const list = body.querySelector('#ci_tpl_selector_list');
+        if(list) libraryScrollTop = list.scrollTop;
+      };
+      const closeTemplateMenu = (restoreFocus = false)=>{
+        const trigger = body.querySelector('.ci-template-row__more[aria-expanded="true"]');
+        if(!trigger) return false;
+        trigger.setAttribute('aria-expanded','false');
+        const menu = document.getElementById(trigger.getAttribute('aria-controls'));
+        if(menu) menu.hidden = true;
+        if(restoreFocus) trigger.focus();
+        return true;
+      };
+      const row = (item)=>{
         const wrapper = document.createElement('div'); wrapper.className = 'ci-template-row';
         wrapper.dataset.templateSource = item.source || 'personal';
         const icon = document.createElement('span'); icon.className = 'material-symbols-outlined ci-template-row__icon';
@@ -46531,29 +46548,48 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         date.textContent = `Actualizada: ${formatDraftDateTime(item.updated_at, true) || 'fecha no disponible'}`;
         copy.append(strong,summary,date);
         const actions = document.createElement('div'); actions.className = 'ci-template-row__actions';
-        if(management){
+        const personal = item.source !== 'curated';
+        if(item.status === 'active'){
+          const use = templateButton('Usar plantilla','use','btn-primary');
+          use.dataset.tplUuid = item.uuid;
+          use.setAttribute('aria-label',`Usar plantilla ${item.template_name}`);
+          actions.append(use);
+          if(personal){
+            const edit = templateButton('Editar','edit');
+            edit.dataset.tplUuid = item.uuid;
+            edit.setAttribute('aria-label',`Editar plantilla ${item.template_name}`);
+            actions.append(edit);
+          }
+        }
+        if(item.status === 'archived'){
           const status = document.createElement('span'); status.className = 'badge bg-light text-dark border';
-          status.textContent = item.status === 'archived' ? 'Archivada' : 'Activa'; actions.append(status);
-          if(item.status === 'active'){
-            [['Editar','edit'],['Duplicar','duplicate'],['Archivar','archive']].forEach(([label,action])=>{
-              const button = templateButton(label,action); button.dataset.tplUuid = item.uuid;
-              button.setAttribute('aria-label',`${label} plantilla ${item.template_name}`); actions.append(button);
-            });
-          }
-          if(item.source !== 'curated'){
-            const deleteButton = templateButton('Eliminar','delete','btn-outline-danger');
-            deleteButton.dataset.tplUuid = item.uuid;
-            deleteButton.setAttribute('aria-label',`Eliminar plantilla ${item.template_name}`);
-            actions.append(deleteButton);
-          }
-        }else{
-          const button = templateButton('Usar plantilla','use','btn-primary');
-          button.dataset.tplUuid = item.uuid;
-          button.setAttribute('aria-label',`Usar plantilla ${item.template_name}`); actions.append(button);
+          status.textContent = 'Archivada'; actions.append(status);
+        }
+        if(personal){
+          const more = templateButton('⋯','more','btn-outline-secondary ci-template-row__more');
+          more.dataset.tplUuid = item.uuid;
+          more.setAttribute('aria-label',`Más acciones para plantilla ${item.template_name}`);
+          more.setAttribute('aria-haspopup','menu');
+          more.setAttribute('aria-expanded','false');
+          const menuId = `ci_tpl_menu_${item.uuid.replace(/[^a-zA-Z0-9_-]/g,'_')}`;
+          more.setAttribute('aria-controls',menuId);
+          const menu = document.createElement('div');
+          menu.id = menuId; menu.className = 'ci-template-row__more-menu';
+          menu.setAttribute('role','menu'); menu.setAttribute('aria-label',`Acciones para plantilla ${item.template_name}`);
+          menu.hidden = true;
+          const secondary = item.status === 'active' ? [['Duplicar','duplicate'],['Archivar','archive'],['Eliminar','delete']] : [['Eliminar','delete']];
+          secondary.forEach(([label,action])=>{
+            const button = templateButton(label,action,action === 'delete' ? 'btn-link text-danger' : 'btn-link');
+            button.dataset.tplUuid = item.uuid;
+            button.setAttribute('role','menuitem');
+            button.setAttribute('aria-label',`${label} plantilla ${item.template_name}`);
+            menu.append(button);
+          });
+          actions.append(more,menu);
         }
         wrapper.append(icon,copy,actions); return wrapper;
       };
-      const render = async (target, focusDeleteUuid = '')=>{
+      const render = async (target, focusAction = '')=>{
         view = target;
         if(target === 'choice'){
           clear('Nuevo consentimiento');
@@ -46562,54 +46598,57 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           choices.append(templateButton('Empezar en blanco','blank','btn-primary'),
             templateButton('Usar plantilla','selector','btn-outline-primary'));
           body.append(choices);
-          footer.append(templateButton('Administrar plantillas','manage','btn-outline-secondary'));
-        }else if(target === 'selector' || target === 'manage'){
-          clear(target === 'selector' ? 'Usar plantilla' : 'Administrar plantillas');
-          paragraph(target === 'selector' ? 'Se copiará el contenido reutilizable a un consentimiento nuevo. Podrás editarlo antes de guardar o emitir.'
-            : 'Estas plantillas son privadas del médico y no forman parte del expediente del paciente.');
+        }else if(target === 'library'){
+          clear('PLANTILLAS DE CONSENTIMIENTO');
+          paragraph('Mis plantillas · El contenido reutilizable se copiará a un consentimiento nuevo.');
           if(successNotice){
             const confirmation = paragraph(successNotice,'alert alert-success');
             confirmation.setAttribute('role','status');
             successNotice = '';
           }
           let loadFailed = false;
-          try { records = await consentTemplateRequest(target === 'manage' ? '?include_archived=1' : ''); }
+          try { records = await consentTemplateRequest('?include_archived=1'); }
           catch(error){ paragraph(error.message,'alert alert-danger'); records = []; loadFailed = true; }
+          records.sort(newestTemplateFirst);
           const list = document.createElement('div'); list.className = 'ci-template-list';
-          if(target === 'selector'){
-            records = records.filter((item)=>item.status === 'active').sort(newestTemplateFirst);
-            const tools = document.createElement('div'); tools.className = 'ci-template-selector-tools';
-            const searchWrap = document.createElement('div'); searchWrap.className = 'ci-template-selector-search';
-            const searchLabel = document.createElement('label'); searchLabel.className = 'form-label small fw-semibold mb-1';
-            searchLabel.htmlFor = 'ci_tpl_search'; searchLabel.textContent = 'Buscar plantilla';
-            const search = document.createElement('input'); search.id = 'ci_tpl_search'; search.type = 'search';
-            search.className = 'form-control'; search.placeholder = 'Buscar plantilla...';
-            search.setAttribute('aria-controls','ci_tpl_selector_list');
-            searchWrap.append(searchLabel,search);
-            tools.append(searchWrap,templateButton('+ Nueva plantilla','create','btn-outline-primary'));
-            body.append(tools);
-            list.id = 'ci_tpl_selector_list';
-            const noMatches = paragraph('No se encontraron plantillas.','text-muted small d-none');
-            const filterRows = ()=>{
-              const query = normalizeTemplateSearch(search.value);
-              const matches = records.filter((item)=> normalizeTemplateSearch([
-                item.template_name,item.content?.title,item.content?.procedimiento].join(' ')).includes(query));
-              list.replaceChildren(...matches.map((item)=>row(item,false)));
-              noMatches.classList.toggle('d-none', !query || !!matches.length);
-            };
-            search.addEventListener('input',filterRows);
-            filterRows();
-          }else records.forEach((item)=>list.append(row(item,true)));
-          if(!records.length && !loadFailed) paragraph(target === 'selector' ? 'No tienes plantillas de consentimiento guardadas.'
-            : 'Aún no tienes plantillas de consentimiento.');
+          const tools = document.createElement('div'); tools.className = 'ci-template-selector-tools';
+          const searchWrap = document.createElement('div'); searchWrap.className = 'ci-template-selector-search';
+          const searchLabel = document.createElement('label'); searchLabel.className = 'form-label small fw-semibold mb-1';
+          searchLabel.htmlFor = 'ci_tpl_search'; searchLabel.textContent = 'Buscar plantilla';
+          const search = document.createElement('input'); search.id = 'ci_tpl_search'; search.type = 'search';
+          search.className = 'form-control'; search.placeholder = 'Buscar plantilla...'; search.value = librarySearch;
+          search.setAttribute('aria-controls','ci_tpl_selector_list');
+          searchWrap.append(searchLabel,search);
+          tools.append(searchWrap,templateButton('+ Nueva plantilla','create','btn-outline-primary'));
+          body.append(tools);
+          const archivedCount = records.filter((item)=>item.status === 'archived').length;
+          if(archivedCount || libraryShowArchived){
+            const toggle = templateButton(libraryShowArchived ? 'Volver a mis plantillas' : `Ver archivadas (${archivedCount})`,
+              'archived-toggle','btn-link');
+            toggle.classList.add('ci-template-archive-toggle'); body.append(toggle);
+          }
+          list.id = 'ci_tpl_selector_list';
+          const noMatches = paragraph('No se encontraron plantillas.','text-muted small d-none');
+          const zero = paragraph(libraryShowArchived ? 'No tienes plantillas archivadas.'
+            : 'No tienes plantillas de consentimiento guardadas.','text-muted small d-none');
+          const filterRows = ()=>{
+            const query = normalizeTemplateSearch(search.value);
+            const visible = records.filter((item)=>item.status === (libraryShowArchived ? 'archived' : 'active'));
+            const matches = visible.filter((item)=> normalizeTemplateSearch([
+              item.template_name,item.content?.title,item.content?.procedimiento].join(' ')).includes(query));
+            list.replaceChildren(...matches.map(row));
+            noMatches.classList.toggle('d-none', !query || !!matches.length || !visible.length);
+            zero.classList.toggle('d-none', !!visible.length || loadFailed);
+          };
+          search.addEventListener('input',()=>{ librarySearch = search.value; libraryScrollTop = 0; filterRows(); });
+          list.addEventListener('scroll',()=>{ libraryScrollTop = list.scrollTop; });
+          filterRows();
           body.append(list);
+          list.scrollTop = libraryScrollTop;
           footer.append(templateButton('Volver','back','btn-outline-secondary'));
-          if(target === 'selector'){
-            footer.append(templateButton('Continuar sin plantilla','blank','btn-outline-primary'));
-            footer.append(templateButton('Administrar plantillas','manage','btn-outline-secondary'));
-          }else footer.append(templateButton('Crear plantilla','create','btn-primary'));
+          footer.append(templateButton('Continuar sin plantilla','blank','btn-outline-primary'));
         }else if(target === 'editor'){
-          clear(editorRecord ? 'Editar plantilla' : 'Crear plantilla');
+          clear(editorRecord ? 'EDITAR PLANTILLA' : 'NUEVA PLANTILLA');
           const form = document.createElement('form'); form.id = 'ci_template_editor_form'; form.className = 'ci-template-editor';
           const nameLabel = document.createElement('label'); nameLabel.className = 'form-label fw-semibold';
           nameLabel.htmlFor = 'ci_tpl_name'; nameLabel.textContent = 'Nombre de la plantilla';
@@ -46637,7 +46676,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             group.append(labelEl,input); form.append(group);
           }
           body.append(form);
-          footer.append(templateButton('Volver a la lista','editor-back','btn-outline-secondary'),
+          footer.append(templateButton('Cancelar','editor-back','btn-outline-secondary'),
             templateButton('Guardar plantilla','save','btn-primary'));
         }else if(target === 'delete' && deleteRecord){
           clear('ELIMINAR PLANTILLA');
@@ -46663,10 +46702,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(els.templateFlowModalEl.classList.contains('show')){
           window.requestAnimationFrame(()=>{
             const first = target === 'editor' || target === 'delete' ? body.querySelector('input')
-              : target === 'selector' ? body.querySelector('#ci_tpl_search')
-              : focusDeleteUuid ? body.querySelector(`[data-tpl-action="delete"][data-tpl-uuid="${CSS.escape(focusDeleteUuid)}"]`)
+              : target === 'library' && focusAction ? body.querySelector(focusAction)
+              : target === 'library' ? body.querySelector('#ci_tpl_search')
               : body.querySelector('button');
-            (first || footer.querySelector('button'))?.focus();
+            (first || body.querySelector('#ci_tpl_search') || footer.querySelector('button'))?.focus();
           });
         }
       };
@@ -46674,7 +46713,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       return await new Promise((resolve)=>{
         const onClick = async (event)=>{
           const button = event.target.closest('[data-tpl-action]');
-          if(!button) return;
+          if(!button){ if(view === 'library') closeTemplateMenu(); return; }
           const action = button.dataset.tplAction;
           button.disabled = true;
           try{
@@ -46685,12 +46724,29 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               result = {action:'template',content:selected.content}; modal.hide(); return;
             }
             if(action === 'back'){ await render('choice'); return; }
-            if(action === 'editor-back'){ await render(editorReturnView); return; }
-            if(action === 'selector' || action === 'manage'){ await render(action); return; }
-            if(action === 'create'){ editorRecord = null; editorReturnView = view; await render('editor'); return; }
+            if(action === 'editor-back'){ await render('library',returnFocusAction); return; }
+            if(action === 'selector'){ await render('library'); return; }
+            if(action === 'archived-toggle'){
+              captureLibraryState(); libraryShowArchived = !libraryShowArchived; libraryScrollTop = 0;
+              await render('library','[data-tpl-action="archived-toggle"]'); return;
+            }
+            if(action === 'create'){
+              captureLibraryState(); editorRecord = null; returnFocusAction = '[data-tpl-action="create"]';
+              await render('editor'); return;
+            }
+            if(action === 'more'){
+              const wasOpen = button.getAttribute('aria-expanded') === 'true';
+              closeTemplateMenu();
+              if(!wasOpen){
+                button.setAttribute('aria-expanded','true');
+                const menu = document.getElementById(button.getAttribute('aria-controls'));
+                if(menu){ menu.hidden = false; menu.querySelector('[role="menuitem"]')?.focus(); }
+              }else button.focus();
+              return;
+            }
             if(action === 'delete-cancel' && deleteRecord && !deletePending){
-              const uuid = deleteRecord.uuid; deleteRecord = null;
-              await render('manage',uuid); return;
+              deleteRecord = null;
+              await render('library',returnFocusAction); return;
             }
             if(action === 'delete-confirm' && deleteRecord){
               const input = body.querySelector('#ci_tpl_delete_confirm');
@@ -46702,7 +46758,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
                   {expected_version:deleteRecord.version});
                 deleteRecord = null;
                 successNotice = 'Plantilla eliminada';
-                await render('manage');
+                await render('library',returnFocusAction);
               }catch(error){
                 body.querySelector('.ci-template-delete-error')?.remove();
                 const feedback = paragraph(error?.message || 'No se pudo eliminar la plantilla. Inténtalo nuevamente.',
@@ -46718,11 +46774,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             }
             const current = records.find((item)=>item.uuid === button.dataset.tplUuid);
             if(action === 'delete' && current && current.source !== 'curated'){
+              captureLibraryState(); returnFocusAction = `[data-tpl-action="more"][data-tpl-uuid="${CSS.escape(current.uuid)}"]`;
               deleteRecord = current; await render('delete'); return;
             }
-            if(action === 'edit' && current){ editorRecord = await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}`); editorReturnView = 'manage'; await render('editor'); return; }
-            if(action === 'duplicate' && current){ await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/duplicate`,'POST',{}); await render('manage'); return; }
-            if(action === 'archive' && current){ await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/archive`,'POST',{expected_version:current.version}); await render('manage'); return; }
+            if(action === 'edit' && current){
+              captureLibraryState(); returnFocusAction = `[data-tpl-action="edit"][data-tpl-uuid="${CSS.escape(current.uuid)}"]`;
+              editorRecord = await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}`);
+              await render('editor'); return;
+            }
+            if(action === 'duplicate' && current){
+              captureLibraryState(); await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/duplicate`,'POST',{});
+              successNotice = 'Plantilla duplicada'; await render('library'); return;
+            }
+            if(action === 'archive' && current){
+              captureLibraryState(); await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/archive`,'POST',{expected_version:current.version});
+              successNotice = 'Plantilla archivada'; await render('library'); return;
+            }
             if(action === 'save'){
               const form = body.querySelector('#ci_template_editor_form');
               if(!form?.reportValidity()) return;
@@ -46734,7 +46801,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               const payload = {template_name:form.elements.namedItem('template_name').value,content};
               if(editorRecord) payload.expected_version = editorRecord.version;
               await consentTemplateRequest(editorRecord ? `/${encodeURIComponent(editorRecord.uuid)}` : '',editorRecord ? 'PUT' : 'POST',payload);
-              editorRecord = null; successNotice = 'Plantilla guardada'; await render(editorReturnView);
+              editorRecord = null; successNotice = 'Plantilla guardada'; await render('library',returnFocusAction);
             }
           }catch(error){
             if(action === 'save' && view === 'editor'){
@@ -46755,6 +46822,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           }
         };
         const onKeydown = (event)=>{
+          if(view === 'library' && event.target.matches('[role="menuitem"]')
+            && ['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+            const items = [...event.target.closest('[role="menu"]').querySelectorAll('[role="menuitem"]')];
+            const index = items.indexOf(event.target);
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+              : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+            event.preventDefault(); items[next]?.focus(); return;
+          }
+          if(view === 'library' && event.key === 'Escape'){
+            if(closeTemplateMenu(true)){ event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }
+            return;
+          }
           if(view !== 'delete' || deletePending) return;
           if(event.key === 'Tab'){
             const controls = [body.querySelector('#ci_tpl_delete_confirm'),
@@ -46769,9 +46848,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             controls[next].focus();
           }else if(event.key === 'Escape'){
             event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
-            const uuid = deleteRecord?.uuid || '';
             deleteRecord = null;
-            render('manage',uuid);
+            render('library',returnFocusAction);
           }
         };
         const onShown = ()=> body.querySelector('button, input')?.focus();

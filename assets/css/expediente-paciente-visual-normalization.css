@@ -5152,6 +5152,10 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #modalConsentTemplateFlow .ci-template-row__copy{display:grid;gap:.1rem;min-width:0;flex:1}
 #p-expediente #modalConsentTemplateFlow .ci-template-row__copy>*{overflow-wrap:anywhere}
 #p-expediente #modalConsentTemplateFlow .ci-template-row__actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:.35rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__more{min-width:34px;font-size:1.15rem;line-height:1}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__more-menu:not([hidden]){display:flex;flex:0 0 100%;justify-content:flex-end;gap:.2rem;border-top:1px solid #d8e8ed;padding-top:.2rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__more-menu .btn{white-space:nowrap}
+#p-expediente #modalConsentTemplateFlow .ci-template-archive-toggle{padding-left:0}
 #p-expediente #modalConsentTemplateFlow .ci-template-editor{display:grid;gap:.7rem}
 #p-expediente #modalConsentTemplateFlow .ci-template-editor__field{display:grid;gap:.25rem}
 #p-expediente #modalConsentTemplateFlow .ci-template-editor__field .form-label{margin:0}
