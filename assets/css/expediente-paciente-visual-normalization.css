@@ -5139,3 +5139,18 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #modalConsentDraftPrompt .ci-draft-choice__body>*{overflow-wrap:anywhere}
 #p-expediente #modalConsentDraftPrompt .ci-draft-choice__controls{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
 @media(max-width:600px){#p-expediente #modalConsentDraftPrompt .ci-draft-choice{align-items:stretch;flex-direction:column}#p-expediente #modalConsentDraftPrompt .ci-draft-choice__controls{justify-content:space-between}}
+
+/* CONS-TPL01: physician template selector and editor; no patient document layout changes. */
+#p-expediente #modalConsentTemplateFlow .ci-template-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-choices .btn{min-height:48px}
+#p-expediente #modalConsentTemplateFlow .ci-template-list{display:grid;gap:.65rem;max-height:55vh;overflow:auto}
+#p-expediente #modalConsentTemplateFlow .ci-template-row{display:flex;align-items:center;gap:.8rem;padding:.75rem;border:1px solid #c8e2e9;border-radius:10px;background:#f8fcfd}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:10px;background:#e5f7fa;color:#008ca4;font-size:25px}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__copy{display:grid;gap:.1rem;min-width:0;flex:1}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__copy>*{overflow-wrap:anywhere}
+#p-expediente #modalConsentTemplateFlow .ci-template-row__actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:.35rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-editor{display:grid;gap:.7rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-editor__field{display:grid;gap:.25rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-editor__field .form-label{margin:0}
+#p-expediente #modalConsentTemplateFlow :is(button,input,select,textarea):focus-visible{outline:2px solid #005a76;outline-offset:2px}
+@media(max-width:600px){#p-expediente #modalConsentTemplateFlow .ci-template-row{align-items:flex-start;flex-wrap:wrap}#p-expediente #modalConsentTemplateFlow .ci-template-row__actions{width:100%;justify-content:flex-start}}

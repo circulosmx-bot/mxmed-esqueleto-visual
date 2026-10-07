@@ -8859,6 +8859,49 @@ try {
                 'meta'=>['route'=>'doctors/{doctor_id}/documents']],403);
             return;
         }
+        if (($segments[2] ?? '') === 'consent-templates') {
+            require_once __DIR__.'/../_lib/clinical_consent_templates.php';
+            header('Cache-Control: private, no-store, max-age=0');
+            $count = count($segments);
+            $uuid = $count >= 4 ? trim(rawurldecode((string)$segments[3])) : '';
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($count === 3 && $method === 'GET') {
+                    $includeArchived = ($_GET['include_archived'] ?? '') === '1';
+                    $result = clinical_consent_template_list($pdo,$scopedDoctorId,$includeArchived);
+                    $status = 200;
+                } elseif ($count === 3 && $method === 'POST') {
+                    $request = clinical_read_json_body();
+                    if (!$request['ok']) throw new ClinicalConsentTemplateException('invalid_json',400);
+                    $result = clinical_consent_template_create($pdo,$scopedDoctorId,$request['data']);
+                    $status = 201;
+                } elseif ($count === 4 && $uuid !== '' && $method === 'GET') {
+                    $result = clinical_consent_template_get($pdo,$scopedDoctorId,$uuid);
+                    $status = 200;
+                } elseif ($count === 4 && $uuid !== '' && in_array($method,['PUT','PATCH'],true)) {
+                    $request = clinical_read_json_body();
+                    if (!$request['ok']) throw new ClinicalConsentTemplateException('invalid_json',400);
+                    $result = clinical_consent_template_update($pdo,$scopedDoctorId,$uuid,$request['data']);
+                    $status = 200;
+                } elseif ($count === 5 && $uuid !== '' && $method === 'POST' && $segments[4] === 'duplicate') {
+                    $result = clinical_consent_template_duplicate($pdo,$scopedDoctorId,$uuid);
+                    $status = 201;
+                } elseif ($count === 5 && $uuid !== '' && $method === 'POST' && $segments[4] === 'archive') {
+                    $request = clinical_read_json_body();
+                    if (!$request['ok']) throw new ClinicalConsentTemplateException('invalid_json',400);
+                    $result = clinical_consent_template_archive($pdo,$scopedDoctorId,$uuid,$request['data']);
+                    $status = 200;
+                } else {
+                    throw new ClinicalConsentTemplateException('not_found',404);
+                }
+                clinical_send_response(['ok'=>true,'data'=>$result,'meta'=>['route'=>'doctors/{doctor_id}/consent-templates']],$status);
+            } catch (ClinicalConsentTemplateException $error) {
+                clinical_send_response(['ok'=>false,'error'=>$error->reason,'message'=>$error->reason,'data'=>null],$error->httpStatus);
+            } catch (Throwable $error) {
+                clinical_send_response(['ok'=>false,'error'=>'server_error','message'=>'consent template unavailable','data'=>null],500);
+            }
+            return;
+        }
         if ($method === 'GET' && count($segments) === 7 && ($segments[2] ?? '') === 'patients'
             && ($segments[4] ?? '') === 'study-orders' && ($segments[6] ?? '') === 'provider-matches') {
             header('Cache-Control: private, no-store, max-age=0');

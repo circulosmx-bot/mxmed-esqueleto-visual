@@ -42083,6 +42083,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       draftPromptText: pane.querySelector('#ci_draft_prompt_text'),
       draftChoices: pane.querySelector('#ci_draft_choices'),
       draftPromptDiscardBtn: pane.querySelector('#ci_draft_discard_btn'),
+      templateFlowModalEl: pane.querySelector('#modalConsentTemplateFlow'),
+      templateFlowTitle: pane.querySelector('#ci_tpl_modal_title'),
+      templateFlowBody: pane.querySelector('#ci_tpl_modal_body'),
+      templateFlowFooter: pane.querySelector('#ci_tpl_modal_footer'),
       actionFeedback: root.querySelector('#ci_action_feedback'),
       docSessionRecoveryModalEl: pane.querySelector('#modalDocSessionRecovery'),
       docSessionRecoveryText: pane.querySelector('#doc_session_recovery_text'),
@@ -45421,7 +45425,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.fullProcedimiento) els.fullProcedimiento.value = f.procedimiento;
       if(els.objetivo) els.objetivo.value = f.objetivo;
       if(els.fullObjetivo) els.fullObjetivo.value = f.objetivo;
-      if(els.templateDesc) els.templateDesc.textContent = f.riesgos || 'Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.';
+      if(els.templateDesc) els.templateDesc.textContent = f.riesgos || 'Selecciona un tipo de procedimiento para ver sus riesgos, beneficios y alternativas.';
       if(els.riesgosManual) els.riesgosManual.value = f.riesgos;
       if(els.fullRiesgos) els.fullRiesgos.value = f.riesgos;
       if(els.riskCommon) els.riskCommon.value = f.risk_comunes;
@@ -45474,11 +45478,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       if(els.templateDesc){
         if(isManual){
-          els.templateDesc.textContent = 'Plantilla "Otro": captura manual de riesgos.';
+          els.templateDesc.textContent = 'Tipo "Otro": captura manual de riesgos.';
         }else if(state.form.riesgos){
           els.templateDesc.textContent = state.form.riesgos;
         }else{
-          els.templateDesc.textContent = 'Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.';
+          els.templateDesc.textContent = 'Selecciona un tipo de procedimiento para ver sus riesgos, beneficios y alternativas.';
         }
       }
     };
@@ -46055,7 +46059,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const renderTemplates = ()=>{
       if(!els.template) return;
       if(els.template.dataset.canonicalReady === '1') return;
-      els.template.innerHTML = '<option value="">Selecciona una plantilla</option>';
+      els.template.innerHTML = '<option value="">Selecciona un tipo de procedimiento</option>';
       state.templates.forEach((tpl)=>{
         const option = document.createElement('option');
         option.value = tpl.key;
@@ -46233,6 +46237,214 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }catch(_){}
     };
 
+    // CONS-TPL01: templates are private reusable input, never clinical documents.
+    const consentTemplateFields = [
+      ['title','Título','input'],['procedimiento','Descripción del procedimiento','textarea'],
+      ['template_key','Tipo de procedimiento','select'],['objetivo','Objetivo','input'],
+      ['riesgos','Riesgos generales','textarea'],['risk_comunes','Riesgos comunes','textarea'],
+      ['risk_poco_frecuentes','Riesgos poco frecuentes','textarea'],
+      ['risk_raros_graves','Complicaciones posibles','textarea'],
+      ['beneficios_esperados','Beneficios esperados','textarea'],['alternativas','Alternativas','textarea'],
+      ['consecuencias_no_aceptar','Consecuencias de no aceptar','textarea'],
+      ['autorizacion_contingencias','Autorización de contingencias','checkbox']
+    ];
+    const consentTemplateBaseUrl = ()=>{
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      return doctorId ? `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/consent-templates` : '';
+    };
+    const consentTemplateRequest = async (suffix = '', method = 'GET', body = null)=>{
+      const base = consentTemplateBaseUrl();
+      if(!base) throw new Error('No se pudo identificar al médico.');
+      const response = await fetch(`${base}${suffix}`, {
+        method, credentials: 'same-origin', cache: 'no-store',
+        headers: body === null ? {} : { 'Content-Type': 'application/json' },
+        body: body === null ? undefined : JSON.stringify(body)
+      });
+      const json = await response.json().catch(()=>null);
+      if(!response.ok || !json?.ok) throw new Error(
+        json?.error === 'version_conflict' ? 'La plantilla cambió. Actualiza la lista antes de guardar.'
+          : 'No se pudo completar la operación con la plantilla.'
+      );
+      return json.data;
+    };
+    const templateButton = (label, action, style = 'btn-outline-primary')=>{
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `btn btn-sm ${style}`;
+      button.textContent = label;
+      button.dataset.tplAction = action;
+      return button;
+    };
+    const consentTemplateApply = (content)=>{
+      if(els.template) els.template.value = sanitizeText(content.template_key || '');
+      for(const [key] of consentTemplateFields){
+        if(key === 'template_key') continue;
+        if(Object.hasOwn(content,key)) state.form[key] = content[key];
+      }
+      state.riskUserEdited = { comunes:true, poco_frecuentes:true, raros_graves:true };
+      syncFormStateToInputs();
+    };
+    const askConsentTemplateDecision = async ()=>{
+      if(!els.templateFlowModalEl || !els.templateFlowBody || !window.bootstrap?.Modal){
+        showCatalogFeedback('No se puede abrir la selección de plantillas.', 'error');
+        return { action:'cancel' };
+      }
+      const body = els.templateFlowBody;
+      const footer = els.templateFlowFooter;
+      const title = els.templateFlowTitle;
+      const modal = window.bootstrap.Modal.getOrCreateInstance(els.templateFlowModalEl);
+      const returnFocus = document.activeElement;
+      let view = 'choice', editorRecord = null, notice = '', result = { action:'cancel' };
+      let records = [];
+      const clear = (heading)=>{ title.textContent = heading; body.replaceChildren(); footer.replaceChildren(); };
+      const paragraph = (copy, className = 'text-muted small')=>{
+        const el = document.createElement('p'); el.className = className; el.textContent = copy; body.append(el); return el;
+      };
+      const row = (item, management)=>{
+        const wrapper = document.createElement('div'); wrapper.className = 'ci-template-row';
+        const icon = document.createElement('span'); icon.className = 'material-symbols-outlined ci-template-row__icon';
+        icon.setAttribute('aria-hidden','true'); icon.textContent = 'fact_check';
+        const copy = document.createElement('div'); copy.className = 'ci-template-row__copy';
+        const strong = document.createElement('strong'); strong.textContent = item.template_name;
+        const summary = document.createElement('span'); summary.className = 'small text-muted';
+        summary.textContent = item.content?.title || item.content?.procedimiento || 'Consentimiento informado';
+        const date = document.createElement('span'); date.className = 'small text-muted';
+        date.textContent = `Actualizada: ${formatDraftDateTime(item.updated_at, true) || 'fecha no disponible'}`;
+        copy.append(strong,summary,date);
+        const actions = document.createElement('div'); actions.className = 'ci-template-row__actions';
+        if(management){
+          const status = document.createElement('span'); status.className = 'badge bg-light text-dark border';
+          status.textContent = item.status === 'archived' ? 'Archivada' : 'Activa'; actions.append(status);
+          if(item.status === 'active'){
+            [['Editar','edit'],['Duplicar','duplicate'],['Archivar','archive']].forEach(([label,action])=>{
+              const button = templateButton(label,action); button.dataset.tplUuid = item.uuid;
+              button.setAttribute('aria-label',`${label} plantilla ${item.template_name}`); actions.append(button);
+            });
+          }
+        }else{
+          const button = templateButton('Usar plantilla','use','btn-primary');
+          button.dataset.tplUuid = item.uuid;
+          button.setAttribute('aria-label',`Usar plantilla ${item.template_name}`); actions.append(button);
+        }
+        wrapper.append(icon,copy,actions); return wrapper;
+      };
+      const render = async (target)=>{
+        view = target;
+        if(target === 'choice'){
+          clear('Nuevo consentimiento');
+          paragraph('Elige cómo deseas comenzar el consentimiento para este paciente.');
+          const choices = document.createElement('div'); choices.className = 'ci-template-choices';
+          choices.append(templateButton('Empezar en blanco','blank','btn-primary'),
+            templateButton('Usar plantilla','selector','btn-outline-primary'));
+          body.append(choices);
+          footer.append(templateButton('Administrar plantillas','manage','btn-outline-secondary'));
+        }else if(target === 'selector' || target === 'manage'){
+          clear(target === 'selector' ? 'Usar plantilla' : 'Administrar plantillas');
+          paragraph(target === 'selector' ? 'Se copiará el contenido reutilizable a un consentimiento nuevo. Podrás editarlo antes de guardar o emitir.'
+            : 'Estas plantillas son privadas del médico y no forman parte del expediente del paciente.');
+          let loadFailed = false;
+          try { records = await consentTemplateRequest(target === 'manage' ? '?include_archived=1' : ''); }
+          catch(error){ paragraph(error.message,'alert alert-danger'); records = []; loadFailed = true; }
+          const list = document.createElement('div'); list.className = 'ci-template-list';
+          records.forEach((item)=>list.append(row(item,target === 'manage')));
+          if(!records.length && !loadFailed) paragraph(target === 'selector' ? 'No tienes plantillas de consentimiento guardadas.'
+            : 'Aún no tienes plantillas de consentimiento.');
+          body.append(list);
+          footer.append(templateButton('Volver','back','btn-outline-secondary'));
+          if(target === 'selector'){
+            footer.append(templateButton('Continuar sin plantilla','blank','btn-outline-primary'));
+            if(!records.length) footer.append(templateButton('Crear plantilla','create','btn-primary'));
+          }else footer.append(templateButton('Crear plantilla','create','btn-primary'));
+        }else if(target === 'editor'){
+          clear(editorRecord ? 'Editar plantilla' : 'Crear plantilla');
+          const form = document.createElement('form'); form.id = 'ci_template_editor_form'; form.className = 'ci-template-editor';
+          const nameLabel = document.createElement('label'); nameLabel.className = 'form-label fw-semibold';
+          nameLabel.htmlFor = 'ci_tpl_name'; nameLabel.textContent = 'Nombre de la plantilla';
+          const name = document.createElement('input'); name.id = 'ci_tpl_name'; name.name = 'template_name';
+          name.className = 'form-control'; name.maxLength = 160; name.required = true;
+          name.value = editorRecord?.template_name || '';
+          form.append(nameLabel,name);
+          for(const [key,label,kind] of consentTemplateFields){
+            const group = document.createElement('div'); group.className = 'ci-template-editor__field';
+            const labelEl = document.createElement('label'); labelEl.className = 'form-label';
+            labelEl.htmlFor = `ci_tpl_${key}`; labelEl.textContent = label;
+            let input;
+            if(kind === 'select'){
+              input = document.createElement('select');
+              [['','Sin selección'],...state.templates.map((item)=>[item.key,item.label])].forEach(([value,text])=>{
+                const option = document.createElement('option'); option.value = value; option.textContent = text; input.append(option);
+              });
+            }else input = document.createElement(kind === 'textarea' ? 'textarea' : 'input');
+            input.id = `ci_tpl_${key}`; input.name = key; input.className = kind === 'checkbox' ? 'form-check-input' : 'form-control';
+            if(kind === 'checkbox') input.type = 'checkbox';
+            else if(kind === 'input') input.type = 'text';
+            else if(kind === 'textarea') input.rows = 2;
+            if(kind === 'checkbox') input.checked = !!editorRecord?.content?.[key];
+            else input.value = editorRecord?.content?.[key] || '';
+            group.append(labelEl,input); form.append(group);
+          }
+          body.append(form);
+          footer.append(templateButton('Volver a la lista','manage','btn-outline-secondary'),
+            templateButton('Guardar plantilla','save','btn-primary'));
+        }
+        if(notice){ paragraph(notice,'alert alert-danger'); notice = ''; }
+        if(els.templateFlowModalEl.classList.contains('show')){
+          window.requestAnimationFrame(()=> (target === 'editor' ? body.querySelector('input') : body.querySelector('button'))?.focus()
+            || footer.querySelector('button')?.focus());
+        }
+      };
+      await render('choice');
+      return await new Promise((resolve)=>{
+        const onClick = async (event)=>{
+          const button = event.target.closest('[data-tpl-action]');
+          if(!button) return;
+          const action = button.dataset.tplAction;
+          button.disabled = true;
+          try{
+            if(action === 'blank'){ result = {action:'blank'}; modal.hide(); return; }
+            if(action === 'use'){
+              const selected = await consentTemplateRequest(`/${encodeURIComponent(button.dataset.tplUuid)}`);
+              if(selected.status !== 'active') throw new Error('Esta plantilla ya no está activa.');
+              result = {action:'template',content:selected.content}; modal.hide(); return;
+            }
+            if(action === 'back'){ await render('choice'); return; }
+            if(action === 'selector' || action === 'manage'){ await render(action); return; }
+            if(action === 'create'){ editorRecord = null; await render('editor'); return; }
+            const current = records.find((item)=>item.uuid === button.dataset.tplUuid);
+            if(action === 'edit' && current){ editorRecord = await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}`); await render('editor'); return; }
+            if(action === 'duplicate' && current){ await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/duplicate`,'POST',{}); await render('manage'); return; }
+            if(action === 'archive' && current){ await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/archive`,'POST',{expected_version:current.version}); await render('manage'); return; }
+            if(action === 'save'){
+              const form = body.querySelector('#ci_template_editor_form');
+              if(!form?.reportValidity()) return;
+              const content = {};
+              for(const [key,,kind] of consentTemplateFields){
+                const field = form.elements.namedItem(key);
+                content[key] = kind === 'checkbox' ? !!field.checked : field.value;
+              }
+              const payload = {template_name:form.elements.namedItem('template_name').value,content};
+              if(editorRecord) payload.expected_version = editorRecord.version;
+              await consentTemplateRequest(editorRecord ? `/${encodeURIComponent(editorRecord.uuid)}` : '',editorRecord ? 'PUT' : 'POST',payload);
+              editorRecord = null; await render('manage');
+            }
+          }catch(error){ notice = error.message; await render(view); }
+          finally { if(button.isConnected) button.disabled = false; }
+        };
+        const onShown = ()=> body.querySelector('button, input')?.focus();
+        const onHidden = ()=>{
+          els.templateFlowModalEl.removeEventListener('click',onClick);
+          els.templateFlowModalEl.removeEventListener('shown.bs.modal',onShown);
+          els.templateFlowModalEl.removeEventListener('hidden.bs.modal',onHidden);
+          if(returnFocus?.isConnected) returnFocus.focus();
+          resolve(result);
+        };
+        els.templateFlowModalEl.addEventListener('click',onClick);
+        els.templateFlowModalEl.addEventListener('shown.bs.modal',onShown);
+        els.templateFlowModalEl.addEventListener('hidden.bs.modal',onHidden);
+        modal.show();
+      });
+    };
+
     const openConsentModal = async ({ draftRef = '' } = {})=>{
       showConsentActionFeedback('');
       const patientId = resolveActivePatientIdForConsent();
@@ -46250,9 +46462,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!selected && !draftRef && drafts.length){
         const decision = await askConsentDraftDecision(drafts);
         if(decision.action === 'resume') selected = drafts.find((row)=> row.ref === decision.ref) || null;
-        else if(decision.action === 'new') shouldOpen = startDraft() === true;
+        else if(decision.action === 'new'){
+          const choice = await askConsentTemplateDecision();
+          if(choice.action === 'blank' || choice.action === 'template'){
+            resetWizard(); shouldOpen = startDraft() === true;
+            if(shouldOpen && choice.action === 'template') consentTemplateApply(choice.content);
+          }
+        }
       }else if(drafts.length === 0 && !draftRef){
-        shouldOpen = startDraft() === true;
+        const choice = await askConsentTemplateDecision();
+        if(choice.action === 'blank' || choice.action === 'template'){
+          resetWizard(); shouldOpen = startDraft() === true;
+          if(shouldOpen && choice.action === 'template') consentTemplateApply(choice.content);
+        }
       }
       if(selected){
         const fullDraft = await fetchConsentDraftDetail(selected.ref);
@@ -46526,9 +46748,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.mode = sanitizeText(formSnapshot.mode || 'guided') === 'full' ? 'full' : 'guided';
       state.firmanteAutoFromPatient = sanitizeText(state.form.firmante_tipo || '') === 'paciente';
       state.riskUserEdited = {
-        comunes: false,
-        poco_frecuentes: false,
-        raros_graves: false
+        comunes: Object.hasOwn(formSnapshot, 'risk_comunes'),
+        poco_frecuentes: Object.hasOwn(formSnapshot, 'risk_poco_frecuentes'),
+        raros_graves: Object.hasOwn(formSnapshot, 'risk_raros_graves')
       };
       applyProcedureRiskSuggestions(draftTemplate, { force: false });
       applyConsentRiskDefaults();

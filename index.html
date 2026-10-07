@@ -8764,9 +8764,9 @@
                         <div class="col-12">
                           <label class="form-label">Tipo de procedimiento / contexto clínico</label>
                           <select class="form-select" id="ci_template">
-                            <option value="">Selecciona una plantilla</option>
+                            <option value="">Selecciona un tipo de procedimiento</option>
                           </select>
-                          <div class="small text-muted mt-1" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
+                          <div class="small text-muted mt-1" id="ci_template_desc">Selecciona un tipo de procedimiento para ver sus riesgos, beneficios y alternativas.</div>
                         </div>
                         <div class="col-12 d-none" id="ci_riesgos_manual_wrap">
                           <label class="form-label" for="ci_riesgos_manual">Riesgos (captura manual)</label>
@@ -10213,6 +10213,18 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="cm_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalConsentTemplateFlow" tabindex="-1" aria-labelledby="ci_tpl_modal_title" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title" id="ci_tpl_modal_title">Nuevo consentimiento</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="ci_tpl_modal_body"></div>
+                      <div class="modal-footer" id="ci_tpl_modal_footer"></div>
                     </div>
                   </div>
                 </div>
