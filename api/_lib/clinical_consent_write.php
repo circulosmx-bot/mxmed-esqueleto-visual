@@ -290,10 +290,12 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                 $consent = $body;
                 $consent['payload'] = $consentPayload;
                 $consent['context'] = $writeContext;
+                $consent['_consent_document_uuid'] = $parentUuid;
                 $patientAuthority = clinical_consent_binding_patient_authority($consentPayload);
                 $doctorAuthority = (string)$doctor['doctor_id'] . '|' . (string)$doctor['user_id'];
                 $consentPayload['signature_binding_status'] = [
-                    'patient' => clinical_consent_binding_classify($consent, 'patient', $patientAuthority),
+                    'patient' => clinical_consent_binding_classify($consent, 'patient', $patientAuthority,
+                        $pdo, (string)$doctor['doctor_id']),
                     'doctor' => clinical_consent_binding_classify($consent, 'doctor', $doctorAuthority,
                         $pdo, (string)$doctor['doctor_id']),
                 ];
@@ -343,6 +345,38 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                         $finalized[] = $row['final_key'];
                         $binaries->insertOriginal($attachmentId, $row['binary_uuid'], $row['final_key'], $row['binary']);
                         $uploads->finalize($row['upload_id'], $requestId, $attachmentId);
+                    }
+                }
+                // Claim each V1 QR artifact for this exact canonical consent inside the
+                // document transaction. A second document cannot reuse the same token.
+                foreach (['patient', 'doctor'] as $signatureRole) {
+                    $signature = is_array($consentPayload['signatures'][$signatureRole] ?? null)
+                        ? $consentPayload['signatures'][$signatureRole] : [];
+                    if (($signature['source'] ?? '') !== 'remote_qr'
+                        || (int)($signature['binding']['version'] ?? 0) !== 1
+                        || ($consentPayload['signature_binding_status'][$signatureRole] ?? '') !== 'valid_bound_signature') continue;
+                    $qrToken = trim((string)($signature['token'] ?? ''));
+                    $qrTokenId = (int)($signature['binding']['token_id'] ?? 0);
+                    if ($qrToken === '' || $qrTokenId < 1) {
+                        throw new InvalidArgumentException('CONSENT_QR_TOKEN_INVALID');
+                    }
+                    $claim = $pdo->prepare("UPDATE clinical_note_capture_tokens
+                        SET status='consumed',consumed_at=COALESCE(consumed_at,UTC_TIMESTAMP()),
+                            note_document_id=?,note_document_uuid=?,updated_at=UTC_TIMESTAMP()
+                        WHERE token=? AND id=? AND patient_id=?
+                          AND (status='uploaded' OR (status='consumed' AND note_document_uuid=?))");
+                    $claim->execute([$parentId, $parentUuid, $qrToken, $qrTokenId, $patientId, $parentUuid]);
+                    if ($claim->rowCount() !== 1) {
+                        // MySQL can report zero for a repeat no-op update; verify that
+                        // the persisted claim still belongs to this same document.
+                        $verify = $pdo->prepare('SELECT status,note_document_uuid FROM clinical_note_capture_tokens
+                            WHERE token=? AND id=? AND patient_id=? LIMIT 1');
+                        $verify->execute([$qrToken, $qrTokenId, $patientId]);
+                        $owner = $verify->fetch(PDO::FETCH_ASSOC);
+                        if (!is_array($owner) || $owner['status'] !== 'consumed'
+                            || (string)$owner['note_document_uuid'] !== $parentUuid) {
+                            throw new InvalidArgumentException('CONSENT_QR_TOKEN_REPLAY');
+                        }
                     }
                 }
                 return $parentId;

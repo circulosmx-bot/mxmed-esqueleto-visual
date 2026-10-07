@@ -118,11 +118,15 @@ function clinical_consent_binding_classify(array $body, string $role, string $au
     $p = is_array($body['payload'] ?? null) ? $body['payload'] : [];
     $entry = is_array($p['signatures'][$role] ?? null) ? $p['signatures'][$role] : [];
     if ($entry === []) return 'absent';
-    if (($entry['source'] ?? '') === 'remote_qr') return 'legacy_unbound';
     $binding = is_array($entry['binding'] ?? null) ? $entry['binding'] : [];
+    if (($entry['source'] ?? '') === 'remote_qr'
+        && (($binding['version'] ?? null) !== 1 || empty($binding['consent_uuid'])
+            || (int)($binding['token_id'] ?? 0) < 1))
+        return 'legacy_unbound';
     if (($binding['version'] ?? null) !== 1) return 'legacy_unverified_binding';
-    if (!in_array((string)($entry['source'] ?? ''), ['local_canvas', 'registered_profile'], true)
-        || ($role === 'patient' && ($entry['source'] ?? '') !== 'local_canvas')
+    if (!empty($binding['revoked_in_edit'])) return 'stale_or_unverified';
+    if (!in_array((string)($entry['source'] ?? ''), ['local_canvas', 'registered_profile', 'remote_qr'], true)
+        || ($role === 'patient' && !in_array((string)($entry['source'] ?? ''), ['local_canvas', 'remote_qr'], true))
         || ($entry['role'] ?? '') !== ($role === 'patient' ? 'patient_or_representative' : 'doctor')
         || trim((string)($p['signature_document_date'] ?? '')) === '') return 'stale_or_unverified';
     foreach (($p['signer_identity_attachment_manifest'] ?? []) as $ref) {
@@ -136,6 +140,37 @@ function clinical_consent_binding_classify(array $body, string $role, string $au
         return 'stale_or_unverified';
     if (($binding['role'] ?? '') !== $role || ($binding['authority'] ?? '') !== $authority
         || ($binding['source'] ?? '') !== ($entry['source'] ?? '')) return 'stale_or_unverified';
+    if (($entry['source'] ?? '') === 'remote_qr') {
+        if ($pdo === null || $doctorId === '' || trim((string)($entry['token'] ?? '')) === '')
+            return 'stale_or_unverified';
+        try {
+            $query = $pdo->prepare('SELECT t.id,t.status,t.patient_id,t.signature_image_data,t.note_document_uuid,
+                q.consent_uuid,q.patient_id AS qr_patient_id,q.doctor_id,q.actor_user_id,q.role,
+                q.signer_authority,q.content_fingerprint,q.fingerprint_version,q.artifact_digest,q.invalidated_at
+                FROM clinical_note_capture_tokens t JOIN clinical_consent_qr_sessions q ON q.token_id=t.id
+                WHERE t.token=? LIMIT 1');
+            $query->execute([(string)$entry['token']]);
+            $qr = $query->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable) { return 'stale_or_unverified'; }
+        $context = is_array($p['signature_context'] ?? null) ? $p['signature_context'] : [];
+        if (!is_array($qr) || !in_array((string)$qr['status'], ['uploaded', 'consumed'], true)
+            || (int)$qr['id'] !== (int)($binding['token_id'] ?? 0)
+            || (string)$qr['consent_uuid'] !== (string)($p['qr_consent_uuid'] ?? '')
+            || (string)$qr['consent_uuid'] !== (string)($binding['consent_uuid'] ?? '')
+            || (string)$qr['patient_id'] !== (string)($context['patient_id'] ?? '')
+            || (string)$qr['qr_patient_id'] !== (string)($context['patient_id'] ?? '')
+            || (string)$qr['doctor_id'] !== $doctorId
+            || (string)$qr['actor_user_id'] !== (string)($body['actor_user_id'] ?? ($body['actor']['user_id'] ?? ''))
+            || (string)$qr['role'] !== $role || (string)$qr['signer_authority'] !== $authority
+            || (int)$qr['fingerprint_version'] !== 1
+            || trim((string)($qr['invalidated_at'] ?? '')) !== ''
+            || ((string)$qr['status'] === 'consumed'
+                && (string)$qr['note_document_uuid'] !== (string)($body['_consent_document_uuid'] ?? ''))
+            || !hash_equals((string)$qr['content_fingerprint'], (string)$binding['content_fingerprint'])
+            || !hash_equals((string)$qr['artifact_digest'], $digest)
+            || !hash_equals((string)$qr['signature_image_data'], (string)$entry['image_data']))
+            return 'stale_or_unverified';
+    }
     if ($role === 'doctor' && ($entry['source'] ?? '') === 'registered_profile') {
         if ($pdo === null || $doctorId === '') return 'stale_or_unverified';
         try {

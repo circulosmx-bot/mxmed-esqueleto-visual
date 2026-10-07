@@ -42635,6 +42635,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       doctorRemoteSignature: null,
       doctorSignatureSavePrompted: false,
       activeDraftRef: '',
+      qrConsentUuid: '',
       activeDraftLabel: '',
       firmanteAutoFromPatient: false,
       identityFiles: [],
@@ -43968,6 +43969,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       expiresAt: '',
       mobileUrl: '',
       role: 'patient',
+      issuedEpoch: -1,
       pollIntervalId: 0,
       pollTimeoutId: 0,
       countdownIntervalId: 0,
@@ -44700,11 +44702,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         image_data: imageData,
         signed_at: sanitizeText(entry?.signed_at || formatNowSql()),
         signer_name: sanitizeText(entry?.signer_name || state.form.firmante_nombre || ''),
-        token: sanitizeText(entry?.token || consentSignatureQrState.token || '')
+        token: sanitizeText(entry?.token || consentSignatureQrState.token || ''),
+        binding: entry?.binding || null
       };
       state.signatureBindingEpoch += 1;
-      state.signatureBinding = null;
-      state.signatureBindingState = 'legacy_unbound';
+      state.signatureBinding = entry?.binding || null;
+      state.signatureBindingState = entry?.binding ? 'valid_bound_signature' : 'legacy_unbound';
       state.signaturePreferredSource = 'remote';
       renderConsentRemoteSignaturePreview();
       updateSignatureStatus();
@@ -45268,6 +45271,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       consentSignatureQrState.expiresAt = '';
       consentSignatureQrState.mobileUrl = '';
       consentSignatureQrState.role = 'patient';
+      consentSignatureQrState.issuedEpoch = -1;
       consentSignatureQrState.cancelling = false;
       consentSignatureQrState.startedAt = 0;
       const qrEls = consentSignatureQrElements();
@@ -45326,11 +45330,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         consentSignatureQrState.cancelling = false;
       }
     };
-    const persistConsentRemoteSignature = (data = {})=>{
+    const persistConsentRemoteSignature = async (data = {})=>{
       const signature = (data?.signature && typeof data.signature === 'object') ? data.signature : null;
       const imageData = sanitizeText(signature?.image_data || '');
       if(!imageData){
-        return;
+        return false;
+      }
+      const binding = signature?.binding;
+      const prepared = await buildCanonicalConsentDocument('draft');
+      const currentFingerprint = prepared?.error ? '' : await window.mxmedConsentSignatureBinding.hash(prepared.body);
+      if(consentSignatureQrState.issuedEpoch !== state.signatureBindingEpoch
+        || !binding || binding.version !== 1 || binding.consent_uuid !== state.qrConsentUuid
+        || binding.content_fingerprint !== currentFingerprint
+        || binding.role !== getConsentSignatureRoleConfig(consentSignatureQrState.role).role){
+        setConsentRoleRemoteStatus(consentSignatureQrState.role,
+          'El consentimiento cambió. Genera un QR nuevo para esta versión.', 'error');
+        return false;
       }
       const roleConfig = getConsentSignatureRoleConfig(consentSignatureQrState.role || 'patient');
       const role = roleConfig.role;
@@ -45350,11 +45365,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           image_data: imageData,
           signed_at: signedAt,
           signer_name: signerName,
-          token
+          token,
+          binding
         };
         state.signatureBindingEpoch += 1;
-        state.doctorSignatureBinding = null;
-        state.doctorSignatureBindingState = 'legacy_unbound';
+        state.doctorSignatureBinding = binding;
+        state.doctorSignatureBindingState = 'valid_bound_signature';
         state.doctorSignaturePreferredSource = 'remote';
         updateDoctorSignatureStatus();
         applied = true;
@@ -45363,11 +45379,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           image_data: imageData,
           signed_at: signedAt,
           signer_name: signerName,
-          token
+          token,
+          binding
         });
       }
       if(!applied){
-        return;
+        return false;
+      }
+      const after = await buildCanonicalConsentDocument('draft');
+      if(!after.error) await classifyConsentPrepared(after);
+      const bindingState = role === 'doctor' ? state.doctorSignatureBindingState : state.signatureBindingState;
+      if(bindingState !== 'valid_bound_signature'){
+        setConsentRoleRemoteStatus(role, 'La firma no corresponde a esta versión. Genera un QR nuevo.', 'error');
+        return false;
       }
       setConsentRoleRemoteStatus(role, roleConfig.receivedStatus, 'success');
       const qrEls = consentSignatureQrElements();
@@ -45377,6 +45401,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(qrEls?.previewWrap){
         qrEls.previewWrap.classList.remove('d-none');
       }
+      return true;
     };
     const syncConsentSignatureTokenStatus = async (opts = {})=>{
       const token = sanitizeText(consentSignatureQrState.token);
@@ -45390,8 +45415,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         consentSignatureQrState.expiresAt = sanitizeText(data?.expires_at || consentSignatureQrState.expiresAt);
         if(status === 'uploaded' || status === 'consumed'){
           stopConsentSignatureQrPolling();
-          setConsentSignatureQrModalState(status === 'consumed' ? 'Completado' : 'Firma recibida', 'success');
-          persistConsentRemoteSignature(data);
+          const accepted = await persistConsentRemoteSignature(data);
+          setConsentSignatureQrModalState(accepted
+            ? (status === 'consumed' ? 'Completado' : 'Firma recibida') : 'Versión modificada',
+          accepted ? 'success' : 'error');
           updateConsentSignatureQrCountdown();
           syncConsentSignatureQrVerifyButton();
           return;
@@ -45450,16 +45477,37 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }, CONSENT_SIGNATURE_QR_MAX_DURATION_MS);
     };
     const createConsentSignatureToken = async (role = 'patient')=>{
+      const issuedEpoch = state.signatureBindingEpoch;
       const context = await resolveConsentIdentityCaptureContext();
       if(!context.ok){
         throw new Error(context.error || 'No se pudo resolver el contexto del paciente.');
       }
       const roleConfig = getConsentSignatureRoleConfig(role);
+      if((state.identityFiles || []).length){
+        throw new Error('Guarda primero los anexos de identidad y reabre el borrador para firmar por QR.');
+      }
+      if(!state.qrConsentUuid){
+        state.qrConsentUuid = state.activeDraftRef || window.crypto?.randomUUID?.() || '';
+      }
+      const prepared = await buildCanonicalConsentDocument('draft');
+      if(prepared?.error) throw new Error(prepared.error);
+      if(!state.qrConsentUuid || !window.mxmedConsentSignatureBinding?.stableAttachments(prepared.body)){
+        throw new Error('No se pudo fijar esta versión del consentimiento para firma remota.');
+      }
+      const fingerprint = await window.mxmedConsentSignatureBinding.hash(prepared.body);
+      if(issuedEpoch !== state.signatureBindingEpoch){
+        throw new Error('El consentimiento cambió. Revisa esta versión y genera un QR nuevo.');
+      }
       const body = {
         patient_id: context.patientId,
-        encounter_key: context.encounterKey || null,
+        encounter_key: sanitizeText(prepared.body?.payload?.signature_context?.encounter_key || '') || null,
         note_context: roleConfig.tokenContext,
-        expires_in_sec: 900
+        expires_in_sec: 900,
+        consent_uuid: state.qrConsentUuid,
+        draft_ref: state.activeDraftRef || null,
+        draft_version: Number(state.activeDraftVersion || 0),
+        content_fingerprint: fingerprint,
+        consent: prepared.body
       };
       const resp = await fetchWithTimeout('/api/clinical/index.php/note-capture-tokens', {
         method: 'POST',
@@ -45477,6 +45525,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       const data = json?.data || {};
       consentSignatureQrState.token = sanitizeText(data?.token || '');
+      if(issuedEpoch !== state.signatureBindingEpoch && consentSignatureQrState.token){
+        await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(consentSignatureQrState.token)}/invalidate`, {
+          method: 'POST', headers: { Accept: 'application/json' }, credentials: 'same-origin'
+        }).catch(()=>{});
+        throw new Error('El consentimiento cambió. Revisa esta versión y genera un QR nuevo.');
+      }
+      consentSignatureQrState.issuedEpoch = issuedEpoch;
       consentSignatureQrState.status = sanitizeText(data?.status || 'pending').toLowerCase();
       consentSignatureQrState.expiresAt = sanitizeText(data?.expires_at || '');
       consentSignatureQrState.mobileUrl = sanitizeText(data?.mobile_url || '');
@@ -45738,6 +45793,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     ];
     const staleConsentSignatureBindings = ()=>{
       state.signatureBindingEpoch += 1;
+      void cancelConsentSignatureTokenIfPending('consent_changed');
+      const qrTokens = new Set();
+      if(consentSignatureQrState.token) qrTokens.add(consentSignatureQrState.token);
+      for(const signature of [state.remoteSignature, state.doctorRemoteSignature]){
+        if(signature?.source !== 'remote_qr' || signature?.binding?.version !== 1) continue;
+        signature.binding.revoked_in_edit = true;
+        if(signature.token) qrTokens.add(signature.token);
+      }
+      for(const token of qrTokens){
+        void fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/invalidate`, {
+          method: 'POST', headers: { Accept: 'application/json' }, credentials: 'same-origin'
+        }).catch(()=>{});
+      }
       if(state.signatureBinding) state.signatureBindingState = 'stale_or_unverified';
       if(state.doctorSignatureBinding) state.doctorSignatureBindingState = 'stale_or_unverified';
       updateSignatureStatus();
@@ -45763,6 +45831,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const updateConsentFormState = (key, value)=>{
       if(state.form[key] !== value){
         if(consentContentFieldKeys.includes(key)) invalidateConsentReview('content');
+        else if(key === 'confirm_informed' && value === true){
+          // Reconfirming an unchanged saved draft restores its reviewed state.
+          // A QR session can only be issued after this confirmation is true.
+          invalidateConsentReview('final');
+        }
         else{
           staleConsentSignatureBindings();
           invalidateConsentReview('final');
@@ -46355,6 +46428,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.reviewWarning) els.reviewWarning.classList.add('d-none');
       state.draftId = '';
       state.activeDraftRef = '';
+      state.qrConsentUuid = '';
       state.activeDraftVersion = 0;
       state.activeDraftLabel = '';
       state.signatureDocumentDate = '';
@@ -46436,6 +46510,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       state.draftId = `cons_draft_${Date.now()}`;
       state.activeDraftRef = '';
+      state.qrConsentUuid = '';
       state.activeDraftVersion = 0;
       state.activeDraftLabel = '';
       state.signatureDocumentDate = '';
@@ -47287,6 +47362,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.template.value = draftTemplate;
       }
       state.activeDraftRef = sanitizeText(draftRecord?.ref || '');
+      state.qrConsentUuid = sanitizeText(payload.qr_consent_uuid || state.activeDraftRef || '');
       state.activeDraftVersion = Number(draftRecord?.version || 1);
       state.activeDraftLabel = sanitizeText(draftRecord?.event_datetime || '');
       state.identityRemoteRefs = Array.isArray(payload?.signer_identity_attachments)
@@ -53875,6 +53951,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           document_uuid: sanitizeText(ref.document_uuid || ref.document_id || '') })),
         ...pendingIdentityHashes
       ];
+      if(state.qrConsentUuid) payload.qr_consent_uuid = state.qrConsentUuid;
       if(identityRefs.length){
         payload.signer_identity_attachments = identityRefs;
         payload.attachments = payload.attachments && typeof payload.attachments === 'object' ? payload.attachments : {};

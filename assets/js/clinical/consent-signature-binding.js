@@ -107,11 +107,13 @@
   const classify = async (body, role, authority, registeredImage = '') => {
     const entry = body?.payload?.signatures?.[role];
     if (!entry?.image_data) return 'absent';
-    if (entry.source === 'remote_qr') return 'legacy_unbound';
     const binding = entry.binding;
+    if (entry.source === 'remote_qr' && (!binding || binding.version !== 1
+      || !binding.consent_uuid || Number(binding.token_id) < 1)) return 'legacy_unbound';
     if (!binding || binding.version !== 1) return 'legacy_unverified_binding';
-    if (!['local_canvas', 'registered_profile'].includes(entry.source)
-      || (role === 'patient' && entry.source !== 'local_canvas')
+    if (binding.revoked_in_edit) return 'stale_or_unverified';
+    if (!['local_canvas', 'registered_profile', 'remote_qr'].includes(entry.source)
+      || (role === 'patient' && !['local_canvas', 'remote_qr'].includes(entry.source))
       || entry.role !== (role === 'patient' ? 'patient_or_representative' : 'doctor')
       || !body?.payload?.signature_document_date
       || !stableAttachments(body)) return 'stale_or_unverified';
@@ -121,6 +123,11 @@
       || await hash(body) !== binding.content_fingerprint
       || binding.role !== role || binding.authority !== authority
       || binding.source !== entry.source) return 'stale_or_unverified';
+    if (entry.source === 'remote_qr'
+      && (!entry.token || !Number.isInteger(Number(binding.token_id))
+        || Number(binding.token_id) < 1
+        || !binding.consent_uuid
+        || binding.consent_uuid !== body?.payload?.qr_consent_uuid)) return 'stale_or_unverified';
     if (entry.source === 'registered_profile'
       && (!registeredImage || await imageDigest(registeredImage) !== digest)) return 'stale_or_unverified';
     return 'valid_bound_signature';

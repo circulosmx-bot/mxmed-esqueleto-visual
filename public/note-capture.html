@@ -33,6 +33,8 @@
     .sig-pad{border:1px solid #c7d2e5;border-radius:10px;background:#fff;touch-action:none;width:100%;height:190px}
     .sig-actions{display:flex;gap:10px;margin-top:10px}
     .sig-actions button{width:auto;flex:1}
+    .consent-review-frame{width:100%;height:min(58vh,560px);border:1px solid #c7d2e5;border-radius:10px;background:#fff}
+    .consent-signer{padding:10px 12px;border-radius:8px;background:#e9f7fa;font-weight:700;margin:10px 0}
   </style>
 </head>
 <body>
@@ -59,9 +61,17 @@
       <button id="captureSubmit" type="submit" disabled>Enviar documento</button>
     </form>
 
+    <section id="consentReview" class="d-none">
+      <h2 style="font-size:1.05rem">Revisa el consentimiento</h2>
+      <p id="consentSigner" class="consent-signer"></p>
+      <iframe id="consentReviewFrame" class="consent-review-frame" title="Consentimiento que se firmará"
+        sandbox="" referrerpolicy="no-referrer"></iframe>
+      <p>Declaro que he revisado la información mostrada.</p>
+      <button type="button" id="consentContinue">Continuar a firma</button>
+    </section>
+
     <form id="signatureForm" class="d-none">
-      <label for="signatureSignerName">Nombre del firmante (opcional)</label>
-      <input id="signatureSignerName" type="text" maxlength="140" placeholder="Nombre de quien firma">
+      <p id="signatureRole" class="consent-signer"></p>
 
       <label for="signatureCanvas">Firma en pantalla</label>
       <canvas id="signatureCanvas" class="sig-pad" width="520" height="190" aria-label="Firma del paciente o representante"></canvas>
@@ -80,6 +90,7 @@
   </main>
 
   <script src="/public/mobile-capture-session.js?v=r43a"></script>
+  <script src="/assets/js/clinical/consent-signature-binding.js"></script>
   <script>
     (function(){
       const params = new URLSearchParams(window.location.search || '');
@@ -104,7 +115,11 @@
 
       const signatureForm = document.getElementById('signatureForm');
       const signatureCanvas = document.getElementById('signatureCanvas');
-      const signatureSignerName = document.getElementById('signatureSignerName');
+      const consentReview = document.getElementById('consentReview');
+      const consentReviewFrame = document.getElementById('consentReviewFrame');
+      const consentSigner = document.getElementById('consentSigner');
+      const consentContinue = document.getElementById('consentContinue');
+      const signatureRole = document.getElementById('signatureRole');
       const signatureSubmit = document.getElementById('signatureSubmit');
       const signatureClear = document.getElementById('signatureClear');
 
@@ -117,6 +132,12 @@
         msg.textContent = String(text || '');
         msg.classList.remove('muted', 'ok', 'err');
         msg.classList.add(tone === 'ok' ? 'ok' : (tone === 'err' ? 'err' : 'muted'));
+      };
+      const safeError = (error, fallback)=>{
+        const value=String(error?.message || '').trim();
+        return /^(Failed to fetch|NetworkError|Load failed|HTTP \d+)$/i.test(value)
+          ? 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.'
+          : (value || fallback);
       };
 
       const setNowDatetime = ()=>{
@@ -240,13 +261,29 @@
       }
 
       if(isSignatureMode){
-        titleEl.textContent = 'Capturar firma clínica';
-        introEl.textContent = 'Firma en pantalla y envía la firma al consentimiento activo en escritorio.';
+        titleEl.textContent = 'Consentimiento informado';
+        introEl.textContent = 'Revisa el documento antes de firmar esta versión.';
         form.classList.add('d-none');
-        signatureForm.classList.remove('d-none');
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
-        setMsg('Firma pendiente de envío…', 'muted');
+        if(token){
+          setMsg('Cargando consentimiento…', 'muted');
+          fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/mobile-context`,
+            {headers:{Accept:'application/json'},credentials:'omit',cache:'no-store'})
+            .then(async response=>{
+              const json=await response.json().catch(()=>null);
+              if(!response.ok || !json?.ok) throw new Error(json?.message || 'Este QR ya no está disponible. Solicita uno nuevo.');
+              return json.data;
+            })
+            .then(data=>{
+              if(data.status!=='pending') throw new Error('Este QR ya fue utilizado o expiró. Solicita uno nuevo.');
+              consentReviewFrame.srcdoc=String(data.review_html || '');
+              consentSigner.textContent=`${data.role_label}: ${data.signer_name || 'Médico responsable'}`;
+              signatureRole.textContent=consentSigner.textContent;
+              consentReview.classList.remove('d-none');
+              setMsg('Lee el consentimiento y continúa para firmarlo.', 'muted');
+            }).catch(error=>setMsg(safeError(error,'No se pudo cargar el consentimiento.'), 'err'));
+        }
       }else if(token){
         setNowDatetime();setMsg('Verificando código…');
         fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/mobile-context`,{headers:{Accept:'application/json'},credentials:'omit',cache:'no-store'})
@@ -261,6 +298,23 @@
             setMsg(pending?'Selecciona el documento. Se enviará sólo cuando presiones Enviar documento.':({expired:'El código expiró. Genera uno nuevo en tu computadora.',cancelled:'Este código fue cancelado.',uploaded:'Documento recibido. Este código ya fue utilizado.',consumed:'Documento recibido. Este código ya fue utilizado.'})[data.status]||'Este código ya no está disponible.',pending?'muted':'err');
           }).catch(error=>setMsg(error.message,'err'));
       }
+
+      consentContinue?.addEventListener('click',async()=>{
+        consentContinue.disabled=true;
+        setMsg('Confirmando revisión…', 'muted');
+        try{
+          const response=await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/review`,
+            {method:'POST',headers:{Accept:'application/json'},credentials:'omit'});
+          const json=await response.json().catch(()=>null);
+          if(!response.ok || !json?.ok) throw new Error(json?.message || 'No se pudo confirmar la revisión.');
+          consentReview.classList.add('d-none');
+          signatureForm.classList.remove('d-none');
+          setMsg('Firma el consentimiento mostrado y confirma.', 'muted');
+        }catch(error){
+          consentContinue.disabled=false;
+          setMsg(safeError(error,'No se pudo continuar a la firma.'), 'err');
+        }
+      });
 
       const selectFile=input=>{
         const file=input.files?.[0]||null;
@@ -321,12 +375,11 @@
 
       signatureForm?.addEventListener('submit', async (event)=>{
         event.preventDefault();
-        if(!signatureHasStroke){
-          setMsg('Captura una firma antes de enviar.', 'err');
+        if(!signatureHasStroke || !window.mxmedConsentSignatureBinding?.hasInk(signatureCanvas)){
+          setMsg('Dibuja una firma legible antes de confirmar.', 'err');
           return;
         }
         const signatureData = signatureCanvas.toDataURL('image/png');
-        const signerName = String(signatureSignerName?.value || '').trim();
         signatureSubmit.disabled = true;
         setMsg('Enviando firma…', 'muted');
         try{
@@ -339,8 +392,7 @@
             credentials: 'same-origin',
             body: JSON.stringify({
               signature_data: signatureData,
-              signer_name: signerName || null,
-              signed_at: new Date().toISOString()
+              reviewed: true
             })
           });
           const json = await resp.json().catch(()=> null);
@@ -348,13 +400,12 @@
             const message = String((json && (json.message || (json.error && json.error.message) || json.error)) || `HTTP ${resp.status}`).trim();
             throw new Error(message || 'No se pudo enviar la firma.');
           }
-          setMsg('Firma enviada correctamente. Ya puedes volver a tu computadora.', 'ok');
+          setMsg('Firma recibida correctamente. Ya puedes volver a tu computadora.', 'ok');
           signatureSubmit.disabled = true;
-          signatureSignerName.disabled = true;
           signatureCanvas.style.pointerEvents = 'none';
           signatureClear.disabled = true;
         }catch(error){
-          setMsg(String((error && error.message) || 'No se pudo enviar la firma.'), 'err');
+          setMsg(safeError(error,'No se pudo enviar la firma.'), 'err');
           signatureSubmit.disabled = false;
         }
       });

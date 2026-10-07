@@ -764,6 +764,20 @@ function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
         $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN signature_signed_at DATETIME DEFAULT NULL");
     } catch (Throwable $e) {
     }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS clinical_consent_qr_sessions (
+        token_id INT NOT NULL PRIMARY KEY, consent_uuid CHAR(36) NOT NULL,
+        draft_ref CHAR(36) DEFAULT NULL, draft_version INT DEFAULT NULL,
+        patient_id VARCHAR(128) NOT NULL, doctor_id VARCHAR(64) NOT NULL,
+        actor_user_id VARCHAR(64) NOT NULL, role VARCHAR(32) NOT NULL,
+        signer_authority VARCHAR(512) NOT NULL, signer_name VARCHAR(191) NOT NULL,
+        content_fingerprint CHAR(64) NOT NULL,
+        fingerprint_version TINYINT NOT NULL DEFAULT 1, document_date VARCHAR(32) NOT NULL,
+        review_html MEDIUMTEXT NOT NULL, review_html_sha256 CHAR(64) NOT NULL,
+        artifact_digest CHAR(64) DEFAULT NULL, reviewed_at DATETIME DEFAULT NULL,
+        invalidated_at DATETIME DEFAULT NULL,
+        created_at DATETIME NOT NULL,
+        KEY idx_consent_qr_identity (consent_uuid,patient_id,doctor_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 function clinical_note_capture_datetime_to_iso(?string $value): ?string
@@ -7864,10 +7878,11 @@ try {
     }
 
     if (($segments[0] ?? '') === 'note-capture-tokens') {
+        require_once __DIR__ . '/../_lib/clinical_consent_qr.php';
         $captureDoctorContext = null;
         $desktopOperation = ($method === 'POST' && count($segments) === 1)
             || ($method === 'GET' && count($segments) === 2)
-            || ($method === 'POST' && count($segments) === 3 && in_array($segments[2], ['cancel', 'consume'], true));
+            || ($method === 'POST' && count($segments) === 3 && in_array($segments[2], ['cancel', 'consume', 'invalidate'], true));
         if ($desktopOperation) {
             $captureDoctorContext = clinical_require_doctor_context('note-capture-tokens');
             if ($captureDoctorContext === null) {
@@ -7991,6 +8006,23 @@ try {
             $expiresAt = gmdate('Y-m-d H:i:s', time() + $expiresInSec);
             $noteContextNorm = strtolower($noteContext);
             $isConsentRemoteSignatureContext = strpos($noteContextNorm, 'consentimiento_firma_remota') === 0;
+            $consentQrSession = null;
+            if ($isConsentRemoteSignatureContext) {
+                // Consent QR sessions are limited to one active review window.
+                $expiresAt = gmdate('Y-m-d H:i:s', time() + min($expiresInSec, 900));
+                try {
+                    $consentQrSession = clinical_consent_qr_prepare($body, $captureDoctorContext,
+                        $patientId, $noteContextNorm);
+                    if (!clinical_consent_qr_draft_current($pdo, $consentQrSession)) {
+                        throw new InvalidArgumentException('CONSENT_QR_DRAFT_STALE');
+                    }
+                } catch (InvalidArgumentException $error) {
+                    clinical_send_response(['ok' => false, 'error' => $error->getMessage(),
+                        'message' => 'Guarda los anexos y revisa el consentimiento antes de generar el QR.',
+                        'data' => null], 422);
+                    return;
+                }
+            }
             $mobilePath = '/public/note-capture.html?token=' . rawurlencode($token);
             if ($isConsentRemoteSignatureContext) {
                 $mobilePath .= '&mode=signature';
@@ -8003,6 +8035,7 @@ try {
                 }
             }
             try {
+                if ($consentQrSession !== null) $pdo->beginTransaction();
                 $stmt = $pdo->prepare("
                     INSERT INTO clinical_note_capture_tokens (
                         token,
@@ -8046,7 +8079,12 @@ try {
                 $stmt->bindValue(':created_at', $now, PDO::PARAM_STR);
                 $stmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
                 $stmt->execute();
+                if ($consentQrSession !== null) {
+                    clinical_consent_qr_insert($pdo, (int)$pdo->lastInsertId(), $consentQrSession);
+                    $pdo->commit();
+                }
             } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'server_error',
@@ -8088,6 +8126,34 @@ try {
                 return;
             }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            if (str_starts_with((string)$row['note_context'], 'consentimiento_firma_remota')) {
+                if ((string)$row['status'] !== 'pending') {
+                    clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_UNAVAILABLE',
+                        'message' => 'Este QR ya fue utilizado, cancelado o expiró. Solicita uno nuevo.'],
+                        (string)$row['status'] === 'expired' ? 410 : 409);
+                    return;
+                }
+                $session = clinical_consent_qr_session($pdo, (int)$row['id']);
+                if ($session === null || !clinical_consent_qr_draft_current($pdo, $session)
+                    || trim((string)($session['invalidated_at'] ?? '')) !== ''
+                    || !hash_equals((string)$session['review_html_sha256'],
+                    hash('sha256', (string)$session['review_html']))) {
+                    clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_REVIEW_UNAVAILABLE',
+                        'message' => 'No se pudo verificar el consentimiento. Solicita un QR nuevo.'], 409);
+                    return;
+                }
+                $signer = json_decode((string)$session['signer_authority'], true);
+                header('Cache-Control: no-store');
+                clinical_send_response(['ok' => true, 'data' => [
+                    'status' => $row['status'],
+                    'expires_at' => clinical_note_capture_datetime_to_iso($row['expires_at']),
+                    'role_label' => $session['role'] === 'doctor' ? 'Firma del médico'
+                        : (($signer[0] ?? '') === 'paciente' ? 'Firma del paciente' : 'Firma del representante'),
+                    'signer_name' => (string)$session['signer_name'],
+                    'review_html' => $session['review_html'],
+                ]], 200);
+                return;
+            }
             try { $classification = clinical_capture_classification_from_context((string)$row['note_context']); }
             catch (InvalidArgumentException) {
                 clinical_send_response(['ok' => false, 'error' => 'CAPTURE_CLASSIFICATION_INVALID', 'data' => null], 410);
@@ -8099,6 +8165,28 @@ try {
                 'classification' => $classification ?? ['id' => null, 'label' => 'Documento clínico',
                     'mime_types' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']],
             ]], 200);
+            return;
+        }
+
+        if ($method === 'POST' && count($segments) === 3 && $segments[2] === 'review') {
+            $row = clinical_note_capture_token_fetch($pdo, trim(rawurldecode((string)$segments[1])));
+            if (!is_array($row)) {
+                clinical_send_response(['ok' => false, 'error' => 'not_found'], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            $session = clinical_consent_qr_session($pdo, (int)$row['id']);
+            if ($session === null || $row['status'] !== 'pending'
+                || trim((string)($session['invalidated_at'] ?? '')) !== ''
+                || !clinical_consent_qr_draft_current($pdo, $session)) {
+                clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_UNAVAILABLE',
+                    'message' => 'Este QR ya no está disponible. Solicita uno nuevo.'], 409);
+                return;
+            }
+            $stmt = $pdo->prepare('UPDATE clinical_consent_qr_sessions SET reviewed_at=UTC_TIMESTAMP()
+                WHERE token_id=? AND reviewed_at IS NULL');
+            $stmt->execute([(int)$row['id']]);
+            clinical_send_response(['ok' => true, 'data' => ['reviewed' => true]], 200);
             return;
         }
 
@@ -8135,17 +8223,55 @@ try {
                 trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')), 'note-capture-tokens')) {
                 return;
             }
+            if (!clinical_consent_qr_desktop_allowed($pdo, $row, $captureDoctorContext)) {
+                clinical_send_response(['ok' => false, 'error' => 'forbidden',
+                    'message' => 'Esta firma pertenece a otro médico.'], 403);
+                return;
+            }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
             clinical_send_response([
                 'ok' => true,
                 'error' => null,
                 'message' => 'note capture token status',
-                'data' => clinical_note_capture_status_data($row),
+                'data' => clinical_consent_qr_status($pdo, $row),
                 'meta' => [
                     'method' => 'GET',
                     'route' => 'note-capture-tokens/{token}',
                 ],
             ], 200);
+            return;
+        }
+
+        if ($method === 'POST' && count($segments) === 3 && $segments[2] === 'invalidate') {
+            $row = clinical_note_capture_token_fetch($pdo, trim(rawurldecode((string)$segments[1])));
+            if (!is_array($row)) {
+                clinical_send_response(['ok' => false, 'error' => 'not_found'], 404);
+                return;
+            }
+            if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext,
+                trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')),
+                'note-capture-tokens')) {
+                return;
+            }
+            if (!clinical_consent_qr_desktop_allowed($pdo, $row, $captureDoctorContext)) {
+                clinical_send_response(['ok' => false, 'error' => 'forbidden'], 403);
+                return;
+            }
+            $session = clinical_consent_qr_session($pdo, (int)$row['id']);
+            if ($session === null || !in_array((string)$row['status'], ['pending', 'uploaded', 'cancelled'], true)) {
+                clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_ALREADY_CONSUMED',
+                    'message' => 'Esta firma ya pertenece a un documento guardado.'], 409);
+                return;
+            }
+            $stmt = $pdo->prepare('UPDATE clinical_consent_qr_sessions
+                SET invalidated_at=COALESCE(invalidated_at,UTC_TIMESTAMP()) WHERE token_id=?');
+            $stmt->execute([(int)$row['id']]);
+            if ($row['status'] === 'pending') {
+                $cancel = $pdo->prepare("UPDATE clinical_note_capture_tokens SET status='cancelled',
+                    cancelled_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=? AND status='pending'");
+                $cancel->execute([(int)$row['id']]);
+            }
+            clinical_send_response(['ok' => true, 'data' => ['invalidated' => true]], 200);
             return;
         }
 
@@ -8180,6 +8306,10 @@ try {
             }
             if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext,
                 trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')), 'note-capture-tokens')) {
+                return;
+            }
+            if (!clinical_consent_qr_desktop_allowed($pdo, $row, $captureDoctorContext)) {
+                clinical_send_response(['ok' => false, 'error' => 'forbidden'], 403);
                 return;
             }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
@@ -8282,8 +8412,28 @@ try {
                 trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')), 'note-capture-tokens')) {
                 return;
             }
+            if (!clinical_consent_qr_desktop_allowed($pdo, $row, $captureDoctorContext)) {
+                clinical_send_response(['ok' => false, 'error' => 'forbidden'], 403);
+                return;
+            }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
             $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            $consumeQrSession = str_starts_with((string)$row['note_context'], 'consentimiento_firma_remota')
+                ? clinical_consent_qr_session($pdo, (int)$row['id']) : null;
+            if ($consumeQrSession !== null) {
+                $linked = clinical_v1_document_record_by_token($pdo,
+                    $noteDocumentUuid !== '' ? $noteDocumentUuid : (string)$noteDocumentId);
+                $linkedPayload = is_array($linked) ? json_decode((string)$linked['payload_json'], true) : null;
+                $linkedRole = $consumeQrSession['role'] === 'doctor' ? 'doctor' : 'patient';
+                if (!is_array($linked) || (string)$linked['patient_id'] !== (string)$row['patient_id']
+                    || (string)$linked['document_type'] !== 'consentimiento_informado'
+                    || (string)($linkedPayload['qr_consent_uuid'] ?? '') !== (string)$consumeQrSession['consent_uuid']
+                    || (int)($linkedPayload['signatures'][$linkedRole]['binding']['token_id'] ?? 0) !== (int)$row['id']) {
+                    clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_DOCUMENT_MISMATCH',
+                        'message' => 'La firma no corresponde a este consentimiento.'], 409);
+                    return;
+                }
+            }
             if ($status === 'consumed') {
                 clinical_send_response([
                     'ok' => true,
@@ -8384,10 +8534,16 @@ try {
             $status = strtolower(trim((string)($row['status'] ?? 'pending')));
             if ($status !== 'pending') {
                 $statusCode = ($status === 'expired') ? 410 : 409;
+                $signatureStatusMessage = match ($status) {
+                    'expired' => 'Este QR expiró. Solicita uno nuevo.',
+                    'cancelled' => 'Este QR fue cancelado. Solicita uno nuevo.',
+                    'uploaded', 'consumed' => 'Este QR ya fue utilizado.',
+                    default => 'Este QR no está disponible. Solicita uno nuevo.',
+                };
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'conflict',
-                    'message' => 'token no disponible para firma (' . $status . ')',
+                    'message' => $signatureStatusMessage,
                     'data' => null,
                     'meta' => [
                         'method' => 'POST',
@@ -8408,6 +8564,18 @@ try {
                         'route' => 'note-capture-tokens/{token}/signature',
                     ],
                 ], 409);
+                return;
+            }
+            $qrSession = clinical_consent_qr_session($pdo, (int)$row['id']);
+            if ($qrSession === null || (string)$qrSession['patient_id'] !== (string)$row['patient_id']
+                || (string)$qrSession['role'] !== ($noteContext === 'consentimiento_firma_remota:doctor' ? 'doctor' : 'patient')
+                || (int)$qrSession['fingerprint_version'] !== 1
+                || trim((string)($qrSession['reviewed_at'] ?? '')) === ''
+                || trim((string)($qrSession['invalidated_at'] ?? '')) !== ''
+                || !hash_equals((string)$qrSession['review_html_sha256'], hash('sha256', (string)$qrSession['review_html']))
+                || !clinical_consent_qr_draft_current($pdo, $qrSession)) {
+                clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_STALE',
+                    'message' => 'El consentimiento cambió o no fue revisado. Solicita un QR nuevo.'], 409);
                 return;
             }
             $bodyResult = clinical_read_json_body();
@@ -8452,19 +8620,17 @@ try {
                 ], 400);
                 return;
             }
-            $signerName = trim((string)($body['signer_name'] ?? ''));
-            $signedAtRaw = trim((string)($body['signed_at'] ?? ''));
-            if ($signedAtRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $signedAtRaw) === 1) {
-                $signedAtRaw = str_replace('T', ' ', $signedAtRaw) . ':00';
+            $artifactDigest = clinical_consent_binding_artifact_digest($signatureData);
+            if ($artifactDigest === '') {
+                clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_SIGNATURE_INVALID',
+                    'message' => 'Dibuja una firma legible antes de confirmar.'], 422);
+                return;
             }
-            if ($signedAtRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/', $signedAtRaw) === 1) {
-                $signedAtRaw .= ':00';
-            }
-            if ($signedAtRaw === '' || preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $signedAtRaw) !== 1) {
-                $signedAtRaw = gmdate('Y-m-d H:i:s');
-            }
+            $signerName = (string)$qrSession['signer_name'];
+            $signedAtRaw = gmdate('Y-m-d H:i:s');
             $uploadedAt = gmdate('Y-m-d H:i:s');
             try {
+                $pdo->beginTransaction();
                 $stmt = $pdo->prepare("
                     UPDATE clinical_note_capture_tokens
                     SET
@@ -8475,7 +8641,7 @@ try {
                         signature_signed_at = :signature_signed_at,
                         preview_url = NULL,
                         updated_at = :updated_at
-                    WHERE token = :token
+                    WHERE token = :token AND status = 'pending' AND expires_at > UTC_TIMESTAMP()
                 ");
                 $stmt->bindValue(':uploaded_at', $uploadedAt, PDO::PARAM_STR);
                 $stmt->bindValue(':signature_image_data', $signatureData, PDO::PARAM_STR);
@@ -8488,11 +8654,18 @@ try {
                 $stmt->bindValue(':updated_at', $uploadedAt, PDO::PARAM_STR);
                 $stmt->bindValue(':token', $token, PDO::PARAM_STR);
                 $stmt->execute();
+                if ($stmt->rowCount() !== 1) throw new RuntimeException('CONSENT_QR_TOKEN_REPLAY');
+                $digestWrite = $pdo->prepare('UPDATE clinical_consent_qr_sessions SET artifact_digest=?
+                    WHERE token_id=? AND artifact_digest IS NULL AND reviewed_at IS NOT NULL');
+                $digestWrite->execute([$artifactDigest, (int)$row['id']]);
+                if ($digestWrite->rowCount() !== 1) throw new RuntimeException('CONSENT_QR_SESSION_REPLAY');
+                $pdo->commit();
             } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'server_error',
-                    'message' => trim((string)$e->getMessage()) ?: 'no se pudo guardar la firma remota',
+                    'message' => 'No se pudo aceptar la firma. Solicita un QR nuevo.',
                     'data' => null,
                     'meta' => [
                         'method' => 'POST',
