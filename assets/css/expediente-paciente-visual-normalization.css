@@ -5143,6 +5143,9 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 /* CONS-TPL01: physician template selector and editor; no patient document layout changes. */
 #p-expediente #modalConsentTemplateFlow .ci-template-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
 #p-expediente #modalConsentTemplateFlow .ci-template-choices .btn{min-height:48px}
+#p-expediente #modalConsentTemplateFlow .ci-template-selector-tools{display:flex;align-items:flex-end;gap:.65rem;margin-bottom:.75rem}
+#p-expediente #modalConsentTemplateFlow .ci-template-selector-search{flex:1;min-width:0}
+#p-expediente #modalConsentTemplateFlow .ci-template-selector-tools .btn{white-space:nowrap}
 #p-expediente #modalConsentTemplateFlow .ci-template-list{display:grid;gap:.65rem;max-height:55vh;overflow:auto}
 #p-expediente #modalConsentTemplateFlow .ci-template-row{display:flex;align-items:center;gap:.8rem;padding:.75rem;border:1px solid #c8e2e9;border-radius:10px;background:#f8fcfd}
 #p-expediente #modalConsentTemplateFlow .ci-template-row__icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:10px;background:#e5f7fa;color:#008ca4;font-size:25px}
@@ -5153,4 +5156,11 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #modalConsentTemplateFlow .ci-template-editor__field{display:grid;gap:.25rem}
 #p-expediente #modalConsentTemplateFlow .ci-template-editor__field .form-label{margin:0}
 #p-expediente #modalConsentTemplateFlow :is(button,input,select,textarea):focus-visible{outline:2px solid #005a76;outline-offset:2px}
-@media(max-width:600px){#p-expediente #modalConsentTemplateFlow .ci-template-row{align-items:flex-start;flex-wrap:wrap}#p-expediente #modalConsentTemplateFlow .ci-template-row__actions{width:100%;justify-content:flex-start}}
+@media(max-width:600px){#p-expediente #modalConsentTemplateFlow .ci-template-row{align-items:flex-start;flex-wrap:wrap}#p-expediente #modalConsentTemplateFlow .ci-template-row__actions{width:100%;justify-content:flex-start}#p-expediente #modalConsentTemplateFlow .ci-template-selector-tools{align-items:stretch;flex-direction:column}}
+
+/* CONS-TPL03: save reusable consent content without replacing the clinical form. */
+#p-expediente #modalConsentimientoInformado .ci-save-template-overlay{position:absolute;inset:0;z-index:3;display:grid;place-items:center;padding:1rem;background:rgba(3,40,65,.58)}
+#p-expediente #modalConsentimientoInformado .ci-save-template-dialog{width:min(100%,520px);max-height:100%;overflow:auto;padding:1.25rem;border:1px solid #b8dce6;border-radius:12px;background:#fff;box-shadow:0 15px 40px rgba(0,31,53,.22)}
+#p-expediente #modalConsentimientoInformado .ci-save-template-dialog h5{margin:0 0 .65rem;color:#073555}
+#p-expediente #modalConsentimientoInformado .ci-save-template-dialog__actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+#p-expediente #modalConsentimientoInformado .ci-save-template-dialog :is(button,input):focus-visible{outline:2px solid #005a76;outline-offset:2px}

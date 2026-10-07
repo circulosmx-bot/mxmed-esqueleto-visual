@@ -9080,10 +9080,12 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_prev" disabled>Anterior</button>
                         <button type="button" class="btn btn-primary btn-sm" id="ci_next">Continuar</button>
                         <button type="button" class="btn btn-success btn-sm d-none" id="ci_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" id="ci_save_as_template">Guardar como plantilla</button>
                         <button type="button" class="btn btn-primary btn-sm d-none" id="ci_emit">Emitir consentimiento</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ci_cancel">Cancelar</button>
                       </div>
                     </div>
+                    <div class="alert alert-success py-2 mt-2 d-none" id="ci_save_template_status" role="status" aria-live="polite"></div>
                     <div class="alert alert-danger py-2 mt-2 d-none" id="ci_emit_errors"></div>
                   </div>
                 </div>
@@ -10129,6 +10131,19 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="ci_modal_body_slot"></div>
+                      <div class="ci-save-template-overlay d-none" id="ci_save_template_overlay" role="dialog" aria-modal="true" aria-labelledby="ci_save_template_heading" aria-describedby="ci_save_template_help">
+                        <div class="ci-save-template-dialog">
+                          <h5 id="ci_save_template_heading">Guardar como plantilla</h5>
+                          <p id="ci_save_template_help" class="text-muted small">Se guardará únicamente el contenido reutilizable. Los datos del paciente, firmas y anexos no se incluirán.</p>
+                          <label class="form-label fw-semibold" for="ci_save_template_name">Nombre de la plantilla</label>
+                          <input class="form-control" id="ci_save_template_name" type="text" maxlength="160" required>
+                          <div class="alert alert-danger mt-3 mb-0 d-none" id="ci_save_template_error" role="alert"></div>
+                          <div class="ci-save-template-dialog__actions">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_save_template_cancel">Cancelar</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="ci_save_template_confirm">Guardar plantilla</button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

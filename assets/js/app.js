@@ -42105,6 +42105,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       notice: root.querySelector('#ci_wizard_notice'),
       ctxNotice: root.querySelector('#ci_context_notice'),
       stepLabel: root.querySelector('#ci_step_label'),
+      saveAsTemplate: root.querySelector('#ci_save_as_template'),
+      saveTemplateStatus: root.querySelector('#ci_save_template_status'),
+      saveTemplateOverlay: pane.querySelector('#ci_save_template_overlay'),
+      saveTemplateName: pane.querySelector('#ci_save_template_name'),
+      saveTemplateError: pane.querySelector('#ci_save_template_error'),
+      saveTemplateCancel: pane.querySelector('#ci_save_template_cancel'),
+      saveTemplateConfirm: pane.querySelector('#ci_save_template_confirm'),
       step1: root.querySelector('#ci_step_1'),
       step2: root.querySelector('#ci_step_2'),
       fullView: root.querySelector('#ci_full_view'),
@@ -42634,6 +42641,34 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
         { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
       ]
+    };
+    // Single presentation and extraction whitelist for personal consent templates.
+    const consentTemplateFields = [
+      ['title','Título','input'],['procedimiento','Descripción del procedimiento','textarea'],
+      ['template_key','Tipo de procedimiento','select'],['objetivo','Objetivo','input'],
+      ['riesgos','Riesgos generales','textarea'],['risk_comunes','Riesgos comunes','textarea'],
+      ['risk_poco_frecuentes','Riesgos poco frecuentes','textarea'],
+      ['risk_raros_graves','Complicaciones posibles','textarea'],
+      ['beneficios_esperados','Beneficios esperados','textarea'],['alternativas','Alternativas','textarea'],
+      ['consecuencias_no_aceptar','Consecuencias de no aceptar','textarea'],
+      ['autorizacion_contingencias','Autorización de contingencias','checkbox']
+    ];
+    const extractReusableConsentContent = ()=>{
+      const content = {};
+      for(const [key,,kind] of consentTemplateFields){
+        content[key] = kind === 'checkbox' ? !!state.form[key]
+          : (key === 'template_key' ? sanitizeText(els.template?.value || '') : String(state.form[key] || ''));
+      }
+      return content;
+    };
+    const hasReusableConsentContent = ()=>{
+      const content = extractReusableConsentContent();
+      return consentTemplateFields.some(([key,,kind])=> key !== 'template_key' && kind !== 'checkbox'
+        && content[key].trim() !== '');
+    };
+    const refreshSaveAsTemplateAvailability = ()=>{
+      els.saveAsTemplate?.classList.toggle('d-none', !((state.mode === 'full' || state.step === 2)
+        && hasReusableConsentContent()));
     };
     const informeState = {
       step: 1,
@@ -45467,6 +45502,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       syncTemplateControls();
       syncSignerControls();
       syncWitnessControls();
+      refreshSaveAsTemplateAvailability();
     };
 
     const syncTemplateControls = ()=>{
@@ -46053,6 +46089,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.stepLabel){
         els.stepLabel.textContent = isFullMode ? 'Vista completa' : `Paso ${state.step} de 2`;
       }
+      refreshSaveAsTemplateAvailability();
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.wizard));
     };
 
@@ -46155,6 +46192,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         testigo_2_nombre: '',
         confirm_informed: false
       };
+      if(els.saveTemplateStatus){
+        els.saveTemplateStatus.textContent = '';
+        els.saveTemplateStatus.classList.add('d-none');
+      }
       applyConsentRiskDefaults({ force: true });
       clearConsentValidationFeedback();
       syncFormStateToInputs();
@@ -46238,16 +46279,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
 
     // CONS-TPL01: templates are private reusable input, never clinical documents.
-    const consentTemplateFields = [
-      ['title','Título','input'],['procedimiento','Descripción del procedimiento','textarea'],
-      ['template_key','Tipo de procedimiento','select'],['objetivo','Objetivo','input'],
-      ['riesgos','Riesgos generales','textarea'],['risk_comunes','Riesgos comunes','textarea'],
-      ['risk_poco_frecuentes','Riesgos poco frecuentes','textarea'],
-      ['risk_raros_graves','Complicaciones posibles','textarea'],
-      ['beneficios_esperados','Beneficios esperados','textarea'],['alternativas','Alternativas','textarea'],
-      ['consecuencias_no_aceptar','Consecuencias de no aceptar','textarea'],
-      ['autorizacion_contingencias','Autorización de contingencias','checkbox']
-    ];
     const consentTemplateBaseUrl = ()=>{
       const doctorId = resolveCanonicalDocumentsDoctorId();
       return doctorId ? `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/consent-templates` : '';
@@ -46279,6 +46310,79 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return json.data;
     };
+    let saveTemplatePending = false;
+    let saveTemplateReturnFocus = null;
+    let saveTemplateContent = null;
+    let consentBodyWasInert = false;
+    const closeSaveAsTemplateDialog = (restoreFocus = true)=>{
+      if(!els.saveTemplateOverlay || els.saveTemplateOverlay.classList.contains('d-none')) return;
+      els.saveTemplateOverlay.classList.add('d-none');
+      if(els.consentModalBodySlot) els.consentModalBodySlot.inert = consentBodyWasInert;
+      if(restoreFocus && saveTemplateReturnFocus?.isConnected) saveTemplateReturnFocus.focus();
+      saveTemplateReturnFocus = null;
+      saveTemplateContent = null;
+    };
+    const openSaveAsTemplateDialog = ()=>{
+      if(!els.saveTemplateOverlay || !els.consentModalEl?.classList.contains('show')
+        || state.saving || !hasReusableConsentContent()) return;
+      saveTemplateContent = extractReusableConsentContent();
+      saveTemplateReturnFocus = els.saveAsTemplate;
+      consentBodyWasInert = !!els.consentModalBodySlot?.inert;
+      if(els.consentModalBodySlot) els.consentModalBodySlot.inert = true;
+      els.saveTemplateName.value = '';
+      els.saveTemplateError.textContent = '';
+      els.saveTemplateError.classList.add('d-none');
+      els.saveTemplateOverlay.classList.remove('d-none');
+      window.requestAnimationFrame(()=>els.saveTemplateName?.focus());
+    };
+    els.saveTemplateCancel?.addEventListener('click',()=>{
+      if(!saveTemplatePending) closeSaveAsTemplateDialog();
+    });
+    els.saveTemplateOverlay?.addEventListener('keydown',(event)=>{
+      if(event.key === 'Escape'){
+        event.preventDefault();
+        event.stopPropagation();
+        if(!saveTemplatePending) closeSaveAsTemplateDialog();
+      }else if(event.key === 'Tab'){
+        const controls = [els.saveTemplateName,els.saveTemplateCancel,els.saveTemplateConfirm]
+          .filter((control)=>control && !control.disabled);
+        const index = controls.indexOf(document.activeElement);
+        if(!controls.length) return;
+        event.preventDefault();
+        const next = event.shiftKey ? (index <= 0 ? controls.length - 1 : index - 1)
+          : (index < 0 || index === controls.length - 1 ? 0 : index + 1);
+        controls[next].focus();
+      }else if(event.key === 'Enter' && event.target === els.saveTemplateName){
+        event.preventDefault();
+        els.saveTemplateConfirm?.click();
+      }
+    });
+    els.saveTemplateConfirm?.addEventListener('click',async ()=>{
+      if(saveTemplatePending || !els.saveTemplateName?.reportValidity() || !saveTemplateContent) return;
+      saveTemplatePending = true;
+      els.saveTemplateConfirm.disabled = true;
+      els.saveTemplateCancel.disabled = true;
+      els.saveTemplateError.textContent = '';
+      els.saveTemplateError.classList.add('d-none');
+      try{
+        await consentTemplateRequest('', 'POST', {
+          template_name:els.saveTemplateName.value.trim(), content:saveTemplateContent
+        });
+        closeSaveAsTemplateDialog();
+        if(els.saveTemplateStatus){
+          els.saveTemplateStatus.textContent = 'Plantilla guardada';
+          els.saveTemplateStatus.classList.remove('d-none');
+          window.requestAnimationFrame(()=>els.saveTemplateStatus?.scrollIntoView({block:'nearest'}));
+        }
+      }catch(error){
+        els.saveTemplateError.textContent = error?.message || 'No se pudo guardar la plantilla. Revisa la información e inténtalo nuevamente.';
+        els.saveTemplateError.classList.remove('d-none');
+      }finally{
+        saveTemplatePending = false;
+        els.saveTemplateConfirm.disabled = false;
+        els.saveTemplateCancel.disabled = false;
+      }
+    });
     const templateButton = (label, action, style = 'btn-outline-primary')=>{
       const button = document.createElement('button');
       button.type = 'button';
@@ -46306,14 +46410,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const title = els.templateFlowTitle;
       const modal = window.bootstrap.Modal.getOrCreateInstance(els.templateFlowModalEl);
       const returnFocus = document.activeElement;
-      let view = 'choice', editorRecord = null, notice = '', successNotice = '', result = { action:'cancel' };
+      let view = 'choice', editorRecord = null, editorReturnView = 'manage';
+      let notice = '', successNotice = '', result = { action:'cancel' };
       let records = [];
+      const normalizeTemplateSearch = (value)=> String(value || '').toLocaleLowerCase('es')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+      const newestTemplateFirst = (left,right)=>
+        String(right.updated_at || '').localeCompare(String(left.updated_at || ''))
+          || String(left.template_name || '').localeCompare(String(right.template_name || ''),'es',{sensitivity:'base'})
+          || String(left.uuid || '').localeCompare(String(right.uuid || ''));
       const clear = (heading)=>{ title.textContent = heading; body.replaceChildren(); footer.replaceChildren(); };
       const paragraph = (copy, className = 'text-muted small')=>{
         const el = document.createElement('p'); el.className = className; el.textContent = copy; body.append(el); return el;
       };
       const row = (item, management)=>{
         const wrapper = document.createElement('div'); wrapper.className = 'ci-template-row';
+        wrapper.dataset.templateSource = item.source || 'personal';
         const icon = document.createElement('span'); icon.className = 'material-symbols-outlined ci-template-row__icon';
         icon.setAttribute('aria-hidden','true'); icon.textContent = 'fact_check';
         const copy = document.createElement('div'); copy.className = 'ci-template-row__copy';
@@ -46363,14 +46475,37 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           try { records = await consentTemplateRequest(target === 'manage' ? '?include_archived=1' : ''); }
           catch(error){ paragraph(error.message,'alert alert-danger'); records = []; loadFailed = true; }
           const list = document.createElement('div'); list.className = 'ci-template-list';
-          records.forEach((item)=>list.append(row(item,target === 'manage')));
+          if(target === 'selector'){
+            records = records.filter((item)=>item.status === 'active').sort(newestTemplateFirst);
+            const tools = document.createElement('div'); tools.className = 'ci-template-selector-tools';
+            const searchWrap = document.createElement('div'); searchWrap.className = 'ci-template-selector-search';
+            const searchLabel = document.createElement('label'); searchLabel.className = 'form-label small fw-semibold mb-1';
+            searchLabel.htmlFor = 'ci_tpl_search'; searchLabel.textContent = 'Buscar plantilla';
+            const search = document.createElement('input'); search.id = 'ci_tpl_search'; search.type = 'search';
+            search.className = 'form-control'; search.placeholder = 'Buscar plantilla...';
+            search.setAttribute('aria-controls','ci_tpl_selector_list');
+            searchWrap.append(searchLabel,search);
+            tools.append(searchWrap,templateButton('+ Nueva plantilla','create','btn-outline-primary'));
+            body.append(tools);
+            list.id = 'ci_tpl_selector_list';
+            const noMatches = paragraph('No se encontraron plantillas.','text-muted small d-none');
+            const filterRows = ()=>{
+              const query = normalizeTemplateSearch(search.value);
+              const matches = records.filter((item)=> normalizeTemplateSearch([
+                item.template_name,item.content?.title,item.content?.procedimiento].join(' ')).includes(query));
+              list.replaceChildren(...matches.map((item)=>row(item,false)));
+              noMatches.classList.toggle('d-none', !query || !!matches.length);
+            };
+            search.addEventListener('input',filterRows);
+            filterRows();
+          }else records.forEach((item)=>list.append(row(item,true)));
           if(!records.length && !loadFailed) paragraph(target === 'selector' ? 'No tienes plantillas de consentimiento guardadas.'
             : 'Aún no tienes plantillas de consentimiento.');
           body.append(list);
           footer.append(templateButton('Volver','back','btn-outline-secondary'));
           if(target === 'selector'){
             footer.append(templateButton('Continuar sin plantilla','blank','btn-outline-primary'));
-            if(!records.length) footer.append(templateButton('Crear plantilla','create','btn-primary'));
+            footer.append(templateButton('Administrar plantillas','manage','btn-outline-secondary'));
           }else footer.append(templateButton('Crear plantilla','create','btn-primary'));
         }else if(target === 'editor'){
           clear(editorRecord ? 'Editar plantilla' : 'Crear plantilla');
@@ -46401,13 +46536,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             group.append(labelEl,input); form.append(group);
           }
           body.append(form);
-          footer.append(templateButton('Volver a la lista','manage','btn-outline-secondary'),
+          footer.append(templateButton('Volver a la lista','editor-back','btn-outline-secondary'),
             templateButton('Guardar plantilla','save','btn-primary'));
         }
         if(notice){ paragraph(notice,'alert alert-danger'); notice = ''; }
         if(els.templateFlowModalEl.classList.contains('show')){
-          window.requestAnimationFrame(()=> (target === 'editor' ? body.querySelector('input') : body.querySelector('button'))?.focus()
-            || footer.querySelector('button')?.focus());
+          window.requestAnimationFrame(()=>{
+            const first = target === 'editor' ? body.querySelector('input')
+              : target === 'selector' ? body.querySelector('#ci_tpl_search') : body.querySelector('button');
+            (first || footer.querySelector('button'))?.focus();
+          });
         }
       };
       await render('choice');
@@ -46425,10 +46563,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               result = {action:'template',content:selected.content}; modal.hide(); return;
             }
             if(action === 'back'){ await render('choice'); return; }
+            if(action === 'editor-back'){ await render(editorReturnView); return; }
             if(action === 'selector' || action === 'manage'){ await render(action); return; }
-            if(action === 'create'){ editorRecord = null; await render('editor'); return; }
+            if(action === 'create'){ editorRecord = null; editorReturnView = view; await render('editor'); return; }
             const current = records.find((item)=>item.uuid === button.dataset.tplUuid);
-            if(action === 'edit' && current){ editorRecord = await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}`); await render('editor'); return; }
+            if(action === 'edit' && current){ editorRecord = await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}`); editorReturnView = 'manage'; await render('editor'); return; }
             if(action === 'duplicate' && current){ await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/duplicate`,'POST',{}); await render('manage'); return; }
             if(action === 'archive' && current){ await consentTemplateRequest(`/${encodeURIComponent(current.uuid)}/archive`,'POST',{expected_version:current.version}); await render('manage'); return; }
             if(action === 'save'){
@@ -46442,7 +46581,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               const payload = {template_name:form.elements.namedItem('template_name').value,content};
               if(editorRecord) payload.expected_version = editorRecord.version;
               await consentTemplateRequest(editorRecord ? `/${encodeURIComponent(editorRecord.uuid)}` : '',editorRecord ? 'PUT' : 'POST',payload);
-              editorRecord = null; successNotice = 'Plantilla guardada'; await render('manage');
+              editorRecord = null; successNotice = 'Plantilla guardada'; await render(editorReturnView);
             }
           }catch(error){
             if(action === 'save' && view === 'editor'){
@@ -54040,6 +54179,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     });
     els.consentModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      closeSaveAsTemplateDialog(false);
       resetWizard();
     });
 
@@ -55135,6 +55275,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     root.addEventListener('click', (event)=>{
       if(event.defaultPrevented) return;
+      const saveAsTemplateBtn = event.target.closest('#ci_save_as_template');
+      if(saveAsTemplateBtn){
+        event.preventDefault();
+        openSaveAsTemplateDialog();
+        return;
+      }
       const saveBtn = event.target.closest('#ci_save');
       if(saveBtn){
         event.preventDefault();
