@@ -52977,6 +52977,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
     };
 
+    const consentLegalClosing = 'Declaro que la información me fue explicada en lenguaje claro, que tuve oportunidad de realizar preguntas y resolver mis dudas, y que tomo esta decisión de manera libre e informada.';
+    const consentContingencySentence = (authorized)=>
+      `${authorized ? 'Autorizo' : 'No autorizo'} la atención de contingencias y urgencias derivadas del procedimiento.`;
+    const consentVisibleSignerRelation = (relation, signerTypeKey)=>{
+      const value = trimConsentInputValue(relation || '');
+      return signerTypeKey === 'paciente' || value.toLowerCase() === 'self' ? '' : value;
+    };
+    const consentLegalOpening = (signerName, signerTypeKey, signerRoleText)=> signerTypeKey === 'paciente'
+      ? `Yo, ${signerName}, paciente, declaro que recibí información suficiente, clara y comprensible sobre el procedimiento descrito en este documento, que me será realizado, así como sobre su finalidad y alcances.`
+      : `Yo, ${signerName}, en mi carácter de ${signerRoleText.toLowerCase()}, manifiesto que recibí información suficiente, clara y comprensible sobre el procedimiento descrito en este documento, que le será realizado al paciente, así como sobre su finalidad y alcances.`;
     const buildConsentLegalRenderedText = (data = {})=>{
       const nowSql = sanitizeText(data.nowSql || '');
       const eventDate = nowSql ? nowSql.slice(0, 10) : '';
@@ -52985,7 +52995,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const patientAge = trimConsentInputValue(data.patientAge || '');
       const patientSexo = trimConsentInputValue(data.patientSexo || '');
       const patientMeta = [patientAge ? `Edad: ${patientAge}` : '', patientSexo ? `Sexo: ${patientSexo}` : ''].filter(Boolean).join(' · ');
-      const consentTitle = trimConsentInputValue(data.consentTitle || 'Consentimiento informado');
       const procedureText = trimConsentInputValue(data.procedureText || '');
       const risks = trimConsentInputValue(data.risks || '');
       const benefits = trimConsentInputValue(data.benefits || '');
@@ -52995,7 +53004,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const signerType = trimConsentInputValue(data.signerTypeLabel || 'Paciente');
       const signerTypeKey = sanitizeText(data.signerTypeKey || '').toLowerCase();
       const signerName = trimConsentInputValue(data.signerName || patientName || '________________');
-      const signerRelation = trimConsentInputValue(data.signerRelation || '');
+      const signerRelation = consentVisibleSignerRelation(data.signerRelation, signerTypeKey);
       const doctorName = trimConsentInputValue(data.doctorName || 'Médico tratante');
       const doctorLicense = trimConsentInputValue(data.doctorLicense || '');
       const witness1 = trimConsentInputValue(data.witness1 || '');
@@ -53004,9 +53013,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const objective = trimConsentInputValue(data.objective || '');
       const motivo = trimConsentInputValue(data.motivo || '');
       const signerRoleText = signerRelation || signerType || 'firmante responsable';
-      const signerIntro = signerTypeKey === 'paciente'
-        ? `Yo, ${signerName}, paciente, declaro que recibí información suficiente, clara y comprensible sobre el procedimiento propuesto, su finalidad y alcances.`
-        : `Yo, ${signerName}, en mi carácter de ${signerRoleText}, manifiesto que recibí información suficiente, clara y comprensible sobre el procedimiento propuesto, su finalidad y alcances.`;
+      const signerIntro = consentLegalOpening(signerName, signerTypeKey, signerRoleText);
 
       const lines = [];
       lines.push('CONSENTIMIENTO INFORMADO');
@@ -53015,8 +53022,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       lines.push('');
       lines.push(`Paciente: ${patientName}`);
       if(patientMeta) lines.push(patientMeta);
-      lines.push('');
-      lines.push(`Título del consentimiento: ${consentTitle}`);
       lines.push('');
       lines.push(signerIntro);
       lines.push('');
@@ -53041,9 +53046,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       lines.push('Consecuencias de no realizar el procedimiento:');
       lines.push(consequences || 'Se explicaron los posibles riesgos de no aceptar el procedimiento.');
       lines.push('');
-      lines.push(`Autorización de contingencias y urgencias: ${contingencias ? 'Sí autorizo.' : 'No autorizo.'}`);
+      lines.push('AUTORIZACIÓN DE CONTINGENCIAS Y URGENCIAS');
+      lines.push(consentContingencySentence(contingencias));
       lines.push('');
-      lines.push('Declaro que la información fue explicada en lenguaje claro, resolviendo dudas y permitiendo decisión libre e informada.');
+      lines.push(consentLegalClosing);
       lines.push('');
       lines.push('Firmas:');
       lines.push(`${signerType}: ${signerName}${signerRelation ? ` (${signerRelation})` : ''}`);
@@ -53086,12 +53092,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const riskPocoFrecuentes = sanitizeText(riskProfile?.poco_frecuentes?.value || riskProfile?.poco_frecuentes?.ui_phrase || riskProfile?.poco_frecuentes?.legal_phrase || '');
       const riskRarosGraves = sanitizeText(riskProfile?.raros_graves?.value || riskProfile?.raros_graves?.ui_phrase || riskProfile?.raros_graves?.legal_phrase || '');
       const hasStructuredRiskProfile = !!(riskComunes || riskPocoFrecuentes || riskRarosGraves);
-      const contingencyLabel = data.contingency ? 'Sí autorizo' : 'No autorizo';
       const renderedText = sanitizeText(data.renderedText || '');
       const signerTypeLabel = sanitizeText(data.signerTypeLabel || 'Paciente');
       const signerTypeKey = sanitizeText(data.signerTypeKey || '').toLowerCase();
       const signerName = sanitizeText(data.signerName || '');
-      const signerRelation = sanitizeText(data.signerRelation || '');
+      const signerRelation = consentVisibleSignerRelation(data.signerRelation, signerTypeKey);
       const witness1 = sanitizeText(data.witness1 || '');
       const witness2 = sanitizeText(data.witness2 || '');
       const patientSignature = (data.patientSignature && typeof data.patientSignature === 'object') ? data.patientSignature : null;
@@ -53102,11 +53107,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const doctorSignMeta = [sanitizeText(doctorSignature?.signer_name || doctorName), sanitizeText(doctorSignature?.signed_at || '')].filter(Boolean).join(' · ');
       const signLine = '<div style="margin-top:26px;border-top:1px solid #9fb6c4;"></div>';
       const signerRoleText = sanitizeText(signerRelation || signerTypeLabel || 'firmante responsable');
-      const legalBase = signerTypeKey === 'paciente'
-        ? `Yo, ${signerName || patientName || '________________'}, paciente, declaro que recibí información suficiente, clara y comprensible sobre el procedimiento propuesto, su finalidad y alcances.`
-        : `Yo, ${signerName || patientName || '________________'}, en mi carácter de ${signerRoleText.toLowerCase()}, manifiesto que recibí información suficiente, clara y comprensible sobre el procedimiento propuesto, su finalidad y alcances.`;
-      const legalUnderstand = 'Declaro que tuve oportunidad de realizar preguntas, que estas fueron respondidas de manera satisfactoria, y que entiendo que puedo retirar este consentimiento antes del acto médico conforme al marco legal aplicable.';
-      const legalAuthorize = `Autorización para atención de contingencias y urgencias derivadas del procedimiento: ${contingencyLabel}.`;
+      const legalBase = consentLegalOpening(signerName || patientName || '________________', signerTypeKey, signerRoleText);
+      const legalAuthorize = consentContingencySentence(!!data.contingency);
       const dateLabel = date ? sanitizeText(date).slice(0, 19).replace('T', ' ') : '';
       const normalizeAttachmentUrl = (rawUrl = '')=>{
         const safe = sanitizeText(rawUrl || '');
@@ -53199,7 +53201,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   </section>
   <section style="font-size:.94rem;line-height:1.56;text-align:justify;color:#000;">
     <p style="margin:0 0 8px;">${lineBreak(legalBase)}</p>
-    <p style="margin:0 0 8px;">${lineBreak(legalUnderstand)}</p>
+    <p style="margin:0 0 8px;">${lineBreak(consentLegalClosing)}</p>
+    <div style="font-size:.92rem;font-weight:700;margin-bottom:4px;">AUTORIZACIÓN DE CONTINGENCIAS Y URGENCIAS</div>
     <p style="margin:0;">${lineBreak(legalAuthorize)}</p>
   </section>
   <section>
@@ -53266,6 +53269,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       const actorUserId = resolveClinicalActorUserId();
       const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      const doctorDisplayName = sanitizeText(
+        window.mxmedStore?.doctorProfile?.full_name
+        || window.mxmedStore?.doctorName
+        || window.mxmedDoctor?.full_name
+        || actorName
+      ) || 'Médico tratante';
       const nowSql = formatNowSql();
       const consentType = sanitizeText(els.template?.value || 'otro');
       const templateLabel = sanitizeText(els.template?.selectedOptions?.[0]?.textContent || consentType || 'Consentimiento');
@@ -53379,7 +53388,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         signerTypeKey: firmanteTipo,
         signerName: firmanteNombre || patientSnapshot.full_name,
         signerRelation: firmanteParentesco,
-        doctorName: actorName,
+        doctorName: doctorDisplayName,
         doctorLicense,
         witness1: testigo1Nombre,
         witness2: testigo2Nombre,
@@ -53551,7 +53560,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             institution: institutionName,
             facility: facilityName,
             patientName: patientSnapshot.full_name,
-            doctorName: actorName,
+            doctorName: doctorDisplayName,
             doctorLicense,
             procedure: procedimiento || '',
             risks: consentRisksResolvedText,

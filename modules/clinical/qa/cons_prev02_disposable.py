@@ -49,6 +49,13 @@ def draw_signature(page):
     page.mouse.up()
 
 
+OPENING = 'paciente, declaro que recibí información suficiente, clara y comprensible sobre el procedimiento descrito en este documento, que me será realizado, así como sobre su finalidad y alcances.'
+CLOSING = 'Declaro que la información me fue explicada en lenguaje claro, que tuve oportunidad de realizar preguntas y resolver mis dudas, y que tomo esta decisión de manera libre e informada.'
+CONTINGENCY_YES = 'Autorizo la atención de contingencias y urgencias derivadas del procedimiento.'
+CONTINGENCY_NO = 'No autorizo la atención de contingencias y urgencias derivadas del procedimiento.'
+DOCTOR_NAME = 'Dra. Leticia Muñoz Alfaro QA'
+
+
 with sync_playwright() as pw:
     api = pw.request.new_context(extra_http_headers={'Cookie': 'PHPSESSID=step3-head-neck-qa'})
     browser = pw.webkit.launch()
@@ -62,6 +69,7 @@ with sync_playwright() as pw:
     page.goto(BASE + '/index.html?qa_tools=hide', wait_until='domcontentloaded')
     page.wait_for_function('typeof window.setActivePatientId === "function"')
     page.evaluate("window.__MXMED_USER_ID='review-user';window.mxmedStore.user_id='review-user'")
+    page.evaluate("name=>{window.mxmedStore.doctorProfile={...window.mxmedStore.doctorProfile,full_name:name};window.mxmedStore.doctorName=name;window.mxmedDoctor.full_name=name}", DOCTOR_NAME)
     page.evaluate("async()=>{await window.setActivePatientId('p_plan02ux_review',{emitEvent:true,skipM7DirtyGuard:true,skipActiveEncounterConfirm:true,skipUnsavedNewPatientConfirm:true,applyEntryRule:false});document.querySelector('#p-expediente').classList.remove('d-none');window.dispatchEvent(new Event('patient:selected'))}")
     expect(page.locator('#p-expediente')).to_have_attribute('data-patient-id', 'p_plan02ux_review')
     page.locator('#p-expediente [data-exp-tabs] [data-bs-target="#t-consent"]').click()
@@ -95,6 +103,11 @@ with sync_playwright() as pw:
     check('T04', 'CONSENTIMIENTO INFORMADO' in page.locator('#ci_review_html').inner_text()
           and 'Declaración legal integrada' in page.locator('#ci_review_html').inner_text()
           and page.locator('#ci_review_html article').count() == 1)
+    initial_text = page.locator('#ci_review_html').inner_text()
+    check('COPY_PREVIEW_FALSE_CONTINGENCY', CONTINGENCY_NO in initial_text and CONTINGENCY_YES not in initial_text.replace(CONTINGENCY_NO, ''))
+    check('COPY_PREVIEW_LEGAL_OPENING_CLOSING', OPENING in initial_text and CLOSING in initial_text)
+    check('COPY_PREVIEW_NO_INTERNAL_LABELS', 'Título del consentimiento:' not in initial_text and '(self)' not in initial_text and ' · self' not in initial_text)
+    check('COPY_PREVIEW_PHYSICIAN_IDENTITY', f'Médico responsable: {DOCTOR_NAME}' in initial_text)
     capture(page, 'A-content-preview')
     page.locator('#ci_review_edit_button').click()
     expect(page.locator('#ci_review_edit')).to_be_visible()
@@ -113,6 +126,7 @@ with sync_playwright() as pw:
     }
     for key, value in values.items():
         page.locator(f'#ci_review_edit_{key}').fill(value)
+    page.locator('#ci_review_edit_autorizacion_contingencias').check()
     capture(page, 'B-structured-edit')
     page.locator('#ci_review_apply').click()
     expect(page.locator('#ci_review_edit')).to_be_hidden()
@@ -122,6 +136,7 @@ with sync_playwright() as pw:
         check(code, values[key] in html_text and page.locator('#ci_' + ('title' if key == 'title' else key if key != 'risk_comunes' else 'risk_common')).input_value() == values[key])
     check('STRUCTURED_RISKS_ALL_LEVELS', all(values[key] in html_text
           for key in ('risk_comunes','risk_poco_frecuentes','risk_raros_graves')))
+    check('COPY_PREVIEW_TRUE_CONTINGENCY', CONTINGENCY_YES in html_text and CONTINGENCY_NO not in html_text)
 
     # Save-as-template reads the same state.form edited from the preview.
     page.locator('#ci_save_as_template').click()
@@ -144,6 +159,10 @@ with sync_playwright() as pw:
     check('T13', page.locator('#ci_review_html').inner_text().count('Paciente / responsable') == 1)
     check('T14', page.locator('#ci_review_html article').count() == 1
           and 'Técnica revisada QA' in page.locator('#ci_review_html').inner_text())
+    final_text = page.locator('#ci_review_html').inner_text()
+    check('COPY_FINAL_REVIEW', CONTINGENCY_YES in final_text and OPENING in final_text and CLOSING in final_text
+          and 'Título del consentimiento:' not in final_text and '(self)' not in final_text
+          and f'Médico responsable: {DOCTOR_NAME}' in final_text)
     capture(page, 'D-final-review')
 
     page.locator('#ci_review_back_edit').click()
@@ -200,6 +219,15 @@ with sync_playwright() as pw:
     stored_html = sql("SELECT JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.frozen_snapshot.html')) FROM clinical_documents WHERE document_type='consentimiento_informado' LIMIT 1")
     browser_html = page.evaluate("html=>{const el=document.createElement('div');el.innerHTML=html;return el.innerHTML}", posted_html)
     check('T20', count_docs() == 1 and stored_html == posted_html and reviewed_html == browser_html)
+    stored_text = page.evaluate("html=>{const el=document.createElement('div');el.innerHTML=html;return el.innerText}", stored_html)
+    posted_payload = json.loads(document_posts[-1])['payload']
+    check('COPY_PERSISTED_FROZEN', CONTINGENCY_YES in stored_text and OPENING in stored_text and CLOSING in stored_text
+          and 'Título del consentimiento:' not in stored_text and '(self)' not in stored_text
+          and f'Médico responsable: {DOCTOR_NAME}' in stored_text)
+    check('COPY_RENDERED_TEXT_MATCH', CONTINGENCY_YES in posted_payload['rendered_text']
+          and OPENING in posted_payload['rendered_text'] and CLOSING in posted_payload['rendered_text']
+          and 'Título del consentimiento:' not in posted_payload['rendered_text']
+          and '(self)' not in posted_payload['rendered_text'])
 
     # A personal template remains available and can still create a stable draft.
     page.locator('[data-action="documents-open-consent"]').click()
