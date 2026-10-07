@@ -46255,16 +46255,28 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const consentTemplateRequest = async (suffix = '', method = 'GET', body = null)=>{
       const base = consentTemplateBaseUrl();
       if(!base) throw new Error('No se pudo identificar al médico.');
-      const response = await fetch(`${base}${suffix}`, {
-        method, credentials: 'same-origin', cache: 'no-store',
-        headers: body === null ? {} : { 'Content-Type': 'application/json' },
-        body: body === null ? undefined : JSON.stringify(body)
-      });
+      const fallback = method === 'GET' ? 'No se pudieron cargar las plantillas. Inténtalo nuevamente.'
+        : 'No se pudo guardar la plantilla. Revisa la información e inténtalo nuevamente.';
+      let response;
+      try{
+        response = await fetch(`${base}${suffix}`, {
+          method, credentials: 'same-origin', cache: 'no-store',
+          headers: body === null ? {} : { 'Content-Type': 'application/json' },
+          body: body === null ? undefined : JSON.stringify(body)
+        });
+      }catch(_){ throw new Error(method === 'GET' ? fallback : 'No se pudo guardar la plantilla. Revisa la conexión e inténtalo nuevamente.'); }
       const json = await response.json().catch(()=>null);
-      if(!response.ok || !json?.ok) throw new Error(
-        json?.error === 'version_conflict' ? 'La plantilla cambió. Actualiza la lista antes de guardar.'
-          : 'No se pudo completar la operación con la plantilla.'
-      );
+      if(!response.ok || !json?.ok){
+        const messages = {
+          version_conflict:'La plantilla cambió. Actualiza la lista antes de guardar.',
+          invalid_template:'Escribe un nombre válido para la plantilla.',
+          invalid_content:'Revisa los campos de la plantilla y su longitud antes de guardar.',
+          unsupported_field:'La plantilla contiene información que no se puede guardar.',
+          unsupported_content_field:'La plantilla contiene información que no se puede guardar.',
+          expected_version_required:'Actualiza la lista antes de editar la plantilla.'
+        };
+        throw new Error(messages[json?.error] || fallback);
+      }
       return json.data;
     };
     const templateButton = (label, action, style = 'btn-outline-primary')=>{
@@ -46294,7 +46306,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const title = els.templateFlowTitle;
       const modal = window.bootstrap.Modal.getOrCreateInstance(els.templateFlowModalEl);
       const returnFocus = document.activeElement;
-      let view = 'choice', editorRecord = null, notice = '', result = { action:'cancel' };
+      let view = 'choice', editorRecord = null, notice = '', successNotice = '', result = { action:'cancel' };
       let records = [];
       const clear = (heading)=>{ title.textContent = heading; body.replaceChildren(); footer.replaceChildren(); };
       const paragraph = (copy, className = 'text-muted small')=>{
@@ -46342,6 +46354,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           clear(target === 'selector' ? 'Usar plantilla' : 'Administrar plantillas');
           paragraph(target === 'selector' ? 'Se copiará el contenido reutilizable a un consentimiento nuevo. Podrás editarlo antes de guardar o emitir.'
             : 'Estas plantillas son privadas del médico y no forman parte del expediente del paciente.');
+          if(successNotice){
+            const confirmation = paragraph(successNotice,'alert alert-success');
+            confirmation.setAttribute('role','status');
+            successNotice = '';
+          }
           let loadFailed = false;
           try { records = await consentTemplateRequest(target === 'manage' ? '?include_archived=1' : ''); }
           catch(error){ paragraph(error.message,'alert alert-danger'); records = []; loadFailed = true; }
@@ -46425,9 +46442,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               const payload = {template_name:form.elements.namedItem('template_name').value,content};
               if(editorRecord) payload.expected_version = editorRecord.version;
               await consentTemplateRequest(editorRecord ? `/${encodeURIComponent(editorRecord.uuid)}` : '',editorRecord ? 'PUT' : 'POST',payload);
-              editorRecord = null; await render('manage');
+              editorRecord = null; successNotice = 'Plantilla guardada'; await render('manage');
             }
-          }catch(error){ notice = error.message; await render(view); }
+          }catch(error){
+            if(action === 'save' && view === 'editor'){
+              footer.querySelector('.ci-template-save-error')?.remove();
+              const feedback = document.createElement('div');
+              feedback.className = 'alert alert-danger ci-template-save-error w-100 mb-0';
+              feedback.setAttribute('role','alert');
+              feedback.textContent = error?.message || 'No se pudo guardar la plantilla. Revisa la información e inténtalo nuevamente.';
+              footer.prepend(feedback);
+            }else{ notice = error?.message || 'No se pudo completar la operación con la plantilla.'; await render(view); }
+          }
           finally { if(button.isConnected) button.disabled = false; }
         };
         const onShown = ()=> body.querySelector('button, input')?.focus();
