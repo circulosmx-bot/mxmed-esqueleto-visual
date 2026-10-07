@@ -46102,6 +46102,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.mode = 'guided';
       state.draftId = '';
       state.activeDraftRef = '';
+      state.activeDraftVersion = 0;
       state.activeDraftLabel = '';
       state.firmanteAutoFromPatient = false;
       state.riskUserEdited = {
@@ -46171,6 +46172,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       state.draftId = `cons_draft_${Date.now()}`;
       state.activeDraftRef = '';
+      state.activeDraftVersion = 0;
       state.activeDraftLabel = '';
       state.riskUserEdited = {
         comunes: false,
@@ -46221,30 +46223,46 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }catch(_){}
     };
 
-    const openConsentModal = async ()=>{
+    const openConsentModal = async ({ draftRef = '' } = {})=>{
       const patientId = resolveActivePatientIdForConsent();
       if(!patientId){
         startDraft();
         return;
       }
-      const latestDraft = await fetchLatestConsentDraft(patientId);
+      const drafts = await fetchConsentDrafts(patientId);
+      if(drafts === null){
+        showCatalogFeedback('No se pudieron consultar los borradores. Intenta de nuevo.', 'error');
+        return;
+      }
       let shouldOpen = false;
-      if(latestDraft){
-        const decision = await askConsentDraftDecision(latestDraft);
-        if(decision === 'reopen'){
+      let selected = drafts.find((row)=> row.ref === sanitizeText(draftRef || '')) || null;
+      if(!selected && !draftRef && drafts.length > 1){
+        const choices = drafts.map((row, index)=> `${index + 1}. ${row.title} — ${formatDraftDateTime(row.event_datetime) || 'sin fecha'}`);
+        const answer = window.prompt(`Hay ${drafts.length} borradores de consentimiento. Escribe el número para continuar o 0 para crear otro:\n${choices.join('\n')}`, '1');
+        if(answer === null) return;
+        const number = Number(answer);
+        if(!Number.isInteger(number) || number < 0 || number > drafts.length) return;
+        selected = number === 0 ? null : drafts[number - 1];
+        if(number === 0) shouldOpen = startDraft() === true;
+      }else if(!selected && !draftRef && drafts.length === 1){
+        const decision = await askConsentDraftDecision(drafts[0]);
+        if(decision === 'reopen') selected = drafts[0];
+        else if(decision === 'discard' || decision === 'new') shouldOpen = startDraft() === true;
+      }else if(drafts.length === 0 && !draftRef){
+        shouldOpen = startDraft() === true;
+      }
+      if(selected){
+        const fullDraft = await fetchConsentDraftDetail(selected.ref);
+        if(fullDraft){
+          resetWizard();
           renderTemplates();
           fillWizardPatientFields();
-          hydrateDraftState(latestDraft);
+          hydrateDraftState(fullDraft);
           shouldOpen = true;
-        }else if(decision === 'discard' || decision === 'new'){
-          markConsentDraftRefIgnored(patientId, latestDraft?.ref || '');
-          clearLocalConsentDraft(patientId);
-          shouldOpen = startDraft() === true;
         }else{
-          shouldOpen = false;
+          showCatalogFeedback('No se pudo recuperar el borrador. Intenta de nuevo.', 'error');
+          return;
         }
-      }else{
-        shouldOpen = startDraft() === true;
       }
       if(!shouldOpen) return;
       if(!els.consentModalEl || !window.bootstrap?.Modal) return;
@@ -46257,14 +46275,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     const extractConsentDraftRecord = (item = {})=>{
       const clinicalDoc = (item?.clinical_document && typeof item.clinical_document === 'object') ? item.clinical_document : {};
-      const directPayload = (item?.payload && typeof item.payload === 'object') ? item.payload : {};
+      const directPayload = parseObjectMaybeJson(item?.payload) || parseObjectMaybeJson(item?.payload_json) || {};
       const payload = (clinicalDoc?.payload && typeof clinicalDoc.payload === 'object')
         ? clinicalDoc.payload
         : directPayload;
       const consentPayload = (payload?.consent && typeof payload.consent === 'object') ? payload.consent : {};
-      const status = sanitizeText(consentPayload.status || payload.status || item?.status || '');
-      const summaryText = sanitizeText(clinicalDoc.summary || item?.summary || '').toLowerCase();
-      const isDraft = status.toLowerCase() === 'draft' || summaryText.startsWith('draft') || summaryText.includes(' draft ');
+      const status = sanitizeText(clinicalDoc.status || item?.status || '');
+      const isDraft = status === 'draft' || (status === 'generated' && sanitizeText(consentPayload.status || payload.status) === 'draft');
       if(!isDraft) return null;
       const ref = sanitizeText(
         clinicalDoc.document_uuid
@@ -46280,18 +46297,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         source: 'remote',
         ref,
         payload,
+        version: Number(clinicalDoc.version || item.version || 1),
+        created_by_user_id: sanitizeText(clinicalDoc.created_by_user_id || item.created_by_user_id || ''),
         event_datetime: sanitizeText(item?.event_datetime || item?.occurred_at || item?.created_at || ''),
         title: sanitizeText(clinicalDoc.title || item?.title || 'Consentimiento informado')
       };
     };
 
-    const fetchLatestConsentDraft = async (patientId)=>{
+    const fetchConsentDrafts = async (patientId)=>{
       const safePatientId = sanitizeText(patientId || '');
       if(!safePatientId) return null;
-      const localDraft = getLocalConsentDraft(safePatientId);
-      if(localDraft) return localDraft;
       try{
-        const url = buildScopedCanonicalDocumentsListUrl(safePatientId, 50, {
+        const url = buildScopedCanonicalDocumentsListUrl(safePatientId, 200, {
           document_type: 'consentimiento_informado'
         });
         if(!url){
@@ -46304,7 +46321,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           credentials: 'same-origin'
         });
         const json = await resp.json().catch(()=> null);
+        if(!resp.ok || json?.ok !== true || !Array.isArray(json?.data?.items)) return null;
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
+        const currentUser = resolveClinicalActorUserId();
         const drafts = items
           .filter((item)=>{
             const clinicalDoc = (item?.clinical_document && typeof item.clinical_document === 'object') ? item.clinical_document : {};
@@ -46313,12 +46332,31 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           })
           .map((item)=> extractConsentDraftRecord(item))
           .filter(Boolean)
-          .filter((row)=> !isConsentDraftRefIgnored(safePatientId, row?.ref || ''))
+          .filter((row)=> row.created_by_user_id === currentUser)
           .sort((a, b)=> String(b.event_datetime || '').localeCompare(String(a.event_datetime || '')));
-        return drafts[0] || null;
+        return drafts;
       }catch(_){
         return null;
       }
+    };
+
+    const fetchConsentDraftDetail = async (ref)=>{
+      const url = buildScopedCanonicalDocumentDetailUrl(ref);
+      if(!url) return null;
+      try{
+        const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const json = await response.json();
+        if(!response.ok || json?.ok !== true) return null;
+        const doc = json?.data?.document || {};
+        const payload = doc?.content?.payload;
+        if(doc.document_type !== 'consentimiento_informado' || !payload || typeof payload !== 'object'
+          || !['draft', 'generated'].includes(doc.status)
+          || sanitizeText(payload?.consent?.status) !== 'draft'
+          || sanitizeText(doc?.audit?.created_by_user_id) !== resolveClinicalActorUserId()) return null;
+        return { source: 'server', ref: sanitizeText(doc.document_id || ref),
+          version: Number(doc.version || 1), payload, title: sanitizeText(doc.title || ''),
+          event_datetime: sanitizeText(doc?.ui?.event_datetime || '') };
+      }catch(_){ return null; }
     };
 
     const formatConsentUiDate = (rawValue = '', { withTime = false } = {})=>{
@@ -46429,7 +46467,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.template.value = draftTemplate;
       }
       state.activeDraftRef = sanitizeText(draftRecord?.ref || '');
+      state.activeDraftVersion = Number(draftRecord?.version || 1);
       state.activeDraftLabel = sanitizeText(draftRecord?.event_datetime || '');
+      state.identityRemoteRefs = Array.isArray(payload?.signer_identity_attachments)
+        ? payload.signer_identity_attachments.map(normalizeConsentIdentityRef).filter(Boolean) : [];
+      renderIdentityFilesList();
       state.step = Number(formSnapshot.step || 1) === 2 ? 2 : 1;
       state.mode = sanitizeText(formSnapshot.mode || 'guided') === 'full' ? 'full' : 'guided';
       state.firmanteAutoFromPatient = sanitizeText(state.form.firmante_tipo || '') === 'paciente';
@@ -52169,7 +52211,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const summary = sanitizeText(doc.summary || '');
         const dtRaw = sanitizeText(doc.event_datetime || doc.created_at || '');
         const dateText = formatConsentUiDate(dtRaw, { withTime: true }) || '—';
-        const status = sanitizeText(doc.status || doc.payload?.consent?.status || 'draft');
+        const status = sanitizeText(doc.status || 'generated');
         const uuid = sanitizeText(doc.document_uuid || '');
         const payload = parseObjectMaybeJson(doc.payload)
           || parseObjectMaybeJson(doc.payload_json)
@@ -52224,12 +52266,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.innerHTML = `
           <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
             <span>${title.replace(/</g, '&lt;')}</span>
-            <span class="badge bg-light text-dark border">${status.replace(/</g, '&lt;')}</span>
+            <span class="badge bg-light text-dark border">${(isConsentDoc ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
-          ${uuid ? '<div class="small mt-2"><span class="text-primary">Abrir detalle</span></div>' : ''}
+          ${uuid ? `<div class="small mt-2"><span class="text-primary">${isConsentDoc && status === 'draft' ? 'Continuar borrador' : 'Abrir detalle'}</span></div>` : ''}
         `;
+        if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
         els.list.appendChild(card);
       });
     };
@@ -52330,7 +52373,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             summary: clinicalDoc.summary || item.summary || '',
             event_datetime: item.event_datetime || item.occurred_at || '',
             document_type: documentType || 'consentimiento_informado',
-            status: payload?.consent?.status || payload?.status || 'draft',
+            status: (documentType === 'consentimiento_informado'
+              && sanitizeText(clinicalDoc.status || item.status || '') === 'generated'
+              && sanitizeText(payload?.consent?.status) === 'draft')
+              ? 'draft' : sanitizeText(clinicalDoc.status || item.status || 'generated'),
+            version: Number(clinicalDoc.version || item.version || 1),
+            created_by_user_id: sanitizeText(clinicalDoc.created_by_user_id || item.created_by_user_id || ''),
+            updated_at: sanitizeText(clinicalDoc.updated_at || item.updated_at || ''),
             payload
           };
         }).filter((row)=> allowedTypes.has(sanitizeText(row.document_type || '').toLowerCase()));
@@ -53311,6 +53360,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           prepared.body.payload = payload;
         }
         const localIdentityFiles = Array.isArray(state.identityFiles) ? state.identityFiles : [];
+        if(state.activeDraftRef){
+          prepared.body.draft_ref = sanitizeText(state.activeDraftRef);
+          prepared.body.expected_version = Number(state.activeDraftVersion || 0);
+        }
         const requestBody = localIdentityFiles.length ? new FormData() : JSON.stringify(prepared.body);
         if(requestBody instanceof FormData){
           requestBody.append('patient_id', prepared.patientId);
@@ -53350,18 +53403,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           || ''
         );
         if(normalizedStatus === 'draft'){
-          setLocalConsentDraft({
-            patientId: prepared.patientId,
-            ref: savedRef,
-            payload: prepared.body.payload,
-            eventDatetime: prepared.body.event_datetime,
-            title: prepared.body.title
-          });
-          clearConsentDraftIgnoredRefs(prepared.patientId);
           pushCiDebug('[CI] saveDraft ok');
         }else{
           clearLocalConsentDraft(prepared.patientId);
-          clearConsentDraftIgnoredRefs(prepared.patientId);
           pushCiDebug('[CI] emit ok');
         }
         const remoteToken = sanitizeText(state.remoteSignature?.token || consentSignatureQrState.token || '');
@@ -53378,9 +53422,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         closeConsentModal();
         listCanonicalConsents();
         if(normalizedStatus === 'draft'){
-          showCatalogFeedback('Borrador guardado correctamente.', 'success');
+          showCatalogFeedback('Borrador guardado', 'success');
         }else{
-          showCatalogFeedback('Consentimiento generado correctamente.', 'success');
+          showCatalogFeedback('Consentimiento emitido', 'success');
         }
         try{
           window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
@@ -54839,14 +54883,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const card = event.target.closest('[data-doc-uuid]');
       if(!card) return;
       event.preventDefault();
-      openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
+      if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
     els.list.addEventListener('keydown', (event)=>{
       if(event.key !== 'Enter' && event.key !== ' ') return;
       const card = event.target.closest('[data-doc-uuid]');
       if(!card) return;
       event.preventDefault();
-      openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
+      if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
 
     window.addEventListener('expediente:patient-changed', ()=>{ listCanonicalConsents(); });

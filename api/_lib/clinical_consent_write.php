@@ -84,6 +84,11 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
     }
     $key = clinical_idempotency_key_validate($idempotencyKey);
     clinical_encounter_integrity_assert_schema_ready($pdo);
+    $draftRef = trim((string)($body['draft_ref'] ?? ''));
+    $expectedVersion = (int)($body['expected_version'] ?? 0);
+    if ($draftRef !== '' && (preg_match('/^[0-9a-f-]{36}$/i', $draftRef) !== 1 || $expectedVersion < 1)) {
+        throw new InvalidArgumentException('CONSENT_DRAFT_IDENTITY_INVALID');
+    }
     $context = is_array($body['context'] ?? null) ? $body['context'] : [];
     $encounterKey = trim((string)($context['encounter_key'] ?? ''));
     $appointmentId = trim((string)($context['appointment_id'] ?? ''));
@@ -112,7 +117,7 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
     $finalized = [];
     $result = null;
     $cleanupSafe = false;
-    $parentUuid = ClinicalPrivateBinaryStorage::uuidV4();
+    $parentUuid = $draftRef !== '' ? $draftRef : ClinicalPrivateBinaryStorage::uuidV4();
     try {
         if ($documentFiles !== []) {
             [$root, $ttl] = clinical_encounter_multipart_config();
@@ -143,6 +148,8 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
             'consent_intent' => $intent,
             'encounter_id' => $encounter === null ? null : (string)$encounter['encounter_id'],
             'appointment_id' => $appointmentId !== '' ? $appointmentId : null,
+            'draft_ref' => $draftRef !== '' ? $draftRef : null,
+            'expected_version' => $draftRef !== '' ? $expectedVersion : null,
             'identity_binaries' => array_map(static fn(array $row): array => [
                 'sha256' => $row['binary']['sha256'], 'byte_length' => $row['binary']['byte_length'],
                 'mime_type' => $row['binary']['mime_type']], $staged),
@@ -176,7 +183,8 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
         $result = $service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT', (string)$doctor['doctor_id'],
             'PATIENT', $patientId, $key, $semantic, 'document_id', (string)$doctor['user_id'],
             function () use ($pdo, $doctor, $patientId, $body, $payload, $context, $encounter,
-                $appointmentId, $parentUuid, $staged, $storage, $key, &$finalized): int {
+                $appointmentId, $parentUuid, $draftRef, $expectedVersion, $intent,
+                $staged, $storage, $key, &$finalized): int {
                 if (!clinical_has_active_doctor_patient_link($pdo, (string)$doctor['doctor_id'], $patientId)) {
                     throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
                 }
@@ -186,8 +194,55 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                 $requestStmt->execute([(string)$doctor['doctor_id'], $patientId, $key]);
                 $requestId = (int)$requestStmt->fetchColumn();
                 if ($requestId <= 0) throw new RuntimeException('CONSENT_IDEMPOTENCY_MISSING');
+                $existing = null;
+                if ($draftRef !== '') {
+                    $find = $pdo->prepare('SELECT id,document_uuid,document_type,patient_id,status,version,
+                        created_by_user_id,encounter_ref_id,appointment_id,payload_json,signed_at
+                        FROM clinical_documents WHERE document_uuid=? LIMIT 1 FOR UPDATE');
+                    $find->execute([$draftRef]);
+                    $existing = $find->fetch(PDO::FETCH_ASSOC) ?: null;
+                    if ($existing === null || (string)$existing['patient_id'] !== $patientId
+                        || (string)$existing['document_type'] !== 'consentimiento_informado'
+                        || (string)$existing['created_by_user_id'] !== (string)$doctor['user_id']) {
+                        throw new InvalidArgumentException('CONSENT_DRAFT_SCOPE_INVALID');
+                    }
+                    $storedPayload = json_decode((string)$existing['payload_json'], true);
+                    $legacyDraft = (string)$existing['status'] === 'generated'
+                        && is_array($storedPayload)
+                        && (string)($storedPayload['consent']['status'] ?? '') === 'draft'
+                        && $existing['signed_at'] === null;
+                    if ($legacyDraft) {
+                        $revision = $pdo->prepare('SELECT revision_id FROM clinical_document_revisions
+                            WHERE original_document_id=? OR supersedes_document_id=? OR new_document_id=? LIMIT 1');
+                        $revision->execute([(int)$existing['id'], (int)$existing['id'], (int)$existing['id']]);
+                        $legacyDraft = $revision->fetchColumn() === false;
+                    }
+                    if ((string)$existing['status'] !== 'draft' && !$legacyDraft) {
+                        throw new ClinicalIdempotencyException('CONSENT_DRAFT_FINAL', 'El consentimiento ya fue emitido.', 409);
+                    }
+                    if ((int)$existing['version'] !== $expectedVersion) {
+                        throw new ClinicalIdempotencyException('CONSENT_DRAFT_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
+                    }
+                    $storedEncounter = (int)($existing['encounter_ref_id'] ?? 0);
+                    $requestedEncounter = (int)($encounter['encounter_id'] ?? 0);
+                    if ($storedEncounter !== $requestedEncounter
+                        || trim((string)($existing['appointment_id'] ?? '')) !== $appointmentId) {
+                        throw new InvalidArgumentException('CONSENT_DRAFT_CONTEXT_MISMATCH');
+                    }
+                }
                 $refs = is_array($payload['signer_identity_attachments'] ?? null)
                     ? $payload['signer_identity_attachments'] : [];
+                if ($existing !== null) {
+                    $previous = json_decode((string)$existing['payload_json'], true);
+                    foreach ((array)($previous['signer_identity_attachments'] ?? []) as $oldRef) {
+                        if (!is_array($oldRef)) continue;
+                        $oldUuid = (string)($oldRef['document_uuid'] ?? '');
+                        if ($oldUuid !== '' && !array_filter($refs, static fn($ref): bool =>
+                            is_array($ref) && (string)($ref['document_uuid'] ?? '') === $oldUuid)) {
+                            $refs[] = $oldRef;
+                        }
+                    }
+                }
                 foreach ($staged as $row) {
                     $refs[] = ['document_uuid' => $row['document_uuid'],
                         'title' => 'Anexo identidad firmante — ' . (string)($row['binary']['source_filename'] ?? 'archivo'),
@@ -221,8 +276,31 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                 $consent = $body;
                 $consent['payload'] = $consentPayload;
                 $consent['context'] = $writeContext;
-                $parentId = clinical_v1_document_insert($pdo, $writeContext, $consent,
-                    (string)$doctor['user_id'], $parentUuid);
+                $nextStatus = $intent === 'draft' ? 'draft' : 'generated';
+                if ($existing === null) {
+                    $parentId = clinical_v1_document_insert($pdo, $writeContext, $consent,
+                        (string)$doctor['user_id'], $parentUuid);
+                    if ($nextStatus === 'draft') {
+                        $markDraft = $pdo->prepare("UPDATE clinical_documents
+                            SET status='draft',generated_at=NULL WHERE id=? AND status='generated'");
+                        $markDraft->execute([$parentId]);
+                        if ($markDraft->rowCount() !== 1) throw new RuntimeException('CONSENT_DRAFT_CREATE_FAILED');
+                    }
+                } else {
+                    $parentId = (int)$existing['id'];
+                    $encoded = json_encode($consentPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                    $update = $pdo->prepare("UPDATE clinical_documents SET title=?,summary=?,payload_json=?,
+                        event_datetime=?,status=?,version=version+1,updated_at=UTC_TIMESTAMP(),
+                        updated_by_user_id=?,edited_flag=1,generated_at=CASE WHEN ?='generated' THEN UTC_TIMESTAMP() ELSE NULL END
+                        WHERE id=? AND version=?");
+                    $update->execute([(string)($body['title'] ?? 'Consentimiento informado'),
+                        (string)($body['summary'] ?? ''), $encoded,
+                        (string)($body['event_datetime'] ?? gmdate('Y-m-d H:i:s')),
+                        $nextStatus, (string)$doctor['user_id'], $nextStatus, $parentId, $expectedVersion]);
+                    if ($update->rowCount() !== 1) {
+                        throw new ClinicalIdempotencyException('CONSENT_DRAFT_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
+                    }
+                }
                 if ($staged !== []) {
                     $uploads = new ClinicalMultipartCoordinationRepository($pdo);
                     $binaries = new ClinicalMultipartBinaryManifestRepository($pdo);
