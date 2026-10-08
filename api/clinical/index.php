@@ -9382,6 +9382,26 @@ try {
                 return;
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());
+                $consentRepresentative = isset($consentBody) && is_array($consentBody)
+                    && (string)($consentBody['payload']['form_snapshot']['firmante_tipo'] ?? 'paciente') !== 'paciente';
+                $consentSignatureMessages = [
+                    'CONSENT_PATIENT_SIGNATURE_REQUIRED' => 'Falta la firma del paciente.',
+                    'CONSENT_REPRESENTATIVE_SIGNATURE_REQUIRED' => 'Falta la firma del representante.',
+                    'CONSENT_PHYSICIAN_SIGNATURE_REQUIRED' => 'Falta la firma del médico.',
+                    'CONSENT_PATIENT_SIGNATURE_STALE' => $consentRepresentative
+                        ? 'La firma del representante corresponde a una versión anterior. Solicita la firma nuevamente.'
+                        : 'La firma del paciente corresponde a una versión anterior. Solicita la firma nuevamente.',
+                    'CONSENT_DOCTOR_SIGNATURE_STALE' => 'La firma del médico debe aplicarse nuevamente porque el consentimiento cambió.',
+                    'CONSENT_SIGNATURE_CONTEXT_MISMATCH' => 'Los datos del firmante cambiaron. Revísalos y solicita la firma nuevamente.',
+                    'CONSENT_CONFIRMATION_REQUIRED' => 'Confirma que el paciente recibió la información antes de emitir.',
+                ];
+                if (isset($consentSignatureMessages[$msg])) {
+                    clinical_send_response(['ok' => false,
+                        'error' => ['code' => $msg, 'message' => $consentSignatureMessages[$msg]],
+                        'message' => $consentSignatureMessages[$msg], 'data' => null,
+                        'meta' => $meta], 422);
+                    return;
+                }
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'invalid_params',

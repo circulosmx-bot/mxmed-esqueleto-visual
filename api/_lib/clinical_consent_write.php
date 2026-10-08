@@ -4,6 +4,42 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_encounter_multipart_adapter.php';
 require_once __DIR__ . '/clinical_consent_signature_binding.php';
 
+/** Final emission requires two signatures verified against the server's current projection. */
+function clinical_consent_assert_emission_signatures(array $consent, array $statuses): void
+{
+    $payload = $consent['payload'] ?? [];
+    $form = is_array($payload['form_snapshot'] ?? null) ? $payload['form_snapshot'] : [];
+    $signer = is_array($payload['firmante'] ?? null) ? $payload['firmante'] : [];
+    $type = trim((string)($form['firmante_tipo'] ?? 'paciente'));
+    $name = trim((string)($form['firmante_nombre'] ?? ''));
+    $relationship = trim((string)($form['firmante_parentesco'] ?? ''));
+    $patient = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
+    if (!in_array($type, ['paciente', 'tutor', 'representante_legal', 'familiar_mas_cercano'], true)
+        || $name === '' || ($type !== 'paciente' && ($relationship === '' || $relationship === 'self'))
+        || ($type === 'paciente' && ($relationship !== 'self'
+            || $name !== trim((string)($patient['full_name'] ?? ''))))
+        || $type !== trim((string)($signer['tipo'] ?? ''))
+        || $name !== trim((string)($signer['nombre'] ?? ''))
+        || $relationship !== trim((string)($signer['relacion'] ?? ($signer['parentesco'] ?? '')))) {
+        throw new InvalidArgumentException('CONSENT_SIGNATURE_CONTEXT_MISMATCH');
+    }
+    if (empty($form['confirm_informed'])) {
+        throw new InvalidArgumentException('CONSENT_CONFIRMATION_REQUIRED');
+    }
+    foreach (['patient', 'doctor'] as $role) {
+        $status = (string)($statuses[$role] ?? 'absent');
+        if ($status === 'valid_bound_signature') continue;
+        $entry = $payload['signatures'][$role] ?? null;
+        $blank = !is_array($entry) || trim((string)($entry['image_data'] ?? '')) === '';
+        if ($status === 'stale_or_unverified' && !$blank) {
+            throw new InvalidArgumentException('CONSENT_' . strtoupper($role) . '_SIGNATURE_STALE');
+        }
+        $code = $role === 'doctor' ? 'PHYSICIAN'
+            : ($type === 'paciente' ? 'PATIENT' : 'REPRESENTATIVE');
+        throw new InvalidArgumentException('CONSENT_' . $code . '_SIGNATURE_REQUIRED');
+    }
+}
+
 /** The consent command owns its identity files in the same canonical create. */
 function clinical_consent_identity_files(array $files): array
 {
@@ -300,6 +336,14 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
                         $pdo, (string)$doctor['doctor_id']),
                 ];
                 $consent['payload'] = $consentPayload;
+                if ($intent === 'granted') {
+                    if (trim((string)($consent['actor_user_id'] ?? ($consent['actor']['user_id'] ?? '')))
+                        !== (string)$doctor['user_id']) {
+                        throw new InvalidArgumentException('CONSENT_SIGNATURE_CONTEXT_MISMATCH');
+                    }
+                    clinical_consent_assert_emission_signatures($consent,
+                        $consentPayload['signature_binding_status']);
+                }
                 $nextStatus = $intent === 'draft' ? 'draft' : 'generated';
                 if ($existing === null) {
                     $parentId = clinical_v1_document_insert($pdo, $writeContext, $consent,

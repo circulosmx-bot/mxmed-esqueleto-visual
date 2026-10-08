@@ -1,5 +1,5 @@
 """CONS-SIGN02B disposable browser and HTTP proof. Run through consultation_flow_r1_disposable_gate.sh."""
-import hashlib, json, os, re, subprocess
+import hashlib, json, os, re, subprocess, sys
 from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright, expect
 
@@ -188,6 +188,39 @@ with sync_playwright() as pw:
     close_qr(desktop)
     save_draft(desktop)
     check('DOCTOR_SERVER_BOUND',current_payload()['signature_binding_status']['doctor']=='valid_bound_signature')
+    emission_mode=os.environ.get('CONSENT_QR_EMISSION_MODE','')
+    if emission_mode in ('both_qr','patient_local_doctor_qr','patient_qr_doctor_registered'):
+        open_draft(desktop)
+        if not desktop.locator('#ci_review_confirm_informed').is_checked():
+            desktop.locator('#ci_review_confirm_informed').check()
+        if emission_mode=='patient_local_doctor_qr':
+            desktop.locator('#ci_signature_clear').click()
+            box=desktop.locator('#ci_signature_canvas').bounding_box()
+            desktop.mouse.move(box['x']+25,box['y']+25)
+            desktop.mouse.down();desktop.mouse.move(box['x']+150,box['y']+65,steps=9);desktop.mouse.up()
+            desktop.wait_for_function("document.querySelector('#ci_signature_status').textContent.includes('vinculada')")
+        elif emission_mode=='patient_qr_doctor_registered':
+            desktop.locator('#ci_doctor_signature_clear').click()
+            image=current_payload()['signatures']['patient']['image_data']
+            digest=hashlib.sha256(__import__('base64').b64decode(image.split(',',1)[1])).hexdigest()
+            subprocess.run(['mysql',DB,'-e',"CREATE TABLE IF NOT EXISTS physician_signatures (doctor_id VARCHAR(64) PRIMARY KEY, checksum_sha256 CHAR(64) NOT NULL)"],check=True)
+            subprocess.run(['mysql',DB,'-e',f"REPLACE INTO physician_signatures VALUES ('1','{digest}')"],check=True)
+            desktop.evaluate("image=>{window.mxmedPhysicianSignature={read:()=>image,refresh:async()=>{}};document.dispatchEvent(new Event('mxmed:signature-changed'))}",image)
+            desktop.locator('#ci_doctor_signature_apply_registered').click()
+            desktop.wait_for_function("document.querySelector('#ci_doctor_signature_status').textContent.includes('vinculada')")
+        desktop.locator('#ci_signatures_continue').click()
+        expect(desktop.locator('#ci_review_signature_status')).to_contain_text('Paciente: Firma válida para esta versión')
+        expect(desktop.locator('#ci_review_signature_status')).to_contain_text('Médico: Firma válida para esta versión')
+        with desktop.expect_response(lambda r:r.request.method=='POST' and '/patients/p_plan02ux_review/documents' in r.url) as emission:
+            desktop.locator('#ci_emit').click()
+        check('CONSENT_QR_EMISSION_HTTP',emission.value.status in (200,201))
+        result=current_payload()
+        check('CONSENT_QR_EMISSION_VERIFIED',result['consent']['status']=='granted'
+            and result['signature_binding_status']=={'patient':'valid_bound_signature','doctor':'valid_bound_signature'}
+            and result['signatures']['patient']['binding']['content_fingerprint']==result['signatures']['doctor']['binding']['content_fingerprint'])
+        check('CONSENT_QR_EMISSION_MODE_'+emission_mode.upper(),True)
+        browser.close()
+        sys.exit(0)
     subprocess.run(['php','modules/clinical/qa/consent_qr_binding_contract.php',DB],check=True)
     doctor_phone.close()
 
@@ -211,6 +244,16 @@ with sync_playwright() as pw:
     init_desktop(desktop);open_draft(desktop)
     desktop.wait_for_function("document.querySelector('#ci_signature_status').textContent.includes('requiere confirmación')",timeout=15000)
     check('T21_CHANGED_DRAFT_REMOTE_SIGNATURE_STALE',desktop.locator('#ci_signature_status').inner_text()=='Firma requiere confirmación nuevamente')
+    if os.environ.get('CONSENT_QR_STALE_EMISSION_ONLY')=='1':
+        if not desktop.locator('#ci_review_confirm_informed').is_checked():
+            desktop.locator('#ci_review_confirm_informed').check()
+        desktop.locator('#ci_signatures_continue').click()
+        expect(desktop.locator('#ci_review_heading')).to_have_text('Vista previa · Revisión final')
+        desktop.locator('#ci_emit').click()
+        expect(desktop.locator('#ci_review_warning')).to_contain_text('versión anterior')
+        check('STALE_REOPENED_DRAFT_EMISSION_BLOCKED',True)
+        browser.close()
+        sys.exit(0)
 
     # An uploaded but unsaved QR must stay revoked even if the editor later
     # returns every visible field to the same fingerprint.

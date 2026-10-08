@@ -42121,6 +42121,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       reviewPanel: root.querySelector('#ci_review_panel'),
       reviewHeading: root.querySelector('#ci_review_heading'),
       reviewWarning: root.querySelector('#ci_review_warning'),
+      reviewSignatureStatus: root.querySelector('#ci_review_signature_status'),
       reviewHtml: root.querySelector('#ci_review_html'),
       reviewAttachments: root.querySelector('#ci_review_attachments'),
       reviewEdit: root.querySelector('#ci_review_edit'),
@@ -54185,6 +54186,40 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.doctorSignatureBindingState = doctor;
       updateSignatureStatus(); updateDoctorSignatureStatus();
     };
+    const consentEmissionSignatureError = (prepared)=>{
+      const statuses = prepared?.body?.payload?.signature_binding_status || {};
+      const representative = sanitizeText(state.form.firmante_tipo || 'paciente') !== 'paciente';
+      if(statuses.patient !== 'valid_bound_signature'){
+        if(statuses.patient === 'stale_or_unverified') return representative
+          ? 'La firma del representante corresponde a una versión anterior del consentimiento. Solicita la firma nuevamente.'
+          : 'La firma del paciente corresponde a una versión anterior del consentimiento. Solicita la firma nuevamente.';
+        return representative ? 'Falta una firma válida del representante.' : 'Falta una firma válida del paciente.';
+      }
+      if(statuses.doctor !== 'valid_bound_signature'){
+        return statuses.doctor === 'stale_or_unverified'
+          ? 'La firma del médico debe aplicarse nuevamente porque el consentimiento cambió.'
+          : 'Falta una firma válida del médico.';
+      }
+      return '';
+    };
+    const renderConsentFinalSignatureStatus = (prepared, final)=>{
+      if(!els.reviewSignatureStatus) return;
+      els.reviewSignatureStatus.classList.toggle('d-none', !final);
+      if(!final){ els.reviewSignatureStatus.replaceChildren(); return; }
+      const statuses = prepared?.body?.payload?.signature_binding_status || {};
+      const statusText = status => status === 'valid_bound_signature' ? 'Firma válida para esta versión'
+        : status === 'stale_or_unverified' ? 'Firma requiere confirmación nuevamente'
+        : status === 'legacy_unbound' || status === 'legacy_unverified_binding'
+          ? 'Firma anterior no verificada' : 'Firma pendiente';
+      const representative = sanitizeText(state.form.firmante_tipo || 'paciente') !== 'paciente';
+      els.reviewSignatureStatus.replaceChildren();
+      for(const [label,status] of [[representative ? 'Representante' : 'Paciente', statuses.patient],
+        ['Médico', statuses.doctor]]){
+        const line = document.createElement('div');
+        line.textContent = `${label}: ${statusText(status)}`;
+        els.reviewSignatureStatus.append(line);
+      }
+    };
 
     // Review hashes canonical consent inputs, never mutable DOM or rendered HTML.
     // The generated timestamp is intentionally omitted; the final reviewed body
@@ -54281,6 +54316,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     let consentReviewEditStartingValues = null;
     const renderConsentReviewDocument = (prepared, final = false)=>{
       els.reviewHtml.innerHTML = String(prepared?.body?.payload?.frozen_snapshot?.html || '');
+      renderConsentFinalSignatureStatus(prepared, final);
       els.reviewHtml.classList.remove('ci-review-sheet--editing');
       consentReviewReadHtml = els.reviewHtml.innerHTML;
       consentReviewEditStartingValues = null;
@@ -54334,6 +54370,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         showNotice(prepared.error);
         return false;
       }
+      await Promise.all([...state.signatureBindingTasks]);
+      await classifyConsentPrepared(prepared);
       state.finalReviewFingerprint = await fingerprintConsentReview(prepared, 'final');
       state.reviewedPrepared = prepared;
       state.reviewPhase = 'final';
@@ -54658,6 +54696,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const current = await buildCanonicalConsentDocument(normalizedStatus);
         if(!current?.error) await classifyConsentPrepared(current);
         if(isEmit){
+          const signatureError = current?.error ? '' : consentEmissionSignatureError(current);
+          if(signatureError){
+            renderConsentFinalSignatureStatus(current, true);
+            showConsentReviewWarning(signatureError);
+            return;
+          }
           const currentFingerprint = current?.error ? '' : await fingerprintConsentReview(current, 'final');
           const contentMatches = await consentContentStillReviewed();
           if(!contentMatches || currentFingerprint !== state.finalReviewFingerprint){
@@ -54746,7 +54790,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const json = await resp.json().catch(()=> null);
         if(!resp.ok || !json || json.ok !== true){
           console.error('[mxmed-consent] canonical write rejected', { status: resp.status, error: json?.error });
-          throw new Error('No se pudo guardar el consentimiento. Revisa los datos e intenta de nuevo.');
+          throw new Error(isEmit && typeof json?.error?.code === 'string'
+            && json.error.code.startsWith('CONSENT_')
+            ? sanitizeText(json.message || json.error.message || '')
+            : 'No se pudo guardar el consentimiento. Revisa los datos e intenta de nuevo.');
         }
         try{
           console.info('[mxmed-consent] save canonical ok', {
