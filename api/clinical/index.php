@@ -9169,6 +9169,34 @@ try {
             }
             return;
         }
+        if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'responsiva-preview') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = ['route' => 'doctors/{doctor_id}/patients/{patient_id}/responsiva-preview'];
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($doctorId !== (string)$scopedDoctorContext['doctor_id']
+                    || !clinical_patient_exists($pdo, $patientId)
+                    || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response(['ok' => false, 'error' => 'forbidden', 'meta' => $meta], 403);
+                    return;
+                }
+                $request = json_decode((string)file_get_contents('php://input'), true);
+                $body = is_array($request) ? $request : [];
+                if (($body['document_type'] ?? '') !== 'responsiva_medica'
+                    || trim((string)($body['context']['patient_id'] ?? '')) !== $patientId
+                    || trim((string)($body['payload']['actor_snapshot']['user_id'] ?? '')) !== (string)$scopedDoctorContext['user_id'])
+                    throw new InvalidArgumentException('RESPONSIVA_PREVIEW_CONTEXT_INVALID');
+                require_once __DIR__ . '/../_lib/clinical_responsiva_render.php';
+                clinical_send_response(['ok' => true, 'data' => [
+                    'html' => clinical_responsiva_render_html((array)$body['payload'])], 'meta' => $meta], 200);
+                return;
+            } catch (Throwable $error) {
+                clinical_send_response(['ok' => false, 'error' => 'RESPONSIVA_PREVIEW_INVALID',
+                    'meta' => $meta], 400);
+                return;
+            }
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
             clinical_m6_observability_route('C04_PATIENT_DOCUMENT', 'CREATE_DOCUMENT', 'PATIENT_LEVEL_C04');
             $doctorId = trim(rawurldecode((string)$segments[1]));
@@ -9247,6 +9275,23 @@ try {
                     if ($document === null) throw new RuntimeException('CONSENT_DOCUMENT_NOT_FOUND');
                     clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
                         'data' => ['document_id' => $consentResult['document_uuid'], 'document' => $document],
+                        'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
+                    return;
+                }
+                if (($payload['document_type'] ?? null) === 'responsiva_medica') {
+                    if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('RESPONSIVA_MULTIPART_UNSUPPORTED');
+                    if ($doctorId !== (string)$scopedDoctorContext['doctor_id']) {
+                        clinical_send_response(['ok' => false, 'error' => 'forbidden', 'meta' => $meta], 403);
+                        return;
+                    }
+                    require_once __DIR__ . '/../_lib/clinical_responsiva_write.php';
+                    $result = clinical_responsiva_write($pdo, $scopedDoctorContext, $patientId, $payload,
+                        (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                    $replay = ($result['_idempotency_replay'] ?? false) === true;
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
+                    if ($document === null) throw new RuntimeException('RESPONSIVA_DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
+                        'data' => ['document_id' => $result['document_uuid'], 'document' => $document],
                         'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
                     return;
                 }

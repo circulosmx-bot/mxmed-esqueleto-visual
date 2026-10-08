@@ -231,6 +231,8 @@
 <link rel="stylesheet" href="assets/css/clinical/expediente-panel-geometry.css?v=ux-align02">
 <link rel="stylesheet" href="assets/css/clinical/expediente-panel-title-typography.css?v=ux-title01">
 <link rel="stylesheet" href="assets/css/clinical/floating-qa-widget-visibility.css?v=qa-widget01">
+<link rel="stylesheet" href="assets/css/clinical-doc-base.css">
+<link rel="stylesheet" href="assets/css/clinical/responsiva-document.css?v=resp-imp01a">
 </head>
 
 <body class="mx-sidebar-collapsed" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -9910,6 +9912,10 @@
                       </div>
                     </div>
                     <div id="rm_step_5" class="d-none">
+                      <div class="small text-uppercase text-muted fw-semibold mb-2">Revisión del contenido antes de firmar</div>
+                      <div id="rm_content_review" class="border rounded p-3 bg-light-subtle"></div>
+                    </div>
+                    <div id="rm_step_6" class="d-none">
                       <div class="row g-3">
                         <div class="col-12">
                           <div class="border rounded p-3 bg-light-subtle">
@@ -9927,7 +9933,7 @@
                               <canvas id="rm_signer_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr" disabled title="Disponible en una fase posterior">Firma con celular próximamente</button>
                               <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_signer_signature_clear">Volver a firmar</button>
                             </div>
                             <div class="small text-muted mt-2 d-none" id="rm_signer_signature_remote_status"></div>
@@ -9953,7 +9959,7 @@
                               <canvas id="rm_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr" disabled title="Disponible en una fase posterior">Firma con celular próximamente</button>
                               <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_doctor_signature_clear">Volver a firmar</button>
                             </div>
                             <div class="small text-muted mt-2 d-none" id="rm_doctor_signature_remote_status"></div>
@@ -9968,8 +9974,12 @@
                         </div>
                       </div>
                     </div>
+                    <div id="rm_step_7" class="d-none">
+                      <div class="small text-uppercase text-muted fw-semibold mb-2">Revisión final antes de emitir</div>
+                      <div id="rm_final_review" class="border rounded p-3 bg-light-subtle"></div>
+                    </div>
                     <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
-                      <span class="text-muted small" id="rm_step_label">Paso 1 de 5</span>
+                      <span class="text-muted small" id="rm_step_label">Paso 1 de 7</span>
                       <div class="d-flex flex-wrap justify-content-end gap-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_prev" disabled>Anterior</button>
                         <button type="button" class="btn btn-primary btn-sm" id="rm_next">Continuar</button>
@@ -10941,6 +10951,7 @@
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
 <script src="assets/js/clinical/patient-workspace-navigation-guard.js?v=vis24"></script>
 <script src="assets/js/clinical/consent-signature-binding.js?v=cons-sign02a"></script>
+<script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-imp01a"></script>
 <script src="assets/js/app.js?v=cons-sign02b-r2"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help01"></script>
 <script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>

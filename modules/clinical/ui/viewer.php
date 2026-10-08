@@ -958,6 +958,7 @@ if (!$embed) {
 ?>
 <?php if ($isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
+<link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=resp-imp01a">
 <?php endif; ?>
 <style>
   html,body{height:100%;}
@@ -2869,7 +2870,11 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($isResponsivaDoc): ?>
+    <?php if ($isResponsivaDoc && trim((string)($payload['responsiva_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['responsiva_snapshot']['html']; ?>
+      </div>
+    <?php elseif ($isResponsivaDoc): ?>
       <?php
       $responsivaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
       $responsivaContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];

@@ -1,0 +1,60 @@
+/* RESP-IMP01A: content-only Responsiva V1, separate from Consentimiento. */
+(function () {
+  'use strict';
+  const clean = value => String(value ?? '').normalize('NFC').replace(/\r\n?/g, '\n');
+  const projection = body => {
+    const p = body?.payload || {}, patient = p.patient_snapshot || {}, actor = p.actor_snapshot || {};
+    const brand = p.branding || {};
+    const type = p.responsiva || {}, content = p.content || {}, signer = p.signer || {};
+    return {
+      version: 1, document_type: 'responsiva_medica', document_date: clean(p.report?.emission_date),
+      patient: { id: clean(body?.context?.patient_id), name: clean(patient.full_name), age: clean(patient.age), sex: clean(patient.sex) },
+      physician: { user_id: clean(actor.user_id), name: clean(actor.full_name), license: clean(actor.license),
+        specialty: clean(actor.specialty), specialty_license: clean(actor.specialty_license), place: clean(actor.place),
+        institution: clean(actor.institution), facility: clean(actor.facility) },
+      visible_branding: { logo_url: clean(brand.logo_url_resolved),
+        facility: clean(brand.facility_visible ?? actor.facility),
+        location: clean(brand.location_line_visible ?? actor.place) },
+      type: { key: clean(type.type), other: clean(type.type_other), label: clean(type.type_label) },
+      content: { clinical_situation: clean(content.clinical_situation), indicated_conduct: clean(content.indicated_conduct),
+        relevant_risk: clean(content.relevant_risk), declaration_text: clean(content.declaration_text),
+        additional_manifestation: clean(content.additional_manifestation), closing_statement: clean(content.closing_statement) },
+      signer: { role: clean(signer.role), name: clean(signer.name), character: clean(signer.character),
+        relationship: clean(signer.relationship) }
+    };
+  };
+  const hash = async body => {
+    const bytes = new TextEncoder().encode(JSON.stringify(projection(body)));
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  };
+  const authority = (body, role, doctorId) => role === 'doctor'
+    ? `${clean(doctorId)}|${clean(body?.payload?.actor_snapshot?.user_id)}`
+    : JSON.stringify(['role', 'name', 'character', 'relationship'].map(key => clean(body?.payload?.signer?.[key])));
+  const imageDigest = data => window.mxmedConsentSignatureBinding.imageDigest(data);
+  const imageHasInk = data => window.mxmedConsentSignatureBinding.imageHasInk(data);
+  const bind = async (body, role, doctorId, signature) => {
+    if (!signature?.image_data || !await imageHasInk(signature.image_data)) return null;
+    const digest = await imageDigest(signature.image_data);
+    if (!digest) return null;
+    return { ...signature, binding: { version: 1, role, source: signature.source,
+      authority: authority(body, role, doctorId), artifact_digest: digest,
+      content_fingerprint: await hash(body), applied_at: new Date().toISOString() } };
+  };
+  const classify = async (body, role, doctorId, registeredImage = '') => {
+    const entry = body?.payload?.signatures?.[role];
+    if (!entry?.image_data) return 'absent';
+    const b = entry.binding;
+    if (b?.version !== 1) return 'legacy_unverified_binding';
+    if (b.revoked_in_edit || !['local_canvas', 'registered_profile'].includes(entry.source)
+      || (role === 'signer' && entry.source !== 'local_canvas') || entry.role !== role
+      || b.role !== role || b.source !== entry.source || b.authority !== authority(body, role, doctorId)
+      || b.content_fingerprint !== await hash(body) || !await imageHasInk(entry.image_data)
+      || b.artifact_digest !== await imageDigest(entry.image_data)) return 'stale_or_unverified_signature';
+    if (entry.source === 'registered_profile'
+      && (!registeredImage || b.artifact_digest !== await imageDigest(registeredImage)))
+      return 'stale_or_unverified_signature';
+    return 'valid_bound_signature';
+  };
+  window.mxmedResponsivaSignatureBinding = Object.freeze({ projection, hash, authority, bind, classify });
+})();

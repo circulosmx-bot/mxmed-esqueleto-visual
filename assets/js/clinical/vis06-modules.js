@@ -123,6 +123,14 @@
       if(resultTypes.has(row.document_type)&&row.created_after_final_note==1)main.append(node('p','Resultado recibido después de finalizar','vis06-late'));
       if(row.lineage_root_id && String(row.lineage_root_id)!==String(row.id) && row.has_successor!=1)main.append(node('span','Versión vigente','vis06-status'));
       const actions=node('div','','vis06-actions');const detail=button('Ver detalle',()=>{view.lastTrigger=detail;revealRecord(row,view);});actions.append(detail);
+      const actor=String(window.mxmedUserId || window.__MXMED_USER_ID || window.mxmedStore?.user_id
+        || document.body?.dataset?.userId || '').trim();
+      if(view.kind==='documents' && row.document_type==='responsiva_medica' && row.status==='draft'
+        && actor && actor===String(row.created_by_user_id || '')){
+        actions.prepend(button('Continuar borrador',()=>window.dispatchEvent(new CustomEvent('mxmed:resume-responsiva-draft',{
+          detail:{patient_id:selectedPatient(),document_uuid:row.document_uuid}
+        }))));
+      }
       if(row.has_private_binary==1)actions.append(button('Abrir archivo',()=>privateRead(row,view)));
       if(rows.some(r=>String(r.lineage_root_id || r.id)===String(row.lineage_root_id || row.id)&&String(r.id)!==String(row.id)))actions.append(button('Ver historial',()=>{view.lastTrigger=detail;revealRecord(row,view);}));
       card.append(main,actions);view.list.append(card);
