@@ -4327,9 +4327,33 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
 .docux-action-modal .docux-capture-expiry {font-size:12px;margin:8px 0 0;color:#617d94}
 .docux-action-modal[data-docux-capture] .docux-qr {width:216px;height:216px}
 .docux-action-modal[data-docux-capture] .docux-capture-columns {grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+/* Consent QR handoff uses the Step-6 capture modal's shared guide and panel styles. */
+#modalConsentSignatureQr .ci-signature-handoff-dialog {width:calc(100vw - 24px);max-width:570px}
+#modalConsentSignatureQr .ci-signature-handoff {width:100%;max-height:calc(100dvh - 32px);overflow-y:auto}
+#modalConsentSignatureQr .ci-signature-handoff :is(.modal-header,.modal-body,.modal-footer) {padding-left:0;padding-right:0}
+#modalConsentSignatureQr .ci-signature-handoff .modal-body {padding-top:0;padding-bottom:0}
+#modalConsentSignatureQr .ci-signature-handoff .docux-action-icon {border-radius:12px;background:#e5f5ff}
+#modalConsentSignatureQr .ci-signature-handoff .docux-capture-columns {grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+#modalConsentSignatureQr .ci-signature-handoff .docux-qr {width:216px;height:216px}
+#modalConsentSignatureQr .ci-signature-handoff .docux-phone::after {content:'draw'}
+#modalConsentSignatureQr .ci-signature-context {display:flex;flex-wrap:wrap;gap:4px;margin:0 0 12px;padding:9px 12px;border:1px solid #d5edf3;border-radius:8px;background:#effafb;color:#356b82;font-size:13px;line-height:19px}
+#modalConsentSignatureQr .ci-signature-context strong {color:#07536e;overflow-wrap:anywhere}
+#modalConsentSignatureQr .ci-signature-preview {max-height:180px;object-fit:contain}
+#modalConsentSignatureQr .docux-capture-status[data-tone=success] {color:#008754}
+#modalConsentSignatureQr .docux-capture-status[data-tone=error] {color:#9d352f}
+#modalConsentSignatureQr .ci-signature-handoff .modal-footer > div {width:100%;justify-content:space-between}
+@media(max-height:800px){
+ #modalConsentSignatureQr .ci-signature-handoff {padding:18px}
+ #modalConsentSignatureQr .ci-signature-handoff .modal-header {margin-bottom:12px}
+ #modalConsentSignatureQr .ci-signature-handoff .docux-action-icon {font-size:56px;line-height:64px;flex-basis:64px;height:64px}
+ #modalConsentSignatureQr .ci-signature-handoff .docux-capture-steps {margin-bottom:10px}
+ #modalConsentSignatureQr .ci-signature-handoff .modal-footer {margin-top:12px}
+}
 @media(max-width:575.98px){
  .docux-action-modal[data-docux-capture] .docux-capture-columns {grid-template-columns:minmax(0,1fr)}
  .docux-action-modal[data-docux-capture] .docux-phone-panel {display:none}
+ #modalConsentSignatureQr .ci-signature-handoff .docux-capture-columns {grid-template-columns:minmax(0,1fr)}
+ #modalConsentSignatureQr .ci-signature-handoff .docux-phone-panel {display:none}
  .docux-capture-classifications [data-docux-capture-options] {grid-template-columns:repeat(2,minmax(0,1fr))}
  .docux-action-modal .docux-capture-classifications [data-docux-capture-options] label {flex-direction:column;text-align:center;padding:10px 8px}
 }

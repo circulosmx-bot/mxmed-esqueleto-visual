@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=doc-vis03">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=cons-sign02b-r2">
 <link rel="stylesheet" href="assets/css/patient-workspace-navigation-guard.css?v=vis24">
 <link rel="stylesheet" href="assets/css/clinical/dental-location-v1.css?v=dental-cat02">
 <link rel="stylesheet" href="assets/css/clinical/dental-odontogram-v2.css?v=dental-odontogram02">
@@ -5908,50 +5908,53 @@
                     </div>
                   </div>
                 </div>
-                <div class="modal fade" id="modalConsentSignatureQr" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title" data-role="ci-signature-qr-title">Firmar desde tu celular</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                      </div>
-                      <div class="modal-body">
-                        <p class="small text-muted mb-3" data-role="ci-signature-qr-hint">
-                          Escanea este código con tu celular para firmar y anexar la firma al consentimiento en curso.
-                        </p>
-                        <div class="text-center mb-3">
-                          <img
-                            data-role="ci-signature-qr-image"
-                            src=""
-                            alt="Código QR para firma remota"
-                            class="border rounded p-2 bg-white"
-                            style="width:220px;height:220px;object-fit:contain;"
-                          >
+                <div class="modal fade" id="modalConsentSignatureQr" tabindex="-1" aria-labelledby="ci-signature-qr-title" aria-describedby="ci-signature-qr-hint" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered ci-signature-handoff-dialog">
+                    <div class="modal-content docux-action-modal ci-signature-handoff">
+                      <header class="modal-header">
+                        <span class="material-symbols-rounded docux-action-icon" aria-hidden="true">smartphone</span>
+                        <div>
+                          <h4 class="modal-title" id="ci-signature-qr-title" data-role="ci-signature-qr-title">Firmar con celular</h4>
+                          <p id="ci-signature-qr-hint" data-role="ci-signature-qr-hint">Revisa y firma este consentimiento desde tu teléfono.</p>
                         </div>
-                        <div class="small text-break mb-2">
-                          <div class="text-muted mb-1">Si no ves el código QR, abre este enlace en tu celular:</div>
-                          <a href="#" target="_blank" rel="noopener" data-role="ci-signature-qr-link"></a>
+                        <button type="button" class="btn btn-link" data-modal-close data-bs-dismiss="modal" aria-label="Cerrar">×</button>
+                      </header>
+                      <div class="modal-body plan02b-modal-content">
+                        <p class="ci-signature-context">Firmando como: <strong data-role="ci-signature-qr-context">Paciente o representante</strong></p>
+                        <div class="docux-capture-guide">
+                          <ol class="docux-capture-steps">
+                            <li><span aria-hidden="true">1</span>Escanea el código<br>o abre el enlace</li>
+                            <li><span aria-hidden="true">2</span>Revisa el consentimiento</li>
+                            <li><span aria-hidden="true">3</span>Firma y confirma</li>
+                          </ol>
+                          <div class="docux-capture-columns">
+                            <div class="docux-qr-panel">
+                              <div class="docux-qr" data-role="ci-signature-qr-image" role="img" aria-label="Código QR para firmar el consentimiento desde el teléfono"></div>
+                              <p>Escanea con la cámara de tu teléfono</p>
+                              <div class="docux-links">
+                                <a href="#" target="_blank" rel="noopener noreferrer" data-role="ci-signature-qr-link"><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace</a>
+                                <button type="button" class="btn btn-link" data-action="ci-signature-qr-copy-link" aria-label="Copiar enlace"><span class="material-symbols-rounded" aria-hidden="true">content_copy</span></button>
+                              </div>
+                              <p class="docux-capture-expiry">Código de un solo uso · <span data-role="ci-signature-qr-countdown">vence en 15 min</span></p>
+                            </div>
+                            <div class="docux-phone-panel">
+                              <span class="material-symbols-rounded docux-phone" aria-hidden="true">smartphone</span>
+                              <p class="docux-phone-help">Mantén esta ventana abierta mientras firmas. La firma aparecerá aquí cuando sea recibida.</p>
+                            </div>
+                          </div>
                         </div>
-                        <button type="button" class="btn btn-outline-secondary btn-sm mb-2" data-action="ci-signature-qr-copy-link">
-                          Copiar enlace
-                        </button>
-                        <div class="small mb-1" data-role="ci-signature-qr-state">Pendiente</div>
-                        <div class="small text-muted" data-role="ci-signature-qr-countdown"></div>
+                        <p class="docux-capture-status" data-role="ci-signature-qr-state" role="status" aria-live="polite">Esperando firma…</p>
                         <div class="alert alert-success d-none mt-3 mb-0 py-2 px-3" data-role="ci-signature-qr-preview-wrap">
                           <div class="fw-semibold small mb-2">Firma recibida</div>
-                          <img
-                            data-role="ci-signature-qr-preview-image"
-                            src=""
-                            alt="Vista previa de firma remota"
-                            class="img-fluid rounded border bg-white"
-                            style="max-height:180px;object-fit:contain;"
-                          >
+                          <img data-role="ci-signature-qr-preview-image" src="" alt="Vista previa de firma remota" class="img-fluid rounded border bg-white ci-signature-preview">
                         </div>
                       </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-action="ci-signature-qr-verify-now">Verificar ahora</button>
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
-                      </div>
+                      <footer class="modal-footer">
+                        <div>
+                          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                          <button type="button" class="btn btn-outline-secondary" data-action="ci-signature-qr-verify-now">Verificar ahora</button>
+                        </div>
+                      </footer>
                     </div>
                   </div>
                 </div>
@@ -10937,7 +10940,7 @@
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
 <script src="assets/js/clinical/patient-workspace-navigation-guard.js?v=vis24"></script>
 <script src="assets/js/clinical/consent-signature-binding.js?v=cons-sign02a"></script>
-<script src="assets/js/app.js?v=ordprint02b"></script>
+<script src="assets/js/app.js?v=cons-sign02b-r2"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help01"></script>
 <script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
