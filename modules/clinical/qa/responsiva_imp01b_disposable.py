@@ -41,7 +41,10 @@ def qrrow(token):
 
 
 def draw(page, selector='#signatureCanvas'):
-    box = page.locator(selector).bounding_box()
+    canvas = page.locator(selector)
+    expect(canvas).to_be_visible(timeout=15000)
+    canvas.scroll_into_view_if_needed()
+    box = canvas.bounding_box()
     page.mouse.move(box['x'] + 25, box['y'] + 25)
     page.mouse.down()
     page.mouse.move(box['x'] + 170, box['y'] + 80, steps=12)
