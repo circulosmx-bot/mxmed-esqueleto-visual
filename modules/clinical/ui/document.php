@@ -1086,7 +1086,7 @@ if (!$embed) {
               <li><a class="dropdown-item" href="<?php echo h($originalDownloadHref); ?>" target="_blank" rel="noopener" download>Descargar original</a></li>
             <?php endif; ?>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
-            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar</button></li>
+            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar página HTML</button></li>
           <?php elseif ($isPdfDoc): ?>
             <li><a class="dropdown-item" href="<?php echo h($viewerOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
             <?php if ($downloadHref !== ''): ?>
@@ -1095,11 +1095,11 @@ if (!$embed) {
               <li><button type="button" class="dropdown-item" disabled title="No disponible">Descargar PDF</button></li>
             <?php endif; ?>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
-            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar</button></li>
+            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar página HTML</button></li>
           <?php elseif ($showCommonDocActions): ?>
             <li><a class="dropdown-item" href="<?php echo h($documentOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
-            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar</button></li>
+            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar página HTML</button></li>
             <li><button type="button" class="dropdown-item" data-action="copy-document-link">Copiar enlace</button></li>
           <?php endif; ?>
           <?php if ($uuid !== '' && $errorMessage === '' && $replicateUrl !== ''): ?>

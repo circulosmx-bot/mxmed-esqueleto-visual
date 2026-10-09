@@ -43266,6 +43266,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       consentimiento_informado: Object.freeze({
         document_type: 'consentimiento_informado',
         title: 'Consentimiento informado',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'consent.document_title',
         blocks: Object.freeze([
           'identificacion',
@@ -43295,6 +43297,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informe_medico: Object.freeze({
         document_type: 'informe_medico',
         title: 'Informe médico',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'content.reason',
         blocks: Object.freeze([
           'encabezado',
@@ -43328,6 +43332,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       nota_medica: Object.freeze({
         document_type: 'nota_medica',
         title: 'Nota médica',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'content.motivo_consulta',
         blocks: Object.freeze([
           'encabezado',
@@ -43357,6 +43363,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       alta_medica: Object.freeze({
         document_type: 'alta_medica',
         title: 'Alta médica',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'content.motivo_egreso',
         blocks: Object.freeze([
           'encabezado',
@@ -43386,6 +43394,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       interconsulta: Object.freeze({
         document_type: 'interconsulta',
         title: 'Interconsulta',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'content.reason',
         blocks: Object.freeze([
           'encabezado',
@@ -43416,6 +43426,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsiva_medica: Object.freeze({
         document_type: 'responsiva_medica',
         title: 'Responsiva médica',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'responsiva.type_label',
         blocks: Object.freeze([
           'encabezado',
@@ -43446,6 +43458,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificado_medico: Object.freeze({
         document_type: 'certificado_medico',
         title: 'Certificado médico',
+        printable: true,
+        post_emission_actions: Object.freeze(['view', 'print', 'close']),
         subtitle_field: 'certificate.type_label',
         blocks: Object.freeze([
           'encabezado',
@@ -43482,6 +43496,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       return Object.freeze({
         document_type: key || 'unknown',
         title: 'Documento clínico',
+        printable: false,
+        post_emission_actions: Object.freeze([]),
         subtitle_field: '',
         blocks: Object.freeze([]),
         signatures_required: Object.freeze([]),
@@ -47565,6 +47581,85 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       window.open(href, '_blank', 'noopener');
       return true;
     };
+    const openClinicalDocumentPrint = (documentUuid)=>{
+      const uuid = sanitizeText(documentUuid);
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(uuid) || !doctorId) return false;
+      const params = new URLSearchParams({ uuid, doctor_id: doctorId, autoprint: '1' });
+      window.open(`/modules/clinical/ui/viewer.php?${params.toString()}`, '_blank', 'noopener');
+      return true;
+    };
+    const postEmission = { documentUuid: '', documentType: '' };
+    const ensurePostEmissionModal = ()=>{
+      let modal = document.getElementById('modalDocumentPostEmission');
+      if(modal) return modal;
+      modal = document.createElement('div');
+      modal.id = 'modalDocumentPostEmission';
+      modal.className = 'modal fade doc-post-emission-modal';
+      modal.tabIndex = -1;
+      modal.setAttribute('aria-labelledby', 'document_post_emission_title');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('role', 'dialog');
+      modal.innerHTML = `<div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-body text-center py-4 px-4">
+          <h2 class="h5 mt-2 mb-2" id="document_post_emission_title" tabindex="-1" role="status" aria-live="polite"></h2>
+          <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <button type="button" class="btn btn-primary" data-post-emission="print">IMPRIMIR</button>
+            <button type="button" class="btn btn-outline-primary" data-post-emission="view">VER DOCUMENTO</button>
+            <button type="button" class="btn btn-outline-secondary" data-post-emission="close">CERRAR</button>
+          </div>
+        </div>
+      </div></div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (event)=>{
+        const action = event.target.closest('[data-post-emission]')?.dataset.postEmission;
+        if(!action) return;
+        if(action === 'view') openClinicalDocumentViewer(postEmission.documentUuid);
+        if(action === 'print') openClinicalDocumentPrint(postEmission.documentUuid);
+        if(action === 'close') window.bootstrap?.Modal?.getInstance(modal)?.hide();
+      });
+      modal.addEventListener('shown.bs.modal', ()=> modal.querySelector('#document_post_emission_title')?.focus());
+      modal.addEventListener('hidden.bs.modal', ()=>{
+        const emittedCard = [...els.list.querySelectorAll('[data-doc-uuid]')]
+          .find(card => card.dataset.docUuid === postEmission.documentUuid);
+        const returnTarget = emittedCard?.querySelector('[data-doc-action="view"]')
+          || root.querySelector('[data-action="documents-open-consent"]');
+        returnTarget?.focus();
+      });
+      return modal;
+    };
+    const showPostEmissionSuccess = (responseJson, documentType, sourceModal = null)=>{
+      const definition = getClinicalDocumentDefinition(documentType);
+      const saved = responseJson?.data?.document;
+      const uuid = sanitizeText(saved?.document_id || saved?.document_uuid || responseJson?.data?.document_id || '');
+      if(!saved || saved.status !== 'generated' || saved.document_type !== documentType
+        || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(uuid)) return false;
+      const modal = ensurePostEmissionModal();
+      if(!window.bootstrap?.Modal) return false;
+      postEmission.documentUuid = uuid;
+      postEmission.documentType = documentType;
+      modal.querySelector('#document_post_emission_title').textContent = `✓ ${definition.title} emitido correctamente`;
+      const actions = Array.isArray(definition.post_emission_actions) ? definition.post_emission_actions : [];
+      modal.querySelector('[data-post-emission="view"]').hidden = !actions.includes('view');
+      modal.querySelector('[data-post-emission="print"]').hidden = !definition.printable || !actions.includes('print');
+      const show = ()=> window.bootstrap.Modal.getOrCreateInstance(modal).show();
+      if(sourceModal?.classList.contains('show')){
+        sourceModal.addEventListener('hidden.bs.modal', show, { once: true });
+      }else{
+        show();
+      }
+      return true;
+    };
+    const presentEmittedDocument = async (responseJson, documentType, sourceModal)=>{
+      try{
+        await listCanonicalConsents();
+        if(showPostEmissionSuccess(responseJson, documentType, sourceModal)) return true;
+      }catch(error){
+        console.warn('[DOCUMENT-POST-EMISSION] action shell unavailable', error);
+      }
+      showCatalogFeedback('El documento se emitió, pero no fue posible abrir sus acciones. Consúltalo en Documentos.', 'error');
+      return false;
+    };
     const readInformePatientContext = ()=>{
       const snapshot = readPatientSnapshot();
       return {
@@ -48046,16 +48141,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'informe_medico', patientId: prepared.patientId });
+          await presentEmittedDocument(json, 'informe_medico', els.informeModalEl);
+        }else{
+          listCanonicalConsents();
         }
         resetInformeWizard();
         closeInformeModal();
-        listCanonicalConsents();
-        showCatalogFeedback(
-          prepared.normalizedStatus === 'issued'
-            ? 'Informe médico emitido correctamente.'
-            : 'Borrador de informe médico guardado correctamente.',
-          'success'
-        );
+        if(prepared.normalizedStatus !== 'issued') showCatalogFeedback('Borrador de informe médico guardado correctamente.', 'success');
       }catch(error){
         setInformeNotice(sanitizeText(error?.message || 'No se pudo guardar el informe médico.'));
         showCatalogFeedback(sanitizeText(error?.message || 'No se pudo guardar el informe médico.'), 'error');
@@ -48845,16 +48937,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'nota_medica', patientId: prepared.patientId });
+          await presentEmittedDocument(json, 'nota_medica', els.notaModalEl);
+        }else{
+          listCanonicalConsents();
         }
         resetNotaWizard();
         closeNotaModal();
-        listCanonicalConsents();
-        showCatalogFeedback(
-          prepared.normalizedStatus === 'issued'
-            ? 'Nota médica emitida correctamente.'
-            : 'Borrador de nota médica guardado correctamente.',
-          'success'
-        );
+        if(prepared.normalizedStatus !== 'issued') showCatalogFeedback('Borrador de nota médica guardado correctamente.', 'success');
       }catch(error){
         const message = sanitizeText(error?.message || 'No se pudo guardar la nota médica.');
         setNotaNotice(message);
@@ -49813,20 +49902,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'alta_medica', patientId: prepared.patientId });
+          await presentEmittedDocument(json, 'alta_medica', els.altaModalEl);
+        }else{
+          listCanonicalConsents();
         }
+        const createdAgendaEvent = !!altaState.form.create_agenda_event;
         resetAltaWizard();
         closeAltaModal();
-        listCanonicalConsents();
-        showCatalogFeedback(
-          prepared.normalizedStatus === 'issued'
-            ? (altaState.form.create_agenda_event
-              ? 'Alta médica emitida y cita registrada en Agenda.'
-              : 'Alta médica emitida correctamente.')
-            : (altaState.form.create_agenda_event
-              ? 'Borrador de alta médica guardado y cita registrada en Agenda.'
-              : 'Borrador de alta médica guardado correctamente.'),
-          'success'
-        );
+        if(prepared.normalizedStatus !== 'issued') showCatalogFeedback(createdAgendaEvent
+          ? 'Borrador de alta médica guardado y cita registrada en Agenda.'
+          : 'Borrador de alta médica guardado correctamente.', 'success');
       }catch(error){
         const message = sanitizeText(error?.message || 'No se pudo guardar el alta médica.');
         setAltaNotice(message);
@@ -50631,16 +50716,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'interconsulta', patientId: prepared.patientId });
+          await presentEmittedDocument(json, 'interconsulta', els.interconsultaModalEl);
+        }else{
+          listCanonicalConsents();
         }
         resetInterconsultaWizard();
         closeInterconsultaModal();
-        listCanonicalConsents();
-        showCatalogFeedback(
-          prepared.normalizedStatus === 'issued'
-            ? 'Interconsulta emitida correctamente.'
-            : 'Borrador de interconsulta guardado correctamente.',
-          'success'
-        );
+        if(prepared.normalizedStatus !== 'issued') showCatalogFeedback('Borrador de interconsulta guardado correctamente.', 'success');
       }catch(error){
         const message = sanitizeText(error?.message || 'No se pudo guardar la interconsulta.');
         setInterconsultaNotice(message);
@@ -51777,20 +51859,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         responsivaState.activeDraftVersion = Number(savedDocument.version || 0);
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'responsiva_medica', patientId: prepared.patientId });
+          await presentEmittedDocument(json, 'responsiva_medica', els.responsivaModalEl);
+        }else{
+          listCanonicalConsents();
         }
         responsivaState.discardTempOnHide = true;
         resetResponsivaWizard();
         closeResponsivaModal();
-        listCanonicalConsents();
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
           detail: { patient_id: prepared.patientId, document_type: 'responsiva_medica', source: 'responsiva_medica' }
         }));
-        showCatalogFeedback(
-          prepared.normalizedStatus === 'issued'
-            ? 'Responsiva médica emitida correctamente.'
-            : 'Borrador de responsiva médica guardado correctamente.',
-          'success'
-        );
+        if(prepared.normalizedStatus !== 'issued') showCatalogFeedback('Borrador de responsiva médica guardado correctamente.', 'success');
       }catch(error){
         const message = sanitizeText(error?.message || 'No se pudo guardar la responsiva médica.');
         setResponsivaNotice(message);
@@ -53301,15 +53380,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'certificado_medico', patientId: prepared.patientId });
+          await presentEmittedDocument(json, 'certificado_medico', els.certificadoModalEl);
+        }else{
+          listCanonicalConsents();
         }
-        listCanonicalConsents();
         const successMessage = prepared.normalizedStatus === 'issued'
           ? 'Certificado médico emitido correctamente.'
           : 'Borrador de certificado médico guardado correctamente.';
         if(closeOnSuccess){
           resetCertificadoWizard();
           closeCertificadoModal();
-          showCatalogFeedback(successMessage, 'success');
+          if(prepared.normalizedStatus !== 'issued') showCatalogFeedback(successMessage, 'success');
         }else{
           setCertificadoNotice(successMessage);
         }
@@ -53639,6 +53720,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
         const resumableDraft = (isConsentDoc || isResponsivaDoc) && status === 'draft';
+        const definition = getClinicalDocumentDefinition(documentType);
+        const emittedActions = status === 'generated' && Array.isArray(definition.post_emission_actions)
+          ? definition.post_emission_actions : [];
         card.setAttribute('aria-label', `${resumableDraft ? 'Continuar borrador' : 'Ver detalle'}: ${title}`);
         if(uuid) card.dataset.docUuid = uuid;
         card.innerHTML = `
@@ -53648,7 +53732,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
-          ${uuid ? `<div class="small fw-semibold mt-2"><span class="text-primary">${resumableDraft ? 'Continuar borrador' : 'Ver detalle'}</span></div>` : ''}
+          ${uuid ? (emittedActions.includes('view')
+            ? `<div class="d-flex flex-wrap gap-2 mt-2" data-doc-actions>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-doc-action="view">VER</button>
+                ${definition.printable && emittedActions.includes('print')
+                  ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-doc-action="print">IMPRIMIR</button>' : ''}
+              </div>`
+            : `<div class="small fw-semibold mt-2"><span class="text-primary">${resumableDraft ? 'Continuar borrador' : 'Ver detalle'}</span></div>`) : ''}
         `;
         if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
         if(isResponsivaDoc && status === 'draft') card.dataset.responsivaDraft = '1';
@@ -55181,15 +55271,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(doctorRemoteToken && doctorRemoteSource === 'remote_qr'){
           consumeConsentSignatureToken(doctorRemoteToken, savedDocument);
         }
+        if(isEmit) await presentEmittedDocument(json, 'consentimiento_informado', els.consentModalEl);
+        else listCanonicalConsents();
         resetWizard();
         closeConsentModal();
-        listCanonicalConsents();
         if(normalizedStatus === 'draft'){
           showConsentActionFeedback('Borrador guardado. Podrás continuar este documento más adelante.');
           showCatalogFeedback('Borrador guardado', 'success');
-        }else{
-          showConsentActionFeedback('Consentimiento emitido. Ya puedes consultarlo en Documentos recientes.');
-          showCatalogFeedback('Consentimiento emitido', 'success');
         }
         try{
           window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
@@ -56777,12 +56865,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const card = event.target.closest('[data-doc-uuid]');
       if(!card) return;
       event.preventDefault();
+      const action = event.target.closest('[data-doc-action]')?.dataset.docAction;
+      if(action === 'view'){ openClinicalDocumentViewer(card.dataset.docUuid); return; }
+      if(action === 'print'){ openClinicalDocumentPrint(card.dataset.docUuid); return; }
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
     els.list.addEventListener('keydown', (event)=>{
       if(event.key !== 'Enter' && event.key !== ' ') return;
+      if(event.target.closest('[data-doc-action]')) return;
       const card = event.target.closest('[data-doc-uuid]');
       if(!card) return;
       event.preventDefault();

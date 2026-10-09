@@ -1583,7 +1583,7 @@ if (!$embed) {
               $docPrintableHref = $certificadoPrintableHref;
             }
           ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($docPrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($docPrintableHref); ?>" target="_blank" rel="noopener">Abrir página imprimible</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($isCertificadoDoc && $uuid !== '' && (!$embed || $allowInlineEdit)): ?>
@@ -3393,6 +3393,12 @@ if (!$embed) {
         loader.classList.add('d-none');
       });
     }
+    <?php if ($uuid !== '' && $errorMessage === '' && ($isConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) && (string)($_GET['autoprint'] ?? '') === '1'): ?>
+    window.addEventListener('load', function () {
+      window.focus();
+      document.querySelector('[data-role="viewer-print"]')?.click();
+    }, { once: true });
+    <?php endif; ?>
     document.addEventListener('click', function (event) {
       var printBtn = event.target && event.target.closest ? event.target.closest('[data-role="viewer-print"]') : null;
       if (!printBtn) return;
