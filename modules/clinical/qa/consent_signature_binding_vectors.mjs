@@ -4,10 +4,22 @@ import { webcrypto } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 const source = fs.readFileSync('assets/js/clinical/consent-signature-binding.js', 'utf8');
+const presentationSource = fs.readFileSync('assets/js/clinical/legal-document-presentation.js', 'utf8');
 const vectors = JSON.parse(fs.readFileSync('modules/clinical/qa/consent_signature_binding_vectors.json', 'utf8'));
 const context = {window: {}, crypto: webcrypto, TextEncoder};
 vm.createContext(context);
+vm.runInContext(presentationSource, context);
 vm.runInContext(source, context);
+const newConsent = structuredClone(vectors[0].body);
+newConsent.payload.presentation = {version: 1, professional_header: 'shown'};
+newConsent.payload.branding = {professional_name_visible: 'Dra. Ejemplo', logo_url_resolved: '/logo.webp',
+  facility_visible: 'Clínica ejemplo', location_line_visible: 'Ciudad ejemplo'};
+newConsent.payload.actor_snapshot.specialty = 'Medicina interna';
+newConsent.payload.actor_snapshot.specialty_license = '12345';
+vectors.push({name: 'presentation_v2_shown', body: newConsent});
+const hiddenConsent = structuredClone(newConsent);
+hiddenConsent.payload.presentation.professional_header = 'hidden';
+vectors.push({name: 'presentation_v2_hidden', body: hiddenConsent});
 for (const {name, body} of vectors) {
   const clientProjection = JSON.stringify(context.window.mxmedConsentSignatureBinding.projection(body));
   const clientHash = await context.window.mxmedConsentSignatureBinding.hash(body);
@@ -21,3 +33,8 @@ for (const {name, body} of vectors) {
   }
   console.log(`${name}: PASS ${clientHash}`);
 }
+if (await context.window.mxmedConsentSignatureBinding.hash(newConsent)
+    === await context.window.mxmedConsentSignatureBinding.hash(hiddenConsent)) {
+  throw Error('header mode must change the V2 fingerprint');
+}
+console.log('presentation_v2_stale_on_toggle: PASS');

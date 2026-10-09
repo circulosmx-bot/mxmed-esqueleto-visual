@@ -9046,6 +9046,22 @@
                       </div>
                     </div>
 
+                    <div id="ci_presentation" class="d-none mt-3">
+                      <fieldset class="border rounded p-3">
+                        <legend class="float-none w-auto px-1 fs-6 fw-semibold mb-1">Presentación del documento</legend>
+                        <div class="form-label mb-2">Encabezado profesional</div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="ci_professional_header" id="ci_professional_header_shown" value="shown" checked>
+                          <label class="form-check-label" for="ci_professional_header_shown">Mostrar logotipo y datos profesionales</label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="ci_professional_header" id="ci_professional_header_hidden" value="hidden">
+                          <label class="form-check-label" for="ci_professional_header_hidden">Generar sin encabezado profesional</label>
+                        </div>
+                        <div class="form-text">La identidad y firma del médico se conservan donde correspondan.</div>
+                      </fieldset>
+                    </div>
+
                     <section id="ci_review_panel" class="d-none" aria-label="Vista previa del consentimiento">
                       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <h5 class="mb-0" id="ci_review_heading">Vista previa · Revisión de contenido</h5>
@@ -11035,11 +11051,11 @@
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
 <script src="assets/js/clinical/patient-workspace-navigation-guard.js?v=vis24"></script>
-<script src="assets/js/clinical/consent-signature-binding.js?v=cons-sign02a"></script>
+<script src="assets/js/clinical/consent-signature-binding.js?v=doc-present02"></script>
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/app.js?v=resp-ux02"></script>
+<script src="assets/js/app.js?v=doc-present02"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>

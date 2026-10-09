@@ -42116,6 +42116,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       step1: root.querySelector('#ci_step_1'),
       step2: root.querySelector('#ci_step_2'),
       fullView: root.querySelector('#ci_full_view'),
+      consentPresentation: root.querySelector('#ci_presentation'),
+      consentProfessionalHeaderShown: root.querySelector('#ci_professional_header_shown'),
+      consentProfessionalHeaderHidden: root.querySelector('#ci_professional_header_hidden'),
       fullBackToStep1: root.querySelector('#ci_full_back_to_step1'),
       modeGuided: root.querySelector('#ci_mode_guided'),
       modeFull: root.querySelector('#ci_mode_full'),
@@ -42635,6 +42638,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       draftId: '',
       saving: false,
       mode: 'guided',
+      professionalHeader: 'shown',
       reviewPhase: 'capture',
       contentReviewFingerprint: '',
       finalReviewFingerprint: '',
@@ -43276,6 +43280,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const CLINICAL_DOCUMENT_DEFINITIONS = Object.freeze({
       consentimiento_informado: Object.freeze({
         document_type: 'consentimiento_informado',
+        supports_professional_header: true,
         title: 'Consentimiento informado',
         printable: true,
         post_emission_actions: Object.freeze(['view', 'print', 'close']),
@@ -43436,6 +43441,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }),
       responsiva_medica: Object.freeze({
         document_type: 'responsiva_medica',
+        supports_professional_header: true,
         title: 'Responsiva médica',
         printable: true,
         post_emission_actions: Object.freeze(['view', 'print', 'close']),
@@ -45456,7 +45462,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         || !els.signatureQrModal?.classList.contains('show')) return false;
       const currentFingerprint = prepared?.error ? '' : await window.mxmedConsentSignatureBinding.hash(prepared.body);
       if(consentSignatureQrState.issuedEpoch !== state.signatureBindingEpoch
-        || !binding || binding.version !== 1 || binding.consent_uuid !== state.qrConsentUuid
+        || !binding || binding.version !== window.mxmedConsentSignatureBinding.projection(prepared.body).version
+        || binding.consent_uuid !== state.qrConsentUuid
         || binding.content_fingerprint !== currentFingerprint
         || binding.role !== getConsentSignatureRoleConfig(consentSignatureQrState.role).role){
         setConsentRoleRemoteStatus(consentSignatureQrState.role,
@@ -45957,7 +45964,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const qrTokens = new Set();
       if(consentSignatureQrState.token) qrTokens.add(consentSignatureQrState.token);
       for(const signature of [state.remoteSignature, state.doctorRemoteSignature]){
-        if(signature?.source !== 'remote_qr' || signature?.binding?.version !== 1) continue;
+        if(signature?.source !== 'remote_qr' || ![1, 2].includes(signature?.binding?.version)) continue;
         signature.binding.revoked_in_edit = true;
         if(signature.token) qrTokens.add(signature.token);
       }
@@ -46483,12 +46490,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.step1?.classList.toggle('d-none', !isCapture || isFullMode || !isStep1);
       els.step2?.classList.toggle('d-none', !isCapture || isFullMode || isStep1);
       els.fullView?.classList.toggle('d-none', !isCapture || !isFullMode);
+      els.consentPresentation?.classList.toggle('d-none', !isCapture || (!isFullMode && isStep1));
       els.reviewPanel?.classList.toggle('d-none', !isContent && !isFinal);
       els.signaturesPanel?.classList.toggle('d-none', !isSignatures);
       els.modeGuided?.closest('[role="group"]')?.parentElement?.classList.toggle('d-none', !isCapture);
       els.prevTop?.classList.toggle('d-none', !isCapture || isFullMode || isStep1);
       if(els.modeGuided) els.modeGuided.classList.toggle('active', !isFullMode);
       if(els.modeFull) els.modeFull.classList.toggle('active', isFullMode);
+      if(els.consentProfessionalHeaderShown) els.consentProfessionalHeaderShown.checked = state.professionalHeader === 'shown';
+      if(els.consentProfessionalHeaderHidden) els.consentProfessionalHeaderHidden.checked = state.professionalHeader === 'hidden';
       els.prev?.classList.toggle('d-none', !isCapture);
       els.next?.classList.toggle('d-none', !isCapture || isFullMode || !isStep1);
       els.save?.classList.toggle('d-none', isCapture && !isFullMode && isStep1);
@@ -46577,6 +46587,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const resetWizard = ()=>{
       state.step = 1;
       state.mode = 'guided';
+      state.professionalHeader = 'shown';
       state.reviewPhase = 'capture';
       state.contentReviewFingerprint = '';
       state.finalReviewFingerprint = '';
@@ -46658,6 +46669,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     const startDraft = ()=>{
       state.reviewPhase = 'capture';
+      state.professionalHeader = 'shown';
       state.contentReviewFingerprint = '';
       state.finalReviewFingerprint = '';
       state.reviewedPrepared = null;
@@ -47468,6 +47480,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       state.reviewedPrepared = null;
       const payload = (draftRecord?.payload && typeof draftRecord.payload === 'object') ? draftRecord.payload : {};
       state.signatureDocumentDate = sanitizeText(payload.signature_document_date || draftRecord?.event_datetime || '');
+      state.professionalHeader = window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload);
       const formSnapshot = (payload?.form_snapshot && typeof payload.form_snapshot === 'object') ? payload.form_snapshot : {};
       state.form = {
         ...state.form,
@@ -54137,6 +54150,26 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return lines.join('\n');
     };
+    const consentHeaderLogoCache = new Map();
+    const resolveConsentHeaderLogo = (raw)=>{
+      const url = sanitizeText(raw || '');
+      if(!url || !((url.startsWith('/') && !url.startsWith('//')) || /^https:\/\/[^\s]+$/i.test(url))){
+        return Promise.resolve('');
+      }
+      if(!consentHeaderLogoCache.has(url)){
+        const probe = (async()=>{
+          try{
+            const image = new Image();
+            image.src = url;
+            await Promise.race([image.decode(), new Promise((_, reject)=>
+              window.setTimeout(()=> reject(new Error('logo_timeout')), 3000))]);
+            return url;
+          }catch(_){ return ''; }
+        })();
+        consentHeaderLogoCache.set(url, probe);
+      }
+      return consentHeaderLogoCache.get(url);
+    };
     const buildConsentFrozenSnapshotHtml = (data = {})=>{
       const escape = (value)=>{
         if(typeof escapeHtml === 'function'){
@@ -54153,6 +54186,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const patientName = sanitizeText(data.patientName || 'Paciente');
       const doctorName = sanitizeText(data.doctorName || 'Médico tratante');
       const doctorLicense = sanitizeText(data.doctorLicense || '');
+      const showProfessionalHeader = !!data.presentation
+        && window.mxmedLegalDocumentPresentation.professionalHeaderMode({presentation: data.presentation}) === 'shown';
+      const header = (data.professionalHeader && typeof data.professionalHeader === 'object') ? data.professionalHeader : {};
+      const headerLogo = sanitizeText(header.logo_url_resolved || '');
+      const safeHeaderLogo = headerLogo.startsWith('/') && !headerLogo.startsWith('//')
+        || /^https:\/\/[^\s]+$/i.test(headerLogo) ? headerLogo : '';
+      const headerMeta = [sanitizeText(header.specialty || ''),
+        doctorLicense ? `Cédula: ${doctorLicense}` : '',
+        sanitizeText(header.specialty_license || '') ? `Cédula esp.: ${sanitizeText(header.specialty_license)}` : '',
+        sanitizeText(header.facility_visible || ''), sanitizeText(header.location_line_visible || '')].filter(Boolean);
+      const professionalHeaderHtml = showProfessionalHeader
+        ? `<header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe" style="display:flex;align-items:flex-start;justify-content:flex-start;gap:18px;padding-bottom:2px;">
+          ${safeHeaderLogo ? `<div style="flex:0 0 auto;max-width:120px;"><img src="${escape(safeHeaderLogo)}" alt="Logo médico" style="display:block;max-height:64px;max-width:120px;object-fit:contain;"></div>` : ''}
+          <div style="min-width:0;"><div class="clinical-doc-doctor-name" style="font-size:1.45rem;font-weight:800;color:#0a5168;line-height:1.15;">${escape(doctorName)}</div>
+          ${headerMeta.map(line=>`<div class="clinical-doc-doctor-site" style="font-size:.84rem;color:#3f5564;">${escape(line)}</div>`).join('')}</div>
+        </header>` : '';
       const title = sanitizeText(data.title || 'Consentimiento informado');
       const status = sanitizeText(data.status || 'draft');
       const date = sanitizeText(data.date || '');
@@ -54264,6 +54313,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
       return `
 <article style="background:#fff;border:1px solid #cfd8df;border-radius:8px;padding:24px 28px;display:grid;gap:14px;font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.5;color:#111;">
+  ${professionalHeaderHtml}
   <header style="text-align:center;border-bottom:1px solid #d9e0e5;padding-bottom:10px;">
     <div style="font-size:1.08rem;font-weight:700;letter-spacing:.02em;">CONSENTIMIENTO INFORMADO</div>
     <div style="font-size:.9rem;margin-top:4px;">${escape(title)}</div>
@@ -54346,6 +54396,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       const actorUserId = resolveClinicalActorUserId();
       const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      const doctorPrefill = readDoctorPrefillProfile();
+      const doctorBranding = resolveDoctorBranding();
+      const consentHeaderLogo = await resolveConsentHeaderLogo(doctorBranding.logo_url);
       const doctorDisplayName = sanitizeText(
         window.mxmedStore?.doctorProfile?.full_name
         || window.mxmedStore?.doctorName
@@ -54406,6 +54459,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       // `risk_profile` is the canonical source; legacy `riesgos` stays as compatibility fallback.
       const consentRisksResolvedText = riskProfilePrimaryText || legacyRisksText;
       const docDefinition = getClinicalDocumentDefinition('consentimiento_informado');
+      const presentation = docDefinition.supports_professional_header
+        ? {version: 1, professional_header: state.professionalHeader === 'hidden' ? 'hidden' : 'shown'} : undefined;
       const firmanteTipo = sanitizeText(state.form.firmante_tipo || 'paciente');
       const firmanteNombre = trimConsentInputValue(state.form.firmante_nombre || '');
       const firmanteParentesco = trimConsentInputValue(state.form.firmante_parentesco || (firmanteTipo === 'paciente' ? 'self' : ''));
@@ -54515,7 +54570,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actor_snapshot: {
           user_id: actorUserId,
           full_name: actorName,
-          license: doctorLicense || null
+          license: doctorLicense || null,
+          specialty: sanitizeText(doctorPrefill.specialty || ''),
+          specialty_license: sanitizeText(doctorPrefill.specialty_license || '')
+        },
+        presentation,
+        branding: {
+          professional_name_visible: doctorDisplayName,
+          logo_url_resolved: consentHeaderLogo,
+          facility_visible: sanitizeText(doctorBranding.facility_visible || ''),
+          location_line_visible: sanitizeText(doctorBranding.location_line_visible || '')
         },
         template_snapshot: {
           template_id: consentType || '',
@@ -54644,6 +54708,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           version: 1,
           generated_at: nowSql,
           html: buildConsentFrozenSnapshotHtml({
+            presentation,
+            professionalHeader: {
+              ...payload.branding,
+              specialty: payload.actor_snapshot.specialty,
+              specialty_license: payload.actor_snapshot.specialty_license
+            },
             title: consentTitle || templateLabel || 'Consentimiento informado',
             status,
             date: nowSql,
@@ -54733,7 +54803,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           return;
         }
         const binding = {
-          version: 1,
+          version: tool.projection(prepared.body).version,
           content_fingerprint: await tool.hash(prepared.body),
           artifact_digest: await tool.imageDigest(imageData),
           source, role, authority,
@@ -54839,6 +54909,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actor: payload.actor_snapshot || {},
         contact: payload.patient_snapshot?.contact || {},
         template: payload.template_snapshot || {},
+        ...(payload.presentation ? {
+          presentation: payload.presentation,
+          professional_header_content: payload.branding || {}
+        } : {}),
         consent_title: payload.consent?.document_title || '',
         content,
         risk_profile: payload.consent_legal?.risk_profile || {},
@@ -55011,7 +55085,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const article = els.reviewHtml.querySelector('article');
       const sections = article ? [...article.querySelectorAll(':scope > section')] : [];
       const sectionFor = (heading)=> sections.find((section)=> section.firstElementChild?.textContent.trim() === heading);
-      const header = article?.querySelector(':scope > header');
+      const header = article?.querySelector(':scope > header:not(.doc-base-medical-header)');
       const legal = sections.find((section)=> section.querySelector('div')?.textContent.trim() === 'AUTORIZACIÓN DE CONTINGENCIAS Y URGENCIAS');
       const procedure = sectionFor('Descripción del procedimiento / tratamiento');
       const risks = sectionFor('Riesgos');
@@ -56980,6 +57054,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       invalidateConsentReview('content');
       describeTemplate(event?.target?.value || '');
     });
+    for(const control of [els.consentProfessionalHeaderShown, els.consentProfessionalHeaderHidden]){
+      control?.addEventListener('change', ()=>{
+        if(!control.checked) return;
+        const next = control.value === 'hidden' ? 'hidden' : 'shown';
+        if(state.professionalHeader === next) return;
+        state.professionalHeader = next;
+        invalidateConsentReview('content');
+        renderStep();
+      });
+    }
     els.signatureClear?.addEventListener('click', (event)=>{
       event.preventDefault();
       invalidateConsentReview('final');

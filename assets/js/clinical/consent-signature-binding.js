@@ -24,8 +24,9 @@
     const refs = Array.isArray(payload.signer_identity_attachment_manifest)
       ? payload.signer_identity_attachment_manifest : [];
     const context = payload.signature_context || body?.context || {};
+    const version = payload.presentation ? 2 : 1;
     return canonical({
-      version: 1,
+      version,
       document_type: 'consentimiento_informado',
       document_date: clean(payload.signature_document_date || ''),
       patient: { id: clean(context.patient_id || ''), name: clean(patient.full_name),
@@ -36,6 +37,14 @@
         name: clean(actor.full_name), license: clean(actor.license),
         place: clean(payload.place), institution: clean(payload.institution_name),
         facility: clean(payload.facility_name) },
+      ...(version === 2 ? {
+        presentation: {professional_header: window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload)},
+        visible_header: {name: clean(payload.branding?.professional_name_visible),
+          specialty: clean(actor.specialty), specialty_license: clean(actor.specialty_license),
+          license: clean(actor.license), logo_url: clean(payload.branding?.logo_url_resolved),
+          facility: clean(payload.branding?.facility_visible),
+          location: clean(payload.branding?.location_line_visible)}
+      } : {}),
       content: { title: clean(consent.document_title), procedure: clean(form.procedimiento),
         motive: clean(form.motivo), objective: clean(form.objetivo), risks: clean(form.riesgos),
         risk_common: clean(form.risk_comunes), risk_infrequent: clean(form.risk_poco_frecuentes),
@@ -108,9 +117,11 @@
     const entry = body?.payload?.signatures?.[role];
     if (!entry?.image_data) return 'absent';
     const binding = entry.binding;
-    if (entry.source === 'remote_qr' && (!binding || binding.version !== 1
+    const version = projection(body).version;
+    if (entry.source === 'remote_qr' && (!binding || ![1, 2].includes(binding.version)
       || !binding.consent_uuid || Number(binding.token_id) < 1)) return 'legacy_unbound';
-    if (!binding || binding.version !== 1) return 'legacy_unverified_binding';
+    if (!binding || ![1, 2].includes(binding.version)) return 'legacy_unverified_binding';
+    if (binding.version !== version) return 'stale_or_unverified';
     if (binding.revoked_in_edit) return 'stale_or_unverified';
     if (!['local_canvas', 'registered_profile', 'remote_qr'].includes(entry.source)
       || (role === 'patient' && !['local_canvas', 'remote_qr'].includes(entry.source))

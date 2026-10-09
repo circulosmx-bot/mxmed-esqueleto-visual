@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/clinical_legal_document_presentation.php';
 
 /** CONS-SIGN02A: the same content-only projection as consent-signature-binding.js. */
 function clinical_consent_binding_clean(mixed $value): string
@@ -29,7 +30,7 @@ function clinical_consent_binding_projection(array $body): array
             : 'sha256:' . strtolower($c($ref['sha256'] ?? ''));
     }
     sort($attachments, SORT_STRING);
-    return [
+    $projection = [
         'attachments' => $attachments,
         'content' => [
             'alternatives' => $c($form['alternativas'] ?? ''),
@@ -78,6 +79,24 @@ function clinical_consent_binding_projection(array $body): array
             $c($witnesses[1]['nombre'] ?? ''),
         ],
     ];
+    if (array_key_exists('presentation', $p)) {
+        $brand = is_array($p['branding'] ?? null) ? $p['branding'] : [];
+        $projection['version'] = 2;
+        $projection['presentation'] = [
+            'professional_header' => clinical_legal_document_professional_header_mode($p),
+        ];
+        $projection['visible_header'] = [
+            'facility' => $c($brand['facility_visible'] ?? ''),
+            'license' => $c($actor['license'] ?? ''),
+            'location' => $c($brand['location_line_visible'] ?? ''),
+            'logo_url' => $c($brand['logo_url_resolved'] ?? ''),
+            'name' => $c($brand['professional_name_visible'] ?? ''),
+            'specialty' => $c($actor['specialty'] ?? ''),
+            'specialty_license' => $c($actor['specialty_license'] ?? ''),
+        ];
+        ksort($projection, SORT_STRING);
+    }
+    return $projection;
 }
 
 function clinical_consent_binding_fingerprint(array $body): string
@@ -119,11 +138,13 @@ function clinical_consent_binding_classify(array $body, string $role, string $au
     $entry = is_array($p['signatures'][$role] ?? null) ? $p['signatures'][$role] : [];
     if ($entry === []) return 'absent';
     $binding = is_array($entry['binding'] ?? null) ? $entry['binding'] : [];
+    $version = (int)clinical_consent_binding_projection($body)['version'];
     if (($entry['source'] ?? '') === 'remote_qr'
-        && (($binding['version'] ?? null) !== 1 || empty($binding['consent_uuid'])
+        && (!in_array(($binding['version'] ?? null), [1, 2], true) || empty($binding['consent_uuid'])
             || (int)($binding['token_id'] ?? 0) < 1))
         return 'legacy_unbound';
-    if (($binding['version'] ?? null) !== 1) return 'legacy_unverified_binding';
+    if (!in_array(($binding['version'] ?? null), [1, 2], true)) return 'legacy_unverified_binding';
+    if ($binding['version'] !== $version) return 'stale_or_unverified';
     if (!empty($binding['revoked_in_edit'])) return 'stale_or_unverified';
     if (!in_array((string)($entry['source'] ?? ''), ['local_canvas', 'registered_profile', 'remote_qr'], true)
         || ($role === 'patient' && !in_array((string)($entry['source'] ?? ''), ['local_canvas', 'remote_qr'], true))
@@ -162,7 +183,7 @@ function clinical_consent_binding_classify(array $body, string $role, string $au
             || (string)$qr['doctor_id'] !== $doctorId
             || (string)$qr['actor_user_id'] !== (string)($body['actor_user_id'] ?? ($body['actor']['user_id'] ?? ''))
             || (string)$qr['role'] !== $role || (string)$qr['signer_authority'] !== $authority
-            || (int)$qr['fingerprint_version'] !== 1
+            || (int)$qr['fingerprint_version'] !== $version
             || trim((string)($qr['invalidated_at'] ?? '')) !== ''
             || ((string)$qr['status'] === 'consumed'
                 && (string)$qr['note_document_uuid'] !== (string)($body['_consent_document_uuid'] ?? ''))

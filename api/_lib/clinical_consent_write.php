@@ -113,6 +113,9 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
         throw new InvalidArgumentException('CONSENT_DOCUMENT_INVALID');
     }
     $payload = $body['payload'];
+    if (!clinical_legal_document_presentation_valid($payload)) {
+        throw new InvalidArgumentException('CONSENT_PRESENTATION_INVALID');
+    }
     clinical_consent_validate_remote_refs($pdo, $patientId, $payload);
     $intent = (string)($payload['consent']['status'] ?? '');
     if (!in_array($intent, ['draft', 'granted'], true)

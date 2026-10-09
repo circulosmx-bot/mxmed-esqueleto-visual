@@ -8575,7 +8575,7 @@ try {
             $qrSession = clinical_consent_qr_session($pdo, (int)$row['id']);
             if ($qrSession === null || (string)$qrSession['patient_id'] !== (string)$row['patient_id']
                 || (string)$qrSession['role'] !== ($noteContext === 'consentimiento_firma_remota:doctor' ? 'doctor' : 'patient')
-                || (int)$qrSession['fingerprint_version'] !== 1
+                || !in_array((int)$qrSession['fingerprint_version'], [1, 2], true)
                 || trim((string)($qrSession['reviewed_at'] ?? '')) === ''
                 || trim((string)($qrSession['invalidated_at'] ?? '')) !== ''
                 || !hash_equals((string)$qrSession['review_html_sha256'], hash('sha256', (string)$qrSession['review_html']))

@@ -30,7 +30,7 @@ def draw(page, selector):
     page.mouse.move(box['x'] + 145, box['y'] + 65, steps=9)
     page.mouse.up()
 
-def setup(page):
+def setup(page, header_mode='shown'):
     page.goto(BASE + '/index.html?qa_tools=hide', wait_until='domcontentloaded')
     page.wait_for_function('typeof window.setActivePatientId === "function"')
     page.evaluate("window.__MXMED_USER_ID='review-user';window.mxmedStore.user_id='review-user'")
@@ -41,9 +41,30 @@ def setup(page):
     page.locator('[data-action="documents-open-consent"]').click()
     page.locator('#modalConsentTemplateFlow [data-tpl-action="blank"]').click()
     page.locator('#ci_next').click()
+    expect(page.locator('#ci_presentation')).to_be_visible()
+    check('P01_DEFAULT_SHOWN', page.locator('#ci_professional_header_shown').is_checked())
+    if header_mode == 'hidden':
+        page.locator('#ci_professional_header_hidden').check()
+    page.locator('#ci_mode_full').click()
+    check('DOC_PRESENT02_FULL_MODE_PRESERVED', page.locator('#ci_presentation').is_visible()
+        and page.locator('#ci_professional_header_' + header_mode).is_checked())
+    page.locator('#ci_mode_guided').click()
+    if not page.locator('#ci_presentation').is_visible():
+        page.locator('#ci_next').click()
+    check('DOC_PRESENT02_GUIDED_MODE_PRESERVED', page.locator('#ci_presentation').is_visible()
+        and page.locator('#ci_professional_header_' + header_mode).is_checked())
     page.locator('#ci_title').fill('CONS-SIGN02C emisión')
     page.locator('#ci_procedimiento').fill('Procedimiento con dos firmas verificadas')
     page.locator('#ci_preview').click()
+    page.wait_for_function("document.querySelector('#ci_review_html')?.textContent !== 'Preparando vista previa…'")
+    preview_html = page.locator('#ci_review_html').inner_html()
+    logo = page.locator('#ci_review_html .doc-base-medical-header img')
+    check('DOC_PRESENT02_NO_BROKEN_LOGO', logo.count() == 0
+        or logo.evaluate('el=>el.complete&&el.naturalWidth>0'))
+    check('DOC_PRESENT02_PREVIEW_' + header_mode.upper(),
+        ('doc-base-medical-header' in preview_html) == (header_mode == 'shown'))
+    if os.environ.get('DOC_PRESENT02_SCREENSHOT_DIR'):
+        page.screenshot(path=f'{os.environ["DOC_PRESENT02_SCREENSHOT_DIR"]}/preview-{page.viewport_size["width"]}x{page.viewport_size["height"]}-{header_mode}.png')
     page.locator('#ci_review_continue').click()
     expect(page.locator('#ci_signatures_panel')).to_be_visible()
     page.locator('#ci_review_confirm_informed').check()
@@ -72,7 +93,8 @@ with sync_playwright() as playwright:
             extra_http_headers={'Cookie': 'PHPSESSID=step3-head-neck-qa'})
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
-        setup(page)
+        header_mode = 'shown' if width == 1366 else 'hidden'
+        setup(page, header_mode)
         review(page)
         check('ZERO_SIGNATURES_STATUS', 'Paciente: Firma pendiente' in page.locator('#ci_review_signature_status').inner_text()
             and 'Médico: Firma pendiente' in page.locator('#ci_review_signature_status').inner_text())
@@ -110,6 +132,16 @@ with sync_playwright() as playwright:
         check('EMIT_HTTP', response.value.status in (200, 201))
         status, payload = latest()
         check('GENERATED', status == 'generated' and payload['consent']['status'] == 'granted')
+        check('DOC_PRESENT02_EMITTED_' + header_mode.upper(),
+            payload['presentation'] == {'version': 1, 'professional_header': header_mode}
+            and ('doc-base-medical-header' in payload['frozen_snapshot']['html']) == (header_mode == 'shown'))
+        emitted_data = response.value.json()['data']
+        emitted_uuid = emitted_data['document'].get('document_uuid') or emitted_data['document_id']
+        for action, suffix in [('VIEWER', ''), ('PRINT', '&autoprint=1')]:
+            rendered = page.request.get(BASE + '/modules/clinical/ui/viewer.php?uuid='
+                + emitted_uuid + '&doctor_id=1' + suffix)
+            check('DOC_PRESENT02_' + action + '_' + header_mode.upper(),
+                rendered.status == 200 and ('<header class="clinical-doc-head informe-doc-head doc-base-medical-header' in rendered.text()) == (header_mode == 'shown'))
         check('SERVER_VERIFIED_BOTH', payload['signature_binding_status'] == {
             'patient': 'valid_bound_signature', 'doctor': 'valid_bound_signature'})
         patient_fp = payload['signatures']['patient']['binding']['content_fingerprint']
@@ -121,8 +153,6 @@ with sync_playwright() as playwright:
         if width == 1440:
             accepted = json.loads(response.value.request.post_data)
             endpoint = response.value.url
-            emitted_data = response.value.json()['data']
-            emitted_uuid = emitted_data['document'].get('document_uuid') or emitted_data['document_id']
             historical_before = subprocess.check_output(['mysql', '-N', '-B', DB, '-e',
                 f"SELECT CONCAT(status,':',version,':',SHA2(payload_json,256)) FROM clinical_documents WHERE document_uuid='{emitted_uuid}'"], text=True).strip()
             document_count = subprocess.check_output(['mysql', '-N', '-B', DB, '-e',
@@ -188,6 +218,7 @@ with sync_playwright() as playwright:
             historical_read = page.request.get(BASE + '/api/clinical/index.php/doctors/1/documents/' + emitted_uuid)
             check('HISTORICAL_GENERATED_READABLE', historical_read.status == 200
                 and historical_read.json().get('ok') is True)
+            page.locator('.doc-post-emission-modal [data-post-emission="close"]').click()
             page.locator('[data-action="documents-open-consent"]').click()
             page.locator('#modalConsentTemplateFlow [data-tpl-action="blank"]').click()
             page.locator('#ci_next').click()
@@ -248,9 +279,11 @@ with sync_playwright() as playwright:
                     and result.json().get('error', {}).get('code') == 'CONSENT_PATIENT_SIGNATURE_STALE')
             reject_representative('REPRESENTATIVE_NAME_CHANGE_REJECTED', 'firmante_nombre', 'Otra tutora')
             reject_representative('REPRESENTATIVE_RELATIONSHIP_CHANGE_REJECTED', 'firmante_parentesco', 'padre')
+            page.locator('.doc-post-emission-modal [data-post-emission="close"]').click()
             page.locator('[data-action="documents-open-consent"]').click()
             page.locator('#modalConsentTemplateFlow [data-tpl-action="blank"]').click()
             page.locator('#ci_next').click()
+            page.locator('#ci_professional_header_hidden').check()
             page.locator('#ci_title').fill('CONS-SIGN02C borrador solo médico')
             page.locator('#ci_procedimiento').fill('Borrador permitido con firma médica')
             page.locator('#ci_preview').click()
@@ -267,6 +300,29 @@ with sync_playwright() as playwright:
             check('DOCTOR_ONLY_DRAFT_ALLOWED', draft_status == 'draft'
                 and draft_payload['signature_binding_status'] == {
                     'patient': 'absent', 'doctor': 'valid_bound_signature'})
+            check('DOC_PRESENT02_HIDDEN_DRAFT_SAVED', draft_payload['presentation']['professional_header'] == 'hidden')
+            page.locator('[data-action="documents-open-consent"]').click()
+            expect(page.locator('#modalConsentDraftPrompt')).to_be_visible()
+            (page.locator('#modalConsentDraftPrompt .ci-draft-choice')
+                .filter(has_text='CONS-SIGN02C borrador solo médico')
+                .locator('[data-draft-ref]').click())
+            expect(page.locator('#modalConsentDraftPrompt')).to_be_hidden()
+            expect(page.locator('#modalConsentimientoInformado')).to_be_visible()
+            expect(page.locator('#ci_professional_header_hidden')).to_be_checked()
+            check('DOC_PRESENT02_HIDDEN_DRAFT_RESTORED',
+                page.locator('#ci_professional_header_hidden').is_checked())
+            if page.locator('#ci_next').is_visible():
+                page.locator('#ci_next').click()
+            page.locator('#ci_preview').click()
+            page.locator('#ci_review_continue').click()
+            page.locator('#ci_review_confirm_informed').check()
+            draw(page, '#ci_signature_canvas')
+            page.wait_for_function("document.querySelector('#ci_signature_status').textContent.includes('vinculada')")
+            page.locator('#ci_professional_header_shown').evaluate(
+                "el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))}")
+            check('DOC_PRESENT02_HEADER_TOGGLE_STALES_BOTH',
+                'requiere confirmación' in page.locator('#ci_signature_status').inner_text()
+                and 'requiere confirmación' in page.locator('#ci_doctor_signature_status').inner_text())
         check('NO_PAGE_ERRORS', not errors)
         check(f'BROWSER_{width}X{height}', True)
         page.close()

@@ -140,6 +140,7 @@ with sync_playwright() as pw:
     reviewed_html=phone.locator('#consentReviewFrame').get_attribute('srcdoc')
     expected_hash=sql(f"SELECT q.review_html_sha256 FROM clinical_consent_qr_sessions q JOIN clinical_note_capture_tokens t ON t.id=q.token_id WHERE t.token='{token}'")
     check('T02_MOBILE_DISPLAYS_EXACT_CONSENT', 'Procedimiento de prueba versión A' in reviewed_html and hashlib.sha256(reviewed_html.encode()).hexdigest()==expected_hash)
+    check('DOC_PRESENT02_MOBILE_SHOWN', 'doc-base-medical-header' in reviewed_html)
     check('MOBILE_390X844_NO_HORIZONTAL_OVERFLOW',phone.evaluate('document.documentElement.scrollWidth<=window.innerWidth'))
     check('T03_MOBILE_ROLE_PATIENT_CORRECT','Firma del paciente' in phone.locator('#consentSigner').inner_text())
     check('T04_MOBILE_REVIEW_REQUIRED_BEFORE_SIGNATURE',not phone.locator('#signatureForm').is_visible())
@@ -162,11 +163,11 @@ with sync_playwright() as pw:
     save_draft(desktop)
     payload=current_payload()
     binding=payload['signatures']['patient']['binding']
-    check('T06_REMOTE_SIGNATURE_BINDING_METADATA_PERSISTED',payload['signature_binding_status']['patient']=='valid_bound_signature' and binding['version']==1 and binding['source']=='remote_qr')
+    check('T06_REMOTE_SIGNATURE_BINDING_METADATA_PERSISTED',payload['signature_binding_status']['patient']=='valid_bound_signature' and binding['version']==2 and binding['source']=='remote_qr')
     check('T11_CONSUMED_TOKEN_REPLAY_REJECTED',context.request.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+token+'/signature',data={'signature_data':'x'}).status==409)
     consumed_status=status(context.request,token)[1]['data']
     check('CONSUMED_TOKEN_HISTORICAL_BINDING_VISIBLE',consumed_status['status']=='consumed'
-        and consumed_status['signature']['binding']['version']==1 and not consumed_status.get('qr_stale'))
+        and consumed_status['signature']['binding']['version']==2 and not consumed_status.get('qr_stale'))
 
     open_draft(desktop)
     check('T20_DRAFT_REOPEN_VALID_REMOTE_SIGNATURE_RESTORED',desktop.locator('#ci_signature_status').inner_text()=='Firma vinculada a esta versión')
@@ -291,6 +292,23 @@ with sync_playwright() as pw:
     close_qr(desktop)
     stale_phone.close()
 
+    # A pending V2 QR is bound to the visible professional-header choice.
+    to_signatures(desktop)
+    header_token,header_href=qr(desktop)
+    header_phone=mobile(mobile_context,header_href)
+    check('DOC_PRESENT02_OLD_MOBILE_SHOWN',
+        'doc-base-medical-header' in header_phone.locator('#consentReviewFrame').get_attribute('srcdoc'))
+    header_phone.locator('#consentContinue').click()
+    expect(header_phone.locator('#signatureForm')).to_be_visible()
+    desktop.locator('#ci_professional_header_hidden').evaluate(
+        "el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))}")
+    wait_cancelled(desktop,header_token)
+    check('DOC_PRESENT02_HEADER_CHANGE_REJECTS_OLD_QR',
+        context.request.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+header_token+'/signature',
+            data={'signature_data':valid_image}).status==409)
+    close_qr(desktop)
+    header_phone.close()
+
     to_signatures(desktop)
     attachment_token,_=qr(desktop)
     desktop.locator('#ci_identity_files').set_input_files({'name':'identidad.png','mimeType':'image/png','buffer':__import__('base64').b64decode(valid_image.split(',',1)[1])})
@@ -319,7 +337,7 @@ with sync_playwright() as pw:
     check('SERVER_DRAFT_VERSION_STALE_REJECTED',context.request.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+version_token+'/signature',data={'signature_data':valid_image}).status==409)
     close_qr(desktop)
 
-    # An old QR artifact with no V1 binding remains visibly unbound after resume.
+    # A QR artifact with no binding remains visibly unbound after resume.
     sql("UPDATE clinical_documents SET payload_json=JSON_REMOVE(payload_json,'$.signatures.patient.binding') WHERE document_type='consentimiento_informado'")
     init_desktop(desktop);open_draft(desktop)
     desktop.wait_for_function("document.querySelector('#ci_signature_status').textContent.includes('sin vinculación V1')",timeout=15000)

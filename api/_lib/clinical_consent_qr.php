@@ -15,6 +15,9 @@ function clinical_consent_qr_prepare(array $body, array $doctor, string $patient
 {
     $consent = is_array($body['consent'] ?? null) ? $body['consent'] : [];
     $payload = is_array($consent['payload'] ?? null) ? $consent['payload'] : [];
+    if (!clinical_legal_document_presentation_valid($payload)) {
+        throw new InvalidArgumentException('CONSENT_QR_PRESENTATION_INVALID');
+    }
     $context = is_array($consent['context'] ?? null) ? $consent['context'] : [];
     $uuid = trim((string)($body['consent_uuid'] ?? ''));
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
@@ -63,7 +66,7 @@ function clinical_consent_qr_prepare(array $body, array $doctor, string $patient
         'doctor_id' => (string)$doctor['doctor_id'], 'actor_user_id' => $actor,
         'role' => $role, 'signer_authority' => $authority, 'signer_name' => $signerName,
         'content_fingerprint' => $fingerprint,
-        'fingerprint_version' => 1, 'document_date' => $date,
+        'fingerprint_version' => clinical_consent_binding_projection($consent)['version'], 'document_date' => $date,
         'review_html' => $html, 'review_html_sha256' => hash('sha256', $html),
     ];
 }
@@ -109,7 +112,7 @@ function clinical_consent_qr_insert(PDO $pdo, int $tokenId, array $session): voi
     $query->execute([$tokenId, $session['consent_uuid'], $session['draft_ref'], $session['draft_version'],
         $session['patient_id'], $session['doctor_id'],
         $session['actor_user_id'], $session['role'], $session['signer_authority'], $session['signer_name'],
-        $session['content_fingerprint'], 1, $session['document_date'],
+        $session['content_fingerprint'], $session['fingerprint_version'], $session['document_date'],
         $session['review_html'], $session['review_html_sha256']]);
 }
 
@@ -121,7 +124,7 @@ function clinical_consent_qr_binding(PDO $pdo, array $tokenRow): ?array
     $digest = clinical_consent_binding_artifact_digest((string)($tokenRow['signature_image_data'] ?? ''));
     if ($digest === '' || !hash_equals($digest, (string)($session['artifact_digest'] ?? ''))) return null;
     return [
-        'version' => 1, 'content_fingerprint' => $session['content_fingerprint'],
+        'version' => (int)$session['fingerprint_version'], 'content_fingerprint' => $session['content_fingerprint'],
         'artifact_digest' => $digest, 'source' => 'remote_qr', 'role' => $session['role'],
         'authority' => $session['signer_authority'],
         'consent_uuid' => $session['consent_uuid'],
