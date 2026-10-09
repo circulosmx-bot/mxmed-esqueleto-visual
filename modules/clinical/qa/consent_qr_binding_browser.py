@@ -22,7 +22,6 @@ def status(request, token):
 def init_desktop(page):
     page.goto(BASE+'/index.html?qa_tools=hide',wait_until='domcontentloaded')
     page.wait_for_function('typeof window.setActivePatientId === "function"')
-    page.evaluate("window.__MXMED_USER_ID='review-user';window.mxmedStore.user_id='review-user'")
     page.evaluate("async()=>{await window.setActivePatientId('p_plan02ux_review',{emitEvent:true,skipM7DirtyGuard:true,skipActiveEncounterConfirm:true,skipUnsavedNewPatientConfirm:true,applyEntryRule:false});document.querySelector('#p-expediente').classList.remove('d-none');window.dispatchEvent(new Event('patient:selected'))}")
     page.locator('#p-expediente [data-exp-tabs] [data-bs-target="#t-consent"]').click()
     page.locator('#t-consent .docvis-intents').first.locator('button').first.click()

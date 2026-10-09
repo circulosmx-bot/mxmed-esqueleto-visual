@@ -46100,8 +46100,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())} ${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
     };
 
+    let authenticatedDocumentsActorUserId = '';
     const resolveClinicalActorUserId = ()=>{
       const candidates = [
+        authenticatedDocumentsActorUserId,
         window.mxmedUserId,
         window.__MXMED_USER_ID,
         window.mxmedStore && window.mxmedStore.user_id,
@@ -47325,6 +47327,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const safePatientId = sanitizeText(patientId || '');
       if(!safePatientId) return null;
       try{
+        const currentUser = await resolveResponsivaAuthenticatedActorUserId();
         const url = buildScopedCanonicalDocumentsListUrl(safePatientId, 200, {
           document_type: 'consentimiento_informado'
         });
@@ -47340,7 +47343,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const json = await resp.json().catch(()=> null);
         if(!resp.ok || json?.ok !== true || !Array.isArray(json?.data?.items)) return null;
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
-        const currentUser = resolveClinicalActorUserId();
         const drafts = items
           .filter((item)=>{
             const clinicalDoc = (item?.clinical_document && typeof item.clinical_document === 'object') ? item.clinical_document : {};
@@ -47361,6 +47363,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const url = buildScopedCanonicalDocumentDetailUrl(ref);
       if(!url) return null;
       try{
+        const currentUser = await resolveResponsivaAuthenticatedActorUserId();
         const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const json = await response.json();
         if(!response.ok || json?.ok !== true) return null;
@@ -47369,7 +47372,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(doc.document_type !== 'consentimiento_informado' || !payload || typeof payload !== 'object'
           || !['draft', 'generated'].includes(doc.status)
           || sanitizeText(payload?.consent?.status) !== 'draft'
-          || sanitizeText(doc?.audit?.created_by_user_id) !== resolveClinicalActorUserId()) return null;
+          || sanitizeText(doc?.audit?.created_by_user_id) !== currentUser) return null;
         return { source: 'server', ref: sanitizeText(doc.document_id || ref),
           version: Number(doc.version || 1), payload, title: sanitizeText(doc.title || ''),
           event_datetime: sanitizeText(doc?.ui?.event_datetime || '') };
@@ -51729,6 +51732,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!response.ok || json?.ok !== true || json?.data?.doctor_id !== doctorId || !userId){
         throw new Error('No se pudo verificar la sesión del médico. Vuelve a iniciar sesión.');
       }
+      authenticatedDocumentsActorUserId = userId;
       return userId;
     };
     const buildResponsivaDocument = async (targetStatus = 'draft')=>{
@@ -54394,7 +54398,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           missing: validation.missing
         };
       }
-      const actorUserId = resolveClinicalActorUserId();
+      let actorUserId;
+      try{
+        actorUserId = await resolveResponsivaAuthenticatedActorUserId();
+      }catch(error){
+        return { error: sanitizeText(error?.message || 'No se pudo verificar la sesión del médico.') };
+      }
       const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       const doctorPrefill = readDoctorPrefillProfile();
       const doctorBranding = resolveDoctorBranding();
