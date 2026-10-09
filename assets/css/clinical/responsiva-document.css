@@ -47,6 +47,22 @@
   background: #fbfeff;
 }
 
+/* The global save-ok mark only reflects nonempty text/local browser storage here. */
+#rm_wizard .save-field > .save-ok { display: none !important; }
+#rm_wizard .save-wrap input.form-control,
+#rm_wizard .save-wrap textarea.form-control { padding-right: .75rem; }
+#rm_wizard .save-wrap select.form-select { padding-right: 2.25rem; }
+
+/* Text presence is not clinical or legal verification. Keep invalid feedback intact. */
+#rm_wizard .form-control.is-valid:not(.is-invalid),
+#rm_wizard .form-select.is-valid:not(.is-invalid),
+#rm_wizard.was-validated .form-control:valid:not(.is-invalid),
+#rm_wizard.was-validated .form-select:valid:not(.is-invalid) {
+  background-image: none;
+  border-color: #ced4da;
+  padding-right: .75rem;
+}
+
 #rm_wizard .responsiva-additional-info {
   border: 1px solid #d8e5eb;
   border-radius: .5rem;

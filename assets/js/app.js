@@ -42468,6 +42468,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaSignerRelationshipWrap: root.querySelector('#rm_signer_relationship_wrap'),
       responsivaSignerCharacter: root.querySelector('#rm_signer_character'),
       responsivaSignerRelationship: root.querySelector('#rm_signer_relationship'),
+      responsivaSignerCharacterOther: root.querySelector('#rm_signer_character_other'),
+      responsivaSignerRelationshipOther: root.querySelector('#rm_signer_relationship_other'),
+      responsivaSignerCharacterOtherWrap: root.querySelector('#rm_signer_character_other_wrap'),
+      responsivaSignerRelationshipOtherWrap: root.querySelector('#rm_signer_relationship_other_wrap'),
       responsivaProfessionalHeaderShown: root.querySelector('#rm_professional_header_shown'),
       responsivaProfessionalHeaderHidden: root.querySelector('#rm_professional_header_hidden'),
       responsivaPreview: root.querySelector('#rm_preview'),
@@ -51041,6 +51045,20 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     };
     let responsivaRepresentativeCache = null;
+    const syncResponsivaRepresentativeSelect = (select, other, wrap, value)=>{
+      if(!select || !other || !wrap) return;
+      const canonical = sanitizeText(value || '');
+      const listed = Array.from(select.options).some(option=> option.value === canonical && option.value !== '__other__');
+      select.value = listed ? canonical : (canonical ? '__other__' : '');
+      other.value = listed ? '' : canonical;
+      wrap.classList.toggle('d-none', select.value !== '__other__');
+    };
+    const syncResponsivaRepresentativeSelectors = ()=>{
+      syncResponsivaRepresentativeSelect(els.responsivaSignerCharacter, els.responsivaSignerCharacterOther,
+        els.responsivaSignerCharacterOtherWrap, responsivaState.form.signer_character);
+      syncResponsivaRepresentativeSelect(els.responsivaSignerRelationship, els.responsivaSignerRelationshipOther,
+        els.responsivaSignerRelationshipOtherWrap, responsivaState.form.signer_relationship);
+    };
     const syncResponsivaAdditionalInfoUi = ({ autoExpand = false } = {})=>{
       const hasContent = ['indicated_conduct', 'relevant_risk', 'additional_manifestation']
         .some((key)=> String(responsivaState.form[key] || '').trim() !== '');
@@ -51278,8 +51296,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.responsivaAdditionalManifestation) els.responsivaAdditionalManifestation.value = sanitizeText(responsivaState.form.additional_manifestation || '');
       if(els.responsivaSignerRole) els.responsivaSignerRole.value = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
       if(els.responsivaSignerName) els.responsivaSignerName.value = sanitizeText(responsivaState.form.signer_name || '');
-      if(els.responsivaSignerCharacter) els.responsivaSignerCharacter.value = sanitizeText(responsivaState.form.signer_character || '');
-      if(els.responsivaSignerRelationship) els.responsivaSignerRelationship.value = sanitizeText(responsivaState.form.signer_relationship || '');
+      syncResponsivaRepresentativeSelectors();
       const headerMode = responsivaState.form.professional_header === 'hidden' ? 'hidden' : 'shown';
       if(els.responsivaProfessionalHeaderShown) els.responsivaProfessionalHeaderShown.checked = headerMode === 'shown';
       if(els.responsivaProfessionalHeaderHidden) els.responsivaProfessionalHeaderHidden.checked = headerMode === 'hidden';
@@ -56513,8 +56530,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         responsivaState.form.signer_relationship = responsivaRepresentativeCache?.relationship || '';
       }
       if(els.responsivaSignerName) els.responsivaSignerName.value = responsivaState.form.signer_name;
-      if(els.responsivaSignerCharacter) els.responsivaSignerCharacter.value = responsivaState.form.signer_character;
-      if(els.responsivaSignerRelationship) els.responsivaSignerRelationship.value = responsivaState.form.signer_relationship;
+      syncResponsivaRepresentativeSelectors();
       syncResponsivaSignerRoleUi();
       renderResponsivaStep();
     }, 'change');
@@ -56522,9 +56538,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaState.form.signer_name = normalizeConsentInputRaw(el.value || '');
     });
     bindResponsivaField(els.responsivaSignerCharacter, (el)=>{
-      responsivaState.form.signer_character = normalizeConsentInputRaw(el.value || '');
+      els.responsivaSignerCharacterOtherWrap?.classList.toggle('d-none', el.value !== '__other__');
+      responsivaState.form.signer_character = el.value === '__other__'
+        ? normalizeConsentInputRaw(els.responsivaSignerCharacterOther?.value || '') : normalizeConsentInputRaw(el.value || '');
     });
     bindResponsivaField(els.responsivaSignerRelationship, (el)=>{
+      els.responsivaSignerRelationshipOtherWrap?.classList.toggle('d-none', el.value !== '__other__');
+      responsivaState.form.signer_relationship = el.value === '__other__'
+        ? normalizeConsentInputRaw(els.responsivaSignerRelationshipOther?.value || '') : normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaSignerCharacterOther, (el)=>{
+      responsivaState.form.signer_character = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaSignerRelationshipOther, (el)=>{
       responsivaState.form.signer_relationship = normalizeConsentInputRaw(el.value || '');
     });
     for(const control of [els.responsivaProfessionalHeaderShown, els.responsivaProfessionalHeaderHidden]){

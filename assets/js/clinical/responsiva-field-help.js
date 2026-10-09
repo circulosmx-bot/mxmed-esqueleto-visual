@@ -54,7 +54,11 @@
     sections: narrative,
     contextLabel: 'Caso ficticio',
     contextText: 'Se recomienda valoración hospitalaria; el paciente decide no aceptar el traslado en ese momento.',
-    note: 'Ejemplo únicamente orientativo. Adapta la redacción a la situación real del paciente.'
+    note: 'Ejemplo únicamente orientativo. Adapta la redacción a la situación real del paciente.',
+    onUseExample: ({section, destination}) => {
+      destination.value = section.text;
+      destination.dispatchEvent(new Event('input', {bubbles: true}));
+    }
   });
   window.mxmedExampleFieldHelp.mount({
     modal, id: 'rm-signer-example',
