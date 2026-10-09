@@ -21,6 +21,11 @@ def check(name, condition):
     print(f'{name}=PASS', flush=True)
 
 
+def is_document_save_response(response):
+    return (response.request.method == 'POST'
+            and response.url.split('?', 1)[0].endswith(f'/patients/{PATIENT}/documents'))
+
+
 def sql(query):
     return subprocess.check_output(['mysql', '--raw', '-N', '-B', DB, '-e', query], text=True).strip()
 
@@ -72,7 +77,7 @@ with sync_playwright() as pw:
     expect(page.locator('#rm_content_review')).to_contain_text('Situación clínica QA', timeout=15000)
     check('T23_PREVIEW_ZERO_ROWS_AFTER', sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '0')
     check('T25_CONTENT_REVIEW', page.locator('#rm_content_review').get_by_text('Declaración de cierre').count() > 0)
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents' in r.url) as first_response:
+    with page.expect_response(is_document_save_response) as first_response:
         page.locator('#rm_save').click()
     first = first_response.value
     check('T01_CREATE_HTTP', first.status in (200, 201))
@@ -104,7 +109,7 @@ with sync_playwright() as pw:
           and page.locator('#rm_date').input_value() == date)
     page.locator('#rm_next').click()
     page.locator('#rm_clinical_situation').fill('Situación clínica QA segunda versión')
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents' in r.url) as second_response:
+    with page.expect_response(is_document_save_response) as second_response:
         page.locator('#rm_save').click()
     second = second_response.value
     check('T02_SECOND_SAVE_HTTP', second.status in (200, 201))
@@ -131,9 +136,9 @@ with sync_playwright() as pw:
     page.wait_for_timeout(200)
     check('T13_BLANK_CLICK_NOT_BOUND', page.locator('#rm_signer_signature_status').inner_text() == 'Sin firma')
     draw(page, '#rm_signer_signature_canvas')
-    expect(page.locator('#rm_signer_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
+    expect(page.locator('#rm_signer_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
     check('T12_SIGNER_BIND_UI', True)
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents' in r.url) as signer_response:
+    with page.expect_response(is_document_save_response) as signer_response:
         page.locator('#rm_save').click()
     check('T09_SIGNER_ONLY_SAVE', signer_response.value.status in (200, 201))
     _, version, payload = saved(doc_uuid)
@@ -143,12 +148,12 @@ with sync_playwright() as pw:
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
     for _ in range(5):
         page.locator('#rm_next').click()
-    expect(page.locator('#rm_signer_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
+    expect(page.locator('#rm_signer_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
     check('T20_REHYDRATED_SIGNER', True)
     draw(page, '#rm_doctor_signature_canvas')
-    expect(page.locator('#rm_doctor_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
+    expect(page.locator('#rm_doctor_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
     check('T14_DOCTOR_BIND_UI', True)
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents' in r.url) as both_response:
+    with page.expect_response(is_document_save_response) as both_response:
         page.locator('#rm_save').click()
     check('T11_BOTH_SAVE', both_response.value.status in (200, 201))
     _, version, payload = saved(doc_uuid)
@@ -159,7 +164,7 @@ with sync_playwright() as pw:
     page.locator('#rm_clinical_situation').fill('Contenido alterado después de las firmas')
     check('T17_CONTENT_STALES_SIGNER', 'revisar' in page.locator('#rm_signer_signature_status').inner_text())
     check('T18_CONTENT_STALES_DOCTOR', 'revisar' in page.locator('#rm_doctor_signature_status').inner_text())
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents') as stale_signature_response:
+    with page.expect_response(is_document_save_response) as stale_signature_response:
         page.locator('#rm_save').click()
     check('T17_STALE_SAVE_ALLOWED', stale_signature_response.value.status in (200, 201))
     _, version, payload = saved(doc_uuid)
@@ -173,9 +178,9 @@ with sync_playwright() as pw:
     page.locator('#rm_signer_signature_clear').click()
     page.locator('#rm_doctor_signature_clear').click()
     draw(page, '#rm_signer_signature_canvas')
-    expect(page.locator('#rm_signer_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
+    expect(page.locator('#rm_signer_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
     draw(page, '#rm_doctor_signature_canvas')
-    expect(page.locator('#rm_doctor_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
+    expect(page.locator('#rm_doctor_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
     page.locator('#rm_next').click()
     expect(page.locator('#rm_final_review')).to_contain_text('Contenido alterado después de las firmas', timeout=15000)
     final_html = page.locator('#rm_final_review').inner_html()
@@ -184,7 +189,7 @@ with sync_playwright() as pw:
     check('T25_FINAL_REVIEW_COMPLETE', 'Declaración de cierre' in final_html
           and 'Firma del paciente o responsable' in final_html and 'Firma del médico tratante' in final_html
           and 'doc-base-footer-block' in final_html and final_html.count('data:image/png;base64,') == 2)
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents' in r.url) as emit_response:
+    with page.expect_response(is_document_save_response) as emit_response:
         page.locator('#rm_emit').click()
     check('T26_EMIT_HTTP', emit_response.value.status in (200, 201))
     check('T26_SAME_UUID_FINAL', emit_response.value.json()['data']['document_id'] == doc_uuid)
@@ -192,8 +197,12 @@ with sync_playwright() as pw:
     check('T26_DRAFT_TO_GENERATED', status == 'generated' and payload['status'] == 'issued')
     check('T24_SHARED_COMPOSITION', payload['responsiva_snapshot']['html'] == final_html)
     expect(row.get_by_role('button', name='Continuar borrador')).to_have_count(0, timeout=15000)
-    check('T29_CONSENT_QR_DISABLED', page.locator('#rm_signer_signature_qr').is_disabled()
-          and page.locator('#rm_doctor_signature_qr').is_disabled())
+    if os.environ.get('RESP_QR_AVAILABLE') == '1':
+        check('T29_RESPONSIVA_QR_ENABLED', page.locator('#rm_signer_signature_qr').is_enabled()
+              and page.locator('#rm_doctor_signature_qr').is_enabled())
+    else:
+        check('T29_CONSENT_QR_DISABLED', page.locator('#rm_signer_signature_qr').is_disabled()
+              and page.locator('#rm_doctor_signature_qr').is_disabled())
     expect(page.locator('#modalResponsivaMedica')).to_be_hidden(timeout=15000)
     page.locator('#t-consent .docvis-back').click()
     page.locator('#t-consent .docvis-intents').first.locator('button').first.click()
@@ -205,8 +214,8 @@ with sync_playwright() as pw:
     expect(page.locator('#rm_content_review')).to_contain_text('Responsiva médica', timeout=15000)
     page.locator('#rm_next').click()
     draw(page, '#rm_doctor_signature_canvas')
-    expect(page.locator('#rm_doctor_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents') as doctor_only_response:
+    expect(page.locator('#rm_doctor_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
+    with page.expect_response(is_document_save_response) as doctor_only_response:
         page.locator('#rm_save').click()
     check('T10_DOCTOR_ONLY_HTTP', doctor_only_response.value.status in (200, 201))
     second_uuid = doctor_only_response.value.json()['data']['document_id']
@@ -231,12 +240,13 @@ with sync_playwright() as pw:
         page.locator('#rm_next').click()
     check('T15_REGISTERED_STILL_NOT_AUTO', page.locator('#rm_doctor_signature_source_registered').is_checked() is False)
     page.locator('#rm_doctor_signature_source_registered').check()
-    expect(page.locator('#rm_doctor_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
+    expect(page.locator('#rm_doctor_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
     draw(page, '#rm_signer_signature_canvas')
-    expect(page.locator('#rm_signer_signature_status')).to_have_text('Firma vinculada a esta versión', timeout=15000)
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents') as registered_response:
+    expect(page.locator('#rm_signer_signature_status')).to_contain_text('Firma vinculada a esta versión', timeout=15000)
+    with page.expect_response(is_document_save_response) as registered_response:
         page.locator('#rm_save').click()
     check('T16_REGISTERED_SAVE_HTTP', registered_response.value.status in (200, 201))
+    expect(page.locator('#modalResponsivaMedica')).to_be_hidden(timeout=15000)
     _, _, registered_payload = saved(second_uuid)
     check('T16_REGISTERED_BOUND', registered_payload['signature_binding_status']['doctor'] == 'valid_bound_signature'
           and registered_payload['signatures']['doctor']['source'] == 'registered_profile'
@@ -247,18 +257,20 @@ with sync_playwright() as pw:
         page.locator('#rm_next').click()
     page.locator('#rm_signer_name').fill('Otro firmante QA')
     check('T19_IDENTITY_STALES_SIGNER', 'revisar' in page.locator('#rm_signer_signature_status').inner_text())
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents') as identity_response:
+    with page.expect_response(is_document_save_response) as identity_response:
         page.locator('#rm_save').click()
     check('T19_IDENTITY_SAVE_HTTP', identity_response.value.status in (200, 201))
+    expect(page.locator('#modalResponsivaMedica')).to_be_hidden(timeout=15000)
     check('T19_IDENTITY_STALE_SERVER', saved(second_uuid)[2]['signature_binding_status']['signer'] == 'stale_or_unverified_signature')
     sql("UPDATE clinical_documents SET payload_json=JSON_REMOVE(payload_json,'$.signatures.signer.binding') "
         f"WHERE document_uuid='{second_uuid}'")
     draft_row.get_by_role('button', name='Continuar borrador').click()
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
+    expect(page.locator('#rm_signer_name')).to_have_value('Otro firmante QA', timeout=15000)
     for _ in range(5):
         page.locator('#rm_next').click()
     check('T22_LEGACY_UNVERIFIED', 'revisar' in page.locator('#rm_signer_signature_status').inner_text())
-    with page.expect_response(lambda r: r.request.method == 'POST' and '/patients/' + PATIENT + '/documents') as legacy_binding_response:
+    with page.expect_response(is_document_save_response) as legacy_binding_response:
         page.locator('#rm_save').click()
     check('T22_LEGACY_SAVE_HTTP', legacy_binding_response.value.status in (200, 201))
     check('T22_LEGACY_CLASSIFIED', saved(second_uuid)[2]['signature_binding_status']['signer'] == 'legacy_unverified_binding')

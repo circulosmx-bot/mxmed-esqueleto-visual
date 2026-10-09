@@ -7877,6 +7877,12 @@ try {
         return;
     }
 
+    if (($segments[0] ?? '') === 'responsiva-qr-sessions') {
+        require_once __DIR__ . '/../_lib/clinical_responsiva_qr.php';
+        clinical_responsiva_qr_route(clinical_documents_pdo(), $method, $segments);
+        return;
+    }
+
     if (($segments[0] ?? '') === 'note-capture-tokens') {
         require_once __DIR__ . '/../_lib/clinical_consent_qr.php';
         $captureDoctorContext = null;
@@ -9032,6 +9038,14 @@ try {
                 'meta'=>['route'=>'doctors/{doctor_id}/documents']],403);
             return;
         }
+        if ($method === 'GET' && count($segments) === 3 && ($segments[2] ?? '') === 'session-context') {
+            header('Cache-Control: private, no-store, max-age=0');
+            clinical_send_response(['ok' => true, 'data' => [
+                'doctor_id' => $scopedDoctorContext['doctor_id'],
+                'user_id' => $scopedDoctorContext['user_id'],
+            ], 'meta' => ['route' => 'doctors/{doctor_id}/session-context']], 200);
+            return;
+        }
         if (($segments[2] ?? '') === 'consent-templates') {
             require_once __DIR__.'/../_lib/clinical_consent_templates.php';
             header('Cache-Control: private, no-store, max-age=0');
@@ -9188,6 +9202,8 @@ try {
                     || trim((string)($body['payload']['actor_snapshot']['user_id'] ?? '')) !== (string)$scopedDoctorContext['user_id'])
                     throw new InvalidArgumentException('RESPONSIVA_PREVIEW_CONTEXT_INVALID');
                 require_once __DIR__ . '/../_lib/clinical_responsiva_render.php';
+                if (!clinical_legal_document_presentation_valid((array)$body['payload']))
+                    throw new InvalidArgumentException('RESPONSIVA_PRESENTATION_INVALID');
                 clinical_send_response(['ok' => true, 'data' => [
                     'html' => clinical_responsiva_render_html((array)$body['payload'])], 'meta' => $meta], 200);
                 return;

@@ -232,7 +232,7 @@
 <link rel="stylesheet" href="assets/css/clinical/expediente-panel-title-typography.css?v=ux-title01">
 <link rel="stylesheet" href="assets/css/clinical/floating-qa-widget-visibility.css?v=qa-widget01">
 <link rel="stylesheet" href="assets/css/clinical-doc-base.css">
-<link rel="stylesheet" href="assets/css/clinical/responsiva-document.css?v=resp-imp01a">
+<link rel="stylesheet" href="assets/css/clinical/responsiva-document.css?v=resp-sign-vis01">
 </head>
 
 <body class="mx-sidebar-collapsed" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -5960,6 +5960,55 @@
                     </div>
                   </div>
                 </div>
+                  <!-- RESP-IMP01B: separate Responsiva authority, shared mobile handoff presentation. -->
+                  <div class="modal fade" id="modalResponsivaSignatureQr" tabindex="-1" aria-labelledby="rm-qr-title" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered ci-signature-handoff-dialog">
+                      <div class="modal-content docux-action-modal ci-signature-handoff plan02b-modal">
+                        <header class="modal-header">
+                          <span class="material-symbols-rounded docux-action-icon" aria-hidden="true">smartphone</span>
+                          <div>
+                            <h4 class="modal-title" id="rm-qr-title">Firmar Responsiva con celular</h4>
+                            <p>Revisa y firma esta versión de la responsiva desde tu teléfono.</p>
+                          </div>
+                          <button type="button" class="btn btn-link" data-bs-dismiss="modal" aria-label="Cerrar">×</button>
+                        </header>
+                        <div class="modal-body plan02b-modal-content">
+                          <p class="ci-signature-context">Firmando como: <strong data-role="rm-qr-context">Firmante principal</strong></p>
+                          <div data-role="rm-qr-waiting">
+                            <div class="docux-capture-guide">
+                              <ol class="docux-capture-steps">
+                                <li><span aria-hidden="true">1</span>Escanea el código<br>o abre el enlace</li>
+                                <li><span aria-hidden="true">2</span>Revisa la responsiva</li>
+                                <li><span aria-hidden="true">3</span>Firma y confirma</li>
+                              </ol>
+                              <div class="docux-capture-columns">
+                                <div class="docux-qr-panel">
+                                  <div class="docux-qr" data-role="rm-qr-image" role="img" aria-label="Código QR para firmar la responsiva"></div>
+                                  <p>Escanea con la cámara de tu teléfono</p>
+                                  <div class="docux-links">
+                                    <a href="#" target="_blank" rel="noopener noreferrer" data-role="rm-qr-link"><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace</a>
+                                  </div>
+                                  <p class="docux-capture-expiry">Código de un solo uso · vence en 15 min</p>
+                                </div>
+                                <div class="docux-phone-panel">
+                                  <span class="material-symbols-rounded docux-phone" aria-hidden="true">smartphone</span>
+                                  <p class="docux-phone-help">Mantén esta ventana abierta mientras firmas. La firma aparecerá aquí cuando sea recibida.</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="d-none text-center" data-role="rm-qr-received">
+                            <div class="fs-4 fw-bold text-success">✓ Firma recibida correctamente</div>
+                            <p class="mb-1" data-role="rm-qr-received-signer"></p>
+                            <p class="text-success fw-semibold">Firma vinculada a esta versión</p>
+                            <img data-role="rm-qr-preview" alt="Firma recibida" class="img-fluid rounded border bg-white" style="max-height:110px;object-fit:contain">
+                          </div>
+                          <p class="docux-capture-status" data-role="rm-qr-status" role="status" aria-live="polite">Esperando firma…</p>
+                        </div>
+                        <footer class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></footer>
+                      </div>
+                    </div>
+                  </div>
                 <div class="modal fade" id="modalConsentDoctorSignatureSavePrompt" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -9909,6 +9958,21 @@
                           <label class="form-label" for="rm_signer_relationship">Relación / parentesco</label>
                           <input class="form-control" id="rm_signer_relationship" placeholder="Relación con el paciente">
                         </div>
+                        <div class="col-12">
+                          <fieldset class="border rounded p-3">
+                            <legend class="float-none w-auto px-1 fs-6 fw-semibold mb-1">Presentación del documento</legend>
+                            <div class="form-label mb-2">Encabezado profesional</div>
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="rm_professional_header" id="rm_professional_header_shown" value="shown" checked>
+                              <label class="form-check-label" for="rm_professional_header_shown">Mostrar logotipo y datos profesionales</label>
+                            </div>
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="rm_professional_header" id="rm_professional_header_hidden" value="hidden">
+                              <label class="form-check-label" for="rm_professional_header_hidden">Generar sin encabezado profesional</label>
+                            </div>
+                            <div class="form-text">Puedes generar este documento sin logotipo ni datos profesionales en la parte superior. La identidad y firma del médico se conservan donde correspondan.</div>
+                          </fieldset>
+                        </div>
                       </div>
                     </div>
                     <div id="rm_step_5" class="d-none">
@@ -9931,10 +9995,12 @@
                             </div>
                             <div class="mx-signature-pad">
                               <canvas id="rm_signer_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                              <img id="rm_signer_signature_accepted" class="responsiva-signature-accepted d-none" alt="Firma del paciente o responsable vinculada a la responsiva">
                             </div>
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr" disabled title="Disponible en una fase posterior">Firma con celular próximamente</button>
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr">Firmar con celular</button>
                               <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_signer_signature_clear">Volver a firmar</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rm_signer_signature_cancel_resign">Cancelar cambio</button>
                             </div>
                             <div class="small text-muted mt-2 d-none" id="rm_signer_signature_remote_status"></div>
                           </div>
@@ -9957,10 +10023,12 @@
                             </div>
                             <div class="mx-signature-pad">
                               <canvas id="rm_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                              <img id="rm_doctor_signature_accepted" class="responsiva-signature-accepted d-none" alt="Firma del médico vinculada a la responsiva">
                             </div>
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr" disabled title="Disponible en una fase posterior">Firma con celular próximamente</button>
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr">Firmar con celular</button>
                               <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_doctor_signature_clear">Volver a firmar</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rm_doctor_signature_cancel_resign">Cancelar cambio</button>
                             </div>
                             <div class="small text-muted mt-2 d-none" id="rm_doctor_signature_remote_status"></div>
                             <div class="alert alert-warning py-2 px-3 d-none mt-2" id="rm_doctor_signature_inline_prompt">
@@ -10951,8 +11019,9 @@
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
 <script src="assets/js/clinical/patient-workspace-navigation-guard.js?v=vis24"></script>
 <script src="assets/js/clinical/consent-signature-binding.js?v=cons-sign02a"></script>
-<script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-imp01a"></script>
-<script src="assets/js/app.js?v=cons-sign02b-r2"></script>
+<script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
+<script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
+<script src="assets/js/app.js?v=resp-sign-vis01"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help01"></script>
 <script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>

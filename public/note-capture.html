@@ -125,7 +125,11 @@
 
       const msg = document.getElementById('captureMsg');
 
-      const isSignatureMode = mode === 'signature';
+      const isResponsivaSignature = mode === 'responsiva-signature';
+      const isSignatureMode = mode === 'signature' || isResponsivaSignature;
+      const signatureRoute = isResponsivaSignature ? 'responsiva-qr-sessions' : 'note-capture-tokens';
+      const signatureDocument = isResponsivaSignature ? 'la responsiva' : 'el consentimiento';
+      const signatureObjectPronoun = isResponsivaSignature ? 'firmarla' : 'firmarlo';
       let signatureHasStroke = false;
 
       const setMsg = (text, tone='muted')=>{
@@ -261,14 +265,20 @@
       }
 
       if(isSignatureMode){
-        titleEl.textContent = 'Consentimiento informado';
+        if (isResponsivaSignature && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
+          setMsg('Abre el enlace HTTPS seguro para revisar y firmar la responsiva.', 'err');
+          return;
+        }
+        titleEl.textContent = isResponsivaSignature ? 'Responsiva médica' : 'Consentimiento informado';
         introEl.textContent = 'Revisa el documento antes de firmar esta versión.';
+        consentReview.querySelector('h2').textContent = isResponsivaSignature ? 'Revisar responsiva' : 'Revisa el consentimiento';
+        consentReviewFrame.title = isResponsivaSignature ? 'Responsiva que se firmará' : 'Consentimiento que se firmará';
         form.classList.add('d-none');
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
         if(token){
-          setMsg('Cargando consentimiento…', 'muted');
-          fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/mobile-context`,
+          setMsg(`Cargando ${signatureDocument}…`, 'muted');
+          fetch(`/api/clinical/index.php/${signatureRoute}/${encodeURIComponent(token)}/mobile-context`,
             {headers:{Accept:'application/json'},credentials:'omit',cache:'no-store'})
             .then(async response=>{
               const json=await response.json().catch(()=>null);
@@ -277,12 +287,14 @@
             })
             .then(data=>{
               if(data.status!=='pending') throw new Error('Este QR ya fue utilizado o expiró. Solicita uno nuevo.');
-              consentReviewFrame.srcdoc=String(data.review_html || '');
+              consentReviewFrame.srcdoc=isResponsivaSignature
+                ? `<link rel="stylesheet" href="/assets/css/clinical-doc-base.css"><link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css">${String(data.review_html || '')}`
+                : String(data.review_html || '');
               consentSigner.textContent=`${data.role_label}: ${data.signer_name || 'Médico responsable'}`;
               signatureRole.textContent=consentSigner.textContent;
               consentReview.classList.remove('d-none');
-              setMsg('Lee el consentimiento y continúa para firmarlo.', 'muted');
-            }).catch(error=>setMsg(safeError(error,'No se pudo cargar el consentimiento.'), 'err'));
+              setMsg(`Lee ${signatureDocument} y continúa para ${signatureObjectPronoun}.`, 'muted');
+            }).catch(error=>setMsg(safeError(error,`No se pudo cargar ${signatureDocument}.`), 'err'));
         }
       }else if(token){
         setNowDatetime();setMsg('Verificando código…');
@@ -303,13 +315,13 @@
         consentContinue.disabled=true;
         setMsg('Confirmando revisión…', 'muted');
         try{
-          const response=await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/review`,
+          const response=await fetch(`/api/clinical/index.php/${signatureRoute}/${encodeURIComponent(token)}/review`,
             {method:'POST',headers:{Accept:'application/json'},credentials:'omit'});
           const json=await response.json().catch(()=>null);
           if(!response.ok || !json?.ok) throw new Error(json?.message || 'No se pudo confirmar la revisión.');
           consentReview.classList.add('d-none');
           signatureForm.classList.remove('d-none');
-          setMsg('Firma el consentimiento mostrado y confirma.', 'muted');
+          setMsg(`Firma ${signatureDocument} ${isResponsivaSignature ? 'mostrada' : 'mostrado'} y confirma.`, 'muted');
         }catch(error){
           consentContinue.disabled=false;
           setMsg(safeError(error,'No se pudo continuar a la firma.'), 'err');
@@ -383,7 +395,7 @@
         signatureSubmit.disabled = true;
         setMsg('Enviando firma…', 'muted');
         try{
-          const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/signature`, {
+          const resp = await fetch(`/api/clinical/index.php/${signatureRoute}/${encodeURIComponent(token)}/signature`, {
             method: 'POST',
             headers: {
               Accept: 'application/json',

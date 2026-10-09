@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_legal_document_presentation.php';
+
 /** One escaped composition for unsaved preview and persisted Responsiva documents. */
 function clinical_responsiva_render_html(array $payload): string
 {
@@ -37,15 +39,21 @@ function clinical_responsiva_render_html(array $payload): string
         $imageHtml = preg_match('#^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$#D', $image) === 1
             ? '<img class="informe-doc-sign-image" src="' . $h($image) . '" alt="' . $h($label) . '">'
             : '<div class="informe-doc-sign-line"></div>';
-        return '<div class="informe-doc-section-title doc-base-section-title">' . $h($label) . '</div>'
-            . $imageHtml . '<div class="informe-doc-sign-meta doc-base-signature-meta">' . $h($name) . '</div>';
+        return '<div class="responsiva-doc-signature-block">'
+            . '<div class="informe-doc-section-title doc-base-section-title">' . $h($label) . '</div>'
+            . $imageHtml . '<div class="informe-doc-sign-meta doc-base-signature-meta">' . $h($name) . '</div>'
+            . '</div>';
     };
     $html = '<article class="informe-doc-sheet responsiva-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">'
-        . '<div class="doc-base-sheet-inner doc-base-body"><header class="clinical-doc-head informe-doc-head responsiva-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">'
-        . ($logoHtml !== '' ? '<div class="responsiva-doc-logo">' . $logoHtml . '</div>' : '')
-        . '<div class="responsiva-doc-physician"><div class="clinical-doc-doctor-name">' . $doctorName . '</div>';
-    foreach ($doctorMeta as $line) $html .= '<div class="clinical-doc-doctor-site">' . $h($line) . '</div>';
-    $html .= '</div></header><div class="doc-base-title-block-wrap"><section class="informe-doc-title-block doc-base-title-block">'
+        . '<div class="doc-base-sheet-inner doc-base-body">';
+    if (clinical_legal_document_professional_header_mode($payload) === 'shown') {
+        $html .= '<header class="clinical-doc-head informe-doc-head responsiva-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">'
+            . ($logoHtml !== '' ? '<div class="responsiva-doc-logo">' . $logoHtml . '</div>' : '')
+            . '<div class="responsiva-doc-physician"><div class="clinical-doc-doctor-name">' . $doctorName . '</div>';
+        foreach ($doctorMeta as $line) $html .= '<div class="clinical-doc-doctor-site">' . $h($line) . '</div>';
+        $html .= '</div></header>';
+    }
+    $html .= '<div class="doc-base-title-block-wrap"><section class="informe-doc-title-block doc-base-title-block">'
         . '<div class="informe-doc-title doc-base-title">Responsiva médica</div></section></div>'
         . '<div class="doc-base-patient-block-wrap"><section class="informe-doc-patient-block doc-base-patient-meta">'
         . '<div class="informe-doc-patient-line"><strong>Paciente:</strong> ' . $h($patient['full_name'] ?? '') . '</div>'

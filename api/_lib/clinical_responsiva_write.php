@@ -3,6 +3,21 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_responsiva_binding.php';
 require_once __DIR__ . '/clinical_responsiva_render.php';
+require_once __DIR__ . '/clinical_responsiva_qr.php';
+
+/** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
+function clinical_responsiva_qr_entry_unchanged($previous, $incoming): bool
+{
+    if (is_array($previous) || is_array($incoming)) {
+        if (!is_array($previous) || !is_array($incoming) || count($previous) !== count($incoming)) return false;
+        foreach ($previous as $key => $value) {
+            if (!array_key_exists($key, $incoming)
+                || !clinical_responsiva_qr_entry_unchanged($value, $incoming[$key])) return false;
+        }
+        return true;
+    }
+    return $previous === $incoming;
+}
 
 /** Canonical create/update/finalize command for Responsiva. Caller supplies authenticated doctor scope. */
 function clinical_responsiva_write(PDO $pdo, array $doctor, string $patientId, array $body, string $idempotencyKey): array
@@ -12,13 +27,11 @@ function clinical_responsiva_write(PDO $pdo, array $doctor, string $patientId, a
         || !is_array($body['payload'] ?? null))
         throw new InvalidArgumentException('RESPONSIVA_DOCUMENT_INVALID');
     $payload = $body['payload'];
+    if (!clinical_legal_document_presentation_valid($payload))
+        throw new InvalidArgumentException('RESPONSIVA_PRESENTATION_INVALID');
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('RESPONSIVA_INTENT_INVALID');
-    foreach (['signer', 'doctor'] as $role) {
-        if (($payload['signatures'][$role]['source'] ?? '') === 'remote_qr')
-            throw new InvalidArgumentException('RESPONSIVA_QR_NOT_AVAILABLE');
-    }
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
     $expectedVersion = (int)($body['expected_version'] ?? 0);
     if ($draftRef !== '' && (preg_match('/^[0-9a-f-]{36}$/i', $draftRef) !== 1 || $expectedVersion < 1))
@@ -62,9 +75,24 @@ function clinical_responsiva_write(PDO $pdo, array $doctor, string $patientId, a
             $canonical['context'] = $writeContext;
             $canonical['actor'] = ['user_id' => (string)$doctor['user_id']];
             $canonical['payload'] = $payload;
+            $uploadedQrRoles = [];
+            $previousPayload = $existing !== null ? json_decode((string)$existing['payload_json'], true) : null;
             foreach (['signer', 'doctor'] as $role) {
                 $canonical['payload']['signature_binding_status'][$role] =
                     clinical_responsiva_binding_classify($canonical, $role, (string)$doctor['doctor_id'], $pdo);
+                $entry = (array)($payload['signatures'][$role] ?? []);
+                if (($entry['source'] ?? '') !== 'remote_qr') continue;
+                $qr = clinical_responsiva_qr_row($pdo, (string)($entry['token'] ?? ''));
+                $previousEntry = is_array($previousPayload)
+                    ? (array)($previousPayload['signatures'][$role] ?? []) : [];
+                if ($canonical['payload']['signature_binding_status'][$role] !== 'valid_bound_signature'
+                    && ($existing === null || !clinical_responsiva_qr_entry_unchanged($previousEntry, $entry)))
+                    throw new InvalidArgumentException('RESPONSIVA_QR_UNVERIFIED');
+                if ($qr !== null && (string)$qr['status'] === 'uploaded') {
+                    if ($existing === null || $canonical['payload']['signature_binding_status'][$role] !== 'valid_bound_signature')
+                        throw new InvalidArgumentException('RESPONSIVA_QR_STALE');
+                    $uploadedQrRoles[] = $role;
+                }
             }
             $canonical['payload']['responsiva_snapshot'] = [
                 'version' => 1,
@@ -92,6 +120,10 @@ function clinical_responsiva_write(PDO $pdo, array $doctor, string $patientId, a
                 $nextStatus, (string)$doctor['user_id'], $nextStatus, $id, $expectedVersion]);
             if ($update->rowCount() !== 1)
                 throw new ClinicalIdempotencyException('RESPONSIVA_DRAFT_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
+            foreach ($uploadedQrRoles as $role) {
+                clinical_responsiva_qr_claim($pdo, $canonical, (array)$payload['signatures'][$role], $role,
+                    (string)$doctor['doctor_id'], $draftRef, $expectedVersion);
+            }
             return $id;
         }, static fn(int $id): array => clinical_v1_document_fetch($pdo, $id));
 }
