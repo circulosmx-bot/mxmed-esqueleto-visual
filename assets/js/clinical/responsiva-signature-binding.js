@@ -51,6 +51,7 @@
     if (b.revoked_in_edit || !['local_canvas', 'registered_profile', 'remote_qr'].includes(entry.source)
       || (role === 'signer' && !['local_canvas', 'remote_qr'].includes(entry.source)) || entry.role !== role
       || b.role !== role || b.source !== entry.source || b.authority !== authority(body, role, doctorId)
+      || clean(entry.signer_name) !== clean(role === 'doctor' ? body?.payload?.actor_snapshot?.full_name : body?.payload?.signer?.name)
       || b.content_fingerprint !== await hash(body) || !await imageHasInk(entry.image_data)
       || b.artifact_digest !== await imageDigest(entry.image_data)) return 'stale_or_unverified_signature';
     if (entry.source === 'registered_profile'

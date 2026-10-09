@@ -94,6 +94,16 @@ function clinical_responsiva_write(PDO $pdo, array $doctor, string $patientId, a
                     $uploadedQrRoles[] = $role;
                 }
             }
+            if ($intent === 'issued') {
+                foreach (['signer' => 'RESPONSIVA_SIGNER_SIGNATURE',
+                          'doctor' => 'RESPONSIVA_PHYSICIAN_SIGNATURE'] as $role => $errorPrefix) {
+                    $classification = $canonical['payload']['signature_binding_status'][$role];
+                    if ($classification === 'absent')
+                        throw new InvalidArgumentException($errorPrefix . '_REQUIRED');
+                    if ($classification !== 'valid_bound_signature')
+                        throw new InvalidArgumentException($errorPrefix . '_INVALID_CURRENT_VERSION');
+                }
+            }
             $canonical['payload']['responsiva_snapshot'] = [
                 'version' => 1,
                 'html' => clinical_responsiva_render_html($canonical['payload']),

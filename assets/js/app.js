@@ -42467,6 +42467,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaProfessionalHeaderShown: root.querySelector('#rm_professional_header_shown'),
       responsivaProfessionalHeaderHidden: root.querySelector('#rm_professional_header_hidden'),
       responsivaPreview: root.querySelector('#rm_preview'),
+      responsivaFinalSignerStatus: root.querySelector('#rm_final_signer_status'),
+      responsivaFinalDoctorStatus: root.querySelector('#rm_final_doctor_status'),
       responsivaPrev: root.querySelector('#rm_prev'),
       responsivaNext: root.querySelector('#rm_next'),
       responsivaSave: root.querySelector('#rm_save'),
@@ -50916,6 +50918,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const preview = responsivaQrEl('preview');
       if(preview) preview.src = signature.image_data;
       setResponsivaQrStatus('Firma recibida correctamente', 'success');
+      setResponsivaNotice('');
       responsivaState.finalReviewedBody = null;
     };
     responsivaHandoffShell = documentUi.handoff({
@@ -51278,6 +51281,41 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       refreshResponsivaSignerSignatureStatus();
       refreshResponsivaDoctorSignatureStatus();
     };
+    const assessResponsivaFinalSignatures = async (body)=>{
+      const current = { ...body };
+      if(responsivaState.activeDraftRef){
+        current.draft_ref = responsivaState.activeDraftRef;
+        current.expected_version = responsivaState.activeDraftVersion;
+      }
+      const binding = window.mxmedResponsivaSignatureBinding;
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      const signer = await binding.classify(current, 'signer', doctorId);
+      const doctor = await binding.classify(current, 'doctor', doctorId,
+        responsivaState.doctorRegisteredSignatureData || '');
+      const isPatient = current.payload?.signer?.role === 'paciente';
+      const signerLabel = isPatient ? 'paciente' : 'representante';
+      const signerMessage = signer === 'absent' ? `Falta la firma del ${signerLabel}.`
+        : signer === 'valid_bound_signature' ? ''
+        : `La firma del ${signerLabel} corresponde a una versión anterior o no pudo verificarse. Vuelve a firmar.`;
+      const doctorMessage = doctor === 'absent' ? 'Falta la firma del médico.'
+        : doctor === 'valid_bound_signature' ? ''
+        : 'La firma del médico debe aplicarse nuevamente porque la responsiva cambió o no pudo verificarse.';
+      return { signer, doctor, message: signerMessage || doctorMessage,
+        signerMessage, doctorMessage, signerLabel };
+    };
+    const renderResponsivaFinalSignatureSummary = (assessment)=>{
+      for(const [role, node, label] of [
+        ['signer', els.responsivaFinalSignerStatus, `Firma del ${assessment.signerLabel}`],
+        ['doctor', els.responsivaFinalDoctorStatus, 'Firma del médico']
+      ]){
+        const status = assessment[role];
+        const message = assessment[`${role}Message`];
+        documentUi.signature({ block: node, statusEl: node, status,
+          hasSignature: status !== 'absent',
+          text: status === 'valid_bound_signature'
+            ? `✓ ${label}: vinculada a esta versión` : `${label}: ${message}` });
+      }
+    };
     const renderResponsivaPreview = async ()=>{
       const target = responsivaState.step === 5 ? els.responsivaContentReview
         : (responsivaState.step === 7 ? els.responsivaFinalReview : els.responsivaPreview);
@@ -51313,15 +51351,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           throw new Error('No se pudo componer la vista previa de la Responsiva.');
         if(requestId !== responsivaState.previewRequestId) return;
         documentUi.review({ content: target, continueButton: responsivaState.step === 5
-          ? els.responsivaNext : els.responsivaEmit, state: 'ready', html: json.data.html });
+          ? els.responsivaNext : null, state: 'ready', html: json.data.html });
         if(responsivaState.step === 5){
           responsivaState.contentReviewFingerprint = contentFingerprint;
           if(els.responsivaNext) els.responsivaNext.disabled = false;
         }
         if(responsivaState.step === 7){
+          const assessment = await assessResponsivaFinalSignatures(prepared.body);
+          if(requestId !== responsivaState.previewRequestId) return;
+          renderResponsivaFinalSignatureSummary(assessment);
           prepared.body.payload.responsiva_snapshot = { version: 1, html: json.data.html };
           responsivaState.finalReviewedBody = prepared;
-          if(els.responsivaEmit) els.responsivaEmit.disabled = false;
+          if(els.responsivaEmit) els.responsivaEmit.disabled = !!assessment.message;
         }
       }catch(error){
         if(requestId !== responsivaState.previewRequestId) return;
@@ -51360,7 +51401,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       if(els.responsivaEmit){
         els.responsivaEmit.classList.toggle('d-none', !showFinalActions);
-        els.responsivaEmit.disabled = responsivaState.saving;
+        els.responsivaEmit.disabled = responsivaState.saving || showFinalActions;
       }
       if(els.responsivaCancel){
         els.responsivaCancel.classList.toggle('d-none', !showFinalActions);
@@ -51684,10 +51725,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(signerRole !== 'paciente' && !signerRelationship){
           return { error: 'Relación / parentesco del paciente o responsable es obligatoria para emitir.' };
         }
-        if(!signerSignature) return { error: 'Firma del paciente o responsable es obligatoria para emitir.' };
-        if(responsivaState.signerBindingStatus !== 'valid_bound_signature'){
-          return { error: 'La firma del paciente o responsable debe aplicarse nuevamente a esta versión.' };
-        }
       }
       const actorUserId = await resolveResponsivaAuthenticatedActorUserId();
       const doctorPrefill = readDoctorPrefillProfile();
@@ -51779,6 +51816,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actorUserId,
         source: 'documents_clinicos_responsiva_medica'
       });
+      if(normalizedStatus === 'issued'){
+        const assessment = await assessResponsivaFinalSignatures(body);
+        if(assessment.message) return { error: assessment.message };
+      }
       return { patientId, body, normalizedStatus };
     };
     const applyResponsivaLocalSignature = (role = 'signer')=>{
@@ -51817,6 +51858,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           responsivaState.signerReplacementActive = false;
           refreshResponsivaSignerSignatureStatus();
         }
+        setResponsivaNotice('');
         responsivaState.finalReviewedBody = null;
         if(responsivaState.step === 7) renderResponsivaPreview();
       })();
@@ -51943,7 +51985,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           els.responsivaSave.textContent = 'Guardar borrador';
         }
         if(els.responsivaEmit){
-          els.responsivaEmit.disabled = false;
+          els.responsivaEmit.disabled = true;
           els.responsivaEmit.textContent = 'Emitir responsiva';
         }
         renderResponsivaStep();

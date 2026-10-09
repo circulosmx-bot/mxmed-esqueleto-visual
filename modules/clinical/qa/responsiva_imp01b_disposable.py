@@ -245,6 +245,127 @@ with sync_playwright() as pw:
     doctor_stale_token = create_qr(api, doc_uuid, row(doc_uuid)[1], 'doctor')
     sql(f"UPDATE clinical_documents SET payload_json=JSON_SET(payload_json,'$.actor_snapshot.user_id','other-user') WHERE document_uuid='{doc_uuid}'")
     check('T19_PHYSICIAN_CHANGE_STALE', mobile_status(phone_api, doctor_stale_token).status == 409)
+    sql(f"UPDATE clinical_documents SET payload_json=JSON_SET(payload_json,'$.actor_snapshot.user_id','review-user') WHERE document_uuid='{doc_uuid}'")
+    for role in ('signer', 'doctor'):
+        current = row(doc_uuid)[1]
+        fresh_token = create_qr(api, doc_uuid, current, role)
+        fresh_phone = phone_context.new_page()
+        fresh_phone.goto(BASE + '/public/note-capture.html?mode=responsiva-signature&token=' + fresh_token)
+        expect(fresh_phone.locator('#consentReview')).to_be_visible()
+        fresh_phone.locator('#consentContinue').click()
+        draw(fresh_phone)
+        fresh_phone.locator('#signatureSubmit').click()
+        expect(fresh_phone.locator('#captureMsg')).to_contain_text('Firma recibida correctamente')
+        fresh_signature = api.get(BASE + f'/api/clinical/index.php/responsiva-qr-sessions/{fresh_token}/status').json()['data']['signature']
+        fresh_body = json.loads(json.dumps(document_requests[0]))
+        fresh_body['payload'] = row(doc_uuid)[2]
+        fresh_body['payload']['signatures'][role] = fresh_signature
+        claimed = post_document(api, fresh_body, doc_uuid, current)
+        check('IMP01C_FRESH_' + role.upper() + '_QR_CLAIMED', claimed.status in (200, 201)
+              and qrrow(fresh_token)['status'] == 'consumed'
+              and row(doc_uuid)[2]['signature_binding_status'][role] == 'valid_bound_signature')
+        fresh_phone.close()
+    current = row(doc_uuid)[1]
+    final_body = json.loads(json.dumps(document_requests[0]))
+    final_body['payload'] = row(doc_uuid)[2]
+    final_body['payload']['status'] = 'issued'
+    final_body['draft_ref'] = doc_uuid
+    final_body['expected_version'] = current
+    issued = api.post(BASE + f'/api/clinical/index.php/doctors/1/patients/{PATIENT}/documents',
+                      data=final_body, headers={'Idempotency-Key': 'resp-qr-final-' + str(uuid.uuid4())})
+    check('IMP01C_QR_QR_EMIT', issued.status in (200, 201) and row(doc_uuid)[0] == 'generated'
+          and issued.json()['data']['document_id'] == doc_uuid)
+    emitted = row(doc_uuid)[2]
+    check('IMP01C_QR_QR_FINGERPRINT_MATCH', emitted['signatures']['signer']['binding']['content_fingerprint']
+          == emitted['signatures']['doctor']['binding']['content_fingerprint'])
+    def create_extra_draft():
+        body = json.loads(json.dumps(document_requests[0]))
+        body['payload']['status'] = 'draft'
+        body['payload']['signatures'] = {'signer': None, 'doctor': None}
+        body.pop('draft_ref', None)
+        body.pop('expected_version', None)
+        response = api.post(BASE + f'/api/clinical/index.php/doctors/1/patients/{PATIENT}/documents',
+                            data=body, headers={'Idempotency-Key': 'resp-extra-' + str(uuid.uuid4())})
+        check('IMP01C_EXTRA_DRAFT', response.status in (200, 201))
+        return response.json()['data']['document_id'], body
+
+    def bound_signature(body, role, source):
+        return desktop.evaluate('''async ({body,role,source}) => {
+          const canvas=document.createElement('canvas');canvas.width=220;canvas.height=90;
+          const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,220,90);
+          ctx.strokeStyle='#102a43';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(20,20);ctx.lineTo(180,65);ctx.stroke();
+          return window.mxmedResponsivaSignatureBinding.bind(body,role,'1',{
+            type:'drawn',role,source,image_data:canvas.toDataURL('image/png'),signed_at:'2026-10-08 12:00:00',
+            signer_name:role==='doctor'?body.payload.actor_snapshot.full_name:body.payload.signer.name});
+        }''', {'body': body, 'role': role, 'source': source})
+
+    def sign_qr_and_claim(extra_uuid, role, source_body):
+        version = row(extra_uuid)[1]
+        extra_token = create_qr(api, extra_uuid, version, role)
+        extra_phone = phone_context.new_page()
+        extra_phone.goto(BASE + '/public/note-capture.html?mode=responsiva-signature&token=' + extra_token)
+        expect(extra_phone.locator('#consentReview')).to_be_visible()
+        extra_phone.locator('#consentContinue').click()
+        draw(extra_phone)
+        extra_phone.locator('#signatureSubmit').click()
+        expect(extra_phone.locator('#captureMsg')).to_contain_text('Firma recibida correctamente')
+        signature = api.get(BASE + f'/api/clinical/index.php/responsiva-qr-sessions/{extra_token}/status').json()['data']['signature']
+        source_body['payload'] = row(extra_uuid)[2]
+        source_body['payload']['signatures'][role] = signature
+        claimed = post_document(api, source_body, extra_uuid, version)
+        check('IMP01C_EXTRA_QR_CLAIMED', claimed.status in (200, 201)
+              and row(extra_uuid)[2]['signature_binding_status'][role] == 'valid_bound_signature')
+        extra_phone.close()
+
+    def emit_extra(extra_uuid, source_body, name):
+        source_body['payload'] = row(extra_uuid)[2]
+        source_body['payload']['status'] = 'issued'
+        source_body['draft_ref'] = extra_uuid
+        source_body['expected_version'] = row(extra_uuid)[1]
+        response = api.post(BASE + f'/api/clinical/index.php/doctors/1/patients/{PATIENT}/documents',
+                            data=source_body, headers={'Idempotency-Key': 'resp-extra-emit-' + str(uuid.uuid4())})
+        check(name, response.status in (200, 201) and row(extra_uuid)[0] == 'generated'
+              and response.json()['data']['document_id'] == extra_uuid)
+
+    local_uuid, local_body = create_extra_draft()
+    local_body['payload'] = row(local_uuid)[2]
+    local_body['payload']['signatures']['signer'] = bound_signature(local_body, 'signer', 'local_canvas')
+    check('IMP01C_LOCAL_SIGNER_DRAFT', post_document(api, local_body, local_uuid, row(local_uuid)[1]).status in (200, 201))
+    sign_qr_and_claim(local_uuid, 'doctor', local_body)
+    emit_extra(local_uuid, local_body, 'IMP01C_LOCAL_SIGNER_QR_DOCTOR_EMIT')
+
+    registered_uuid, registered_body = create_extra_draft()
+    sign_qr_and_claim(registered_uuid, 'signer', registered_body)
+    registered_body['payload'] = row(registered_uuid)[2]
+    registered = bound_signature(registered_body, 'doctor', 'registered_profile')
+    digest = hashlib.sha256(base64.b64decode(registered['image_data'].split(',')[1])).hexdigest()
+    sql('CREATE TABLE IF NOT EXISTS physician_signatures (doctor_id VARCHAR(64) PRIMARY KEY, checksum_sha256 CHAR(64) NOT NULL)')
+    sql(f"INSERT INTO physician_signatures (doctor_id,checksum_sha256) VALUES ('1','{digest}') ON DUPLICATE KEY UPDATE checksum_sha256=VALUES(checksum_sha256)")
+    registered_body['payload']['signatures']['doctor'] = registered
+    check('IMP01C_EXPLICIT_REGISTERED_DOCTOR_DRAFT',
+          post_document(api, registered_body, registered_uuid, row(registered_uuid)[1]).status in (200, 201))
+    emit_extra(registered_uuid, registered_body, 'IMP01C_QR_SIGNER_REGISTERED_DOCTOR_EMIT')
+
+    representative_uuid, representative_body = create_extra_draft()
+    representative_body['payload'] = row(representative_uuid)[2]
+    representative_body['payload']['signer'].update({
+        'role': 'tutor', 'name': 'Representante QA', 'character': 'Madre', 'relationship': 'Madre'})
+    representative_body['payload']['signatures']['signer'] = bound_signature(representative_body, 'signer', 'local_canvas')
+    representative_body['payload']['signatures']['doctor'] = bound_signature(representative_body, 'doctor', 'local_canvas')
+    check('IMP01C_REPRESENTATIVE_BOTH_DRAFT',
+          post_document(api, representative_body, representative_uuid, row(representative_uuid)[1]).status in (200, 201))
+    changed_representative = json.loads(json.dumps(representative_body))
+    changed_representative['payload'] = row(representative_uuid)[2]
+    changed_representative['payload']['status'] = 'issued'
+    changed_representative['payload']['signer']['relationship'] = 'Tutor legal'
+    changed_representative['draft_ref'] = representative_uuid
+    changed_representative['expected_version'] = row(representative_uuid)[1]
+    changed_attempt = api.post(BASE + f'/api/clinical/index.php/doctors/1/patients/{PATIENT}/documents',
+                               data=changed_representative,
+                               headers={'Idempotency-Key': 'resp-representative-changed-' + str(uuid.uuid4())})
+    check('IMP01C_REPRESENTATIVE_RELATIONSHIP_CHANGE_BLOCKED',
+          changed_attempt.status == 400 and row(representative_uuid)[0] == 'draft')
+    emit_extra(representative_uuid, representative_body, 'IMP01C_REPRESENTATIVE_EMIT')
     check('T30_CONSENT_TABLE_UNTOUCHED', sql("SHOW TABLES LIKE 'clinical_consent_qr_sessions'") == '')
     check('T31_M6_ENCOUNTER_STILL_OPEN', sql("SELECT COUNT(*) FROM clinical_encounters WHERE encounter_id=1016 AND status='open'") == '1')
     check('NO_BROWSER_ERRORS', not errors)

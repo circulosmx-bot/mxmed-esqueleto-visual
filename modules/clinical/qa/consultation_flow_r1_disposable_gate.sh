@@ -7,7 +7,7 @@ qa_root="$(mktemp -d "${TMPDIR:-/tmp}/flow-r1-qa-XXXXXXXX")"
 http_pid=""
 cleanup(){
   if [[ -n "$http_pid" ]]; then
-    if [[ "${FLOW_R1_CAPTURE_R43A:-0}" == "1" ]]; then pgrep -P "$http_pid" | xargs -I{} kill {} 2>/dev/null || true; fi
+    if [[ "${FLOW_R1_CAPTURE_R43A:-0}" == "1" || -n "${PHP_CLI_SERVER_WORKERS:-}" ]]; then pgrep -P "$http_pid" | xargs -I{} kill {} 2>/dev/null || true; fi
     kill "$http_pid" 2>/dev/null || true; wait "$http_pid" 2>/dev/null || true; fi
   rm -rf "$qa_root"
   mysql -e "DROP DATABASE IF EXISTS \`$qa_db\`"
@@ -60,7 +60,7 @@ if [[ "${FLOW_R1_CAPTURE_R42:-0}" == "1" || "${FLOW_R1_CAPTURE_R43A:-0}" == "1" 
   qa_php_flags+=(-d upload_max_filesize=32M -d post_max_size=40M -d memory_limit=128M -d display_errors=Off -d "auto_prepend_file=$root_dir/modules/clinical/qa/step6_mobile_capture_r42_probe.php")
 fi
 if [[ "${FLOW_R1_CAPTURE_R43A:-0}" == "1" ]]; then export PHP_CLI_SERVER_WORKERS=4 CLINICAL_API_BASE="http://127.0.0.1:$port"; fi
-MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS='' MXMED_LON06A_WRITE_ENABLED=1 MXMED_CLINICAL_STAGING_TTL_SECONDS=600 MXMED_CLINICAL_PRIVATE_STORAGE_ROOT="$qa_root/private" MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1=1 MXMED_CLINICAL_M6_COHORT_MODE=allowlist MXMED_CLINICAL_M6_COHORT_PAIRS='1|p_plan02ux_review' \
+MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS='' MXMED_LON06A_WRITE_ENABLED=1 MXMED_CLINICAL_STAGING_TTL_SECONDS=600 MXMED_CLINICAL_PRIVATE_STORAGE_ROOT="$qa_root/private" MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1=1 MXMED_CLINICAL_M6_COHORT_MODE=allowlist MXMED_CLINICAL_M6_COHORT_PAIRS='1|p_plan02ux_review' CLINICAL_API_BASE="http://127.0.0.1:$port" \
   MXMED_CLINICAL_WRITE_WINDOW_CONTROL=FILE MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH="$window_path" \
   FLOW_R42_PROBE_LOG="$qa_root/runtime-probe.jsonl" php "${qa_php_flags[@]}" -S "127.0.0.1:$port" -t "$root_dir" >"$qa_root/server.log" 2>&1 &
 http_pid=$!

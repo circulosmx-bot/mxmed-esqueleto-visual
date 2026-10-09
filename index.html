@@ -10009,7 +10009,7 @@
                         <div class="col-12">
                           <div class="border rounded p-2">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico tratante <span class="badge text-bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis ms-1">Opcional</span></div>
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico tratante <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis ms-1">Obligatoria para emitir</span></div>
                               <span class="small text-muted" id="rm_doctor_signature_status">Sin firma</span>
                             </div>
                             <div class="d-flex flex-wrap gap-3 mb-2">
@@ -10045,6 +10045,11 @@
                     </div>
                     <div id="rm_step_7" class="d-none">
                       <div class="small text-uppercase text-muted fw-semibold mb-2">Revisión final antes de emitir</div>
+                      <div id="rm_final_signature_summary" class="border rounded p-3 mb-2" role="status" aria-live="polite">
+                        <div class="fw-semibold mb-2">Firmas requeridas para emitir</div>
+                        <div id="rm_final_signer_status" class="small mb-1"></div>
+                        <div id="rm_final_doctor_status" class="small"></div>
+                      </div>
                       <div id="rm_final_review" class="border rounded p-3 bg-light-subtle"></div>
                     </div>
                     <div class="d-flex align-items-center justify-content-between gap-2 mt-3">

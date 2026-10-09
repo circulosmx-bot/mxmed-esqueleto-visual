@@ -90,11 +90,13 @@ function clinical_responsiva_binding_classify(array $body, string $role, string 
     if (($binding['version'] ?? null) !== 1) return 'legacy_unverified_binding';
     if (!empty($binding['revoked_in_edit'])) return 'stale_or_unverified_signature';
     $source = (string)($entry['source'] ?? '');
+    $expectedName = $role === 'doctor' ? ($p['actor_snapshot']['full_name'] ?? '') : ($p['signer']['name'] ?? '');
     if (!in_array($source, ['local_canvas', 'registered_profile', 'remote_qr'], true)
         || ($role === 'signer' && !in_array($source, ['local_canvas', 'remote_qr'], true))
         || (string)($entry['role'] ?? '') !== $role
         || (string)($binding['role'] ?? '') !== $role
         || (string)($binding['source'] ?? '') !== $source
+        || clinical_consent_binding_clean($entry['signer_name'] ?? '') !== clinical_consent_binding_clean($expectedName)
         || (string)($binding['authority'] ?? '') !== clinical_responsiva_binding_authority($body, $role, $doctorId)
         || !hash_equals(clinical_responsiva_binding_fingerprint($body), (string)($binding['content_fingerprint'] ?? '')))
         return 'stale_or_unverified_signature';
