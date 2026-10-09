@@ -5923,7 +5923,7 @@
                       </header>
                       <div class="modal-body plan02b-modal-content">
                         <p class="ci-signature-context">Firmando como: <strong data-role="ci-signature-qr-context">Paciente o representante</strong></p>
-                        <div class="docux-capture-guide">
+                        <div class="docux-capture-guide" data-role="ci-signature-qr-waiting">
                           <ol class="docux-capture-steps">
                             <li><span aria-hidden="true">1</span>Escanea el código<br>o abre el enlace</li>
                             <li><span aria-hidden="true">2</span>Revisa el consentimiento</li>
@@ -5946,8 +5946,9 @@
                           </div>
                         </div>
                         <p class="docux-capture-status" data-role="ci-signature-qr-state" role="status" aria-live="polite">Esperando firma…</p>
-                        <div class="alert alert-success d-none mt-3 mb-0 py-2 px-3" data-role="ci-signature-qr-preview-wrap">
-                          <div class="fw-semibold small mb-2">Firma recibida</div>
+                        <div class="alert alert-success d-none mt-3 mb-0 py-2 px-3 text-center" data-role="ci-signature-qr-preview-wrap">
+                          <div class="fw-semibold mb-2" data-role="ci-signature-qr-received-heading" tabindex="-1">✓ Firma recibida correctamente</div>
+                          <p class="small mb-2" data-document-handoff-signer></p>
                           <img data-role="ci-signature-qr-preview-image" src="" alt="Vista previa de firma remota" class="img-fluid rounded border bg-white ci-signature-preview">
                         </div>
                       </div>
@@ -5998,8 +5999,8 @@
                             </div>
                           </div>
                           <div class="d-none text-center" data-role="rm-qr-received">
-                            <div class="fs-4 fw-bold text-success">✓ Firma recibida correctamente</div>
-                            <p class="mb-1" data-role="rm-qr-received-signer"></p>
+                            <div class="fs-4 fw-bold text-success" data-role="rm-qr-received-heading" tabindex="-1">✓ Firma recibida correctamente</div>
+                            <p class="mb-1" data-role="rm-qr-received-signer" data-document-handoff-signer></p>
                             <p class="text-success fw-semibold">Firma vinculada a esta versión</p>
                             <img data-role="rm-qr-preview" alt="Firma recibida" class="img-fluid rounded border bg-white" style="max-height:110px;object-fit:contain">
                           </div>
@@ -11021,6 +11022,7 @@
 <script src="assets/js/clinical/consent-signature-binding.js?v=cons-sign02a"></script>
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
+<script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/app.js?v=resp-sign-vis01"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help01"></script>
 <script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>

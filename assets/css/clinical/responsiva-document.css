@@ -53,29 +53,6 @@
   gap: 0;
 }
 
-.responsiva-doc-sheet .responsiva-doc-signature-block {
-  width: min(100%, 390px);
-  margin: 0 auto;
-  text-align: center;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.responsiva-doc-sheet .responsiva-doc-signature-block + .responsiva-doc-signature-block {
-  margin-top: 30px;
-}
-
-.responsiva-doc-sheet .informe-doc-sign-line {
-  margin: 76px auto 6px;
-  border-top: 1px solid #9fb6c4;
-  width: min(100%, 320px);
-}
-
-.responsiva-doc-sheet .responsiva-doc-signature-block .informe-doc-sign-image {
-  display: block;
-  margin: 6px auto;
-}
-
 @media (max-width: 767.98px) {
   .responsiva-doc-sheet {
     width: 100%;

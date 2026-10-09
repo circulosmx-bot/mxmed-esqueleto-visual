@@ -1043,7 +1043,6 @@ if (!$embed) {
     background:#fff;
     margin-top:8px;
   }
-  .consent-doc-sign-line{margin-top:28px;border-top:1px solid #9fb6c4;}
   .document-sheet-frame{
     background:#eef2f5;
     border-radius:14px;

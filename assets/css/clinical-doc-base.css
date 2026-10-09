@@ -212,6 +212,37 @@
   text-align: center;
 }
 
+/* Shared printed signature geometry for existing document renderers. */
+:where(.doc-base-signature, .responsiva-doc-signature-block, .consent-doc-sign-item) {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.responsiva-doc-sheet .responsiva-doc-signature-block {
+  width: min(100%, 390px);
+  margin: 0 auto;
+  text-align: center;
+}
+.responsiva-doc-sheet .responsiva-doc-signature-block + .responsiva-doc-signature-block { margin-top: 30px; }
+.responsiva-doc-sheet .informe-doc-sign-line {
+  margin: 76px auto 6px;
+  border-top: 1px solid #9fb6c4;
+  width: min(100%, 320px);
+}
+.responsiva-doc-sheet .responsiva-doc-signature-block .informe-doc-sign-image {
+  display: block;
+  margin: 6px auto;
+}
+.consent-doc-sign-line { margin-top: 28px; border-top: 1px solid #9fb6c4; }
+
+/* The same handoff shell stays reachable at compact desktop heights. */
+.ci-signature-handoff-dialog .ci-signature-handoff {
+  max-height: calc(100dvh - 32px);
+}
+.ci-signature-handoff-dialog .ci-signature-handoff .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .doc-base-footer {
   margin-top: 0;
   padding-top: 6px;
