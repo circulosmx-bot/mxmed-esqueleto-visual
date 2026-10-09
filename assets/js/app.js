@@ -51824,8 +51824,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const applyResponsivaLocalSignature = (role = 'signer')=>{
       const task = (async ()=>{
+        if(!responsivaState.activeDraftRef){
+          setResponsivaNotice('No se pudo preparar la responsiva para firmar. Vuelve a intentar entrar a Firmas.');
+          return;
+        }
         const prepared = await buildResponsivaDocument('draft');
         if(prepared?.error) return;
+        prepared.body.draft_ref = responsivaState.activeDraftRef;
+        prepared.body.expected_version = responsivaState.activeDraftVersion;
         const nowSql = formatNowSql();
         const doctor = role === 'doctor';
         const registered = doctor && responsivaState.doctorSignaturePreferredSource === 'registered';
@@ -51894,7 +51900,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const key = `responsiva-qr:${window.crypto.randomUUID()}`;
       const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Idempotency-Key': key },
-        body: JSON.stringify(prepared.body) });
+        body: JSON.stringify(prepared.body) }).catch(()=>{
+          throw new Error('No se pudo guardar el borrador de responsiva. Revisa la conexión e inténtalo de nuevo.');
+        });
       const json = await response.json().catch(()=>null);
       if(!response.ok || json?.ok !== true)
         throw new Error(sanitizeText(json?.message || json?.error || 'No se pudo guardar el borrador.'));
@@ -51903,6 +51911,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaState.activeDraftVersion = Number(saved.version || 0);
       if(!responsivaState.activeDraftRef || responsivaState.activeDraftVersion < 1)
         throw new Error('El servidor no devolvió la versión del borrador.');
+      listCanonicalConsents();
       return saved;
     };
     const saveResponsivaDocument = async (status = 'draft')=>{
@@ -56499,12 +56508,36 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         buildSnapshot: buildResponsivaTempSnapshot
       });
     });
-    els.responsivaNext?.addEventListener('click', (event)=>{
+    els.responsivaNext?.addEventListener('click', async (event)=>{
       event.preventDefault();
+      if(responsivaState.saving) return;
       if(responsivaState.step === 5 && (!responsivaState.contentReviewFingerprint
         || !els.responsivaContentReview?.querySelector('.responsiva-doc-sheet'))){
         setResponsivaNotice('Espera a que se complete la revisión del contenido.');
         return;
+      }
+      if(responsivaState.step === 5){
+        responsivaState.saving = true;
+        els.responsivaNext.disabled = true;
+        if(els.responsivaPrev) els.responsivaPrev.disabled = true;
+        if(els.responsivaSave) els.responsivaSave.disabled = true;
+        try{
+          const prepared = await buildResponsivaDocument('draft');
+          if(prepared?.error || await window.mxmedResponsivaSignatureBinding.hash(prepared.body)
+            !== responsivaState.contentReviewFingerprint)
+            throw new Error('El contenido cambió desde la revisión. Revísalo nuevamente antes de firmar.');
+          await saveResponsivaDraftInPlace();
+          if(responsivaState.step !== 5 || !els.responsivaModalEl?.classList.contains('show')) return;
+          setResponsivaNotice('');
+        }catch(error){
+          setResponsivaNotice(sanitizeText(error?.message || 'No se pudo preparar el borrador para firmar.'));
+          return;
+        }finally{
+          responsivaState.saving = false;
+          els.responsivaNext.disabled = false;
+          if(els.responsivaPrev) els.responsivaPrev.disabled = false;
+          if(els.responsivaSave) els.responsivaSave.disabled = false;
+        }
       }
       responsivaState.step = Math.min(7, Number(responsivaState.step || 1) + 1);
       renderResponsivaStep();
@@ -56517,7 +56550,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     els.responsivaCancel?.addEventListener('click', (event)=>{
       event.preventDefault();
-      resetResponsivaWizard();
       closeResponsivaModal();
     });
     els.responsivaSave?.addEventListener('click', (event)=>{
@@ -56574,6 +56606,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(responsivaState.discardTempOnHide){
         responsivaState.discardTempOnHide = false;
         clearDocModalTempSession({ documentType: 'responsiva_medica', patientId });
+        resetResponsivaWizard();
+        return;
+      }
+      if(responsivaState.activeDraftRef){
+        clearDocModalTempSession({ documentType: 'responsiva_medica', patientId });
+        listCanonicalConsents();
         resetResponsivaWizard();
         return;
       }

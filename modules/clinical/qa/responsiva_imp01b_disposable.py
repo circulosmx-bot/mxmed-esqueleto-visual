@@ -176,6 +176,7 @@ with sync_playwright() as pw:
     draft.get_by_role('button', name='Continuar borrador').click()
     for _ in range(5):
         desktop.locator('#rm_next').click()
+    expect(desktop.locator('#rm_step_6')).to_be_visible(timeout=15000)
     check('T24_REOPEN_REMOTE_VALID', 'vinculada' in desktop.locator('#rm_signer_signature_status').inner_text())
     check('T29_SHARED_PREVIEW', saved_html.startswith('<article') and '<article' in row(doc_uuid)[2]['responsiva_snapshot']['html'])
     # A newer canonical draft version invalidates a QR issued for the preceding version.
@@ -289,7 +290,9 @@ with sync_playwright() as pw:
         check('IMP01C_EXTRA_DRAFT', response.status in (200, 201))
         return response.json()['data']['document_id'], body
 
-    def bound_signature(body, role, source):
+    def bound_signature(body, role, source, document_uuid):
+        body = json.loads(json.dumps(body))
+        body['draft_ref'] = document_uuid
         return desktop.evaluate('''async ({body,role,source}) => {
           const canvas=document.createElement('canvas');canvas.width=220;canvas.height=90;
           const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,220,90);
@@ -329,7 +332,7 @@ with sync_playwright() as pw:
 
     local_uuid, local_body = create_extra_draft()
     local_body['payload'] = row(local_uuid)[2]
-    local_body['payload']['signatures']['signer'] = bound_signature(local_body, 'signer', 'local_canvas')
+    local_body['payload']['signatures']['signer'] = bound_signature(local_body, 'signer', 'local_canvas', local_uuid)
     check('IMP01C_LOCAL_SIGNER_DRAFT', post_document(api, local_body, local_uuid, row(local_uuid)[1]).status in (200, 201))
     sign_qr_and_claim(local_uuid, 'doctor', local_body)
     emit_extra(local_uuid, local_body, 'IMP01C_LOCAL_SIGNER_QR_DOCTOR_EMIT')
@@ -337,7 +340,7 @@ with sync_playwright() as pw:
     registered_uuid, registered_body = create_extra_draft()
     sign_qr_and_claim(registered_uuid, 'signer', registered_body)
     registered_body['payload'] = row(registered_uuid)[2]
-    registered = bound_signature(registered_body, 'doctor', 'registered_profile')
+    registered = bound_signature(registered_body, 'doctor', 'registered_profile', registered_uuid)
     digest = hashlib.sha256(base64.b64decode(registered['image_data'].split(',')[1])).hexdigest()
     sql('CREATE TABLE IF NOT EXISTS physician_signatures (doctor_id VARCHAR(64) PRIMARY KEY, checksum_sha256 CHAR(64) NOT NULL)')
     sql(f"INSERT INTO physician_signatures (doctor_id,checksum_sha256) VALUES ('1','{digest}') ON DUPLICATE KEY UPDATE checksum_sha256=VALUES(checksum_sha256)")
@@ -350,8 +353,8 @@ with sync_playwright() as pw:
     representative_body['payload'] = row(representative_uuid)[2]
     representative_body['payload']['signer'].update({
         'role': 'tutor', 'name': 'Representante QA', 'character': 'Madre', 'relationship': 'Madre'})
-    representative_body['payload']['signatures']['signer'] = bound_signature(representative_body, 'signer', 'local_canvas')
-    representative_body['payload']['signatures']['doctor'] = bound_signature(representative_body, 'doctor', 'local_canvas')
+    representative_body['payload']['signatures']['signer'] = bound_signature(representative_body, 'signer', 'local_canvas', representative_uuid)
+    representative_body['payload']['signatures']['doctor'] = bound_signature(representative_body, 'doctor', 'local_canvas', representative_uuid)
     check('IMP01C_REPRESENTATIVE_BOTH_DRAFT',
           post_document(api, representative_body, representative_uuid, row(representative_uuid)[1]).status in (200, 201))
     changed_representative = json.loads(json.dumps(representative_body))

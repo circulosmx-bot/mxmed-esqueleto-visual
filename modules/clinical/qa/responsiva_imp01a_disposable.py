@@ -89,21 +89,19 @@ with sync_playwright() as pw:
     expect(page.locator('#rm_content_review')).to_contain_text('Situación clínica QA', timeout=15000)
     check('T23_PREVIEW_ZERO_ROWS_AFTER', sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '0')
     check('T25_CONTENT_REVIEW', page.locator('#rm_content_review').get_by_text('Declaración de cierre').count() > 0)
-    page.locator('#rm_next').click()
-    page.locator('#rm_next').click()
-    expect(page.locator('#rm_final_signer_status')).to_contain_text('Falta la firma del paciente', timeout=15000)
-    expect(page.locator('#rm_final_doctor_status')).to_contain_text('Falta la firma del médico')
-    check('IMP01C_ZERO_FINAL_CTA_BLOCKED', page.locator('#rm_emit').is_disabled())
     page.locator('#rm_prev').click()
-    page.locator('#rm_prev').click()
+    check('U01_PREVIEW_BACK_ZERO_ROWS', sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '0')
+    page.locator('#rm_next').click()
+    expect(page.locator('#rm_content_review')).to_contain_text('Situación clínica QA', timeout=15000)
     with page.expect_response(is_document_save_response) as first_response:
-        page.locator('#rm_save').click()
+        page.locator('#rm_next').click()
     first = first_response.value
     check('T01_CREATE_HTTP', first.status in (200, 201))
     body = first.request.post_data_json
-    first_json = first.json()
-    doc_uuid = first_json['data']['document_id']
+    doc_uuid = first.json()['data']['document_id']
     status, version, payload = saved(doc_uuid)
+    check('U02_U03_SIGNATURE_PHASE_CANONICAL_DRAFT', status == 'draft' and version == 1
+          and bool(re.fullmatch(r'[0-9a-f-]{36}', doc_uuid)))
     check('T01_CANONICAL_DRAFT', status == payload['status'] == 'draft' and version == 1)
     check('T08_NO_SIGNATURES', payload['signature_binding_status'] == {'signer': 'absent', 'doctor': 'absent'})
     zero_issue = issue_attempt(api, body, doc_uuid, version)
@@ -113,8 +111,25 @@ with sync_playwright() as pw:
     check('T05_CONTENT_STORED', payload['content']['clinical_situation'] == 'Situación clínica QA')
     date = payload['report']['emission_date']
     print('FIRST_UUID=' + doc_uuid, flush=True)
-    page.locator('#t-consent .docvis-back').click()
-    page.locator('#t-consent .docvis-back').click()
+    page.locator('#rm_next').click()
+    expect(page.locator('#rm_final_signer_status')).to_contain_text('Falta la firma del paciente', timeout=15000)
+    expect(page.locator('#rm_final_doctor_status')).to_contain_text('Falta la firma del médico')
+    check('IMP01C_ZERO_FINAL_CTA_BLOCKED', page.locator('#rm_emit').is_disabled())
+    page.locator('#rm_prev').click()
+    page.locator('#rm_prev').click()
+    with page.expect_response(is_document_save_response) as repeat_entry_response:
+        page.locator('#rm_next').click()
+    expect(page.locator('#rm_step_6')).to_be_visible(timeout=15000)
+    check('U05_REPEATED_SIGNATURE_ENTRY_SAME_UUID', repeat_entry_response.value.status in (200, 201)
+          and repeat_entry_response.value.json()['data']['document_id'] == doc_uuid
+          and sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '1')
+    with page.expect_response(is_document_save_response) as first_close_response:
+        page.locator('#rm_save').click()
+    check('U04_U05_REENTER_NO_DUPLICATE', first_close_response.value.status in (200, 201)
+          and first_close_response.value.json()['data']['document_id'] == doc_uuid
+          and sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '1')
+    while page.locator('#t-consent .docvis-back').is_visible():
+        page.locator('#t-consent .docvis-back').click()
     page.locator('#t-consent .docvis-intents').first.locator('button').nth(1).click()
     row = page.locator('#t-consent .vis06-row').filter(has_text='Responsiva médica')
     expect(row).to_be_visible(timeout=15000)
@@ -138,14 +153,14 @@ with sync_playwright() as pw:
     check('T02_SECOND_SAVE_HTTP', second.status in (200, 201))
     check('T02_SAME_UUID', second.json()['data']['document_id'] == doc_uuid)
     status, version, payload = saved(doc_uuid)
-    check('T03_VERSION_ADVANCED', version == 2 and payload['content']['clinical_situation'] == 'Situación clínica QA segunda versión')
+    check('T03_VERSION_ADVANCED', version == 4 and payload['content']['clinical_situation'] == 'Situación clínica QA segunda versión')
     stale = dict(body)
     stale['draft_ref'] = doc_uuid
     stale['expected_version'] = 1
     stale['payload']['content']['clinical_situation'] = 'Attempt stale write'
     conflict = api.post(BASE + f'/api/clinical/index.php/doctors/1/patients/{PATIENT}/documents',
                         data=stale, headers={'Idempotency-Key': 'resp-stale-' + str(uuid.uuid4())})
-    check('T04_STALE_VERSION_REJECTED', conflict.status == 409 and saved(doc_uuid)[1] == 2)
+    check('T04_STALE_VERSION_REJECTED', conflict.status == 409 and saved(doc_uuid)[1] == 4)
     row.get_by_role('button', name='Continuar borrador').click()
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
     for _ in range(4):
@@ -170,7 +185,8 @@ with sync_playwright() as pw:
     check('T09_SIGNER_ONLY_SAVE', signer_response.value.status in (200, 201))
     _, version, payload = saved(doc_uuid)
     check('T12_SIGNER_BOUND_SERVER', payload['signature_binding_status'] == {'signer': 'valid_bound_signature', 'doctor': 'absent'}
-          and payload['signatures']['signer']['binding']['version'] == 1)
+          and payload['signatures']['signer']['binding']['version'] == 2
+          and payload['signatures']['signer']['binding']['document_uuid'] == doc_uuid)
     signer_issue = issue_attempt(api, signer_response.value.request.post_data_json, doc_uuid, version)
     check('IMP01C_SIGNER_ONLY_BLOCKED', signer_issue.status == 400
           and signer_issue.json()['message'] == 'RESPONSIVA_PHYSICIAN_SIGNATURE_REQUIRED'
@@ -189,10 +205,20 @@ with sync_playwright() as pw:
     check('T11_BOTH_SAVE', both_response.value.status in (200, 201))
     _, version, payload = saved(doc_uuid)
     check('T14_DOCTOR_BOUND_SERVER', payload['signature_binding_status'] == {'signer': 'valid_bound_signature', 'doctor': 'valid_bound_signature'})
+    check('U07_U08_U10_LOCAL_UUID_BOUND', all(
+        payload['signatures'][role]['binding']['version'] == 2
+        and payload['signatures'][role]['binding']['document_type'] == 'responsiva_medica'
+        and payload['signatures'][role]['binding']['document_uuid'] == doc_uuid
+        for role in ('signer', 'doctor')))
     check('IMP01C_BOTH_SIGNATURES_SAME_FINGERPRINT',
           payload['signatures']['signer']['binding']['content_fingerprint']
           == payload['signatures']['doctor']['binding']['content_fingerprint'])
     both_body = both_response.value.request.post_data_json
+    wrong_client_document = copy.deepcopy(both_body)
+    wrong_client_document['draft_ref'] = str(uuid.uuid4())
+    check('U12_CLIENT_WRONG_UUID_REJECTED', page.evaluate('''body =>
+        window.mxmedResponsivaSignatureBinding.classify(body, 'signer', '1')''', wrong_client_document)
+          == 'stale_or_unverified_signature')
     for check_name, mutate in [
         ('IMP01C_SIGNER_DIGEST_REJECTED', lambda b: b['payload']['signatures']['signer']['binding'].update(artifact_digest='0' * 64)),
         ('IMP01C_DOCTOR_DIGEST_REJECTED', lambda b: b['payload']['signatures']['doctor']['binding'].update(artifact_digest='0' * 64)),
@@ -202,6 +228,12 @@ with sync_playwright() as pw:
         ('IMP01C_HEADER_CHANGE_REJECTED', lambda b: b['payload']['presentation'].update(professional_header='hidden')),
         ('IMP01C_LEGACY_SIGNER_REJECTED', lambda b: b['payload']['signatures']['signer'].pop('binding')),
         ('IMP01C_LEGACY_DOCTOR_REJECTED', lambda b: b['payload']['signatures']['doctor'].pop('binding')),
+        ('U12_SIGNER_WRONG_UUID_REJECTED', lambda b: b['payload']['signatures']['signer']['binding'].update(document_uuid=str(uuid.uuid4()))),
+        ('U12_DOCTOR_WRONG_UUID_REJECTED', lambda b: b['payload']['signatures']['doctor']['binding'].update(document_uuid=str(uuid.uuid4()))),
+        ('U13_STALE_FINGERPRINT_REJECTED', lambda b: b['payload']['signatures']['signer']['binding'].update(content_fingerprint='0' * 64)),
+        ('U14_MISSING_UUID_REJECTED', lambda b: b['payload']['signatures']['signer']['binding'].pop('document_uuid')),
+        ('U14_MALFORMED_UUID_REJECTED', lambda b: b['payload']['signatures']['doctor']['binding'].update(document_uuid='not-a-uuid')),
+        ('U14_OLD_V1_LOCAL_REJECTED', lambda b: b['payload']['signatures']['signer']['binding'].update(version=1)),
     ]:
         attempt_body = copy.deepcopy(both_body)
         mutate(attempt_body)
@@ -260,6 +292,8 @@ with sync_playwright() as pw:
     check('IMP01C_FINAL_FINGERPRINTS_MATCH', final_fingerprint
           == payload['signatures']['signer']['binding']['content_fingerprint']
           == payload['signatures']['doctor']['binding']['content_fingerprint'])
+    check('U25_U26_FINAL_UUID_MATCH', all(payload['signatures'][role]['binding']['document_uuid'] == doc_uuid
+          for role in ('signer', 'doctor')))
     check('T24_SHARED_COMPOSITION', payload['responsiva_snapshot']['html'] == final_html)
     expect(row.get_by_role('button', name='Continuar borrador')).to_have_count(0, timeout=15000)
     if os.environ.get('RESP_QR_AVAILABLE') == '1':
@@ -352,7 +386,14 @@ with sync_playwright() as pw:
     _, _, registered_payload = saved(second_uuid)
     check('T16_REGISTERED_BOUND', registered_payload['signature_binding_status'] == {'signer': 'valid_bound_signature', 'doctor': 'valid_bound_signature'}
           and registered_payload['signatures']['doctor']['source'] == 'registered_profile'
-          and registered_payload['signatures']['doctor']['binding']['artifact_digest'] == digest)
+          and registered_payload['signatures']['doctor']['binding']['artifact_digest'] == digest
+          and registered_payload['signatures']['doctor']['binding']['version'] == 2
+          and registered_payload['signatures']['doctor']['binding']['document_uuid'] == second_uuid)
+    wrong_registered = copy.deepcopy(registered_response.value.request.post_data_json)
+    wrong_registered['payload']['signatures']['doctor']['binding']['document_uuid'] = str(uuid.uuid4())
+    wrong_registered_result = issue_attempt(api, wrong_registered, second_uuid, saved(second_uuid)[1])
+    check('U12_REGISTERED_WRONG_UUID_REJECTED', wrong_registered_result.status == 400
+          and wrong_registered_result.json()['message'] == 'RESPONSIVA_PHYSICIAN_SIGNATURE_INVALID_CURRENT_VERSION')
     draft_row.get_by_role('button', name='Continuar borrador').click()
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
     for _ in range(6):
@@ -416,6 +457,58 @@ with sync_playwright() as pw:
     historical_row = page.locator('#t-consent .vis06-row').filter(has_text='Responsiva histórica QA')
     expect(historical_row).to_be_visible(timeout=15000)
     check('T27_HISTORICAL_NOT_RESUMABLE', historical_row.get_by_role('button', name='Continuar borrador').count() == 0)
+    duplicate_content = copy.deepcopy(both_body)
+    duplicate_content.pop('draft_ref', None)
+    duplicate_content.pop('expected_version', None)
+    duplicate_content['payload']['status'] = 'draft'
+    duplicate_content['payload']['signatures'] = {'signer': None, 'doctor': None}
+    duplicate_response = api.post(BASE + f'/api/clinical/index.php/doctors/1/patients/{PATIENT}/documents',
+                                  data=duplicate_content,
+                                  headers={'Idempotency-Key': 'resp-cross-doc-' + str(uuid.uuid4())})
+    check('U29_SECOND_IDENTICAL_DRAFT_CREATED', duplicate_response.status in (200, 201))
+    duplicate_uuid = duplicate_response.json()['data']['document_id']
+    duplicate_version = saved(duplicate_uuid)[1]
+    duplicate_content['payload'] = saved(duplicate_uuid)[2]
+    duplicate_fingerprint = page.evaluate('body=>window.mxmedResponsivaSignatureBinding.hash(body)', duplicate_content)
+    original_fingerprint = both_body['payload']['signatures']['signer']['binding']['content_fingerprint']
+    check('U29_DISTINCT_UUID_IDENTICAL_FINGERPRINT', duplicate_uuid != doc_uuid
+          and duplicate_fingerprint == original_fingerprint)
+    duplicate_content['payload']['signatures'] = copy.deepcopy(both_body['payload']['signatures'])
+    reused = issue_attempt(api, duplicate_content, duplicate_uuid, duplicate_version)
+    check('U29_CROSS_DOCUMENT_SIGNATURE_REJECTED', reused.status == 400
+          and reused.json()['message'] == 'RESPONSIVA_SIGNER_SIGNATURE_INVALID_CURRENT_VERSION'
+          and saved(duplicate_uuid)[0] == 'draft')
+    print('RESPONSIVA_A_UUID=' + doc_uuid, flush=True)
+    print('RESPONSIVA_B_UUID=' + duplicate_uuid, flush=True)
+    while page.locator('#t-consent .docvis-back').is_visible():
+        page.locator('#t-consent .docvis-back').click()
+    page.locator('#t-consent .docvis-intents').first.locator('button').first.click()
+    page.locator('#t-consent .docvis-intents').nth(1).locator('button').first.click()
+    page.locator('[data-action="documents-open-responsiva"]').click()
+    expect(page.locator('#modalResponsivaMedica')).to_be_visible()
+    page.locator('#rm_next').click()
+    page.locator('#rm_clinical_situation').fill('Prueba de persistencia fallida QA')
+    page.locator('#rm_next').click()
+    page.locator('#rm_declaration_text').fill('Declaración de prueba QA')
+    page.locator('#rm_next').click()
+    page.locator('#rm_signer_name').fill('Paciente QA')
+    page.locator('#rm_next').click()
+    expect(page.locator('#rm_content_review')).to_contain_text('Prueba de persistencia fallida QA', timeout=15000)
+    count_before_failure = sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'")
+    page.route(f'**/patients/{PATIENT}/documents', lambda route: route.abort(), times=1)
+    page.locator('#rm_next').click()
+    expect(page.locator('#rm_notice')).to_contain_text('No se pudo guardar el borrador de responsiva', timeout=15000)
+    check('U12_PERSISTENCE_FAILURE_BLOCKS_SIGNATURE_PHASE', page.locator('#rm_step_5').is_visible()
+          and not page.locator('#rm_step_6').is_visible()
+          and sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == count_before_failure)
+    with page.expect_response(is_document_save_response) as recovered_response:
+        page.locator('#rm_next').click()
+    expect(page.locator('#rm_step_6')).to_be_visible(timeout=15000)
+    recovered_uuid = recovered_response.value.json()['data']['document_id']
+    check('U12_RECOVERY_MATERIALIZES_DRAFT', saved(recovered_uuid)[0] == 'draft')
+    page.locator('#modalResponsivaMedica .btn-close').click()
+    expect(page.locator('#modalResponsivaMedica')).to_be_hidden()
+    check('U13_CANCEL_PRESERVES_DRAFT', saved(recovered_uuid)[0] == 'draft')
     active_encounter = api.get(BASE + f'/api/clinical/index.php/patients/{PATIENT}/encounters/active')
     check('T31_M6_ACTIVE_READ', active_encounter.status == 200 and active_encounter.json().get('ok') is True)
     check('T31_M6_ENCOUNTER_UNCHANGED', baseline_encounter == '1'

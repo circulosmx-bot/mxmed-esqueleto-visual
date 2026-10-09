@@ -81,15 +81,28 @@ function clinical_responsiva_binding_authority(array $body, string $role, string
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 }
 
+function clinical_responsiva_binding_document_uuid(array $body): string
+{
+    $value = strtolower(trim((string)($body['draft_ref'] ?? '')));
+    return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $value) === 1
+        ? $value : '';
+}
+
 function clinical_responsiva_binding_classify(array $body, string $role, string $doctorId, ?PDO $pdo = null): string
 {
     $p = (array)($body['payload'] ?? []);
     $entry = is_array($p['signatures'][$role] ?? null) ? $p['signatures'][$role] : [];
     if ($entry === [] || empty($entry['image_data'])) return 'absent';
     $binding = is_array($entry['binding'] ?? null) ? $entry['binding'] : [];
-    if (($binding['version'] ?? null) !== 1) return 'legacy_unverified_binding';
-    if (!empty($binding['revoked_in_edit'])) return 'stale_or_unverified_signature';
     $source = (string)($entry['source'] ?? '');
+    if (($binding['version'] ?? null) !== ($source === 'remote_qr' ? 1 : 2))
+        return 'legacy_unverified_binding';
+    if ($source !== 'remote_qr'
+        && (($binding['document_type'] ?? null) !== 'responsiva_medica'
+            || clinical_responsiva_binding_document_uuid($body) === ''
+            || ($binding['document_uuid'] ?? null) !== clinical_responsiva_binding_document_uuid($body)))
+        return 'stale_or_unverified_signature';
+    if (!empty($binding['revoked_in_edit'])) return 'stale_or_unverified_signature';
     $expectedName = $role === 'doctor' ? ($p['actor_snapshot']['full_name'] ?? '') : ($p['signer']['name'] ?? '');
     if (!in_array($source, ['local_canvas', 'registered_profile', 'remote_qr'], true)
         || ($role === 'signer' && !in_array($source, ['local_canvas', 'remote_qr'], true))

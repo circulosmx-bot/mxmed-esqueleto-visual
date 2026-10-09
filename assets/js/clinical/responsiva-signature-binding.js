@@ -35,11 +35,18 @@
     : JSON.stringify(['role', 'name', 'character', 'relationship'].map(key => clean(body?.payload?.signer?.[key])));
   const imageDigest = data => window.mxmedConsentSignatureBinding.imageDigest(data);
   const imageHasInk = data => window.mxmedConsentSignatureBinding.imageHasInk(data);
+  const documentUuid = body => {
+    const value = clean(body?.draft_ref).trim().toLowerCase();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value) ? value : '';
+  };
   const bind = async (body, role, doctorId, signature) => {
+    const uuid = documentUuid(body);
+    if (!uuid || !['local_canvas', 'registered_profile'].includes(signature?.source)) return null;
     if (!signature?.image_data || !await imageHasInk(signature.image_data)) return null;
     const digest = await imageDigest(signature.image_data);
     if (!digest) return null;
-    return { ...signature, binding: { version: 1, role, source: signature.source,
+    return { ...signature, binding: { version: 2, document_type: 'responsiva_medica', document_uuid: uuid,
+      role, source: signature.source,
       authority: authority(body, role, doctorId), artifact_digest: digest,
       content_fingerprint: await hash(body), applied_at: new Date().toISOString() } };
   };
@@ -47,7 +54,11 @@
     const entry = body?.payload?.signatures?.[role];
     if (!entry?.image_data) return 'absent';
     const b = entry.binding;
-    if (b?.version !== 1) return 'legacy_unverified_binding';
+    if (entry.source === 'remote_qr' ? b?.version !== 1 : b?.version !== 2)
+      return 'legacy_unverified_binding';
+    if (entry.source !== 'remote_qr'
+      && (b.document_type !== 'responsiva_medica' || !documentUuid(body)
+        || clean(b.document_uuid) !== documentUuid(body))) return 'stale_or_unverified_signature';
     if (b.revoked_in_edit || !['local_canvas', 'registered_profile', 'remote_qr'].includes(entry.source)
       || (role === 'signer' && !['local_canvas', 'remote_qr'].includes(entry.source)) || entry.role !== role
       || b.role !== role || b.source !== entry.source || b.authority !== authority(body, role, doctorId)

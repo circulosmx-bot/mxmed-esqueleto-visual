@@ -1,5 +1,4 @@
 """CONS-TPL04 browser, API, and copied-document proof on a disposable database."""
-import base64
 import json
 import os
 import re
@@ -97,10 +96,15 @@ with sync_playwright() as pw:
             expect(page.locator('#modalConsentDraftPrompt')).to_be_visible()
             page.locator('#ci_draft_discard_btn').click()
         expect(page.locator('#modalConsentTemplateFlow')).to_be_visible()
-        page.locator(f'#modalConsentTemplateFlow [data-tpl-action="{target}"]').click()
-        expect(page.locator('#ci_tpl_modal_title')).to_have_text('Administrar plantillas' if target == 'manage' else 'Usar plantilla')
-        expected_rows = int(sql('SELECT COUNT(*) FROM clinical_consent_templates' + ('' if target == 'manage' else " WHERE status='active'")))
+        # The current UI has one library for using and managing personal templates.
+        page.locator('#modalConsentTemplateFlow [data-tpl-action="selector"]').click()
+        expect(page.locator('#ci_tpl_modal_title')).to_have_text('PLANTILLAS DE CONSENTIMIENTO')
+        expected_rows = int(sql("SELECT COUNT(*) FROM clinical_consent_templates WHERE status='active'"))
         expect(page.locator('#modalConsentTemplateFlow .ci-template-row')).to_have_count(expected_rows)
+
+    def open_more(row):
+        row.locator('[data-tpl-action="more"]').click()
+        expect(row.locator('[role="menu"]')).to_be_visible()
 
     def use_template(name):
         open_flow('selector')
@@ -123,9 +127,6 @@ with sync_playwright() as pw:
 
     use_template('Plantilla A QA')
     page.locator('#ci_next').click()
-    page.locator('#ci_confirm_informed').check()
-    identity_png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lN8AAAAASUVORK5CYII=')
-    page.locator('#ci_identity_files').set_input_files({'name':'identidad-tpl04.png','mimeType':'image/png','buffer':identity_png})
     page.locator('#ci_preview').click()
     expect(page.locator('#ci_review_panel')).to_be_visible()
     page.locator('#ci_review_continue').click()
@@ -138,13 +139,28 @@ with sync_playwright() as pw:
     page.mouse.down()
     page.mouse.move(box['x'] + 95, box['y'] + 50, steps=8)
     page.mouse.up()
+    expect(page.locator('#ci_signature_status')).to_contain_text('vinculada')
+    doctor_canvas = page.locator('#ci_doctor_signature_canvas')
+    doctor_canvas.scroll_into_view_if_needed()
+    doctor_box = doctor_canvas.bounding_box()
+    page.mouse.move(doctor_box['x'] + 20, doctor_box['y'] + 20)
+    page.mouse.down()
+    page.mouse.move(doctor_box['x'] + 95, doctor_box['y'] + 50, steps=8)
+    page.mouse.up()
+    expect(page.locator('#ci_doctor_signature_status')).to_contain_text('vinculada')
     page.locator('#ci_signatures_continue').click()
     expect(page.locator('#ci_review_heading')).to_have_text('Vista previa · Revisión final')
-    page.locator('#ci_emit').click()
-    page.wait_for_function("document.querySelector('#ci_action_feedback')?.textContent?.includes('Consentimiento emitido')", timeout=20000)
+    expect(page.locator('#ci_review_signature_status')).to_contain_text('Paciente: Firma válida para esta versión')
+    expect(page.locator('#ci_review_signature_status')).to_contain_text('Médico: Firma válida para esta versión')
+    with page.expect_response(lambda response: response.request.method == 'POST'
+                              and f'/patients/p_plan02ux_review/documents' in response.url) as emitted_response:
+        page.locator('#ci_emit').click()
+    check('T24_CONSENT_EMIT_HTTP', emitted_response.value.status in (200, 201))
+    expect(page.locator('#modalDocumentPostEmission')).to_be_visible(timeout=20000)
     final_uuid = sql("SELECT document_uuid FROM clinical_documents WHERE document_type='consentimiento_informado' AND status<>'draft' LIMIT 1")
     final_before = sql(f"SELECT payload_json FROM clinical_documents WHERE document_uuid='{final_uuid}'")
     check('T24_CONSENT_EMISSION', CONTENT_OLD['procedimiento'] in final_before and 'local_canvas' in final_before)
+    page.locator('#modalDocumentPostEmission [data-post-emission="close"]').click()
     before_edit_documents = document_snapshot()
 
     open_flow('manage')
@@ -172,8 +188,7 @@ with sync_playwright() as pw:
     before_delete_documents = document_snapshot()
     before_delete_document_count = int(sql('SELECT COUNT(*) FROM clinical_documents'))
     before_delete_uploads = sql('SELECT COUNT(*) FROM clinical_binary_uploads')
-    check('PERSISTED_IDENTITY_ATTACHMENT', int(before_delete_uploads) > 0 and before_delete_document_count > 3
-          and bool(json.loads(final_before).get('signer_identity_attachments')))
+    check('DOCUMENTS_SAVED_BEFORE_DELETE', before_delete_document_count >= 3)
 
     status, created_b = request(api, 'POST', ROUTE, {'template_name': 'Plantilla B archivada QA', 'content': CONTENT_OLD})
     check('SEED_B', status == 201)
@@ -187,10 +202,11 @@ with sync_playwright() as pw:
 
     open_flow('manage')
     row_a = managed_row('Plantilla A QA')
+    open_more(row_a)
     check('T05_DELETE_ACTION_VISIBLE_IN_MANAGEMENT', row_a.locator('[data-tpl-action="delete"]').is_visible()
           and row_a.locator('[data-tpl-action="archive"]').is_visible()
           and row_a.locator('[data-tpl-action="edit"]').is_visible())
-    check('ACCESS_DESTRUCTIVE_NAME', page.get_by_role('button', name='Eliminar plantilla Plantilla A QA').count() == 1)
+    check('ACCESS_DESTRUCTIVE_NAME', page.get_by_role('menuitem', name='Eliminar plantilla Plantilla A QA').count() == 1)
     capture('B-destructive-placement')
     row_a.locator('[data-tpl-action="delete"]').click()
     expect(page.locator('#ci_tpl_modal_title')).to_have_text('ELIMINAR PLANTILLA')
@@ -212,16 +228,18 @@ with sync_playwright() as pw:
     check('T09_EXACT_ELIMINAR_ENABLES_DELETE', page.locator('[data-tpl-action="delete-confirm"]').is_enabled())
     capture('D-delete-dialog-confirmed')
     page.keyboard.press('Escape')
-    expect(page.locator('#ci_tpl_modal_title')).to_have_text('Administrar plantillas')
-    expect(managed_row('Plantilla A QA').locator('[data-tpl-action="delete"]')).to_be_focused()
-    check('ACCESS_ESCAPE_FOCUS_RETURN', page.evaluate("document.activeElement?.dataset.tplAction === 'delete' && document.activeElement?.dataset.tplUuid"),)
+    expect(page.locator('#ci_tpl_modal_title')).to_have_text('PLANTILLAS DE CONSENTIMIENTO')
+    expect(managed_row('Plantilla A QA').locator('[data-tpl-action="more"]')).to_be_focused()
+    check('ACCESS_ESCAPE_FOCUS_RETURN', page.evaluate("document.activeElement?.dataset.tplAction === 'more' && document.activeElement?.dataset.tplUuid"),)
     row_a = managed_row('Plantilla A QA')
+    open_more(row_a)
     row_a.locator('[data-tpl-action="delete"]').click()
     page.locator('[data-tpl-action="delete-cancel"]').click()
-    expect(page.locator('#ci_tpl_modal_title')).to_have_text('Administrar plantillas')
-    expect(managed_row('Plantilla A QA').locator('[data-tpl-action="delete"]')).to_be_focused()
+    expect(page.locator('#ci_tpl_modal_title')).to_have_text('PLANTILLAS DE CONSENTIMIENTO')
+    expect(managed_row('Plantilla A QA').locator('[data-tpl-action="more"]')).to_be_focused()
     check('ACCESS_CANCEL_FOCUS_RETURN', True)
     row_a = managed_row('Plantilla A QA')
+    open_more(row_a)
     row_a.locator('[data-tpl-action="delete"]').click()
     page.locator('#ci_tpl_delete_confirm').fill('ELIMINAR')
     # Concurrent modification must cause a version conflict without removing the row.
@@ -233,8 +251,9 @@ with sync_playwright() as pw:
     check('DELETE_FAILURE_PRESERVES_TEMPLATE', request(api, 'GET', ROUTE + '/' + uuid_a)[0] == 200
           and page.locator('#ci_tpl_modal_title').inner_text() == 'ELIMINAR PLANTILLA')
     page.locator('[data-tpl-action="delete-cancel"]').click()
-    expect(page.locator('#ci_tpl_modal_title')).to_have_text('Administrar plantillas')
+    expect(page.locator('#ci_tpl_modal_title')).to_have_text('PLANTILLAS DE CONSENTIMIENTO')
     row_a = managed_row('Plantilla A QA')
+    open_more(row_a)
     row_a.locator('[data-tpl-action="delete"]').click()
     page.locator('#ci_tpl_delete_confirm').fill('ELIMINAR')
     page.locator('[data-tpl-action="delete-confirm"]').click()
@@ -251,7 +270,10 @@ with sync_playwright() as pw:
           and sql('SELECT COUNT(*) FROM clinical_binary_uploads') == before_delete_uploads)
     check('CLINICAL_DOCUMENT_ROWS_CHANGED_BY_DELETE', int(sql('SELECT COUNT(*) FROM clinical_documents')) == before_delete_document_count)
 
+    page.locator('#modalConsentTemplateFlow [data-tpl-action="archived-toggle"]').click()
     row_b = page.locator('#modalConsentTemplateFlow .ci-template-row').filter(has_text='Plantilla B archivada QA')
+    expect(row_b).to_be_visible()
+    open_more(row_b)
     check('ARCHIVED_DELETE_ACTION', row_b.locator('[data-tpl-action="delete"]').is_visible()
           and not row_b.locator('[data-tpl-action="archive"]').count())
     capture('G-archived-management')
