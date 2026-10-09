@@ -232,7 +232,7 @@
 <link rel="stylesheet" href="assets/css/clinical/expediente-panel-title-typography.css?v=ux-title01">
 <link rel="stylesheet" href="assets/css/clinical/floating-qa-widget-visibility.css?v=qa-widget01">
 <link rel="stylesheet" href="assets/css/clinical-doc-base.css">
-<link rel="stylesheet" href="assets/css/clinical/responsiva-document.css?v=resp-sign-vis01">
+<link rel="stylesheet" href="assets/css/clinical/responsiva-document.css?v=resp-form01">
 </head>
 
 <body class="mx-sidebar-collapsed" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -9868,6 +9868,7 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="rm_notice"></div>
                     <div id="rm_step_1">
+                      <h3 class="responsiva-capture-heading">Tipo y contexto</h3>
                       <div class="row g-3">
                         <div class="col-md-6">
                           <label class="form-label" for="rm_type">Tipo de responsiva</label>
@@ -9882,62 +9883,47 @@
                           <label class="form-label" for="rm_type_other">Especifica el tipo de responsiva</label>
                           <input class="form-control" id="rm_type_other" placeholder="Describe el tipo de responsiva">
                         </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Fecha</label>
-                          <input class="form-control" id="rm_date" readonly>
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Paciente</label>
-                          <input class="form-control" id="rm_patient_name" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Edad</label>
-                          <input class="form-control" id="rm_patient_age" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Sexo</label>
-                          <input class="form-control" id="rm_patient_sex" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label">Médico emisor</label>
-                          <input class="form-control" id="rm_doctor_name" readonly>
-                        </div>
-                      </div>
-                    </div>
-                    <div id="rm_step_2" class="d-none">
-                      <div class="row g-3">
                         <div class="col-12">
                           <label class="form-label" for="rm_clinical_situation">Situación clínica</label>
                           <textarea class="form-control" id="rm_clinical_situation" rows="4" placeholder="Describe de forma breve la situación clínica actual."></textarea>
                         </div>
                         <div class="col-12">
-                          <label class="form-label" for="rm_indicated_conduct">Indicación médica</label>
-                          <textarea class="form-control" id="rm_indicated_conduct" rows="3" placeholder="Conducta o recomendación médica indicada."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="rm_relevant_risk">Riesgo relevante informado</label>
-                          <textarea class="form-control" id="rm_relevant_risk" rows="3" placeholder="Riesgo clínico relevante de la decisión manifestada."></textarea>
+                          <div class="responsiva-derived-context" aria-label="Datos derivados del expediente">
+                            <div><label for="rm_date">Fecha</label><input id="rm_date" readonly></div>
+                            <div><label for="rm_patient_name">Paciente</label><input id="rm_patient_name" readonly></div>
+                            <div><label for="rm_patient_age">Edad</label><input id="rm_patient_age" readonly></div>
+                            <div><label for="rm_patient_sex">Sexo</label><input id="rm_patient_sex" readonly></div>
+                            <div><label for="rm_doctor_name">Médico emisor</label><input id="rm_doctor_name" readonly></div>
+                          </div>
                         </div>
                       </div>
+                    </div>
+                    <div id="rm_step_2" class="d-none">
+                      <h3 class="responsiva-capture-heading">Declaración</h3>
+                      <label class="form-label fw-semibold" for="rm_declaration_text">Declaración y argumento del paciente o responsable</label>
+                      <textarea class="form-control responsiva-primary-narrative" id="rm_declaration_text" rows="7" placeholder="Texto base de la responsiva."></textarea>
+                      <div class="form-text mb-3">Este es el bloque principal de manifestación legal del documento. El cierre formal institucional se agrega automáticamente.</div>
+                      <details class="responsiva-additional-info" id="rm_additional_info">
+                        <summary>Información clínica adicional <span class="responsiva-additional-indicator d-none" id="rm_additional_info_indicator">· Con información</span></summary>
+                        <div class="responsiva-additional-fields">
+                          <div>
+                            <label class="form-label" for="rm_indicated_conduct">Indicación médica</label>
+                            <textarea class="form-control" id="rm_indicated_conduct" rows="3" placeholder="Conducta o recomendación médica indicada."></textarea>
+                          </div>
+                          <div>
+                            <label class="form-label" for="rm_relevant_risk">Riesgo relevante informado</label>
+                            <textarea class="form-control" id="rm_relevant_risk" rows="3" placeholder="Riesgo clínico relevante de la decisión manifestada."></textarea>
+                          </div>
+                          <div>
+                            <label class="form-label" for="rm_additional_manifestation">Manifestación adicional <span class="text-muted">(opcional)</span></label>
+                            <textarea class="form-control" id="rm_additional_manifestation" rows="3" placeholder="Manifestación adicional breve del firmante o médico."></textarea>
+                            <div class="form-text">Úsalo solo para aclaraciones breves adicionales al texto principal.</div>
+                          </div>
+                        </div>
+                      </details>
                     </div>
                     <div id="rm_step_3" class="d-none">
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label" for="rm_declaration_text">Declaración y argumento del paciente o responsable</label>
-                          <textarea class="form-control" id="rm_declaration_text" rows="6" placeholder="Texto base de la responsiva."></textarea>
-                          <div class="form-text">Este es el bloque principal de manifestación legal del documento.</div>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="rm_additional_manifestation">Manifestación adicional <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="rm_additional_manifestation" rows="3" placeholder="Manifestación adicional breve del firmante o médico."></textarea>
-                          <div class="form-text">Úsalo solo para aclaraciones breves adicionales al texto principal.</div>
-                        </div>
-                        <div class="col-12">
-                          <div class="form-text">El cierre formal institucional se agrega automáticamente en el documento final.</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div id="rm_step_4" class="d-none">
+                      <h3 class="responsiva-capture-heading">Firmante</h3>
                       <div class="row g-3">
                         <div class="col-md-4">
                           <label class="form-label" for="rm_signer_role">Firmante principal</label>
@@ -9947,10 +9933,11 @@
                             <option value="responsable">Responsable acompañante</option>
                           </select>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-8" id="rm_signer_name_wrap">
                           <label class="form-label" for="rm_signer_name">Nombre del firmante</label>
                           <input class="form-control" id="rm_signer_name" placeholder="Nombre completo del firmante">
                         </div>
+                        <div class="col-12" id="rm_patient_signer_context">Firma el paciente identificado en el expediente.</div>
                         <div class="col-md-6 d-none" id="rm_signer_character_wrap">
                           <label class="form-label" for="rm_signer_character">Carácter</label>
                           <input class="form-control" id="rm_signer_character" placeholder="Ej. Tutor legal, madre, responsable acompañante">
@@ -9959,6 +9946,10 @@
                           <label class="form-label" for="rm_signer_relationship">Relación / parentesco</label>
                           <input class="form-control" id="rm_signer_relationship" placeholder="Relación con el paciente">
                         </div>
+                      </div>
+                    </div>
+                    <div id="rm_step_4" class="d-none">
+                      <div class="row g-3">
                         <div class="col-12">
                           <fieldset class="border rounded p-3">
                             <legend class="float-none w-auto px-1 fs-6 fw-semibold mb-1">Presentación del documento</legend>
@@ -11028,7 +11019,7 @@
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/app.js?v=resp-sign-vis01"></script>
+<script src="assets/js/app.js?v=resp-form01"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help01"></script>
 <script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>

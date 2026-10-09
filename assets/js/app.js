@@ -42456,10 +42456,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaClinicalSituation: root.querySelector('#rm_clinical_situation'),
       responsivaIndicatedConduct: root.querySelector('#rm_indicated_conduct'),
       responsivaRelevantRisk: root.querySelector('#rm_relevant_risk'),
+      responsivaAdditionalInfo: root.querySelector('#rm_additional_info'),
+      responsivaAdditionalInfoIndicator: root.querySelector('#rm_additional_info_indicator'),
       responsivaDeclarationText: root.querySelector('#rm_declaration_text'),
       responsivaAdditionalManifestation: root.querySelector('#rm_additional_manifestation'),
       responsivaSignerRole: root.querySelector('#rm_signer_role'),
       responsivaSignerName: root.querySelector('#rm_signer_name'),
+      responsivaSignerNameWrap: root.querySelector('#rm_signer_name_wrap'),
+      responsivaPatientSignerContext: root.querySelector('#rm_patient_signer_context'),
       responsivaSignerCharacterWrap: root.querySelector('#rm_signer_character_wrap'),
       responsivaSignerRelationshipWrap: root.querySelector('#rm_signer_relationship_wrap'),
       responsivaSignerCharacter: root.querySelector('#rm_signer_character'),
@@ -51036,15 +51040,20 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setResponsivaQrStatus(sanitizeText(error?.message || 'No fue posible iniciar la firma con celular.'), 'error');
       }
     };
+    let responsivaRepresentativeCache = null;
+    const syncResponsivaAdditionalInfoUi = ({ autoExpand = false } = {})=>{
+      const hasContent = ['indicated_conduct', 'relevant_risk', 'additional_manifestation']
+        .some((key)=> String(responsivaState.form[key] || '').trim() !== '');
+      els.responsivaAdditionalInfoIndicator?.classList.toggle('d-none', !hasContent);
+      if(autoExpand && els.responsivaAdditionalInfo) els.responsivaAdditionalInfo.open = hasContent;
+    };
     const syncResponsivaSignerRoleUi = ()=>{
       const role = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
       const isPaciente = role === 'paciente';
+      els.responsivaSignerNameWrap?.classList.toggle('d-none', isPaciente);
+      els.responsivaPatientSignerContext?.classList.toggle('d-none', !isPaciente);
       els.responsivaSignerCharacterWrap?.classList.toggle('d-none', isPaciente);
       els.responsivaSignerRelationshipWrap?.classList.toggle('d-none', isPaciente);
-      if(isPaciente){
-        responsivaState.form.signer_character = '';
-        responsivaState.form.signer_relationship = '';
-      }
     };
     const syncResponsivaCanvasSize = (canvas, stateBag, { preserve = true } = {})=>{
       if(!canvas) return;
@@ -51274,6 +51283,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const headerMode = responsivaState.form.professional_header === 'hidden' ? 'hidden' : 'shown';
       if(els.responsivaProfessionalHeaderShown) els.responsivaProfessionalHeaderShown.checked = headerMode === 'shown';
       if(els.responsivaProfessionalHeaderHidden) els.responsivaProfessionalHeaderHidden.checked = headerMode === 'hidden';
+      syncResponsivaAdditionalInfoUi({ autoExpand: true });
       syncResponsivaSignerRoleUi();
       syncResponsivaTypeUi();
       readResponsivaPatientContext();
@@ -51506,6 +51516,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const resetResponsivaWizard = ()=>{
       invalidateResponsivaQr('wizard_reset').catch(()=>{});
+      responsivaRepresentativeCache = null;
       responsivaState.step = 1;
       responsivaState.saving = false;
       responsivaState.activeDraftRef = '';
@@ -56467,9 +56478,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     bindResponsivaField(els.responsivaIndicatedConduct, (el)=>{
       responsivaState.form.indicated_conduct = normalizeConsentInputRaw(el.value || '');
+      syncResponsivaAdditionalInfoUi();
     });
     bindResponsivaField(els.responsivaRelevantRisk, (el)=>{
       responsivaState.form.relevant_risk = normalizeConsentInputRaw(el.value || '');
+      syncResponsivaAdditionalInfoUi();
     });
     bindResponsivaField(els.responsivaDeclarationText, (el)=>{
       responsivaState.form.declaration_text = normalizeConsentInputRaw(el.value || '');
@@ -56477,9 +56490,31 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     bindResponsivaField(els.responsivaAdditionalManifestation, (el)=>{
       responsivaState.form.additional_manifestation = normalizeConsentInputRaw(el.value || '');
+      syncResponsivaAdditionalInfoUi();
     });
     bindResponsivaField(els.responsivaSignerRole, (el)=>{
-      responsivaState.form.signer_role = sanitizeText(el.value || 'paciente') || 'paciente';
+      const previousRole = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
+      const nextRole = sanitizeText(el.value || 'paciente') || 'paciente';
+      if(previousRole !== 'paciente'){
+        responsivaRepresentativeCache = {
+          name: responsivaState.form.signer_name,
+          character: responsivaState.form.signer_character,
+          relationship: responsivaState.form.signer_relationship
+        };
+      }
+      responsivaState.form.signer_role = nextRole;
+      if(nextRole === 'paciente'){
+        responsivaState.form.signer_name = sanitizeText(readInformePatientContext().name || '');
+        responsivaState.form.signer_character = '';
+        responsivaState.form.signer_relationship = '';
+      }else if(previousRole === 'paciente'){
+        responsivaState.form.signer_name = responsivaRepresentativeCache?.name || '';
+        responsivaState.form.signer_character = responsivaRepresentativeCache?.character || '';
+        responsivaState.form.signer_relationship = responsivaRepresentativeCache?.relationship || '';
+      }
+      if(els.responsivaSignerName) els.responsivaSignerName.value = responsivaState.form.signer_name;
+      if(els.responsivaSignerCharacter) els.responsivaSignerCharacter.value = responsivaState.form.signer_character;
+      if(els.responsivaSignerRelationship) els.responsivaSignerRelationship.value = responsivaState.form.signer_relationship;
       syncResponsivaSignerRoleUi();
       renderResponsivaStep();
     }, 'change');

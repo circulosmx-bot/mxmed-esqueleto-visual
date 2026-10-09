@@ -76,15 +76,16 @@ with sync_playwright() as pw:
     page.locator('[data-action="documents-open-responsiva"]').click()
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
     check('T23_PREVIEW_ZERO_ROWS_BEFORE', sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '0')
-    page.locator('#rm_next').click()
+    patient_signer_name = page.locator('#rm_signer_name').input_value()
     page.locator('#rm_clinical_situation').fill('Situación clínica QA')
+    page.locator('#rm_next').click()
+    page.locator('#rm_additional_info summary').click()
     page.locator('#rm_indicated_conduct').fill('Conducta QA')
     page.locator('#rm_relevant_risk').fill('Riesgo QA')
-    page.locator('#rm_next').click()
     page.locator('#rm_declaration_text').fill('Declaración QA')
     page.locator('#rm_additional_manifestation').fill('Manifestación QA')
     page.locator('#rm_next').click()
-    page.locator('#rm_signer_name').fill('Paciente QA')
+    page.locator('#rm_next').click()
     page.locator('#rm_next').click()
     expect(page.locator('#rm_content_review')).to_contain_text('Situación clínica QA', timeout=15000)
     check('T23_PREVIEW_ZERO_ROWS_AFTER', sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'") == '0')
@@ -143,9 +144,8 @@ with sync_playwright() as pw:
           and page.locator('#rm_relevant_risk').input_value() == 'Riesgo QA'
           and page.locator('#rm_declaration_text').input_value() == 'Declaración QA'
           and page.locator('#rm_additional_manifestation').input_value() == 'Manifestación QA'
-          and page.locator('#rm_signer_name').input_value() == 'Paciente QA'
+          and page.locator('#rm_signer_name').input_value() == patient_signer_name
           and page.locator('#rm_date').input_value() == date)
-    page.locator('#rm_next').click()
     page.locator('#rm_clinical_situation').fill('Situación clínica QA segunda versión')
     with page.expect_response(is_document_save_response) as second_response:
         page.locator('#rm_save').click()
@@ -241,7 +241,6 @@ with sync_playwright() as pw:
         check(check_name, attempt.status == 400 and saved(doc_uuid)[0] == 'draft')
     row.get_by_role('button', name='Continuar borrador').click()
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
-    page.locator('#rm_next').click()
     page.locator('#rm_clinical_situation').fill('Contenido alterado después de las firmas')
     check('T17_CONTENT_STALES_SIGNER', 'revisar' in page.locator('#rm_signer_signature_status').inner_text())
     check('T18_CONTENT_STALES_DOCTOR', 'revisar' in page.locator('#rm_doctor_signature_status').inner_text())
@@ -402,9 +401,11 @@ with sync_playwright() as pw:
     expect(page.locator('#rm_final_doctor_status')).to_contain_text('vinculada a esta versión', timeout=15000)
     expect(page.locator('#rm_emit')).to_be_enabled(timeout=15000)
     check('IMP01C_REGISTERED_DOCTOR_FRONTEND_ACCEPTED', True)
-    for _ in range(3):
+    for _ in range(4):
         page.locator('#rm_prev').click()
+    page.locator('#rm_signer_role').select_option('tutor')
     page.locator('#rm_signer_name').fill('Otro firmante QA')
+    page.locator('#rm_signer_relationship').fill('Madre')
     check('T19_IDENTITY_STALES_SIGNER', 'revisar' in page.locator('#rm_signer_signature_status').inner_text())
     with page.expect_response(is_document_save_response) as identity_response:
         page.locator('#rm_save').click()
@@ -486,12 +487,11 @@ with sync_playwright() as pw:
     page.locator('#t-consent .docvis-intents').nth(1).locator('button').first.click()
     page.locator('[data-action="documents-open-responsiva"]').click()
     expect(page.locator('#modalResponsivaMedica')).to_be_visible()
-    page.locator('#rm_next').click()
     page.locator('#rm_clinical_situation').fill('Prueba de persistencia fallida QA')
     page.locator('#rm_next').click()
     page.locator('#rm_declaration_text').fill('Declaración de prueba QA')
     page.locator('#rm_next').click()
-    page.locator('#rm_signer_name').fill('Paciente QA')
+    page.locator('#rm_next').click()
     page.locator('#rm_next').click()
     expect(page.locator('#rm_content_review')).to_contain_text('Prueba de persistencia fallida QA', timeout=15000)
     count_before_failure = sql("SELECT COUNT(*) FROM clinical_documents WHERE document_type='responsiva_medica'")
