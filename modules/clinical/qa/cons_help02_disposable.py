@@ -49,6 +49,7 @@ with sync_playwright() as pw:
     page.locator('#modalConsentTemplateFlow [data-tpl-action="blank"]').click()
     page.locator('#ci_next').click()
     modal = page.locator('#modalConsentimientoInformado')
+    page.locator('#ci_template').select_option('procedimiento')
     field = page.locator('#ci_procedimiento')
     trigger = modal.locator('[data-example-for="ci_procedimiento"]')
     keys = ('procedimiento', 'objetivo', 'risk_common', 'risk_infrequent', 'risk_rare_serious',
@@ -63,7 +64,7 @@ with sync_playwright() as pw:
     body = selected.locator('p').inner_text()
     check('C01_C02', selected.locator('.mxeh-use:visible').count() == 1
           and dialog.locator('.mxeh-section.is-context .mxeh-use:visible').count() == 0)
-    check('EDUCATIONAL_NOTE', 'Este ejemplo es únicamente una referencia de redacción' in dialog.inner_text())
+    check('EDUCATIONAL_NOTE', 'Caso ficticio únicamente como referencia de redacción' in dialog.inner_text())
     check('C11_OPEN', field.input_value() == '')
     shot(page, 'selected-example')
     selected.locator('.mxeh-use').focus()

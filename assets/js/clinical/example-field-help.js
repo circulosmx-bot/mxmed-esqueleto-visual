@@ -7,11 +7,11 @@
     return node;
   };
 
-  function mount({modal, fieldMap, sections, contextLabel, contextText, note, id,
+  function mount({modal, fieldMap, sections, contextLabel, contextText, note, id, resolveScenario,
     onUseExample, useExampleLabel = 'Usar este ejemplo', canUseExample = () => true}) {
     const content = modal?.querySelector('.modal-content');
     if (!content || !Array.isArray(sections) || !sections.length) return null;
-    const byKey = new Map(sections.map(section => [section.key, section]));
+    const initialByKey = new Map(sections.map(section => [section.key, section]));
     const overlay = create('div', 'mxeh-overlay');
     overlay.hidden = true;
     overlay.setAttribute('role', 'dialog');
@@ -27,31 +27,38 @@
     closeButton.setAttribute('aria-label', 'Cerrar ejemplo');
     header.append(heading, closeButton);
     const intro = create('div', 'mxeh-intro');
+    const category = create('p', 'mxeh-category');
+    category.hidden = true;
     const context = create('p', 'mxeh-context');
     context.append(create('strong', '', `${contextLabel}: `), document.createTextNode(contextText));
     const notice = create('p', 'mxeh-notice', note);
     notice.id = `${id}-note`;
     const focusLabel = create('strong', 'mxeh-focus-label');
     const explanation = create('p', 'mxeh-explanation');
-    intro.append(context, notice, focusLabel, explanation);
+    intro.append(category, context, notice, focusLabel, explanation);
     const list = create('div', 'mxeh-sections');
     const nodes = new Map();
-    for (const section of sections) {
-      const item = create('section', 'mxeh-section');
-      item.dataset.exampleField = section.key;
-      const title = create('h6', '', section.label);
-      const marker = create('span', 'mxeh-current', 'Campo consultado');
-      marker.hidden = true;
-      title.append(marker);
-      item.append(title, create('p', '', section.text));
-      const action = typeof onUseExample === 'function' ? create('button', 'mxeh-use', useExampleLabel) : null;
-      if (action) {
-        action.type = 'button';
-        action.hidden = true;
-        item.append(action);
+    let session = null;
+    function renderSections(activeSections) {
+      list.replaceChildren();
+      nodes.clear();
+      for (const section of activeSections) {
+        const item = create('section', 'mxeh-section');
+        item.dataset.exampleField = section.key;
+        const title = create('h6', '', section.label);
+        const marker = create('span', 'mxeh-current', 'Campo consultado');
+        marker.hidden = true;
+        title.append(marker);
+        item.append(title, create('p', '', section.text));
+        const action = typeof onUseExample === 'function' ? create('button', 'mxeh-use', useExampleLabel) : null;
+        if (action) {
+          action.type = 'button';
+          action.hidden = true;
+          item.append(action);
+        }
+        list.append(item);
+        nodes.set(section.key, {item, marker, action});
       }
-      list.append(item);
-      nodes.set(section.key, {item, marker, action});
     }
     const confirmation = create('div', 'mxeh-confirm');
     confirmation.hidden = true;
@@ -69,8 +76,8 @@
     let selectedKey = null;
     let destination = null;
     function insertSelected() {
-      const section = byKey.get(selectedKey);
-      if (!section || !destination?.isConnected) return;
+      const section = session?.byKey.get(selectedKey);
+      if (!section || !session.allowInsertion || !destination?.isConnected) return;
       onUseExample({section, destination});
       close(false);
       destination.focus({preventScroll: true});
@@ -85,10 +92,21 @@
       confirmation.hidden = true;
       if (restoreFocus && returnFocus?.isConnected) returnFocus.focus({preventScroll: true});
       returnFocus = null;
+      session = null;
     }
     function open(key, trigger, fieldId) {
+      const resolved = typeof resolveScenario === 'function' ? resolveScenario() : null;
+      const activeSections = resolved?.sections || sections;
+      const byKey = new Map(activeSections.map(section => [section.key, section]));
       const selected = byKey.get(key);
       if (!selected) return;
+      session = {byKey, allowInsertion: resolved?.canUseExample !== false};
+      renderSections(activeSections);
+      category.textContent = resolved?.categoryLabel || '';
+      category.hidden = !resolved?.categoryLabel;
+      context.replaceChildren(create('strong', '', `${resolved?.contextLabel || contextLabel}: `),
+        document.createTextNode(resolved?.contextText || contextText));
+      notice.textContent = resolved?.note || note;
       returnFocus = trigger;
       selectedKey = key;
       destination = modal.querySelector(`#${fieldId}`);
@@ -100,7 +118,7 @@
         item.item.classList.toggle('is-current', current);
         item.item.classList.toggle('is-context', !current);
         item.marker.hidden = !current;
-        if (item.action) item.action.hidden = !current || !(typeof canUseExample === 'function'
+        if (item.action) item.action.hidden = !current || !session.allowInsertion || !(typeof canUseExample === 'function'
           ? canUseExample({section: selected, destination}) : canUseExample !== false);
       }
       overlay.hidden = false;
@@ -110,14 +128,13 @@
       list.scrollTop = selectedNode.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
     }
     closeButton.addEventListener('click', () => close());
-    for (const {action} of nodes.values()) {
-      action?.addEventListener('click', () => {
-        if (destination.value.trim()) {
-          confirmation.hidden = false;
-          replace.focus();
-        } else insertSelected();
-      });
-    }
+    list.addEventListener('click', event => {
+      if (!event.target.closest('.mxeh-use') || !session?.allowInsertion) return;
+      if (destination.value.trim()) {
+        confirmation.hidden = false;
+        replace.focus();
+      } else insertSelected();
+    });
     cancel.addEventListener('click', () => { confirmation.hidden = true; nodes.get(selectedKey)?.action?.focus(); });
     replace.addEventListener('click', insertSelected);
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
@@ -136,7 +153,7 @@
     });
     modal.addEventListener('hide.bs.modal', () => close(false));
     for (const [fieldId, key] of Object.entries(fieldMap)) {
-      const section = byKey.get(key);
+      const section = initialByKey.get(key);
       const label = modal.querySelector(`label[for="${fieldId}"]`);
       if (!section || !label) continue;
       const wrapper = create('div', 'mxeh-field-heading');

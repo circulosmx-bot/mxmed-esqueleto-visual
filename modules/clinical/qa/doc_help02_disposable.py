@@ -152,6 +152,7 @@ with sync_playwright() as pw:
     page.locator('#modalConsentTemplateFlow').get_by_role('button', name='Empezar en blanco').click()
     page.locator('#ci_next').click()
     consent = page.locator('#modalConsentimientoInformado')
+    page.locator('#ci_template').select_option('procedimiento')
     check('C01', consent.locator('.mxeh-trigger').count() >= 8 and consent.locator('.ci-example-trigger').count() == 0)
     consent.locator('.mxeh-trigger').first.click()
     consent_dialog = consent.locator('.mxeh-overlay:not([hidden])')
