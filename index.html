@@ -10096,8 +10096,9 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="cm_notice"></div>
                     <div id="cm_step_1">
+                      <div class="small text-uppercase text-muted fw-semibold mb-2">Tipo y contexto</div>
                       <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-12">
                           <label class="form-label" for="cm_type">Tipo de certificado</label>
                           <select class="form-select" id="cm_type">
                             <option value="certificado_general">Certificado médico general</option>
@@ -10105,54 +10106,19 @@
                             <option value="reposo_medico">Constancia de incapacidad temporal</option>
                           </select>
                         </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Fecha de emisión</label>
-                          <input class="form-control" id="cm_date" readonly>
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Paciente</label>
-                          <input class="form-control" id="cm_patient_name" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Edad</label>
-                          <input class="form-control" id="cm_patient_age" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Sexo</label>
-                          <input class="form-control" id="cm_patient_sex" readonly>
-                        </div>
                         <div class="col-12">
-                          <label class="form-label">Médico emisor</label>
-                          <input class="form-control" id="cm_doctor_name" readonly>
-                        </div>
-                        <div class="col-12">
-                          <div class="fw-semibold mb-1">Presentación del documento</div>
-                          <div class="small text-muted mb-2">Encabezado profesional</div>
-                          <label class="form-check"><input class="form-check-input" type="radio" name="cm_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
-                          <label class="form-check"><input class="form-check-input" type="radio" name="cm_professional_header" value="hidden"> Generar sin encabezado profesional</label>
+                          <div class="row g-2 rounded border bg-light-subtle px-2 py-1 small" aria-label="Datos derivados del expediente">
+                            <div class="col-sm-6 col-lg-3"><label class="small text-muted" for="cm_date">Fecha de emisión</label><input class="form-control-plaintext py-0 fw-semibold" id="cm_date" readonly></div>
+                            <div class="col-sm-6 col-lg-3"><label class="small text-muted" for="cm_patient_name">Paciente</label><input class="form-control-plaintext py-0 fw-semibold" id="cm_patient_name" readonly></div>
+                            <div class="col-6 col-lg-1"><label class="small text-muted" for="cm_patient_age">Edad</label><input class="form-control-plaintext py-0 fw-semibold" id="cm_patient_age" readonly></div>
+                            <div class="col-6 col-lg-1"><label class="small text-muted" for="cm_patient_sex">Sexo</label><input class="form-control-plaintext py-0 fw-semibold" id="cm_patient_sex" readonly></div>
+                            <div class="col-sm-6 col-lg-4"><label class="small text-muted" for="cm_doctor_name">Médico emisor</label><input class="form-control-plaintext py-0 fw-semibold" id="cm_doctor_name" readonly></div>
+                          </div>
                         </div>
                       </div>
                     </div>
                     <div id="cm_step_2" class="d-none">
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label" for="cm_purpose_select">Destinatario</label>
-                          <select class="form-select" id="cm_purpose_select">
-                            <option value="A quien corresponda">A quien corresponda</option>
-                            <option value="Institución educativa">Institución educativa</option>
-                            <option value="Centro de trabajo">Centro de trabajo</option>
-                            <option value="Trámite administrativo">Trámite administrativo</option>
-                            <option value="Uso personal">Uso personal</option>
-                            <option value="__other__">Otro</option>
-                          </select>
-                        </div>
-                        <div class="col-12 d-none" id="cm_wrap_purpose_other">
-                          <label class="form-label" for="cm_purpose_other" id="cm_purpose_detail_label">Especificar destinatario</label>
-                          <input class="form-control" id="cm_purpose_other" placeholder="Ej. Dirección de recursos humanos, coordinación escolar, etc.">
-                        </div>
-                      </div>
-                    </div>
-                    <div id="cm_step_3" class="d-none">
+                      <div class="small text-uppercase text-muted fw-semibold mb-2">Datos específicos del certificado</div>
                       <div class="row g-3">
                         <div class="col-md-6" id="cm_wrap_care_date">
                           <label class="form-label" for="cm_care_date">Fecha de atención</label>
@@ -10169,7 +10135,7 @@
                           <div class="small text-muted mt-1 d-none" id="cm_rest_start_date_display"></div>
                         </div>
                         <div class="col-md-6 d-none" id="cm_wrap_rest_end_date">
-                          <label class="form-label" for="cm_rest_end_date">Fin de reposo</label>
+                          <label class="form-label" for="cm_rest_end_date">Fin calculado del reposo</label>
                           <input type="date" class="form-control" id="cm_rest_end_date" readonly>
                           <div class="small text-muted mt-1 d-none" id="cm_rest_end_date_display"></div>
                         </div>
@@ -10181,28 +10147,46 @@
                             <option value="apto_general">Apto en evaluación general</option>
                           </select>
                         </div>
-                        <div class="col-12 d-none" id="cm_wrap_return_note">
-                          <label class="form-label" for="cm_return_note">Nota de reincorporación <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="cm_return_note" placeholder="Ej. Reincorporación a actividades al término del reposo.">
-                        </div>
                         <div class="col-12">
-                          <label class="form-label" for="cm_declaration_text">Declaración principal del certificado</label>
+                          <label class="form-label fw-semibold" for="cm_declaration_text">Declaración principal</label>
                           <textarea class="form-control" id="cm_declaration_text" rows="5" placeholder="Texto declarativo del certificado."></textarea>
                         </div>
                       </div>
                     </div>
-                    <div id="cm_step_4" class="d-none">
-                      <div class="row g-3">
+                    <div id="cm_step_3" class="d-none">
+                      <details id="cm_additional_info" class="border rounded p-3 mb-3">
+                        <summary class="fw-semibold">Información adicional <span class="small text-muted fw-normal">(opcional)</span></summary>
+                        <div class="row g-3 mt-1">
                         <div class="col-12">
+                          <label class="form-label" for="cm_purpose_select">Destinatario</label>
+                          <select class="form-select" id="cm_purpose_select">
+                            <option value="A quien corresponda">A quien corresponda</option>
+                            <option value="Institución educativa">Institución educativa</option>
+                            <option value="Centro de trabajo">Centro de trabajo</option>
+                            <option value="Trámite administrativo">Trámite administrativo</option>
+                            <option value="Uso personal">Uso personal</option>
+                            <option value="__other__">Otro</option>
+                          </select>
+                          <div class="form-text">Para quién o ante qué entidad se presenta.</div>
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_purpose_other">
+                          <label class="form-label" for="cm_purpose_other" id="cm_purpose_detail_label">Especificar destinatario</label>
+                          <input class="form-control" id="cm_purpose_other" placeholder="Nombre del destinatario">
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_return_note">
+                          <label class="form-label" for="cm_return_note">Nota de reincorporación <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="cm_return_note" placeholder="Indicaciones para retomar actividades">
+                        </div>
+                        <div class="col-12" id="cm_wrap_observations_mode">
                           <label class="form-label d-block">Hallazgos clínicos adicionales</label>
                           <div class="d-flex flex-wrap gap-3">
                             <div class="form-check mb-0">
                               <input class="form-check-input" type="radio" name="cm_observations_mode" id="cm_observations_mode_none" value="none">
-                              <label class="form-check-label" for="cm_observations_mode_none">Sin hallazgos clínicos relevantes</label>
+                              <label class="form-check-label" for="cm_observations_mode_none">Sin hallazgos adicionales</label>
                             </div>
                             <div class="form-check mb-0">
                               <input class="form-check-input" type="radio" name="cm_observations_mode" id="cm_observations_mode_present" value="present">
-                              <label class="form-check-label" for="cm_observations_mode_present">Existen hallazgos clínicos</label>
+                              <label class="form-check-label" for="cm_observations_mode_present">Agregar hallazgos</label>
                             </div>
                           </div>
                         </div>
@@ -10249,15 +10233,20 @@
                             <option value="administrativo">Trámite administrativo</option>
                             <option value="otro">Otro</option>
                           </select>
-                          <div class="form-text">Se sugieren opciones compatibles con el tipo de documento.</div>
+                          <div class="form-text">Para qué se utilizará. Se sugieren opciones compatibles con el tipo de documento.</div>
                         </div>
                         <div class="col-12 d-none" id="cm_wrap_usage_note_other">
                           <label class="form-label" for="cm_usage_note_other">Especificar uso del documento</label>
-                          <input class="form-control" id="cm_usage_note_other" placeholder="Ej. Para trámite ante aseguradora">
+                          <input class="form-control" id="cm_usage_note_other" placeholder="Especificar uso">
                         </div>
-                      </div>
+                        </div>
+                      </details>
+                      <div class="fw-semibold mb-1">Presentación del documento</div>
+                      <div class="small text-muted mb-2">Encabezado profesional</div>
+                      <label class="form-check"><input class="form-check-input" type="radio" name="cm_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                      <label class="form-check"><input class="form-check-input" type="radio" name="cm_professional_header" value="hidden"> Generar sin encabezado profesional</label>
                     </div>
-                    <div id="cm_step_5" class="d-none">
+                    <div id="cm_step_4" class="d-none">
                       <div class="row g-3" id="cm_step_5_capture">
                         <div class="col-12">
                           <div class="border rounded p-3 bg-light-subtle">
@@ -10330,7 +10319,7 @@
                       </div>
                     </div>
                     <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
-                      <span class="text-muted small" id="cm_step_label">Paso 1 de 5</span>
+                      <span class="text-muted small" id="cm_step_label">Paso 1 de 4</span>
                       <div class="d-flex flex-wrap justify-content-end gap-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="cm_prev" disabled>Anterior</button>
                         <button type="button" class="btn btn-primary btn-sm" id="cm_next">Continuar</button>
@@ -11065,7 +11054,7 @@
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/certificado-signature-binding.js?v=cert-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/app.js?v=cert-imp01"></script>
+<script src="assets/js/app.js?v=cert-form01"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>

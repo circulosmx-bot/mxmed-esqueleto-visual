@@ -42512,7 +42512,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoStep2: root.querySelector('#cm_step_2'),
       certificadoStep3: root.querySelector('#cm_step_3'),
       certificadoStep4: root.querySelector('#cm_step_4'),
-      certificadoStep5: root.querySelector('#cm_step_5'),
+      certificadoAdditionalInfo: root.querySelector('#cm_additional_info'),
       certificadoPreviewContinue: root.querySelector('#cm_preview_continue'),
       certificadoSignatureBlock: root.querySelector('#cm_signature_block'),
       certificadoHeaderOptions: Array.from(root.querySelectorAll('input[name="cm_professional_header"]')),
@@ -42556,6 +42556,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoReturnNote: root.querySelector('#cm_return_note'),
       certificadoDeclarationText: root.querySelector('#cm_declaration_text'),
       certificadoObservationsModeOptions: Array.from(root.querySelectorAll('input[name="cm_observations_mode"]')),
+      certificadoWrapObservationsMode: root.querySelector('#cm_wrap_observations_mode'),
       certificadoWrapObservations: root.querySelector('#cm_wrap_observations'),
       certificadoObservations: root.querySelector('#cm_observations'),
       certificadoValidityTermOptions: Array.from(root.querySelectorAll('input[name="cm_validity_term_option"]')),
@@ -52447,7 +52448,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.certificadoWrapRestEndDate?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapReturnNote?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapGeneralCondition?.classList.toggle('d-none', !isGeneral);
-      els.certificadoWrapValidityNote?.classList.toggle('d-none', isReposo);
+      els.certificadoWrapObservationsMode?.classList.toggle('d-none', !isGeneral);
+      els.certificadoWrapObservations?.classList.toggle('d-none', !isGeneral || certificadoState.form.observations_mode !== 'present');
+      els.certificadoWrapValidityNote?.classList.toggle('d-none', !isGeneral);
       els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo);
       if(isReposo){
         els.certificadoWrapUsageNoteOther?.classList.add('d-none');
@@ -53092,25 +53095,24 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       renderCertificadoFinalDocument({ renderedText: certificadoState.finalRenderedText });
     };
     const renderCertificadoStep = ()=>{
-      const normalized = Math.min(Math.max(Number(certificadoState.step || 1), 1), 5);
+      const normalized = Math.min(Math.max(Number(certificadoState.step || 1), 1), 4);
       certificadoState.step = normalized;
       els.certificadoStep1?.classList.toggle('d-none', normalized !== 1);
       els.certificadoStep2?.classList.toggle('d-none', normalized !== 2);
       els.certificadoStep3?.classList.toggle('d-none', normalized !== 3);
       els.certificadoStep4?.classList.toggle('d-none', normalized !== 4);
-      els.certificadoStep5?.classList.toggle('d-none', normalized !== 5);
       if(els.certificadoStepLabel){
-        els.certificadoStepLabel.textContent = (normalized === 5 && certificadoState.finalPhase)
+        els.certificadoStepLabel.textContent = (normalized === 4 && certificadoState.finalPhase)
           ? 'Revisión final del documento'
-          : `Paso ${normalized} de 5`;
+          : `Paso ${normalized} de 4`;
       }
       if(els.certificadoPrev){
         els.certificadoPrev.disabled = normalized <= 1;
       }
       if(els.certificadoNext){
-        els.certificadoNext.classList.toggle('d-none', normalized >= 5);
+        els.certificadoNext.classList.toggle('d-none', normalized >= 4);
       }
-      const showActions = normalized === 5 && !certificadoState.finalPhase;
+      const showActions = normalized === 4 && !certificadoState.finalPhase;
       if(els.certificadoSave){
         els.certificadoSave.classList.toggle('d-none', !showActions);
         els.certificadoSave.disabled = certificadoState.saving;
@@ -53124,28 +53126,28 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.certificadoCancel.disabled = certificadoState.saving;
       }
       if(els.certificadoPrev){
-        els.certificadoPrev.classList.toggle('d-none', normalized === 5 && certificadoState.finalPhase);
+        els.certificadoPrev.classList.toggle('d-none', normalized === 4 && certificadoState.finalPhase);
       }
       if(els.certificadoStep5Capture){
-        const showCapture = normalized === 5 && !certificadoState.finalPhase;
+        const showCapture = normalized === 4 && !certificadoState.finalPhase;
         els.certificadoStep5Capture.classList.toggle('d-none', !showCapture);
       }
       els.certificadoSignatureBlock?.classList.toggle('d-none', certificadoState.phase !== 'signatures');
       els.certificadoPreviewContinue?.classList.toggle('d-none', certificadoState.phase === 'signatures');
       if(els.certificadoStep5Final){
-        const showFinal = normalized === 5 && certificadoState.finalPhase;
+        const showFinal = normalized === 4 && certificadoState.finalPhase;
         els.certificadoStep5Final.classList.toggle('d-none', !showFinal);
       }
       if(els.certificadoFinalModeLabel){
         els.certificadoFinalModeLabel.textContent = 'Revisa el documento completo antes de emitir. Para cambiar el texto, vuelve a los campos.';
       }
       if(els.certificadoFinalEmit){
-        const showEmit = normalized === 5 && certificadoState.finalPhase && certificadoState.finalIntent === 'issued';
+        const showEmit = normalized === 4 && certificadoState.finalPhase && certificadoState.finalIntent === 'issued';
         els.certificadoFinalEmit.classList.toggle('d-none', !showEmit);
         els.certificadoFinalEmit.disabled = certificadoState.saving;
       }
       if(els.certificadoFinalSave){
-        const showSave = normalized === 5 && certificadoState.finalPhase;
+        const showSave = normalized === 4 && certificadoState.finalPhase;
         els.certificadoFinalSave.classList.toggle('d-none', !showSave);
         els.certificadoFinalSave.disabled = certificadoState.saving;
       }
@@ -53157,20 +53159,20 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           : (certificadoState.finalEditing ? 'Guardar texto' : 'Editar texto');
       }
       if(els.certificadoFinalBack){
-        const showBack = normalized === 5 && certificadoState.finalPhase;
+        const showBack = normalized === 4 && certificadoState.finalPhase;
         els.certificadoFinalBack.classList.toggle('d-none', !showBack);
         els.certificadoFinalBack.disabled = certificadoState.saving;
       }
-      if(normalized !== 5){
+      if(normalized !== 4){
         els.certificadoSignatureInlinePrompt?.classList.add('d-none');
       }
-      if(normalized === 5 && !certificadoState.finalPhase){
+      if(normalized === 4 && !certificadoState.finalPhase){
         if(!certificadoState.signaturePad){
           initCertificadoSignaturePad();
         }
         window.requestAnimationFrame(()=> syncCertificadoSignatureCanvasSize({ preserveDrawing: true }));
         void loadCertificadoCanonicalPreview();
-      } else if(normalized === 5 && certificadoState.finalPhase){
+      } else if(normalized === 4 && certificadoState.finalPhase){
         if(certificadoState.finalRenderMode !== 'viewer' && els.certificadoFinalEditableBody){
           els.certificadoFinalEditableBody.setAttribute('contenteditable', certificadoState.finalEditing ? 'true' : 'false');
         }
@@ -53179,7 +53181,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.certificadoWizard));
     };
     const buildCertificadoTempSnapshot = ()=>({
+      capture_ui_version: 2,
       step: Number(certificadoState.step || 1) || 1,
+      additional_info_open: !!els.certificadoAdditionalInfo?.open,
       form: {
         type: sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general',
         professional_header: certificadoState.professionalHeader,
@@ -53226,6 +53230,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form.usage_note_user_selected
       ].some((value)=> trimConsentInputValue(value || '') !== '');
     };
+    const certificadoHasMeaningfulAdditionalInfo = (form = {})=>{
+      const purpose = sanitizeText(form.purpose_selection || form.purpose || '');
+      const isCustomPurpose = purpose !== '' && purpose !== 'A quien corresponda';
+      return isCustomPurpose || [
+        form.purpose_detail, form.return_note, form.observations,
+        form.usage_note_type, form.usage_note_custom
+      ].some(value=>trimConsentInputValue(value || '') !== '')
+        || sanitizeText(form.observations_mode || '') === 'present'
+        || !['', '7 días'].includes(sanitizeText(form.validity_term || ''));
+    };
     const applyCertificadoTempSnapshot = (snapshot = null)=>{
       const safe = (snapshot && typeof snapshot === 'object') ? snapshot : {};
       const form = (safe.form && typeof safe.form === 'object') ? safe.form : {};
@@ -53260,8 +53274,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!certificadoState.form.observations_mode && trimConsentInputValue(certificadoState.form.observations || '') !== ''){
         certificadoState.form.observations_mode = 'present';
       }
-      certificadoState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
+      const recoveredStep = Number(safe.step || 1);
+      certificadoState.step = safe.capture_ui_version === 2
+        ? Math.min(Math.max(recoveredStep, 1), 4)
+        : ({ 1: 1, 2: 3, 3: 2, 4: 3, 5: 4 }[recoveredStep] || 1);
       syncCertificadoInputsFromState();
+      if(els.certificadoAdditionalInfo){
+        els.certificadoAdditionalInfo.open = !!safe.additional_info_open
+          || certificadoHasMeaningfulAdditionalInfo(certificadoState.form);
+      }
       renderCertificadoStep();
     };
     const resetCertificadoWizard = ()=>{
@@ -53283,6 +53304,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoState.finalEditing = false;
       certificadoState.declarationEdited = false;
       certificadoState.usageNoteUserSelected = false;
+      if(els.certificadoAdditionalInfo) els.certificadoAdditionalInfo.open = false;
       certificadoState.form = {
         type: 'certificado_general',
         emission_date: '',
@@ -53358,6 +53380,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoState.finalEditing = false;
       certificadoState.declarationEdited = false;
       certificadoState.usageNoteUserSelected = false;
+      if(els.certificadoAdditionalInfo) els.certificadoAdditionalInfo.open = false;
       certificadoState.form = {
         type: 'certificado_general',
         emission_date: nowDate,
@@ -53426,8 +53449,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         certificadoState.declarationEdited = true;
         certificadoState.usageNoteUserSelected = true;
         certificadoState.phase = 'preview';
-        certificadoState.step = 5;
+        certificadoState.step = 4;
         syncCertificadoInputsFromState();
+        if(els.certificadoAdditionalInfo){
+          els.certificadoAdditionalInfo.open = certificadoHasMeaningfulAdditionalInfo(certificadoState.form);
+        }
         els.certificadoHeaderOptions?.forEach(option=>{ option.checked = option.value === certificadoState.professionalHeader; });
         const prepared = await buildCertificadoDocument('draft');
         certificadoState.signatureBindingStatus = await window.mxmedCertificadoSignatureBinding.classify(
@@ -53885,7 +53911,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         certificadoState.finalIntent = intent === 'issued' ? 'issued' : 'draft';
         certificadoState.finalPhase = true;
         certificadoState.finalRenderMode = 'viewer';
-        certificadoState.step = 5;
+        certificadoState.step = 4;
         els.certificadoFinalPreviewViewerWrap?.classList.remove('d-none');
         els.certificadoFinalPreviewDoc?.classList.add('d-none');
       }catch(error){
@@ -57121,7 +57147,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!option.checked) return;
       certificadoState.professionalHeader = option.value === 'hidden' ? 'hidden' : 'shown';
       certificadoState.finalReviewedHash = '';
-      if(certificadoState.step === 5) renderCertificadoStep();
+      if(certificadoState.step === 4) renderCertificadoStep();
     }));
     const markCertificadoMaterialChanged = event=>{
       if(!event.target.closest('input,select,textarea')) return;
@@ -57132,13 +57158,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         refreshCertificadoSignatureStatus();
       }
       if(certificadoState.qr.status === 'pending') void invalidateCertificadoQr('content_changed');
-      if(certificadoState.step === 5 && !certificadoState.finalPhase) void loadCertificadoCanonicalPreview();
+      if(certificadoState.step === 4 && !certificadoState.finalPhase) void loadCertificadoCanonicalPreview();
     };
     els.certificadoWizard?.addEventListener('input', markCertificadoMaterialChanged);
     els.certificadoWizard?.addEventListener('change', markCertificadoMaterialChanged);
     els.certificadoNext?.addEventListener('click', (event)=>{
       event.preventDefault();
-      certificadoState.step = Math.min(5, Number(certificadoState.step || 1) + 1);
+      certificadoState.step = Math.min(4, Number(certificadoState.step || 1) + 1);
       renderCertificadoStep();
       const patientId = resolveActivePatientIdForConsent();
       scheduleDocModalTempSessionSave({
