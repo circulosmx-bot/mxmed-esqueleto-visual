@@ -3080,7 +3080,13 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($isCertificadoDoc): ?>
+    <?php if ($isCertificadoDoc && (int)($payload['certificado_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['certificado_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['certificado_snapshot']['html']; ?>
+      </div>
+    <?php endif; ?>
+    <?php if ($isCertificadoDoc && trim((string)($payload['certificado_snapshot']['html'] ?? '')) === ''): ?>
       <?php
       $certReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
       $certCertificate = is_array($payload['certificate'] ?? null) ? $payload['certificate'] : [];

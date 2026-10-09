@@ -42513,6 +42513,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoStep3: root.querySelector('#cm_step_3'),
       certificadoStep4: root.querySelector('#cm_step_4'),
       certificadoStep5: root.querySelector('#cm_step_5'),
+      certificadoPreviewContinue: root.querySelector('#cm_preview_continue'),
+      certificadoSignatureBlock: root.querySelector('#cm_signature_block'),
+      certificadoHeaderOptions: Array.from(root.querySelectorAll('input[name="cm_professional_header"]')),
       certificadoStep5Capture: root.querySelector('#cm_step_5_capture'),
       certificadoStep5Final: root.querySelector('#cm_step_5_final'),
       certificadoFinalModeLabel: root.querySelector('#cm_final_mode_label'),
@@ -42579,6 +42582,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoSignatureRegisteredWrap: root.querySelector('#cm_signature_registered_wrap'),
       certificadoSignatureRegisteredPreview: root.querySelector('#cm_signature_registered_preview'),
       certificadoSignatureCanvas: root.querySelector('#cm_signature_canvas'),
+      certificadoSignatureAccepted: root.querySelector('#cm_signature_accepted'),
       certificadoSignatureQrOpen: root.querySelector('#cm_signature_qr_open'),
       certificadoSignatureClear: root.querySelector('#cm_signature_clear'),
       certificadoSignatureStatus: root.querySelector('#cm_signature_status'),
@@ -43112,6 +43116,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const CERTIFICATE_STANDARD_CLOSING = 'Se extiende la presente certificación para los fines legales que correspondan.';
     const certificadoState = {
       step: 1,
+      phase: 'preview',
+      activeDraftRef: '',
+      activeDraftVersion: 0,
+      professionalHeader: 'shown',
+      storedDoctorSignature: null,
+      signatureBindingStatus: 'absent',
+      previewHtml: '',
+      previewGeneration: 0,
+      finalReviewedHash: '',
+      qr: { token: '', generation: 0, status: '' },
       saving: false,
       finalPhase: false,
       finalIntent: 'draft',
@@ -48160,6 +48174,81 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       });
       return { patientId, body, normalizedStatus };
     };
+    const loadCertificadoCanonicalPreview = async ({ final = false } = {})=>{
+      const generation = ++certificadoState.previewGeneration;
+      const content = final ? els.certificadoFinalPreviewFrame : els.certificadoPreview;
+      if(!final) documentUi.review({ content, continueButton: els.certificadoPreviewContinue,
+        state: 'loading', message: 'Preparando vista previa…', focus: false });
+      try{
+        const prepared = await buildCertificadoDocument('draft');
+        if(prepared?.error) throw new Error(prepared.error);
+        const doctorId = resolveCanonicalDocumentsDoctorId();
+        const url = `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(prepared.patientId)}/certificado-preview`;
+        const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(prepared.body) });
+        const json = await response.json().catch(()=>null);
+        if(!response.ok || json?.ok !== true || !json?.data?.html)
+          throw new Error(sanitizeText(json?.message || 'No se pudo preparar la vista previa.'));
+        if(generation !== certificadoState.previewGeneration) return null;
+        certificadoState.previewHtml = String(json.data.html);
+        if(final){
+          if(content) content.srcdoc = certificadoState.previewHtml;
+          certificadoState.finalReviewedHash = await window.mxmedCertificadoSignatureBinding.hash(prepared.body);
+        }else documentUi.review({ content, continueButton: els.certificadoPreviewContinue,
+          state: 'ready', html: certificadoState.previewHtml });
+        return prepared;
+      }catch(error){
+        if(generation === certificadoState.previewGeneration){
+          const message = sanitizeText(error?.message || 'No se pudo preparar la vista previa.');
+          if(!final) documentUi.review({ content, continueButton: els.certificadoPreviewContinue,
+            state: 'error', message, retry: ()=>void loadCertificadoCanonicalPreview() });
+          else setCertificadoNotice(message);
+        }
+        return null;
+      }
+    };
+    const saveCertificadoDraftInPlace = async ()=>{
+      const prepared = await buildCertificadoDocument('draft');
+      if(prepared?.error) throw new Error(prepared.error);
+      const url = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
+      if(!url) throw new Error('No se pudo resolver el médico.');
+      const key = `certificado:${window.crypto.randomUUID()}`;
+      const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Idempotency-Key': key },
+        body: JSON.stringify(prepared.body) });
+      const json = await response.json().catch(()=>null);
+      if(!response.ok || json?.ok !== true)
+        throw new Error(sanitizeText(json?.message || json?.error || 'No se pudo guardar el borrador.'));
+      const saved = json.data?.document || {};
+      certificadoState.activeDraftRef = sanitizeText(saved.document_id || saved.document_uuid || '');
+      certificadoState.activeDraftVersion = Number(saved.version || 0);
+      if(!certificadoState.activeDraftRef || certificadoState.activeDraftVersion < 1)
+        throw new Error('El servidor no devolvió la versión del borrador.');
+      listCanonicalConsents();
+      return saved;
+    };
+    const bindCurrentCertificadoPhysicianSignature = async ()=>{
+      if(certificadoState.phase !== 'signatures') return;
+      try{
+        if(!certificadoState.activeDraftRef) await saveCertificadoDraftInPlace();
+        const prepared = await buildCertificadoDocument('draft');
+        if(prepared?.error) throw new Error(prepared.error);
+        const unbound = getUnboundCertificadoDoctorSignature(formatNowSql());
+        if(!unbound || unbound.source === 'remote_qr') return;
+        const bound = await window.mxmedCertificadoSignatureBinding.bind(
+          prepared.body, resolveCanonicalDocumentsDoctorId(), unbound);
+        if(!bound) throw new Error('La firma debe contener trazos visibles.');
+        certificadoState.storedDoctorSignature = bound;
+        certificadoState.signatureBindingStatus = 'valid_bound_signature';
+        certificadoState.finalReviewedHash = '';
+        refreshCertificadoSignatureStatus();
+      }catch(error){
+        certificadoState.signatureBindingStatus = 'stale_or_unverified_signature';
+        setCertificadoNotice(sanitizeText(error?.message || 'No se pudo aplicar la firma.'));
+        refreshCertificadoSignatureStatus();
+      }
+    };
     const saveInformeDocument = async (status = 'draft')=>{
       if(informeState.saving) return;
       informeState.saving = true;
@@ -51006,6 +51095,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(generation === responsivaState.qr.generation) responsivaState.qr.inFlight = false;
       }
     };
+    const setSharedDocumentQrCopy = (type)=>{
+      if(!responsivaQrModal) return;
+      const certificate = type === 'certificado';
+      const title = responsivaQrModal.querySelector('#rm-qr-title');
+      const intro = responsivaQrModal.querySelector('.modal-header p');
+      const reviewStep = responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
+      const image = responsivaQrEl('image');
+      if(title) title.textContent = certificate ? 'Firmar Certificado médico con celular' : 'Firmar Responsiva con celular';
+      if(intro) intro.textContent = certificate
+        ? 'Revisa y firma esta versión del certificado desde tu teléfono.'
+        : 'Revisa y firma esta versión de la responsiva desde tu teléfono.';
+      if(reviewStep) reviewStep.innerHTML = '<span aria-hidden="true">2</span>'
+        + (certificate ? 'Revisa el certificado' : 'Revisa la responsiva');
+      if(image) image.setAttribute('aria-label', certificate
+        ? 'Código QR para firmar el certificado médico' : 'Código QR para firmar la responsiva');
+    };
     const openResponsivaSignatureQr = async (role = 'signer')=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
         setResponsivaNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.');
@@ -51022,6 +51127,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const generation = responsivaState.qr.generation;
       responsivaState.qr = { token: '', role, generation, pollId: 0, status: 'preparing', inFlight: false };
       ensureModalAttachedToBody(responsivaQrModal);
+      setSharedDocumentQrCopy('responsiva');
       const signer = responsivaQrEl('context');
       if(signer) signer.textContent = role === 'doctor' ? 'Médico responsable' : 'Firmante principal';
       responsivaQrEl('waiting')?.classList.remove('d-none');
@@ -52456,6 +52562,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       let drawing = false;
       const start = (event)=>{
         if(certificadoState.saving) return;
+        certificadoState.storedDoctorSignature = null;
+        certificadoState.signatureBindingStatus = 'absent';
         drawing = true;
         const p = point(event);
         ctx.beginPath();
@@ -52478,6 +52586,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(!drawing) return;
         drawing = false;
         ctx.closePath();
+        void bindCurrentCertificadoPhysicianSignature();
         event.preventDefault();
       };
       canvas.addEventListener('pointerdown', start);
@@ -52544,6 +52653,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     const refreshCertificadoSignatureStatus = ()=>{
       if(!els.certificadoSignatureStatus) return;
+      const accepted = certificadoState.storedDoctorSignature;
+      documentUi.signature({ block: els.certificadoSignatureBlock,
+        statusEl: els.certificadoSignatureStatus, image: els.certificadoSignatureAccepted,
+        canvas: els.certificadoSignatureCanvas, manageSurface: true,
+        imageData: accepted?.image_data || '', status: certificadoState.signatureBindingStatus,
+        hasSignature: !!accepted?.image_data,
+        text: certificadoState.signatureBindingStatus === 'valid_bound_signature'
+          ? 'Firma aplicada a esta versión' : accepted ? 'Firma no válida para esta versión' : 'Sin firma' });
+      return;
       const hasRemote = certificadoState.signaturePreferredSource === 'remote' && !!certificadoState.remoteSignature?.image_data;
       const hasRegistered = certificadoState.signaturePreferredSource === 'registered' && !!certificadoState.registeredSignatureData;
       const hasLocal = certificadoState.signatureHasStroke && certificadoState.signaturePreferredSource !== 'registered' && certificadoState.signaturePreferredSource !== 'remote';
@@ -52561,48 +52679,133 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       els.certificadoSignatureStatus.textContent = 'Sin firma';
     };
-    const pullCertificadoDoctorRemoteSignature = ()=>{
-      const remote = (state.doctorRemoteSignature && typeof state.doctorRemoteSignature === 'object')
-        ? state.doctorRemoteSignature
-        : null;
-      const imageData = sanitizeText(remote?.image_data || '');
-      if(!imageData){
-        certificadoState.remoteSignature = null;
-        if(certificadoState.signaturePreferredSource === 'remote'){
-          if(certificadoState.registeredSignatureData){
-            certificadoState.signaturePreferredSource = 'registered';
-          }else if(certificadoState.signatureHasStroke){
-            certificadoState.signaturePreferredSource = 'local';
-          }else{
-            certificadoState.signaturePreferredSource = '';
-          }
-        }
-        return false;
-      }
-      certificadoState.remoteSignature = {
-        type: 'drawn',
-        source: 'remote_qr',
-        role: 'doctor',
-        image_data: imageData,
-        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
-        signer_name: sanitizeText(remote?.signer_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
-        token: sanitizeText(remote?.token || '')
-      };
-      certificadoState.signaturePreferredSource = 'remote';
-      return true;
-    };
     const openCertificadoDoctorSignatureQr = async ()=>{
+      if(!window.isSecureContext || !window.crypto?.subtle?.digest){
+        setCertificadoRemoteStatus('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        return;
+      }
+      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      await invalidateCertificadoQr('new_session');
+      certificadoState.qr.generation += 1;
+      const generation = certificadoState.qr.generation;
+      certificadoState.qr.status = 'preparing';
+      certificadoState.qr.token = '';
+      ensureModalAttachedToBody(responsivaQrModal);
+      setSharedDocumentQrCopy('certificado');
+      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Certificado médico';
+      responsivaQrEl('waiting')?.classList.remove('d-none');
+      responsivaQrEl('received')?.classList.add('d-none');
+      responsivaQrEl('image')?.replaceChildren();
+      certificadoHandoffShell.phase('waiting', { message: 'Preparando código…' });
+      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
       try{
-        await openConsentSignatureQrModal('doctor');
-        window.setTimeout(()=>{
-          if(pullCertificadoDoctorRemoteSignature()){
-            setCertificadoRemoteStatus('Firma remota del médico recibida.', 'success');
-            refreshCertificadoSignatureStatus();
-            renderCertificadoStep();
-          }
-        }, 250);
+        await saveCertificadoDraftInPlace();
+        if(generation !== certificadoState.qr.generation) return;
+        const data = await certificadoHandoffShell.adapter.createSession({
+          document_uuid: certificadoState.activeDraftRef,
+          document_version: certificadoState.activeDraftVersion, role: 'doctor'
+        });
+        if(generation !== certificadoState.qr.generation) return;
+        const token = sanitizeText(data.token || '');
+        const path = sanitizeText(data.mobile_url || '');
+        if(!token || !path || typeof QRCode !== 'function') throw new Error('No se pudo mostrar el código QR.');
+        const url = new URL(path, window.location.origin).href;
+        certificadoState.qr.token = token;
+        certificadoState.qr.status = 'pending';
+        const image = responsivaQrEl('image');
+        image?.replaceChildren();
+        new QRCode(image, { text: url, width: 216, height: 216,
+          colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        const link = responsivaQrEl('link');
+        if(link) link.href = url;
+        certificadoHandoffShell.phase('waiting', { message: 'Esperando firma…' });
+        certificadoHandoffPoller.start();
+        void pollCertificadoQr();
       }catch(error){
-        setCertificadoRemoteStatus(sanitizeText(error?.message || 'No se pudo iniciar firma remota del médico.'), 'error');
+        if(generation !== certificadoState.qr.generation) return;
+        certificadoState.qr.status = 'error';
+        certificadoHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo iniciar la firma.') });
+      }
+    };
+    const invalidateCertificadoQr = async (reason = 'changed')=>{
+      const token = certificadoState.qr.token;
+      if(!token || !['pending','uploaded'].includes(certificadoState.qr.status)) return;
+      certificadoHandoffPoller?.stop();
+      certificadoState.qr.generation += 1;
+      certificadoState.qr.status = 'stale';
+      certificadoHandoffShell.phase('error', { message: 'El certificado cambió. Genera un nuevo código.' });
+      await fetch(`/api/clinical/index.php/certificado-qr-sessions/${encodeURIComponent(token)}/invalidate`, {
+        method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' },
+        body: JSON.stringify({ reason }) }).catch(()=>{});
+    };
+    const certificadoHandoffShell = documentUi.handoff({
+      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
+      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
+      preview: responsivaQrEl('preview'),
+      adapter: {
+        createSession: async data=>{
+          const response = await fetch('/api/clinical/index.php/certificado-qr-sessions', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(data) });
+          const json = await response.json().catch(()=>null);
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo generar el código QR.');
+          return json.data || {};
+        },
+        getStatus: async token=>{
+          const response = await fetch(`/api/clinical/index.php/certificado-qr-sessions/${encodeURIComponent(token)}/status`, {
+            headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
+          const json = await response.json().catch(()=>null);
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo verificar la firma.');
+          return json.data || {};
+        },
+        receive: async (data, token, generation)=>{
+          const signature = data.signature;
+          const prepared = await buildCertificadoDocument('draft');
+          if(prepared?.error || signature?.binding?.document_uuid !== certificadoState.activeDraftRef
+            || Number(signature?.binding?.document_version) !== certificadoState.activeDraftVersion
+            || signature?.binding?.content_fingerprint !== await window.mxmedCertificadoSignatureBinding.hash(prepared.body))
+            throw new Error('El certificado cambió. Genera un nuevo código.');
+          certificadoState.storedDoctorSignature = signature;
+          certificadoState.signatureBindingStatus = 'valid_bound_signature';
+          await saveCertificadoDraftInPlace();
+          if(generation !== certificadoState.qr.generation || token !== certificadoState.qr.token) return;
+          certificadoState.qr.status = 'consumed';
+          certificadoHandoffShell.phase('received', { message: 'Firma recibida correctamente',
+            imageData: signature.image_data, signer: signature.signer_name || '' });
+          refreshCertificadoSignatureStatus();
+          setCertificadoRemoteStatus('Firma recibida correctamente.', 'success');
+        },
+        mapTerminal: status=> status === 'expired' ? 'El código expiró. Genera uno nuevo.'
+          : 'El certificado cambió. Genera uno nuevo.'
+      }
+    });
+    const certificadoHandoffPoller = certificadoHandoffShell.createPoller(()=>void pollCertificadoQr(), 2000);
+    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+      void invalidateCertificadoQr('modal_closed');
+      certificadoHandoffPoller.stop();
+      certificadoState.qr.generation += 1;
+    });
+    const pollCertificadoQr = async ()=>{
+      const { token, generation } = certificadoState.qr;
+      if(!token || certificadoState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      try{
+        const data = await certificadoHandoffShell.adapter.getStatus(token);
+        if(generation !== certificadoState.qr.generation || token !== certificadoState.qr.token
+          || certificadoState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+        if(data.status === 'uploaded' && data.signature){
+          certificadoState.qr.status = 'saving';
+          certificadoHandoffPoller.stop();
+          await certificadoHandoffShell.adapter.receive(data, token, generation);
+        }else if(['expired','stale','cancelled','consumed'].includes(data.status)){
+          certificadoState.qr.status = data.status;
+          certificadoHandoffPoller.stop();
+          certificadoHandoffShell.phase('error', { message: certificadoHandoffShell.adapter.mapTerminal(data.status) });
+        }
+      }catch(error){
+        if(generation === certificadoState.qr.generation)
+          certificadoHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo recibir la firma.') });
       }
     };
     const syncCertificadoPurposeUiFromState = ()=>{
@@ -52913,7 +53116,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.certificadoSave.disabled = certificadoState.saving;
       }
       if(els.certificadoEmit){
-        els.certificadoEmit.classList.toggle('d-none', !showActions);
+        els.certificadoEmit.classList.toggle('d-none', !showActions || certificadoState.phase !== 'signatures');
         els.certificadoEmit.disabled = certificadoState.saving;
       }
       if(els.certificadoCancel){
@@ -52927,14 +53130,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const showCapture = normalized === 5 && !certificadoState.finalPhase;
         els.certificadoStep5Capture.classList.toggle('d-none', !showCapture);
       }
+      els.certificadoSignatureBlock?.classList.toggle('d-none', certificadoState.phase !== 'signatures');
+      els.certificadoPreviewContinue?.classList.toggle('d-none', certificadoState.phase === 'signatures');
       if(els.certificadoStep5Final){
         const showFinal = normalized === 5 && certificadoState.finalPhase;
         els.certificadoStep5Final.classList.toggle('d-none', !showFinal);
       }
       if(els.certificadoFinalModeLabel){
-        els.certificadoFinalModeLabel.textContent = certificadoState.finalIntent === 'issued'
-          ? 'Revisa el documento final y, si necesitas, edita el texto antes de emitir.'
-          : 'Revisa el documento final y, si necesitas, edita el texto antes de cerrar el borrador.';
+        els.certificadoFinalModeLabel.textContent = 'Revisa el documento completo antes de emitir. Para cambiar el texto, vuelve a los campos.';
       }
       if(els.certificadoFinalEmit){
         const showEmit = normalized === 5 && certificadoState.finalPhase && certificadoState.finalIntent === 'issued';
@@ -52947,8 +53150,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.certificadoFinalSave.disabled = certificadoState.saving;
       }
       if(els.certificadoFinalEdit){
-        const showEdit = normalized === 5 && certificadoState.finalPhase;
-        els.certificadoFinalEdit.classList.toggle('d-none', !showEdit);
+        els.certificadoFinalEdit.classList.add('d-none');
         els.certificadoFinalEdit.disabled = certificadoState.saving;
         els.certificadoFinalEdit.textContent = certificadoState.finalRenderMode === 'viewer'
           ? 'Editar texto'
@@ -52967,7 +53169,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           initCertificadoSignaturePad();
         }
         window.requestAnimationFrame(()=> syncCertificadoSignatureCanvasSize({ preserveDrawing: true }));
-        renderCertificadoPreview();
+        void loadCertificadoCanonicalPreview();
       } else if(normalized === 5 && certificadoState.finalPhase){
         if(certificadoState.finalRenderMode !== 'viewer' && els.certificadoFinalEditableBody){
           els.certificadoFinalEditableBody.setAttribute('contenteditable', certificadoState.finalEditing ? 'true' : 'false');
@@ -52980,6 +53182,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       step: Number(certificadoState.step || 1) || 1,
       form: {
         type: sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general',
+        professional_header: certificadoState.professionalHeader,
         emission_date: sanitizeText(certificadoState.form.emission_date || ''),
         purpose: normalizeConsentInputRaw(certificadoState.form.purpose || ''),
         purpose_selection: sanitizeText(certificadoState.form.purpose_selection || ''),
@@ -53048,6 +53251,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note: normalizeConsentInputRaw(form.usage_note ?? certificadoState.form.usage_note ?? ''),
         validity_note: normalizeConsentInputRaw(form.validity_note ?? certificadoState.form.validity_note ?? '')
       };
+      certificadoState.professionalHeader = form.professional_header === 'hidden' ? 'hidden' : 'shown';
+      els.certificadoHeaderOptions?.forEach(option=>{ option.checked = option.value === certificadoState.professionalHeader; });
       certificadoState.usageNoteUserSelected = trimConsentInputValue(form.usage_note_user_selected || '') === '1'
         || trimConsentInputValue(certificadoState.form.usage_note_type || '') !== ''
         || trimConsentInputValue(certificadoState.form.usage_note_custom || '') !== ''
@@ -53061,6 +53266,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const resetCertificadoWizard = ()=>{
       certificadoState.step = 1;
+      certificadoState.phase = 'preview';
+      certificadoState.activeDraftRef = '';
+      certificadoState.activeDraftVersion = 0;
+      certificadoState.professionalHeader = 'shown';
+      els.certificadoHeaderOptions?.forEach(option=>{ option.checked = option.value === 'shown'; });
+      certificadoState.storedDoctorSignature = null;
+      certificadoState.signatureBindingStatus = 'absent';
+      certificadoState.finalReviewedHash = '';
       certificadoState.saving = false;
       certificadoState.finalPhase = false;
       certificadoState.finalIntent = 'draft';
@@ -53128,6 +53341,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const d = String(today.getDate()).padStart(2, '0');
       const nowDate = `${y}-${m}-${d}`;
       certificadoState.step = 1;
+      certificadoState.phase = 'preview';
+      certificadoState.activeDraftRef = '';
+      certificadoState.activeDraftVersion = 0;
+      certificadoState.professionalHeader = 'shown';
+      els.certificadoHeaderOptions?.forEach(option=>{ option.checked = option.value === 'shown'; });
+      certificadoState.storedDoctorSignature = null;
+      certificadoState.signatureBindingStatus = 'absent';
+      certificadoState.finalReviewedHash = '';
       certificadoState.saving = false;
       certificadoState.finalPhase = false;
       certificadoState.finalIntent = 'draft';
@@ -53177,9 +53398,42 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return true;
     };
-    const openCertificadoModal = async ()=>{
+    const openCertificadoModal = async ({ draftRef = '' } = {})=>{
       if(!startCertificadoDraft()) return;
       const patientId = resolveActivePatientIdForConsent();
+      if(draftRef){
+        const actorUserId = await resolveResponsivaAuthenticatedActorUserId();
+        const url = buildScopedCanonicalDocumentDetailUrl(draftRef);
+        const response = url ? await fetch(url, { headers: { Accept: 'application/json' },
+          credentials: 'same-origin' }).catch(()=>null) : null;
+        const json = response?.ok ? await response.json().catch(()=>null) : null;
+        const doc = json?.data?.document || null;
+        const payload = doc?.content?.payload || null;
+        if(!doc || doc.document_type !== 'certificado_medico' || doc.status !== 'draft'
+          || sanitizeText(doc.context?.patient_id) !== patientId
+          || sanitizeText(doc.audit?.created_by_user_id) !== actorUserId
+          || !payload || payload.contract_version !== 2 || payload.status !== 'draft'){
+          showCatalogFeedback('No se pudo reanudar este borrador de forma segura.', 'error');
+          return;
+        }
+        certificadoState.activeDraftRef = sanitizeText(doc.document_id || draftRef);
+        certificadoState.activeDraftVersion = Number(doc.version || 0);
+        certificadoState.professionalHeader = window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload);
+        certificadoState.storedDoctorSignature = payload.signatures?.doctor || null;
+        certificadoState.form = { ...certificadoState.form, ...payload.form_snapshot,
+          type: sanitizeText(payload.certificate?.type || 'certificado_general'),
+          emission_date: sanitizeText(payload.report?.emission_date || '') };
+        certificadoState.declarationEdited = true;
+        certificadoState.usageNoteUserSelected = true;
+        certificadoState.phase = 'preview';
+        certificadoState.step = 5;
+        syncCertificadoInputsFromState();
+        els.certificadoHeaderOptions?.forEach(option=>{ option.checked = option.value === certificadoState.professionalHeader; });
+        const prepared = await buildCertificadoDocument('draft');
+        certificadoState.signatureBindingStatus = await window.mxmedCertificadoSignatureBinding.classify(
+          prepared.body, resolveCanonicalDocumentsDoctorId(), certificadoState.registeredSignatureData);
+        refreshCertificadoSignatureStatus();
+      }else{
       const tempSession = getDocModalTempSession({ documentType: 'certificado_medico', patientId });
       if(tempSession?.snapshot){
         const decision = await askDocModalTempRecoveryDecision({
@@ -53192,6 +53446,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }else{
           clearDocModalTempSession({ documentType: 'certificado_medico', patientId });
         }
+      }
       }
       if(!els.certificadoModalEl || !window.bootstrap?.Modal) return;
       try{
@@ -53207,6 +53462,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }catch(_){}
     };
     const getActiveCertificadoDoctorSignature = (nowSql = '')=>{
+      return certificadoState.storedDoctorSignature;
+    };
+    const getUnboundCertificadoDoctorSignature = (nowSql = '')=>{
       const signedAt = sanitizeText(nowSql || formatNowSql());
       const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       if(certificadoState.signaturePreferredSource === 'remote' && certificadoState.remoteSignature){
@@ -53378,7 +53636,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           return { error: 'Firma del médico es obligatoria para emitir.' };
         }
       }
-      const actorUserId = resolveClinicalActorUserId();
+      const actorUserId = await resolveResponsivaAuthenticatedActorUserId();
       const doctorPrefill = readDoctorPrefillProfile();
       const doctorBranding = resolveDoctorBranding(actorUserId);
       const patientSnapshot = readPatientSnapshot();
@@ -53408,7 +53666,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         || window.mxReadPersistedGroupLogoUrl?.()
         || ''
       );
-      console.log('GROUP LOGO URL', groupLogo);
       const consultorioAddressLine = [
         sanitizeText([consultorioStreet, consultorioExt ? `No. ${consultorioExt}` : ''].filter(Boolean).join(' ')),
         consultorioInt ? `Int. ${consultorioInt}` : '',
@@ -53417,8 +53674,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         consultorioState
       ].filter(Boolean).join(', ');
       const payload = {
-        contract_version: 1,
+        contract_version: 2,
         status: normalizedStatus,
+        presentation: { version: 1, professional_header: certificadoState.professionalHeader },
         report: {
           issued_at: nowSql,
           emission_date: sanitizeText(certificadoState.form.emission_date || nowSql.slice(0, 10)),
@@ -53475,8 +53733,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           ...content
         }
       };
-      const renderedOverride = normalizeConsentInputRaw(renderedTextOverride || '');
-      payload.rendered_text = renderedOverride || buildCertificadoRenderedText(payload);
+      payload.rendered_text = buildCertificadoRenderedText(payload);
       const definition = getClinicalDocumentDefinition('certificado_medico');
       const context = { patient_id: patientId, care_setting: 'consulta' };
       const subtitle = typeLabel;
@@ -53499,6 +53756,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actorUserId,
         source: 'documents_clinicos_certificado_medico'
       });
+      if(certificadoState.activeDraftRef){
+        body.draft_ref = certificadoState.activeDraftRef;
+        body.expected_version = certificadoState.activeDraftVersion;
+      }
       return { patientId, body, normalizedStatus };
     };
     const saveCertificadoDocument = async (status = 'draft', options = {})=>{
@@ -53521,13 +53782,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(prepared?.error){
           throw new Error(prepared.error);
         }
+        if(status === 'issued'){
+          const hash = await window.mxmedCertificadoSignatureBinding.hash(prepared.body);
+          if(!certificadoState.finalReviewedHash || hash !== certificadoState.finalReviewedHash)
+            throw new Error('El certificado cambió desde la revisión final. Revísalo nuevamente.');
+          const classification = await window.mxmedCertificadoSignatureBinding.classify(
+            prepared.body, resolveCanonicalDocumentsDoctorId(), certificadoState.registeredSignatureData);
+          if(classification !== 'valid_bound_signature')
+            throw new Error('La firma del médico no corresponde a la versión actual. Firma nuevamente.');
+        }
         const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
         if(!createUrl){
           throw new Error('No se pudo resolver el médico para guardar el certificado médico.');
         }
         const resp = await fetch(createUrl, {
           method: 'POST',
-          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json',
+            'Idempotency-Key': `certificado:${window.crypto.randomUUID()}` },
           body: JSON.stringify(prepared.body),
           credentials: 'same-origin'
         });
@@ -53536,6 +53807,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el certificado.';
           throw new Error(msg);
         }
+        const saved = json.data?.document || {};
+        certificadoState.activeDraftRef = sanitizeText(saved.document_id || saved.document_uuid || '');
+        certificadoState.activeDraftVersion = Number(saved.version || 0);
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'certificado_medico', patientId: prepared.patientId });
           await presentEmittedDocument(json, 'certificado_medico', els.certificadoModalEl);
@@ -53603,66 +53877,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const prepareCertificadoFinalPhase = async (intent = 'draft')=>{
       if(certificadoState.saving) return;
-      const finalIntent = intent === 'issued' ? 'issued' : 'draft';
       certificadoState.saving = true;
       setCertificadoNotice('');
-      if(els.certificadoSave){
-        els.certificadoSave.disabled = true;
-        els.certificadoSave.textContent = 'Preparando...';
-      }
-      if(els.certificadoEmit){
-        els.certificadoEmit.disabled = true;
-        els.certificadoEmit.textContent = 'Preparando...';
-      }
       try{
-        const prepared = await buildCertificadoDocument('draft');
-        if(prepared?.error){
-          throw new Error(prepared.error);
-        }
-        const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
-        if(!createUrl){
-          throw new Error('No se pudo resolver el médico para guardar el certificado médico.');
-        }
-        const resp = await fetch(createUrl, {
-          method: 'POST',
-          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify(prepared.body),
-          credentials: 'same-origin'
-        });
-        const json = await resp.json().catch(()=> null);
-        if(!resp.ok || !json || json.ok !== true){
-          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo preparar el certificado.';
-          throw new Error(msg);
-        }
-        let docUuid = resolveCreatedCertificadoUuid(json);
-        if(!docUuid){
-          docUuid = await fetchLatestCertificadoUuid(prepared.patientId);
-        }
-        certificadoState.finalRenderedText = resolvePreparedCertificateRenderedText(prepared);
-        certificadoState.finalEditing = false;
-        setCertificadoFinalPhase({
-          active: true,
-          intent: finalIntent,
-          docUuid,
-          renderMode: docUuid ? 'viewer' : 'local'
-        });
+        const reviewed = await loadCertificadoCanonicalPreview({ final: true });
+        if(!reviewed) throw new Error('No se pudo revisar el certificado.');
+        certificadoState.finalIntent = intent === 'issued' ? 'issued' : 'draft';
+        certificadoState.finalPhase = true;
+        certificadoState.finalRenderMode = 'viewer';
         certificadoState.step = 5;
-        renderCertificadoStep();
-        listCanonicalConsents();
+        els.certificadoFinalPreviewViewerWrap?.classList.remove('d-none');
+        els.certificadoFinalPreviewDoc?.classList.add('d-none');
       }catch(error){
-        const message = sanitizeText(error?.message || 'No se pudo preparar la revisión final del certificado.');
-        setCertificadoNotice(message);
-        showCatalogFeedback(message, 'error');
+        setCertificadoNotice(sanitizeText(error?.message || 'No se pudo preparar la revisión final.'));
       }finally{
         certificadoState.saving = false;
-        if(els.certificadoSave){
-          els.certificadoSave.disabled = false;
-          els.certificadoSave.textContent = 'Guardar borrador';
-        }
-        if(els.certificadoEmit){
-          els.certificadoEmit.disabled = false;
-          els.certificadoEmit.textContent = 'Emitir certificado';
-        }
         renderCertificadoStep();
       }
     };
@@ -53877,7 +54106,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.className = 'exp-card exp-card--secondary';
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
-        const resumableDraft = (isConsentDoc || isResponsivaDoc) && status === 'draft';
+        const resumableDraft = (isConsentDoc || isResponsivaDoc || isCertificadoDoc) && status === 'draft';
         const definition = getClinicalDocumentDefinition(documentType);
         const emittedActions = status === 'generated' && Array.isArray(definition.post_emission_actions)
           ? definition.post_emission_actions : [];
@@ -53886,7 +54115,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.innerHTML = `
           <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
             <span>${title.replace(/</g, '&lt;')}</span>
-            <span class="badge bg-light text-dark border">${((isConsentDoc || isResponsivaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
+            <span class="badge bg-light text-dark border">${((isConsentDoc || isResponsivaDoc || isCertificadoDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
@@ -53900,6 +54129,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         `;
         if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
         if(isResponsivaDoc && status === 'draft') card.dataset.responsivaDraft = '1';
+        if(isCertificadoDoc && status === 'draft') card.dataset.certificadoDraft = '1';
         els.list.appendChild(card);
       });
     };
@@ -55809,9 +56039,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
       }
       if(els.certificadoWizard && !els.certificadoWizard.classList.contains('d-none')){
-        if(pullCertificadoDoctorRemoteSignature()){
-          setCertificadoRemoteStatus('Firma remota del médico aplicada.', 'success');
-        }
         refreshCertificadoSignatureStatus();
         renderCertificadoStep();
       }
@@ -56890,6 +57117,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         buildSnapshot: buildCertificadoTempSnapshot
       });
     });
+    els.certificadoHeaderOptions?.forEach(option=> option.addEventListener('change', ()=>{
+      if(!option.checked) return;
+      certificadoState.professionalHeader = option.value === 'hidden' ? 'hidden' : 'shown';
+      certificadoState.finalReviewedHash = '';
+      if(certificadoState.step === 5) renderCertificadoStep();
+    }));
+    const markCertificadoMaterialChanged = event=>{
+      if(!event.target.closest('input,select,textarea')) return;
+      if(event.target.name === 'cm_signature_source') return;
+      certificadoState.finalReviewedHash = '';
+      if(certificadoState.storedDoctorSignature){
+        certificadoState.signatureBindingStatus = 'stale_or_unverified_signature';
+        refreshCertificadoSignatureStatus();
+      }
+      if(certificadoState.qr.status === 'pending') void invalidateCertificadoQr('content_changed');
+      if(certificadoState.step === 5 && !certificadoState.finalPhase) void loadCertificadoCanonicalPreview();
+    };
+    els.certificadoWizard?.addEventListener('input', markCertificadoMaterialChanged);
+    els.certificadoWizard?.addEventListener('change', markCertificadoMaterialChanged);
     els.certificadoNext?.addEventListener('click', (event)=>{
       event.preventDefault();
       certificadoState.step = Math.min(5, Number(certificadoState.step || 1) + 1);
@@ -56908,11 +57154,26 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     els.certificadoSave?.addEventListener('click', (event)=>{
       event.preventDefault();
-      prepareCertificadoFinalPhase('draft');
+      void saveCertificadoDocument('draft');
     });
     els.certificadoEmit?.addEventListener('click', (event)=>{
       event.preventDefault();
       prepareCertificadoFinalPhase('issued');
+    });
+    els.certificadoPreviewContinue?.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      if(certificadoState.phase !== 'preview' || certificadoState.saving) return;
+      certificadoState.saving = true;
+      try{
+        await saveCertificadoDraftInPlace();
+        certificadoState.phase = 'signatures';
+        setCertificadoNotice('');
+        renderCertificadoStep();
+      }catch(error){ setCertificadoNotice(sanitizeText(error?.message || 'No se pudo abrir firmas.')); }
+      finally{
+        certificadoState.saving = false;
+        renderCertificadoStep();
+      }
     });
     els.certificadoFinalEdit?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -56938,80 +57199,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     els.certificadoFinalSave?.addEventListener('click', async (event)=>{
       event.preventDefault();
-      if(certificadoState.saving) return;
-      try{
-        if(certificadoState.finalRenderMode === 'viewer'){
-          clickCertificadoViewerButton('[data-role="cert-edit-save"]:not(.d-none)');
-          await new Promise((resolve)=> window.setTimeout(resolve, 450));
-        }else{
-          await syncCertificadoFinalInlineEdits();
-        }
-        if(certificadoState.finalRenderMode !== 'viewer' && certificadoState.finalDocUuid){
-          const patchUrl = buildScopedCanonicalDocumentPatchUrl(certificadoState.finalDocUuid);
-          if(!patchUrl){
-            throw new Error('No se pudo resolver el médico para actualizar el certificado médico.');
-          }
-          const patchResp = await fetch(patchUrl, {
-            method: 'PATCH',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ rendered_text: certificadoState.finalRenderedText })
-          });
-          const patchJson = await patchResp.json().catch(()=> null);
-          if(!patchResp.ok || !patchJson || patchJson.ok !== true){
-            throw new Error(sanitizeText(patchJson?.message || patchJson?.error || `HTTP ${patchResp.status}`) || 'No se pudieron guardar los cambios de texto.');
-          }
-        }
-        listCanonicalConsents();
-        setCertificadoNotice('Borrador de certificado guardado correctamente.');
-        showCatalogFeedback('Borrador de certificado guardado correctamente.', 'success');
-      }catch(error){
-        const message = sanitizeText(error?.message || 'No se pudo guardar el borrador del certificado.');
-        setCertificadoNotice(message);
-        showCatalogFeedback(message, 'error');
-      }
+      await saveCertificadoDocument('draft');
     });
     els.certificadoFinalEmit?.addEventListener('click', async (event)=>{
       event.preventDefault();
-      if(certificadoState.saving) return;
-      try{
-        if(certificadoState.finalRenderMode === 'viewer'){
-          clickCertificadoViewerButton('[data-role="cert-edit-save"]:not(.d-none)');
-          await new Promise((resolve)=> window.setTimeout(resolve, 450));
-        }else{
-          await syncCertificadoFinalInlineEdits();
-        }
-        if(certificadoState.finalDocUuid){
-          const detailUrl = buildScopedCanonicalDocumentDetailUrl(certificadoState.finalDocUuid);
-          if(!detailUrl){
-            throw new Error('No se pudo resolver el médico para consultar el certificado médico.');
-          }
-          const latestResp = await fetch(detailUrl, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin'
-          });
-          const latestJson = await latestResp.json().catch(()=> null);
-          if(latestResp.ok && latestJson && latestJson.ok === true){
-            const serverRendered = normalizeConsentInputRaw(latestJson?.data?.document?.content?.rendered_text || '');
-            if(serverRendered){
-              certificadoState.finalRenderedText = serverRendered;
-            }
-          }
-        }
-        await saveCertificadoDocument('issued', {
-          closeOnSuccess: true,
-          renderedTextOverride: certificadoState.finalRenderedText
-        });
-      }catch(error){
-        const message = sanitizeText(error?.message || 'No se pudo emitir el certificado.');
-        setCertificadoNotice(message);
-        showCatalogFeedback(message, 'error');
-      }
+      await saveCertificadoDocument('issued');
     });
     els.certificadoSignatureSourceRegistered?.addEventListener('change', ()=>{
       if(els.certificadoSignatureSourceRegistered?.checked){
         setCertificadoSignaturePreferredSource('registered');
+        void bindCurrentCertificadoPhysicianSignature();
       }
     });
     els.certificadoSignatureQrOpen?.addEventListener('click', (event)=>{
@@ -57021,6 +57218,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.certificadoSignatureClear?.addEventListener('click', (event)=>{
       event.preventDefault();
       clearCertificadoSignaturePad();
+      certificadoState.storedDoctorSignature = null;
+      certificadoState.signatureBindingStatus = 'absent';
       certificadoState.remoteSignature = null;
       if(certificadoState.registeredSignatureData){
         setCertificadoSignaturePreferredSource('registered');
@@ -57054,9 +57253,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         initCertificadoSignaturePad();
       }
       window.requestAnimationFrame(()=> syncCertificadoSignatureCanvasSize({ preserveDrawing: true }));
-      if(pullCertificadoDoctorRemoteSignature()){
-        setCertificadoSignaturePreferredSource('remote');
-      }
       renderCertificadoStep();
     });
     els.template?.addEventListener('change', (event)=>{
@@ -57177,6 +57373,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(action === 'print'){ openClinicalDocumentPrint(card.dataset.docUuid); return; }
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.certificadoDraft === '1') openCertificadoModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
     els.list.addEventListener('keydown', (event)=>{
@@ -57187,6 +57384,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       event.preventDefault();
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.certificadoDraft === '1') openCertificadoModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
     window.addEventListener('mxmed:resume-responsiva-draft', (event)=>{
@@ -57194,6 +57392,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const draftRef = sanitizeText(event.detail?.document_uuid || '');
       if(patientId && patientId === resolveActivePatientIdForConsent() && draftRef){
         openResponsivaModal({ draftRef });
+      }
+    });
+    window.addEventListener('mxmed:resume-certificado-draft', (event)=>{
+      const patientId = sanitizeText(event.detail?.patient_id || '');
+      const draftRef = sanitizeText(event.detail?.document_uuid || '');
+      if(patientId && patientId === resolveActivePatientIdForConsent() && draftRef){
+        openCertificadoModal({ draftRef });
       }
     });
 

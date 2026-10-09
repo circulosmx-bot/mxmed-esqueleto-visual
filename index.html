@@ -10125,6 +10125,12 @@
                           <label class="form-label">Médico emisor</label>
                           <input class="form-control" id="cm_doctor_name" readonly>
                         </div>
+                        <div class="col-12">
+                          <div class="fw-semibold mb-1">Presentación del documento</div>
+                          <div class="small text-muted mb-2">Encabezado profesional</div>
+                          <label class="form-check"><input class="form-check-input" type="radio" name="cm_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                          <label class="form-check"><input class="form-check-input" type="radio" name="cm_professional_header" value="hidden"> Generar sin encabezado profesional</label>
+                        </div>
                       </div>
                     </div>
                     <div id="cm_step_2" class="d-none">
@@ -10258,8 +10264,9 @@
                             <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
                             <div id="cm_preview" class="small"></div>
                           </div>
+                          <button type="button" class="btn btn-primary btn-sm mt-2" id="cm_preview_continue">Continuar a firmas</button>
                         </div>
-                        <div class="col-12">
+                        <div class="col-12" id="cm_signature_block">
                           <div class="border rounded p-2">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                               <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis ms-1">Obligatoria</span></div>
@@ -10275,6 +10282,7 @@
                               <div class="fw-semibold mb-1">Firma registrada disponible</div>
                               <img id="cm_signature_registered_preview" src="" alt="Firma registrada del médico" class="img-fluid rounded border bg-white" style="max-height:140px;object-fit:contain;">
                             </div>
+                            <img id="cm_signature_accepted" class="img-fluid rounded border bg-white d-none mb-2" alt="Firma del médico aplicada" style="max-height:140px;object-fit:contain;">
                             <div class="mx-signature-pad">
                               <canvas id="cm_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
@@ -11055,8 +11063,9 @@
 <script src="assets/js/clinical/consent-signature-binding.js?v=doc-present02"></script>
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
+<script src="assets/js/clinical/certificado-signature-binding.js?v=cert-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/app.js?v=doc-ux-reg01"></script>
+<script src="assets/js/app.js?v=cert-imp01"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>

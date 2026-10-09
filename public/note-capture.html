@@ -126,9 +126,12 @@
       const msg = document.getElementById('captureMsg');
 
       const isResponsivaSignature = mode === 'responsiva-signature';
-      const isSignatureMode = mode === 'signature' || isResponsivaSignature;
-      const signatureRoute = isResponsivaSignature ? 'responsiva-qr-sessions' : 'note-capture-tokens';
-      const signatureDocument = isResponsivaSignature ? 'la responsiva' : 'el consentimiento';
+      const isCertificadoSignature = mode === 'certificado-signature';
+      const isSignatureMode = mode === 'signature' || isResponsivaSignature || isCertificadoSignature;
+      const signatureRoute = isCertificadoSignature ? 'certificado-qr-sessions'
+        : (isResponsivaSignature ? 'responsiva-qr-sessions' : 'note-capture-tokens');
+      const signatureDocument = isCertificadoSignature ? 'el certificado'
+        : (isResponsivaSignature ? 'la responsiva' : 'el consentimiento');
       const signatureObjectPronoun = isResponsivaSignature ? 'firmarla' : 'firmarlo';
       let signatureHasStroke = false;
 
@@ -265,14 +268,17 @@
       }
 
       if(isSignatureMode){
-        if (isResponsivaSignature && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
-          setMsg('Abre el enlace HTTPS seguro para revisar y firmar la responsiva.', 'err');
+        if ((isResponsivaSignature || isCertificadoSignature) && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
+          setMsg(`Abre el enlace HTTPS seguro para revisar y firmar ${signatureDocument}.`, 'err');
           return;
         }
-        titleEl.textContent = isResponsivaSignature ? 'Responsiva médica' : 'Consentimiento informado';
+        titleEl.textContent = isCertificadoSignature ? 'Certificado médico'
+          : (isResponsivaSignature ? 'Responsiva médica' : 'Consentimiento informado');
         introEl.textContent = 'Revisa el documento antes de firmar esta versión.';
-        consentReview.querySelector('h2').textContent = isResponsivaSignature ? 'Revisar responsiva' : 'Revisa el consentimiento';
-        consentReviewFrame.title = isResponsivaSignature ? 'Responsiva que se firmará' : 'Consentimiento que se firmará';
+        consentReview.querySelector('h2').textContent = isCertificadoSignature ? 'Revisar certificado'
+          : (isResponsivaSignature ? 'Revisar responsiva' : 'Revisa el consentimiento');
+        consentReviewFrame.title = isCertificadoSignature ? 'Certificado que se firmará'
+          : (isResponsivaSignature ? 'Responsiva que se firmará' : 'Consentimiento que se firmará');
         form.classList.add('d-none');
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
@@ -287,7 +293,7 @@
             })
             .then(data=>{
               if(data.status!=='pending') throw new Error('Este QR ya fue utilizado o expiró. Solicita uno nuevo.');
-              consentReviewFrame.srcdoc=isResponsivaSignature
+              consentReviewFrame.srcdoc=(isResponsivaSignature || isCertificadoSignature)
                 ? `<link rel="stylesheet" href="/assets/css/clinical-doc-base.css"><link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css">${String(data.review_html || '')}`
                 : String(data.review_html || '');
               consentSigner.textContent=`${data.role_label}: ${data.signer_name || 'Médico responsable'}`;
