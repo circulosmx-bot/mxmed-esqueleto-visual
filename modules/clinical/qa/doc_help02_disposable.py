@@ -156,7 +156,7 @@ with sync_playwright() as pw:
     consent.locator('.mxeh-trigger').first.click()
     consent_dialog = consent.locator('.mxeh-overlay:not([hidden])')
     check('C04', consent_dialog.locator('.mxeh-section.is-current').count() == 1)
-    check('C06', consent_dialog.locator('.mxeh-use').count() == 0)
+    check('CONS_HELP02_ENABLED', consent_dialog.locator('.mxeh-section.is-current .mxeh-use:visible').count() == 1)
     check('C03', 'Extirpación de una lesión cutánea superficial' in consent_dialog.inner_text())
     shot(page, 'consent-shared-help')
     consent_dialog.locator('.mxeh-close').click()

@@ -1,4 +1,4 @@
-/* Consentimiento keeps educational examples only in the shared help shell. */
+/* Consentimiento examples use the shared explicit field insertion action. */
 (function () {
   const modal = document.getElementById('modalConsentimientoInformado');
   if (!modal || !window.mxmedExampleFieldHelp) return;
@@ -62,6 +62,10 @@
   window.mxmedExampleFieldHelp.mount({
     modal, id: 'ci-example', fieldMap: fields, sections: example.sections,
     contextLabel: 'Procedimiento de referencia', contextText: example.procedure,
-    note: 'Este ejemplo es únicamente una referencia de redacción. Debe adaptarse a las características del procedimiento y del paciente.'
+    note: 'Este ejemplo es únicamente una referencia de redacción. Debe adaptarse a las características del procedimiento y del paciente.',
+    onUseExample: ({section, destination}) => {
+      destination.value = section.text;
+      destination.dispatchEvent(new Event('input', {bubbles: true}));
+    }
   });
 })();
