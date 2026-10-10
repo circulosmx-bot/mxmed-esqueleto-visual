@@ -50376,6 +50376,56 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       updateInterconsultaSignatureStatus();
     };
+    // Wizard position is browser UI state, scoped to one canonical draft version.
+    // It is never included in the clinical payload or signature projection.
+    const INTERCONSULTA_RESUME_STEP_PREFIX = 'mxmed_interconsulta_resume_step_v1';
+    const interconsultaResumeStepKey = (patientId = '', draftRef = '')=>{
+      const doctorId = sanitizeText(resolveCanonicalDocumentsDoctorId() || '');
+      const patient = sanitizeText(patientId || '');
+      const ref = sanitizeText(draftRef || '');
+      return doctorId && patient && ref
+        ? `${INTERCONSULTA_RESUME_STEP_PREFIX}:${doctorId}:${patient}:${ref}` : '';
+    };
+    const rememberInterconsultaResumeStep = (step = interconsultaState.step)=>{
+      const key = interconsultaResumeStepKey(resolveActivePatientIdForConsent(), interconsultaState.activeDraftRef);
+      const version = Number(interconsultaState.activeDraftVersion || 0);
+      const value = Number(step);
+      if(!key || version < 1 || !Number.isInteger(value) || value < 1 || value > 8) return;
+      try{
+        window.localStorage?.setItem(key, JSON.stringify({ step: value, version, saved_at: Date.now() }));
+      }catch(_){ }
+    };
+    const readInterconsultaResumeStep = (patientId, draftRef, version)=>{
+      const key = interconsultaResumeStepKey(patientId, draftRef);
+      if(!key) return 0;
+      try{
+        const row = JSON.parse(window.localStorage?.getItem(key) || 'null');
+        const step = Number(row?.step);
+        if(Number(row?.version) === Number(version) && Number.isInteger(step)
+          && step >= 1 && step <= 8 && Date.now() - Number(row?.saved_at || 0) < 30 * 86400000)
+          return step;
+      }catch(_){ }
+      return 0;
+    };
+    const clearInterconsultaResumeStep = (patientId, draftRef)=>{
+      const key = interconsultaResumeStepKey(patientId, draftRef);
+      if(!key) return;
+      try{ window.localStorage?.removeItem(key); }catch(_){ }
+    };
+    const safeInterconsultaResumeStep = (savedStep, signatureStatus)=>{
+      const form = interconsultaState.form || {};
+      const recipient = form.recipient || {};
+      const destination = form.recipient_mode === 'service'
+        ? (recipient.service || recipient.specialty) : recipient.doctor_name;
+      const firstIncomplete = !trimConsentInputValue(destination || '') ? 1
+        : !trimConsentInputValue(form.reason || '') ? 2
+        : !trimConsentInputValue(form.summary || '') ? 3
+        : !trimConsentInputValue(form.request || '') ? 4 : 0;
+      if(firstIncomplete) return Math.min(savedStep || firstIncomplete, firstIncomplete);
+      const preferred = savedStep || (signatureStatus === 'valid_bound_signature' ? 7 : 5);
+      if(preferred === 8 && signatureStatus !== 'valid_bound_signature') return 7;
+      return preferred;
+    };
     const renderInterconsultaStep = ()=>{
       if(!els.interconsultaWizard) return;
       const maxStep = 8;
@@ -50401,7 +50451,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       const showActions = normalized >= 5;
       if(els.interconsultaSave){
-        els.interconsultaSave.classList.toggle('d-none', !showActions);
+        els.interconsultaSave.classList.remove('d-none');
         els.interconsultaSave.disabled = interconsultaState.saving;
       }
       if(els.interconsultaEmit){
@@ -50640,12 +50690,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           recipient: { ...interconsultaState.form.recipient, ...payload.recipient },
           ...payload.content
         };
-        interconsultaState.step = 5;
         syncInterconsultaInputsFromState();
         els.interconsultaHeaderOptions?.forEach(option=>{ option.checked = option.value === interconsultaState.professionalHeader; });
         const prepared = await buildInterconsultaDocument('draft');
         interconsultaState.signatureBindingStatus = await window.mxmedInterconsultaSignatureBinding.classify(
           prepared.body, resolveCanonicalDocumentsDoctorId(), interconsultaState.registeredSignatureData);
+        interconsultaState.step = safeInterconsultaResumeStep(
+          readInterconsultaResumeStep(patientId, interconsultaState.activeDraftRef, interconsultaState.activeDraftVersion),
+          interconsultaState.signatureBindingStatus);
         updateInterconsultaSignatureStatus();
         renderInterconsultaStep();
       }else{
@@ -50949,6 +51001,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       interconsultaState.activeDraftVersion = Number(saved.version || 0);
       if(!interconsultaState.activeDraftRef || interconsultaState.activeDraftVersion < 1)
         throw new Error('El servidor no devolvió la versión del borrador.');
+      rememberInterconsultaResumeStep();
       listCanonicalConsents();
       return saved;
     };
@@ -51023,9 +51076,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         interconsultaState.activeDraftRef = sanitizeText(saved.document_id || saved.document_uuid || '');
         interconsultaState.activeDraftVersion = Number(saved.version || 0);
         if(prepared.normalizedStatus === 'issued'){
+          clearInterconsultaResumeStep(prepared.patientId, interconsultaState.activeDraftRef);
           clearDocModalTempSession({ documentType: 'interconsulta', patientId: prepared.patientId });
           await presentEmittedDocument(json, 'interconsulta', els.interconsultaModalEl);
         }else{
+          rememberInterconsultaResumeStep();
           listCanonicalConsents();
         }
         resetInterconsultaWizard();
@@ -57000,6 +57055,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.interconsultaPrev?.addEventListener('click', (event)=>{
       event.preventDefault();
       interconsultaState.step = Math.max(1, Number(interconsultaState.step || 1) - 1);
+      rememberInterconsultaResumeStep();
       renderInterconsultaStep();
       const patientId = resolveActivePatientIdForConsent();
       scheduleDocModalTempSessionSave({
@@ -57025,6 +57081,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         interconsultaState.signatureBindingStatus = classification;
       }
       interconsultaState.step = Math.min(8, Number(interconsultaState.step || 1) + 1);
+      rememberInterconsultaResumeStep();
       renderInterconsultaStep();
       const patientId = resolveActivePatientIdForConsent();
       scheduleDocModalTempSessionSave({
@@ -57073,6 +57130,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     els.interconsultaModalEl?.addEventListener('hidden.bs.modal', ()=>{
       const patientId = resolveActivePatientIdForConsent();
+      rememberInterconsultaResumeStep();
       cancelDocModalTempSessionSave({ documentType: 'interconsulta', patientId });
       const snapshot = buildInterconsultaTempSnapshot();
       if(patientId && hasInterconsultaTempContent(snapshot)){
