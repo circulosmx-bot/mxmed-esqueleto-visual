@@ -2,8 +2,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_alta_render.php';
+require_once __DIR__ . '/clinical_alta_binding.php';
+require_once __DIR__ . '/clinical_alta_qr.php';
 
-/** Canonical Alta draft and finalization; signature binding is reserved for DOC-CLOSE02C. */
+/** Canonical Alta draft and finalization with exact-version physician signature authority. */
 function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $body, string $idempotencyKey): array
 {
     if (($body['document_type'] ?? '') !== 'alta_medica'
@@ -12,6 +14,8 @@ function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $
         || ($body['payload']['contract_version'] ?? null) !== 2)
         throw new InvalidArgumentException('ALTA_DOCUMENT_INVALID');
     $payload = $body['payload'];
+    if (!clinical_legal_document_presentation_valid($payload))
+        throw new InvalidArgumentException('ALTA_PRESENTATION_INVALID');
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true)) throw new InvalidArgumentException('ALTA_INTENT_INVALID');
     if (!in_array((string)($payload['alta']['type'] ?? ''),
@@ -27,19 +31,6 @@ function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $
             if (trim((string)($payload['content'][$field] ?? '')) === '')
                 throw new InvalidArgumentException('ALTA_FIELD_REQUIRED_' . strtoupper($field));
         }
-        // Interim presence check only. Exact UUID/version/fingerprint binding belongs to DOC-CLOSE02C.
-        $signatureImage = (string)($payload['signatures']['doctor']['image_data'] ?? '');
-        if (preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#D', $signatureImage, $match) !== 1)
-            throw new InvalidArgumentException('ALTA_PHYSICIAN_SIGNATURE_REQUIRED');
-        $signatureBytes = base64_decode($match[1], true);
-        $signatureInfo = false;
-        if (is_string($signatureBytes) && strlen($signatureBytes) >= 50) {
-            try { $signatureInfo = @getimagesizefromstring($signatureBytes); }
-            catch (Throwable $ignored) { $signatureInfo = false; }
-        }
-        if ($signatureInfo === false || ($signatureInfo['mime'] ?? '') !== 'image/png'
-            || (int)($signatureInfo[0] ?? 0) < 2 || (int)($signatureInfo[1] ?? 0) < 2)
-            throw new InvalidArgumentException('ALTA_PHYSICIAN_SIGNATURE_INVALID');
     }
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
     $expectedVersion = (int)($body['expected_version'] ?? 0);
@@ -66,7 +57,7 @@ function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $
                 throw new InvalidArgumentException('ALTA_PATIENT_SCOPE_INVALID');
             $existing = null;
             if ($draftRef !== '') {
-                $stmt = $pdo->prepare('SELECT id,patient_id,document_type,status,version,created_by_user_id
+                $stmt = $pdo->prepare('SELECT id,patient_id,document_type,status,version,created_by_user_id,payload_json
                     FROM clinical_documents WHERE document_uuid=? LIMIT 1 FOR UPDATE');
                 $stmt->execute([$draftRef]);
                 $existing = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -84,6 +75,33 @@ function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $
             $canonical['actor'] = ['user_id' => (string)$doctor['user_id']];
             $canonical['payload'] = $payload;
             unset($canonical['payload']['final_text'], $canonical['payload']['form_snapshot']['final_text']);
+            $classification = clinical_alta_binding_classify($canonical, (string)$doctor['doctor_id'], $pdo);
+            $canonical['payload']['signature_binding_status']['doctor'] = $classification;
+            $entry = (array)($payload['signatures']['doctor'] ?? []);
+            $previousPayload = $existing !== null ? json_decode((string)$existing['payload_json'], true) : null;
+            $previousEntry = (array)($previousPayload['signatures']['doctor'] ?? []);
+            $sameEntry = $previousEntry === $entry;
+            $qr = ($entry['source'] ?? '') === 'remote_qr'
+                ? clinical_alta_qr_row($pdo, (string)($entry['token'] ?? '')) : null;
+            if (($entry['source'] ?? '') === 'remote_qr' && $classification !== 'valid_bound_signature'
+                && !$sameEntry) throw new InvalidArgumentException('ALTA_QR_UNVERIFIED');
+            if ($intent === 'issued') {
+                if ($classification === 'absent') throw new InvalidArgumentException('ALTA_PHYSICIAN_SIGNATURE_REQUIRED');
+                if ($classification !== 'valid_bound_signature')
+                    throw new InvalidArgumentException('ALTA_PHYSICIAN_SIGNATURE_INVALID_CURRENT_VERSION');
+            }
+            $sameContent = false;
+            if ($existing !== null && is_array($previousPayload)) {
+                $previousBody = ['draft_ref' => $draftRef, 'expected_version' => $expectedVersion,
+                    'context' => ['patient_id' => $patientId], 'payload' => $previousPayload];
+                $sameContent = hash_equals(clinical_alta_binding_fingerprint($previousBody),
+                    clinical_alta_binding_fingerprint($canonical));
+            }
+            if ($qr !== null && (string)$qr['status'] === 'uploaded' && !$sameContent)
+                throw new InvalidArgumentException('ALTA_QR_STALE');
+            // A signature or emission transition keeps the exact signed content version.
+            // Unsigned capture saves retain the existing optimistic version progression.
+            $preserveSignedVersion = $sameContent && ($entry !== [] || $intent === 'issued');
             $html = clinical_alta_render_html($canonical['payload']);
             $canonical['payload']['alta_snapshot'] = ['version' => 1, 'html' => $html];
             $canonical['payload']['rendered_text'] = trim(preg_replace('/\s+/u', ' ',
@@ -99,15 +117,19 @@ function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $
             }
             $encoded = json_encode($canonical['payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
             $update = $pdo->prepare('UPDATE clinical_documents SET title=?,summary=?,payload_json=?,rendered_text=?,
-                event_datetime=?,status=?,version=version+1,updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,
+                event_datetime=?,status=?,version=version+?,updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,
                 edited_flag=1,generated_at=CASE WHEN ?=\'generated\' THEN UTC_TIMESTAMP() ELSE NULL END
                 WHERE id=? AND version=? AND status=\'draft\'');
             $update->execute([(string)($body['title'] ?? 'Alta médica'), (string)($body['summary'] ?? ''),
                 $encoded, (string)$canonical['payload']['rendered_text'],
                 (string)($body['event_datetime'] ?? gmdate('Y-m-d H:i:s')), $nextStatus,
+                $preserveSignedVersion ? 0 : 1,
                 (string)$doctor['user_id'], $nextStatus, (int)$existing['id'], $expectedVersion]);
             if ($update->rowCount() !== 1)
                 throw new ClinicalIdempotencyException('ALTA_DRAFT_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
+            if ($qr !== null && (string)$qr['status'] === 'uploaded')
+                clinical_alta_qr_claim($pdo, $canonical, $entry, 'doctor',
+                    (string)$doctor['doctor_id'], $draftRef, $expectedVersion);
             return (int)$existing['id'];
         }, static fn(int $id): array => clinical_v1_document_fetch($pdo, $id));
 }

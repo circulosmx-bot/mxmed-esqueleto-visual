@@ -9976,6 +9976,12 @@
                           <textarea class="form-control" id="am_recomendaciones" rows="4" placeholder="Mantener apego al tratamiento e indicar vigilancia de síntomas en domicilio."></textarea>
                         </div>
                       </div>
+                      <div class="border-top mt-3 pt-3">
+                        <h3 class="h6 text-uppercase mb-2">Presentación del documento</h3>
+                        <div class="small mb-2">Encabezado profesional</div>
+                        <label class="d-block"><input type="radio" name="am_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                        <label class="d-block"><input type="radio" name="am_professional_header" value="hidden"> Generar sin encabezado profesional</label>
+                      </div>
                     </div>
                     <div id="am_step_6" class="d-none">
                       <h3 class="responsiva-capture-heading">Revisar Alta médica</h3>
@@ -9985,7 +9991,7 @@
                     <div id="am_step_7" class="d-none">
                       <div class="row g-3">
                         <div class="col-12">
-                          <div class="border rounded p-2">
+                          <div class="border rounded p-2" id="am_signature_block">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                               <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
                               <span class="small text-muted" id="am_signature_status">Sin firma</span>
@@ -10009,6 +10015,7 @@
                             <div class="mx-signature-pad" data-signature-role="doctor">
                               <canvas id="am_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
+                            <img id="am_signature_accepted" class="d-none img-fluid rounded border bg-white mt-2" alt="Firma médica aplicada" style="max-height:140px;object-fit:contain;">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
                               <button type="button" class="btn btn-outline-dark btn-sm" id="am_signature_qr_open">Firmar desde tu celular</button>
                               <button type="button" class="btn btn-outline-secondary btn-sm" id="am_signature_clear">Volver a firmar</button>
@@ -11218,6 +11225,7 @@
 <script src="assets/js/clinical/certificado-signature-binding.js?v=cert-imp01"></script>
 <script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
 <script src="assets/js/clinical/nota-signature-binding.js?v=nm-imp01"></script>
+<script src="assets/js/clinical/alta-signature-binding.js?v=doc-close02c"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/app.js?v=cert-form01"></script>
@@ -11228,6 +11236,7 @@
 <script src="assets/js/clinical/interconsulta-field-help.js?v=ix-help01"></script>
 <script src="assets/js/clinical/informe-field-help.js?v=inf-help01"></script>
 <script src="assets/js/clinical/nota-field-help.js?v=nm-help01"></script>
+<script src="assets/js/clinical/alta-field-help.js?v=doc-close02c"></script>
 <script src="assets/js/clinical/consent-form-hierarchy.js?v=cons-form01"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=step3-step5-micro-ux-r2"></script>

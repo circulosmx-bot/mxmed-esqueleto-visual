@@ -42468,6 +42468,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       altaCreateAgendaEvent: root.querySelector('#am_create_agenda_event'),
       altaAgendaStatus: root.querySelector('#am_agenda_status'),
       altaRecomendaciones: root.querySelector('#am_recomendaciones'),
+      altaHeaderOptions: Array.from(root.querySelectorAll('input[name="am_professional_header"]')),
       altaFinalSignatureState: root.querySelector('#am_final_signature_state'),
       altaPrev: root.querySelector('#am_prev'),
       altaNext: root.querySelector('#am_next'),
@@ -42478,6 +42479,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       altaSignatureRegisteredWrap: root.querySelector('#am_signature_registered_wrap'),
       altaSignatureRegisteredPreview: root.querySelector('#am_signature_registered_preview'),
       altaSignatureCanvas: root.querySelector('#am_signature_canvas'),
+      altaSignatureBlock: root.querySelector('#am_signature_block'),
+      altaSignatureAccepted: root.querySelector('#am_signature_accepted'),
       altaSignatureQrOpen: root.querySelector('#am_signature_qr_open'),
       altaSignatureClear: root.querySelector('#am_signature_clear'),
       altaSignatureStatus: root.querySelector('#am_signature_status'),
@@ -42954,6 +42957,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       saving: false,
       activeDraftRef: '',
       activeDraftVersion: 0,
+      professionalHeader: 'shown',
+      finalReviewedHash: '',
+      storedDoctorSignature: null,
+      signatureBindingStatus: 'absent',
+      qr: { token: '', status: '', generation: 0 },
       previewReady: false,
       finalReviewReady: false,
       finalReviewHtml: '',
@@ -49728,6 +49736,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.altaFollowupNote) els.altaFollowupNote.value = sanitizeText(altaState.form.followup_note || '');
       if(els.altaCreateAgendaEvent) els.altaCreateAgendaEvent.checked = !!altaState.form.create_agenda_event;
       if(els.altaRecomendaciones) els.altaRecomendaciones.value = sanitizeText(altaState.form.recomendaciones || '');
+      els.altaHeaderOptions?.forEach(option=>{ option.checked = option.value === altaState.professionalHeader; });
     };
     const setAltaNotice = (message = '')=>{
       if(!els.altaNotice) return;
@@ -49755,8 +49764,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const updateAltaSignatureStatus = ()=>{
       let label = 'Sin firma';
-      if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature){
-        label = altaState.remoteSignature.source === 'remote_qr' ? 'Firma remota aplicada' : 'Firma del borrador aplicada';
+      if(altaState.storedDoctorSignature && altaState.signatureBindingStatus === 'valid_bound_signature'){
+        label = 'Firma médica válida para esta versión';
+      } else if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature){
+        label = 'Firma remota pendiente de verificación';
       } else if(altaState.signaturePreferredSource === 'registered' && altaState.registeredSignatureData){
         label = 'Firma registrada aplicada';
       } else if(altaState.signatureHasStroke){
@@ -49768,6 +49779,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.altaFinalSignatureState){
         els.altaFinalSignatureState.textContent = label;
       }
+      documentUi.signature({ block: els.altaSignatureBlock,
+        statusEl: els.altaSignatureStatus, image: els.altaSignatureAccepted,
+        canvas: els.altaSignatureCanvas, manageSurface: true,
+        imageData: altaState.storedDoctorSignature?.image_data || '',
+        status: altaState.signatureBindingStatus,
+        hasSignature: !!altaState.storedDoctorSignature?.image_data });
       if(label !== 'Sin firma'){
         clearWizardFieldError('alta_medica', 'doctor_signature');
       }
@@ -49832,6 +49849,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         altaState.signatureHasStroke = true;
         altaState.signaturePreferredSource = 'local';
         altaState.remoteSignature = null;
+        altaState.storedDoctorSignature = null;
+        altaState.signatureBindingStatus = 'absent';
+        altaState.finalReviewedHash = '';
         setAltaRemoteStatus('', 'muted');
         updateAltaSignatureStatus();
       };
@@ -49913,6 +49933,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const setAltaSignaturePreferredSource = (source = '')=>{
       const normalized = sanitizeText(source || '').toLowerCase();
       altaState.signaturePreferredSource = normalized;
+      if(normalized === 'registered'){
+        altaState.storedDoctorSignature = null;
+        altaState.signatureBindingStatus = 'absent';
+        altaState.finalReviewedHash = '';
+      }
       if(els.altaSignatureSourceRegistered){
         els.altaSignatureSourceRegistered.checked = normalized === 'registered';
       }
@@ -49942,70 +49967,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       updateAltaSignatureStatus();
     };
-    const pullAltaDoctorRemoteSignature = ()=>{
-      const remote = (state.doctorRemoteSignature && typeof state.doctorRemoteSignature === 'object')
-        ? state.doctorRemoteSignature
-        : null;
-      const imageData = sanitizeText(remote?.image_data || '');
-      if(!imageData){
-        altaState.remoteSignature = null;
-        if(altaState.signaturePreferredSource === 'remote'){
-          altaState.signaturePreferredSource = altaState.signatureHasStroke ? 'local' : (altaState.registeredSignatureData ? 'registered' : '');
-        }
-        updateAltaSignatureStatus();
-        return false;
-      }
-      altaState.remoteSignature = {
-        type: 'drawn',
-        source: 'remote_qr',
-        role: 'doctor',
-        image_data: imageData,
-        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
-        signer_name: sanitizeText(remote?.signer_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
-        token: sanitizeText(remote?.token || '')
-      };
-      altaState.signaturePreferredSource = 'remote';
-      altaState.signatureHasStroke = false;
-      altaState.localSignatureData = '';
+    const getActiveAltaDoctorSignature = ()=>altaState.storedDoctorSignature;
+    const bindCurrentAltaPhysicianSignature = async ()=>{
+      if(altaState.storedDoctorSignature?.source === 'remote_qr') return;
+      const source = altaState.signaturePreferredSource;
+      const image = source === 'registered' ? altaState.registeredSignatureData
+        : source === 'local' ? exportAltaSignatureData() : '';
+      if(!image) return;
+      const prepared = await buildAltaDocument('draft');
+      if(prepared?.error) throw new Error(prepared.error);
+      const signature = { type: 'drawn', role: 'doctor',
+        source: source === 'registered' ? 'registered_profile' : 'local_canvas',
+        image_data: image, signer_name: sanitizeText(prepared.body.payload.actor_snapshot.full_name),
+        signed_at: formatNowSql() };
+      const bound = await window.mxmedAltaSignatureBinding.bind(
+        prepared.body, resolveCanonicalDocumentsDoctorId(), signature);
+      if(!bound) throw new Error('La firma debe contener trazos visibles.');
+      altaState.storedDoctorSignature = bound;
+      altaState.signatureBindingStatus = 'valid_bound_signature';
       updateAltaSignatureStatus();
-      return true;
-    };
-    const getActiveAltaDoctorSignature = (nowSql = '')=>{
-      const signedAt = sanitizeText(nowSql || formatNowSql());
-      const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
-      if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature){
-        return {
-          type: 'drawn',
-          role: 'doctor',
-          image_data: sanitizeText(altaState.remoteSignature.image_data || ''),
-          signed_at: sanitizeText(altaState.remoteSignature.signed_at || signedAt),
-          signer_name: sanitizeText(altaState.remoteSignature.signer_name || signerName),
-          source: sanitizeText(altaState.remoteSignature.source || 'remote_qr'),
-          token: sanitizeText(altaState.remoteSignature.token || '')
-        };
-      }
-      if(altaState.signaturePreferredSource === 'registered' && altaState.registeredSignatureData){
-        return {
-          type: 'drawn',
-          role: 'doctor',
-          image_data: altaState.registeredSignatureData,
-          signed_at: signedAt,
-          signer_name: signerName,
-          source: 'registered_profile'
-        };
-      }
-      const localSignature = exportAltaSignatureData();
-      if(localSignature){
-        return {
-          type: 'drawn',
-          role: 'doctor',
-          image_data: localSignature,
-          signed_at: signedAt,
-          signer_name: signerName,
-          source: 'local_canvas'
-        };
-      }
-      return null;
     };
     const runAltaEmitGuidedValidation = ()=>{
       return runWizardGuidedValidation({
@@ -50022,7 +50002,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!els.altaWizard) return;
       const maxStep = 8;
       let normalizedStep = Math.min(Math.max(Number(altaState.step || 1), 1), maxStep);
-      if(normalizedStep === 8 && !getActiveAltaDoctorSignature(formatNowSql())){
+      if(normalizedStep === 8 && altaState.signatureBindingStatus !== 'valid_bound_signature'){
         normalizedStep = 7;
         setAltaNotice('Captura la firma del médico para continuar a la revisión final.');
       }
@@ -50073,6 +50053,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const buildAltaTempSnapshot = ()=>({
       step: Number(altaState.step || 1) || 1,
+      professional_header: altaState.professionalHeader,
       signature_source: sanitizeText(altaState.signaturePreferredSource || ''),
       form: {
         fecha_alta: sanitizeText(altaState.form.fecha_alta || ''),
@@ -50135,6 +50116,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         recomendaciones: normalizeConsentInputRaw(form.recomendaciones ?? altaState.form.recomendaciones ?? '')
       };
       altaState.signaturePreferredSource = sanitizeText(safe.signature_source || altaState.signaturePreferredSource || '');
+      altaState.professionalHeader = safe.professional_header === 'hidden' ? 'hidden' : 'shown';
       altaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
       syncAltaInputsFromState();
       refreshAltaRegisteredSignature();
@@ -50146,6 +50128,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       altaState.saving = false;
       altaState.activeDraftRef = '';
       altaState.activeDraftVersion = 0;
+      altaState.professionalHeader = 'shown';
+      altaState.finalReviewedHash = '';
+      altaState.storedDoctorSignature = null;
+      altaState.signatureBindingStatus = 'absent';
+      altaState.qr = { token: '', status: '', generation: altaState.qr.generation + 1 };
       altaState.previewReady = false;
       altaState.finalReviewReady = false;
       altaState.finalReviewHtml = '';
@@ -50206,6 +50193,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       altaState.saving = false;
       altaState.activeDraftRef = '';
       altaState.activeDraftVersion = 0;
+      altaState.professionalHeader = 'shown';
+      altaState.finalReviewedHash = '';
+      altaState.storedDoctorSignature = null;
+      altaState.signatureBindingStatus = 'absent';
+      altaState.qr = { token: '', status: '', generation: altaState.qr.generation + 1 };
       altaState.previewReady = false;
       altaState.finalReviewReady = false;
       altaState.finalReviewHtml = '';
@@ -50266,14 +50258,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
         altaState.activeDraftRef = sanitizeText(doc.document_id || draftRef);
         altaState.activeDraftVersion = Number(doc.version || 0);
+        altaState.professionalHeader = payload.presentation?.professional_header === 'hidden' ? 'hidden' : 'shown';
         altaState.form = { ...altaState.form, ...payload.content,
           fecha_alta: sanitizeText(payload.report?.emission_date || ''),
           tipo_alta: sanitizeText(payload.alta?.type || 'mejoria'),
           create_agenda_event: ['1', 'true'].includes(String(payload.content?.create_agenda_event || '').toLowerCase()) };
         const restoredSignature = payload.signatures?.doctor || null;
         if(restoredSignature?.image_data){
-          altaState.remoteSignature = { ...restoredSignature, source: restoredSignature.source || 'saved_draft' };
-          altaState.signaturePreferredSource = 'remote';
+          const doctorId = resolveCanonicalDocumentsDoctorId();
+          const classification = await window.mxmedAltaSignatureBinding.classify({
+            draft_ref: altaState.activeDraftRef, expected_version: altaState.activeDraftVersion,
+            context: {patient_id: patientId}, payload
+          }, doctorId, readRegisteredDoctorSignature());
+          altaState.signatureBindingStatus = classification;
+          if(classification === 'valid_bound_signature'){
+            altaState.storedDoctorSignature = restoredSignature;
+            altaState.signaturePreferredSource = restoredSignature.source === 'registered_profile' ? 'registered' : 'remote';
+          }
         }
         altaState.step = Math.min(Math.max(Number(payload.workflow_step || 1), 1), 8);
         syncAltaInputsFromState();
@@ -50518,6 +50519,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         signatures: {
           doctor: signature
         },
+        presentation: { version: 1, professional_header: altaState.professionalHeader },
         form_snapshot: {
           fecha_alta: sanitizeText(altaState.form.fecha_alta || ''),
           ...content,
@@ -50574,6 +50576,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           state: 'ready', html });
         if(final){
           altaState.finalReviewHtml = html;
+          altaState.finalReviewedHash = await window.mxmedAltaSignatureBinding.hash(prepared.body);
           altaState.finalReviewReady = true;
         }else{
           altaState.previewReady = true;
@@ -50624,6 +50627,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           showCatalogFeedback(noticeText, 'error');
           return;
         }
+        const prepared = await buildAltaDocument('issued');
+        if(prepared?.error || !altaState.finalReviewedHash
+          || await window.mxmedAltaSignatureBinding.hash(prepared.body) !== altaState.finalReviewedHash
+          || await window.mxmedAltaSignatureBinding.classify(prepared.body,
+            resolveCanonicalDocumentsDoctorId(), altaState.registeredSignatureData) !== 'valid_bound_signature'){
+          setAltaNotice('La firma no corresponde a la versión actual. Revisa y firma nuevamente.');
+          return;
+        }
       }
       altaState.saving = true;
       setAltaNotice('');
@@ -50649,9 +50660,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             setAltaAgendaStatus(`Cita registrada en Agenda (${agendaResult.appointmentId}).`, 'success');
           }
         }
-        if(status === 'issued' && !altaState.activeDraftRef){
-          await persistAltaDocument('draft');
-        }
+        if(status === 'issued' && !altaState.activeDraftRef)
+          throw new Error('Guarda el borrador canónico antes de firmar.');
         const { json, prepared, saved } = await persistAltaDocument(status);
         if(prepared.normalizedStatus === 'issued'){
           const persistedHtml = String(saved?.content?.payload?.alta_snapshot?.html || '');
@@ -51912,18 +51922,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const interconsulta = type === 'interconsulta';
       const informe = type === 'informe';
       const nota = type === 'nota';
+      const alta = type === 'alta';
       const title = responsivaQrModal.querySelector('#rm-qr-title');
       const intro = responsivaQrModal.querySelector('.modal-header p');
       const reviewStep = responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
       const image = responsivaQrEl('image');
-      if(title) title.textContent = nota ? 'Firmar Nota médica con celular' : informe ? 'Firmar Informe médico con celular' : interconsulta ? 'Firmar Interconsulta con celular'
+      if(title) title.textContent = alta ? 'Firmar Alta médica con celular' : nota ? 'Firmar Nota médica con celular' : informe ? 'Firmar Informe médico con celular' : interconsulta ? 'Firmar Interconsulta con celular'
         : certificate ? 'Firmar Certificado médico con celular' : 'Firmar Responsiva con celular';
-      if(intro) intro.textContent = nota ? 'Revisa y firma esta versión de la nota desde tu teléfono.' : informe ? 'Revisa y firma esta versión del informe desde tu teléfono.' : interconsulta ? 'Revisa y firma esta versión de la interconsulta desde tu teléfono.' : certificate
+      if(intro) intro.textContent = alta ? 'Revisa y firma esta versión del alta desde tu teléfono.' : nota ? 'Revisa y firma esta versión de la nota desde tu teléfono.' : informe ? 'Revisa y firma esta versión del informe desde tu teléfono.' : interconsulta ? 'Revisa y firma esta versión de la interconsulta desde tu teléfono.' : certificate
         ? 'Revisa y firma esta versión del certificado desde tu teléfono.'
         : 'Revisa y firma esta versión de la responsiva desde tu teléfono.';
       if(reviewStep) reviewStep.innerHTML = '<span aria-hidden="true">2</span>'
-        + (nota ? 'Revisa la nota' : informe ? 'Revisa el informe' : interconsulta ? 'Revisa la interconsulta' : certificate ? 'Revisa el certificado' : 'Revisa la responsiva');
-      if(image) image.setAttribute('aria-label', nota ? 'Código QR para firmar la nota médica' : informe ? 'Código QR para firmar el informe médico' : interconsulta ? 'Código QR para firmar la interconsulta' : certificate
+        + (alta ? 'Revisa el alta' : nota ? 'Revisa la nota' : informe ? 'Revisa el informe' : interconsulta ? 'Revisa la interconsulta' : certificate ? 'Revisa el certificado' : 'Revisa la responsiva');
+      if(image) image.setAttribute('aria-label', alta ? 'Código QR para firmar el alta médica' : nota ? 'Código QR para firmar la nota médica' : informe ? 'Código QR para firmar el informe médico' : interconsulta ? 'Código QR para firmar la interconsulta' : certificate
         ? 'Código QR para firmar el certificado médico' : 'Código QR para firmar la responsiva');
     };
     const openResponsivaSignatureQr = async (role = 'signer')=>{
@@ -53754,6 +53765,136 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }catch(error){
         if(generation === notaState.qr.generation)
           notaHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo recibir la firma.') });
+      }
+    };
+    const openAltaDoctorSignatureQr = async ()=>{
+      if(!window.isSecureContext || !window.crypto?.subtle?.digest){
+        setAltaNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        return;
+      }
+      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      await invalidateAltaQr('new_session');
+      altaState.qr.generation += 1;
+      const generation = altaState.qr.generation;
+      altaState.qr.status = 'preparing';
+      altaState.qr.token = '';
+      ensureModalAttachedToBody(responsivaQrModal);
+      setSharedDocumentQrCopy('alta');
+      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Alta médica';
+      responsivaQrEl('waiting')?.classList.remove('d-none');
+      responsivaQrEl('received')?.classList.add('d-none');
+      responsivaQrEl('image')?.replaceChildren();
+      altaHandoffShell.phase('waiting', { message: 'Preparando código…' });
+      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      try{
+        await persistAltaDocument('draft');
+        if(generation !== altaState.qr.generation) return;
+        const data = await altaHandoffShell.adapter.createSession({
+          document_uuid: altaState.activeDraftRef,
+          document_version: altaState.activeDraftVersion, role: 'doctor'
+        });
+        if(generation !== altaState.qr.generation) return;
+        const token = sanitizeText(data.token || '');
+        const path = sanitizeText(data.mobile_url || '');
+        if(!token || !path || typeof QRCode !== 'function') throw new Error('No se pudo mostrar el código QR.');
+        const url = new URL(path, window.location.origin).href;
+        altaState.qr.token = token;
+        altaState.qr.status = 'pending';
+        const image = responsivaQrEl('image');
+        image?.replaceChildren();
+        new QRCode(image, { text: url, width: 216, height: 216,
+          colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        const link = responsivaQrEl('link');
+        if(link) link.href = url;
+        altaHandoffShell.phase('waiting', { message: 'Esperando firma…' });
+        altaHandoffPoller.start();
+        void pollAltaQr();
+      }catch(error){
+        if(generation !== altaState.qr.generation) return;
+        altaState.qr.status = 'error';
+        altaHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo iniciar la firma.') });
+      }
+    };
+    const invalidateAltaQr = async (reason = 'changed')=>{
+      const token = altaState.qr.token;
+      if(!token || !['pending','uploaded'].includes(altaState.qr.status)) return;
+      altaHandoffPoller?.stop();
+      altaState.qr.generation += 1;
+      altaState.qr.status = 'stale';
+      altaHandoffShell.phase('error', { message: 'El alta cambió. Genera un nuevo código.' });
+      await fetch(`/api/clinical/index.php/alta-qr-sessions/${encodeURIComponent(token)}/invalidate`, {
+        method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' },
+        body: JSON.stringify({ reason }) }).catch(()=>{});
+    };
+    const altaHandoffShell = documentUi.handoff({
+      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
+      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
+      preview: responsivaQrEl('preview'),
+      adapter: {
+        createSession: async data=>{
+          const response = await fetch('/api/clinical/index.php/alta-qr-sessions', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(data) });
+          const json = await response.json().catch(()=>null);
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo generar el código QR.');
+          return json.data || {};
+        },
+        getStatus: async token=>{
+          const response = await fetch(`/api/clinical/index.php/alta-qr-sessions/${encodeURIComponent(token)}/status`, {
+            headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
+          const json = await response.json().catch(()=>null);
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo verificar la firma.');
+          return json.data || {};
+        },
+        receive: async (data, token, generation)=>{
+          const signature = data.signature;
+          const prepared = await buildAltaDocument('draft');
+          if(prepared?.error || signature?.binding?.document_uuid !== altaState.activeDraftRef
+            || Number(signature?.binding?.document_version) !== altaState.activeDraftVersion
+            || signature?.binding?.content_fingerprint !== await window.mxmedAltaSignatureBinding.hash(prepared.body))
+            throw new Error('El alta cambió. Genera un nuevo código.');
+          altaState.storedDoctorSignature = signature;
+          altaState.signaturePreferredSource = 'remote';
+          altaState.signatureBindingStatus = 'valid_bound_signature';
+          await persistAltaDocument('draft');
+          if(generation !== altaState.qr.generation || token !== altaState.qr.token) return;
+          altaState.qr.status = 'consumed';
+          altaHandoffShell.phase('received', { message: 'Firma recibida correctamente',
+            imageData: signature.image_data, signer: signature.signer_name || '' });
+          updateAltaSignatureStatus();
+          setAltaNotice('Firma recibida correctamente.');
+        },
+        mapTerminal: status=> status === 'expired' ? 'El código expiró. Genera uno nuevo.'
+          : 'El alta cambió. Genera uno nuevo.'
+      }
+    });
+    const altaHandoffPoller = altaHandoffShell.createPoller(()=>void pollAltaQr(), 2000);
+    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+      void invalidateAltaQr('modal_closed');
+      altaHandoffPoller.stop();
+      altaState.qr.generation += 1;
+    });
+    const pollAltaQr = async ()=>{
+      const { token, generation } = altaState.qr;
+      if(!token || altaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      try{
+        const data = await altaHandoffShell.adapter.getStatus(token);
+        if(generation !== altaState.qr.generation || token !== altaState.qr.token
+          || altaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+        if(data.status === 'uploaded' && data.signature){
+          altaState.qr.status = 'saving';
+          altaHandoffPoller.stop();
+          await altaHandoffShell.adapter.receive(data, token, generation);
+        }else if(['expired','stale','cancelled','consumed'].includes(data.status)){
+          altaState.qr.status = data.status;
+          altaHandoffPoller.stop();
+          altaHandoffShell.phase('error', { message: altaHandoffShell.adapter.mapTerminal(data.status) });
+        }
+      }catch(error){
+        if(generation === altaState.qr.generation)
+          altaHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo recibir la firma.') });
       }
     };
     const openCertificadoDoctorSignatureQr = async ()=>{
@@ -57274,9 +57415,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         renderNotaStep();
       }
       if(els.altaWizard && !els.altaWizard.classList.contains('d-none')){
-        if(pullAltaDoctorRemoteSignature()){
-          setAltaRemoteStatus('Firma remota del médico aplicada.', 'success');
-        }
         updateAltaSignatureStatus();
         renderAltaStep();
       }
@@ -57830,11 +57968,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         altaState.previewReady = false;
         altaState.finalReviewReady = false;
         altaState.finalReviewHtml = '';
-        if(altaState.remoteSignature?.source === 'saved_draft'){
+        altaState.finalReviewedHash = '';
+        if(altaState.storedDoctorSignature){
+          altaState.storedDoctorSignature = null;
+          altaState.signatureBindingStatus = 'stale_or_unverified_signature';
           altaState.remoteSignature = null;
           altaState.signaturePreferredSource = altaState.registeredSignatureData ? 'registered' : '';
-          updateAltaSignatureStatus();
         }
+        if(altaState.qr.status === 'pending') void invalidateAltaQr('content_changed');
+        updateAltaSignatureStatus();
         if(key === 'followup_date' || key === 'followup_time' || key === 'followup_note'){
           if(sanitizeText(altaState.form.agenda_event_id || '')){
             altaState.form.agenda_event_id = '';
@@ -57864,6 +58006,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindAltaField(els.altaFollowupTime, 'followup_time', 'change');
     bindAltaField(els.altaFollowupNote, 'followup_note');
     bindAltaField(els.altaRecomendaciones, 'recomendaciones');
+    els.altaHeaderOptions?.forEach(option=>option.addEventListener('change', ()=>{
+      if(!option.checked) return;
+      altaState.professionalHeader = option.value === 'hidden' ? 'hidden' : 'shown';
+      altaState.previewReady = false;
+      altaState.finalReviewReady = false;
+      altaState.finalReviewedHash = '';
+      altaState.storedDoctorSignature = null;
+      altaState.signatureBindingStatus = 'stale_or_unverified_signature';
+      altaState.remoteSignature = null;
+      if(altaState.qr.status === 'pending') void invalidateAltaQr('header_changed');
+      updateAltaSignatureStatus();
+    }));
     els.altaCreateAgendaEvent?.addEventListener('change', ()=>{
       altaState.form.create_agenda_event = !!els.altaCreateAgendaEvent?.checked;
       if(!altaState.form.create_agenda_event){
@@ -57894,14 +58048,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       event.preventDefault();
       const current = Number(altaState.step || 1);
       if(current === 6 && !altaState.previewReady) return;
-      if(current === 7){
-        const signature = getActiveAltaDoctorSignature(formatNowSql());
-        if(!signature){
-          setAltaNotice('Captura la firma del médico para continuar a la revisión final.');
+      if(current === 6 || current === 7){
+        try{
+          if(current === 6){
+            await persistAltaDocument('draft');
+          }else{
+            await bindCurrentAltaPhysicianSignature();
+            if(altaState.storedDoctorSignature?.source !== 'remote_qr') await persistAltaDocument('draft');
+            const prepared = await buildAltaDocument('draft');
+            altaState.signatureBindingStatus = await window.mxmedAltaSignatureBinding.classify(
+              prepared.body, resolveCanonicalDocumentsDoctorId(), altaState.registeredSignatureData);
+            if(altaState.signatureBindingStatus !== 'valid_bound_signature')
+              throw new Error('Aplica una firma médica válida antes de la revisión final.');
+          }
+          setAltaNotice('');
+        }catch(error){
+          setAltaNotice(sanitizeText(error?.message || 'No fue posible continuar.'));
           renderAltaStep();
           return;
         }
-        setAltaNotice('');
       }
       altaState.step = Math.min(8, current + 1);
       renderAltaStep();
@@ -57937,13 +58102,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.altaSignatureQrOpen?.addEventListener('click', async (event)=>{
       event.preventDefault();
       try{
-        await openConsentSignatureQrModal('doctor');
-        window.setTimeout(()=>{
-          if(pullAltaDoctorRemoteSignature()){
-            setAltaRemoteStatus('Firma remota del médico aplicada.', 'success');
-            renderAltaStep();
-          }
-        }, 250);
+        await openAltaDoctorSignatureQr();
       }catch(error){
         setAltaNotice(sanitizeText(error?.message || 'No se pudo iniciar firma remota del médico.'));
       }
@@ -57952,6 +58111,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       event.preventDefault();
       clearAltaSignaturePad();
       altaState.remoteSignature = null;
+      altaState.storedDoctorSignature = null;
+      altaState.signatureBindingStatus = 'absent';
       if(altaState.registeredSignatureData){
         setAltaSignaturePreferredSource('registered');
       }else{
@@ -57984,9 +58145,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         initAltaSignaturePad();
       }
       window.requestAnimationFrame(()=> syncAltaSignatureCanvasSize({ preserveDrawing: true }));
-      if(pullAltaDoctorRemoteSignature()){
-        setAltaSignaturePreferredSource('remote');
-      }
       renderAltaStep();
     });
     els.interconsultaSourceChoose?.addEventListener('click', ()=>void openInterconsultaEncounterChooser());

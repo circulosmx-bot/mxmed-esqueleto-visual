@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/clinical_legal_document_presentation.php';
 
 /** The sole composition for new Alta previews, final review, viewer and print. */
 function clinical_alta_render_html(array $payload): string
@@ -7,28 +8,42 @@ function clinical_alta_render_html(array $payload): string
     $h = static fn($value): string => htmlspecialchars(trim((string)($value ?? '')), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $patient = (array)($payload['patient_snapshot'] ?? []);
     $actor = (array)($payload['actor_snapshot'] ?? []);
+    $brand = (array)($payload['branding'] ?? []);
     $report = (array)($payload['report'] ?? []);
     $alta = (array)($payload['alta'] ?? []);
     $content = (array)($payload['content'] ?? []);
     $signature = (array)($payload['signatures']['doctor'] ?? []);
     $image = (string)($signature['image_data'] ?? '');
     if (preg_match('#^data:image/png;base64,[A-Za-z0-9+/=]+$#D', $image) !== 1) $image = '';
+    $logo = (string)($brand['logo_url_resolved'] ?? '');
+    if (!((str_starts_with($logo, '/') && !str_starts_with($logo, '//'))
+        || preg_match('#^https://[^\s]+$#i', $logo) === 1
+        || preg_match('#^data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$#D', $logo) === 1)) $logo = '';
+    // The profile fallback path can be absent for a doctor without a saved logo.
+    if (preg_match('#^/storage/clinical_uploads/branding/[^/]+/logo-opt\.webp$#D', $logo) === 1
+        && !is_file(dirname(__DIR__, 2) . $logo)) $logo = '';
 
     $types = ['mejoria' => 'Mejoría', 'voluntaria' => 'Voluntaria',
         'administrativa' => 'Administrativa', 'referencia' => 'Referencia'];
     $type = (string)($alta['type'] ?? ($content['tipo_alta'] ?? 'mejoria'));
     $typeLabel = $types[$type] ?? 'Mejoría';
     $html = '<article class="informe-doc-sheet alta-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">'
-        . '<div class="doc-base-sheet-inner doc-base-body">'
-        . '<header class="clinical-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">'
-        . '<div class="clinical-doc-head-main"><div class="clinical-doc-doctor-name">' . $h($actor['full_name'] ?? '') . '</div>';
-    foreach ([$actor['specialty'] ?? '',
+        . '<div class="doc-base-sheet-inner doc-base-body">';
+    if (clinical_legal_document_professional_header_mode($payload) === 'shown') {
+        $modern = array_key_exists('presentation', $payload);
+        $html .= '<header class="clinical-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">';
+        if ($modern && $logo !== '') $html .= '<div class="clinical-doc-head-logo-slot"><img src="' . $h($logo) . '" alt="Logo médico"></div>';
+        $html .= '<div class="clinical-doc-head-main"><div class="clinical-doc-doctor-name">' . $h($actor['full_name'] ?? '') . '</div>';
+        foreach ([$actor['specialty'] ?? '',
         empty($actor['license']) ? '' : 'Cédula: ' . $actor['license'],
         empty($actor['specialty_license']) ? '' : 'Cédula esp.: ' . $actor['specialty_license'],
-        $actor['facility'] ?? '', $actor['place'] ?? ''] as $line) {
-        if (trim((string)$line) !== '') $html .= '<div class="clinical-doc-doctor-site">' . $h($line) . '</div>';
+        $modern ? ($brand['facility_visible'] ?? '') : ($actor['facility'] ?? ''),
+        $modern ? ($brand['location_line_visible'] ?? '') : ($actor['place'] ?? '')] as $line) {
+            if (trim((string)$line) !== '') $html .= '<div class="clinical-doc-doctor-site">' . $h($line) . '</div>';
+        }
+        $html .= '</div></header>';
     }
-    $html .= '</div></header><div class="doc-base-title-block-wrap"><section class="doc-base-title-block">'
+    $html .= '<div class="doc-base-title-block-wrap"><section class="doc-base-title-block">'
         . '<div class="doc-base-title">ALTA MÉDICA</div></section></div>'
         . '<div class="doc-base-patient-block-wrap"><section class="doc-base-patient-meta">'
         . '<div><strong>Paciente:</strong> ' . $h($patient['full_name'] ?? '') . '</div>'

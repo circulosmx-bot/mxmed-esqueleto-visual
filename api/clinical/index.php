@@ -7923,6 +7923,11 @@ try {
         clinical_nota_qr_route(clinical_documents_pdo(), $method, $segments);
         return;
     }
+    if (($segments[0] ?? '') === 'alta-qr-sessions') {
+        require_once __DIR__ . '/../_lib/clinical_alta_qr.php';
+        clinical_alta_qr_route(clinical_documents_pdo(), $method, $segments);
+        return;
+    }
     if (($segments[0] ?? '') === 'informe-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_informe_qr.php';
         clinical_informe_qr_route(clinical_documents_pdo(), $method, $segments);
@@ -9390,6 +9395,8 @@ try {
                     || trim((string)($body['payload']['actor_snapshot']['user_id'] ?? '')) !== (string)$scopedDoctorContext['user_id'])
                     throw new InvalidArgumentException('ALTA_PREVIEW_CONTEXT_INVALID');
                 require_once __DIR__ . '/../_lib/clinical_alta_render.php';
+                if (!clinical_legal_document_presentation_valid((array)$body['payload']))
+                    throw new InvalidArgumentException('ALTA_PRESENTATION_INVALID');
                 clinical_send_response(['ok' => true, 'data' => [
                     'html' => clinical_alta_render_html((array)$body['payload'])], 'meta' => $meta], 200);
                 return;

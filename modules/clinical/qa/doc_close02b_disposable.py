@@ -6,6 +6,7 @@ import uuid
 import base64
 import struct
 import zlib
+import hashlib
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright, expect
@@ -125,6 +126,16 @@ with sync_playwright() as playwright:
           and sql(f"SELECT status FROM clinical_documents WHERE document_uuid={q(doc_uuid)}") == 'draft')
     request['payload']['signatures']['doctor'] = {'source': 'local_canvas', 'role': 'doctor',
         'signer_name': 'Dra. QA', 'image_data': signature_png()}
+    fingerprint = subprocess.check_output(['php', '-r',
+        'require "api/_lib/clinical_alta_binding.php";'
+        'echo clinical_alta_binding_fingerprint(json_decode(file_get_contents("php://stdin"),true));'],
+        input=json.dumps(request, ensure_ascii=False), text=True).strip()
+    image_bytes = base64.b64decode(request['payload']['signatures']['doctor']['image_data'].split(',', 1)[1])
+    request['payload']['signatures']['doctor']['binding'] = {
+        'version': 2, 'document_type': 'alta_medica', 'document_uuid': doc_uuid,
+        'document_version': next_version, 'role': 'doctor', 'source': 'local_canvas',
+        'authority': '1|review-user', 'artifact_digest': hashlib.sha256(image_bytes).hexdigest(),
+        'content_fingerprint': fingerprint, 'applied_at': '2026-10-10T10:00:00Z'}
     final_preview = context.post(preview_url, data=request)
     check('B11_FINAL', final_preview.status == 200 and count() == before + 1)
     final_html = final_preview.json()['data']['html']
