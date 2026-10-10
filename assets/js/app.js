@@ -42445,6 +42445,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       altaStep5: root.querySelector('#am_step_5'),
       altaStep6: root.querySelector('#am_step_6'),
       altaStep7: root.querySelector('#am_step_7'),
+      altaStep8: root.querySelector('#am_step_8'),
+      altaPreview: root.querySelector('#am_preview'),
+      altaFinalPreview: root.querySelector('#am_final_preview'),
       altaDate: root.querySelector('#am_date'),
       altaDischargeType: root.querySelector('#am_discharge_type'),
       altaMotivoEgreso: root.querySelector('#am_motivo_egreso'),
@@ -42465,7 +42468,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       altaCreateAgendaEvent: root.querySelector('#am_create_agenda_event'),
       altaAgendaStatus: root.querySelector('#am_agenda_status'),
       altaRecomendaciones: root.querySelector('#am_recomendaciones'),
-      altaFinalText: root.querySelector('#am_final_text'),
       altaFinalSignatureState: root.querySelector('#am_final_signature_state'),
       altaPrev: root.querySelector('#am_prev'),
       altaNext: root.querySelector('#am_next'),
@@ -42950,7 +42952,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const altaState = {
       step: 1,
       saving: false,
-      finalEdited: false,
+      activeDraftRef: '',
+      activeDraftVersion: 0,
+      previewReady: false,
+      finalReviewReady: false,
+      finalReviewHtml: '',
       signaturePad: null,
       signatureHasStroke: false,
       localSignatureData: '',
@@ -42973,8 +42979,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         followup_note: '',
         create_agenda_event: false,
         agenda_event_id: '',
-        recomendaciones: '',
-        final_text: ''
+        recomendaciones: ''
       }
     };
     const notaEmitValidationRules = [
@@ -43100,20 +43105,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       {
         key: 'doctor_signature',
         label: 'Firma del médico',
-        step: 6,
+        step: 7,
         selector: '#am_signature_canvas',
         message: 'Este campo es obligatorio',
         notice: 'Firma del médico es obligatoria para emitir.',
         isMissing: ()=> !getActiveAltaDoctorSignature(formatNowSql())
-      },
-      {
-        key: 'final_text',
-        label: 'Vista final editable',
-        step: 7,
-        selector: '#am_final_text',
-        message: 'Este campo es obligatorio',
-        notice: 'La vista final editable no puede emitirse vacía.',
-        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.final_text || '')
       }
     ];
     const wizardEmitValidationRulesByDocument = Object.freeze({
@@ -49716,33 +49712,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const key = sanitizeText(value || '').toLowerCase();
       return sanitizeText(altaTypeLabels[key] || '') || 'Mejoría';
     };
-    const buildAltaFinalTextFromForm = (form = null)=>{
-      const source = (form && typeof form === 'object') ? form : altaState.form;
-      const lines = [];
-      const pushSection = (title, value)=>{
-        const safe = normalizeConsentInputRaw(value || '');
-        if(!safe) return;
-        lines.push(`${title}:`);
-        lines.push(safe);
-        lines.push('');
-      };
-      pushSection('Motivo de egreso', source.motivo_egreso);
-      pushSection('Resumen clínico', source.resumen_evolucion);
-      pushSection('Diagnóstico final', source.diagnostico_final);
-      pushSection('Estado actual', source.estado_paciente);
-      pushSection('Datos relevantes', source.datos_relevantes);
-      pushSection('Indicaciones - Tratamiento', source.tratamiento);
-      pushSection('Indicaciones - Cuidados generales', source.cuidados_generales);
-      pushSection('Indicaciones - Signos de alarma', source.signos_alarma);
-      const followupDate = sanitizeText(source.followup_date || '');
-      const followupTime = sanitizeText(source.followup_time || '').slice(0, 5);
-      const followupDateLabel = followupDate ? (formatConsentUiDate(followupDate, { withTime: false }) || followupDate) : '';
-      const followupLine = [followupDateLabel, followupTime].filter(Boolean).join(' · ');
-      pushSection('Seguimiento - Cita de control', normalizeConsentInputRaw(followupLine));
-      pushSection('Seguimiento - Motivo de control', source.followup_note);
-      pushSection('Seguimiento - Recomendaciones', source.recomendaciones);
-      return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-    };
     const syncAltaInputsFromState = ()=>{
       if(els.altaDate) els.altaDate.value = sanitizeText(altaState.form.fecha_alta || '');
       if(els.altaDischargeType) els.altaDischargeType.value = sanitizeText(altaState.form.tipo_alta || 'mejoria') || 'mejoria';
@@ -49759,7 +49728,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.altaFollowupNote) els.altaFollowupNote.value = sanitizeText(altaState.form.followup_note || '');
       if(els.altaCreateAgendaEvent) els.altaCreateAgendaEvent.checked = !!altaState.form.create_agenda_event;
       if(els.altaRecomendaciones) els.altaRecomendaciones.value = sanitizeText(altaState.form.recomendaciones || '');
-      if(els.altaFinalText) els.altaFinalText.value = normalizeConsentInputRaw(altaState.form.final_text || '');
     };
     const setAltaNotice = (message = '')=>{
       if(!els.altaNotice) return;
@@ -49788,7 +49756,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const updateAltaSignatureStatus = ()=>{
       let label = 'Sin firma';
       if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature){
-        label = 'Firma remota aplicada';
+        label = altaState.remoteSignature.source === 'remote_qr' ? 'Firma remota aplicada' : 'Firma del borrador aplicada';
       } else if(altaState.signaturePreferredSource === 'registered' && altaState.registeredSignatureData){
         label = 'Firma registrada aplicada';
       } else if(altaState.signatureHasStroke){
@@ -50012,7 +49980,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           image_data: sanitizeText(altaState.remoteSignature.image_data || ''),
           signed_at: sanitizeText(altaState.remoteSignature.signed_at || signedAt),
           signer_name: sanitizeText(altaState.remoteSignature.signer_name || signerName),
-          source: 'remote_qr',
+          source: sanitizeText(altaState.remoteSignature.source || 'remote_qr'),
           token: sanitizeText(altaState.remoteSignature.token || '')
         };
       }
@@ -50044,25 +50012,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         documentType: 'alta_medica',
         rules: wizardEmitValidationRulesByDocument.alta_medica || [],
         setStep: (nextStep)=>{
-          altaState.step = Math.min(Math.max(Number(nextStep || 1), 1), 7);
+          altaState.step = Math.min(Math.max(Number(nextStep || 1), 1), 8);
         },
         renderStep: ()=> renderAltaStep(),
         setNotice: (message)=> setAltaNotice(message)
       });
     };
-    const ensureAltaFinalText = ({ force = false } = {})=>{
-      if(force || !altaState.finalEdited || !trimConsentInputValue(altaState.form.final_text || '')){
-        altaState.form.final_text = buildAltaFinalTextFromForm(altaState.form);
-        if(els.altaFinalText) els.altaFinalText.value = altaState.form.final_text;
-      }
-    };
     const renderAltaStep = ()=>{
       if(!els.altaWizard) return;
-      const maxStep = 7;
+      const maxStep = 8;
       let normalizedStep = Math.min(Math.max(Number(altaState.step || 1), 1), maxStep);
-      if(normalizedStep === 7 && !getActiveAltaDoctorSignature(formatNowSql())){
-        normalizedStep = 6;
-        setAltaNotice('Captura la firma del médico para continuar a la vista final editable.');
+      if(normalizedStep === 8 && !getActiveAltaDoctorSignature(formatNowSql())){
+        normalizedStep = 7;
+        setAltaNotice('Captura la firma del médico para continuar a la revisión final.');
       }
       altaState.step = normalizedStep;
       els.altaStep1?.classList.toggle('d-none', normalizedStep !== 1);
@@ -50072,35 +50034,32 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.altaStep5?.classList.toggle('d-none', normalizedStep !== 5);
       els.altaStep6?.classList.toggle('d-none', normalizedStep !== 6);
       els.altaStep7?.classList.toggle('d-none', normalizedStep !== 7);
-      if(els.altaStepLabel) els.altaStepLabel.textContent = `Paso ${normalizedStep} de 7`;
+      els.altaStep8?.classList.toggle('d-none', normalizedStep !== 8);
+      if(els.altaStepLabel) els.altaStepLabel.textContent = `Paso ${normalizedStep} de 8`;
       if(els.altaPrev){
         els.altaPrev.disabled = normalizedStep <= 1 || altaState.saving;
       }
       if(els.altaNext){
-        els.altaNext.classList.toggle('d-none', normalizedStep >= 7);
-        els.altaNext.disabled = altaState.saving;
+        els.altaNext.classList.toggle('d-none', normalizedStep >= 8);
+        els.altaNext.disabled = altaState.saving || (normalizedStep === 6 && !altaState.previewReady);
       }
-      const showActions = normalizedStep === 7;
       if(els.altaSave){
-        els.altaSave.classList.toggle('d-none', !showActions);
+        els.altaSave.classList.remove('d-none');
         els.altaSave.disabled = altaState.saving;
       }
       if(els.altaEmit){
-        els.altaEmit.classList.toggle('d-none', !showActions);
-        els.altaEmit.disabled = altaState.saving;
+        els.altaEmit.classList.toggle('d-none', normalizedStep !== 8);
+        els.altaEmit.disabled = altaState.saving || !altaState.finalReviewReady;
       }
       if(els.altaCancel){
-        els.altaCancel.classList.toggle('d-none', !showActions);
+        els.altaCancel.classList.toggle('d-none', normalizedStep !== 8);
         els.altaCancel.disabled = altaState.saving;
       }
-      if(normalizedStep === 6){
+      if(normalizedStep === 7){
         if(!altaState.signaturePad){
           initAltaSignaturePad();
         }
         window.requestAnimationFrame(()=> syncAltaSignatureCanvasSize({ preserveDrawing: true }));
-      }
-      if(normalizedStep === 7){
-        ensureAltaFinalText();
       }
       if(normalizedStep === 5){
         const agendaEventId = sanitizeText(altaState.form.agenda_event_id || '');
@@ -50114,7 +50073,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const buildAltaTempSnapshot = ()=>({
       step: Number(altaState.step || 1) || 1,
-      final_edited: altaState.finalEdited ? '1' : '',
       signature_source: sanitizeText(altaState.signaturePreferredSource || ''),
       form: {
         fecha_alta: sanitizeText(altaState.form.fecha_alta || ''),
@@ -50132,8 +50090,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         followup_note: normalizeConsentInputRaw(altaState.form.followup_note || ''),
         create_agenda_event: altaState.form.create_agenda_event ? '1' : '',
         agenda_event_id: sanitizeText(altaState.form.agenda_event_id || ''),
-        recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || ''),
-        final_text: normalizeConsentInputRaw(altaState.form.final_text || '')
+        recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || '')
       }
     });
     const hasAltaTempContent = (snapshot = null)=>{
@@ -50150,8 +50107,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form.followup_date,
         form.followup_time,
         form.followup_note,
-        form.recomendaciones,
-        form.final_text
+        form.recomendaciones
       ].some((value)=> trimConsentInputValue(value || '') !== '');
     };
     const applyAltaTempSnapshot = (snapshot = null)=>{
@@ -50176,13 +50132,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           String(form.create_agenda_event ?? (altaState.form.create_agenda_event ? '1' : '')).trim().toLowerCase()
         ),
         agenda_event_id: sanitizeText(form.agenda_event_id ?? altaState.form.agenda_event_id ?? ''),
-        recomendaciones: normalizeConsentInputRaw(form.recomendaciones ?? altaState.form.recomendaciones ?? ''),
-        final_text: normalizeConsentInputRaw(form.final_text ?? altaState.form.final_text ?? '')
+        recomendaciones: normalizeConsentInputRaw(form.recomendaciones ?? altaState.form.recomendaciones ?? '')
       };
-      altaState.finalEdited = trimConsentInputValue(safe.final_edited || '') === '1'
-        || trimConsentInputValue(altaState.form.final_text || '') !== '';
       altaState.signaturePreferredSource = sanitizeText(safe.signature_source || altaState.signaturePreferredSource || '');
-      altaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 7);
+      altaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
       syncAltaInputsFromState();
       refreshAltaRegisteredSignature();
       renderAltaStep();
@@ -50191,7 +50144,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       clearWizardErrors('alta_medica');
       altaState.step = 1;
       altaState.saving = false;
-      altaState.finalEdited = false;
+      altaState.activeDraftRef = '';
+      altaState.activeDraftVersion = 0;
+      altaState.previewReady = false;
+      altaState.finalReviewReady = false;
+      altaState.finalReviewHtml = '';
       altaState.signatureHasStroke = false;
       altaState.localSignatureData = '';
       altaState.signaturePreferredSource = '';
@@ -50212,8 +50169,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         followup_note: '',
         create_agenda_event: false,
         agenda_event_id: '',
-        recomendaciones: '',
-        final_text: ''
+        recomendaciones: ''
       };
       setAltaNotice('');
       setAltaRemoteStatus('', 'muted');
@@ -50248,7 +50204,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const nowDate = `${y}-${m}-${d}`;
       altaState.step = 1;
       altaState.saving = false;
-      altaState.finalEdited = false;
+      altaState.activeDraftRef = '';
+      altaState.activeDraftVersion = 0;
+      altaState.previewReady = false;
+      altaState.finalReviewReady = false;
+      altaState.finalReviewHtml = '';
       altaState.signatureHasStroke = false;
       altaState.localSignatureData = '';
       altaState.signaturePreferredSource = '';
@@ -50269,10 +50229,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         followup_note: '',
         create_agenda_event: false,
         agenda_event_id: '',
-        recomendaciones: '',
-        final_text: ''
+        recomendaciones: ''
       };
-      ensureAltaFinalText({ force: true });
       setAltaNotice('');
       setAltaRemoteStatus('', 'muted');
       setAltaAgendaStatus('', 'muted');
@@ -50288,73 +50246,67 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return true;
     };
-    const openAltaModal = async ()=>{
+    const openAltaModal = async ({ draftRef = '' } = {})=>{
       if(!startAltaDraft()) return;
       const patientId = resolveActivePatientIdForConsent();
-      const tempSession = getDocModalTempSession({ documentType: 'alta_medica', patientId });
-      if(tempSession?.snapshot){
-        const decision = await askDocModalTempRecoveryDecision({
-          documentLabel: 'Alta médica',
-          savedAt: tempSession.saved_at
-        });
-        if(decision === 'continue'){
-          applyAltaTempSnapshot(tempSession.snapshot);
-          setAltaNotice('Se recuperó tu captura temporal reciente.');
-        }else{
-          clearDocModalTempSession({ documentType: 'alta_medica', patientId });
+      if(draftRef){
+        const url = buildScopedCanonicalDocumentDetailUrl(draftRef);
+        const response = url ? await fetch(url, { credentials: 'same-origin',
+          headers: { Accept: 'application/json' } }).catch(()=>null) : null;
+        const json = response?.ok ? await response.json().catch(()=>null) : null;
+        const doc = json?.data?.document || null;
+        const payload = doc?.content?.payload || null;
+        const actorUserId = await resolveResponsivaAuthenticatedActorUserId();
+        if(!doc || doc.document_type !== 'alta_medica' || doc.status !== 'draft'
+          || sanitizeText(doc.context?.patient_id) !== patientId
+          || sanitizeText(doc.audit?.created_by_user_id) !== actorUserId
+          || !payload || payload.contract_version !== 2 || payload.status !== 'draft'){
+          showCatalogFeedback('No se pudo reanudar este borrador de forma segura.', 'error');
+          return;
+        }
+        altaState.activeDraftRef = sanitizeText(doc.document_id || draftRef);
+        altaState.activeDraftVersion = Number(doc.version || 0);
+        altaState.form = { ...altaState.form, ...payload.content,
+          fecha_alta: sanitizeText(payload.report?.emission_date || ''),
+          tipo_alta: sanitizeText(payload.alta?.type || 'mejoria'),
+          create_agenda_event: ['1', 'true'].includes(String(payload.content?.create_agenda_event || '').toLowerCase()) };
+        const restoredSignature = payload.signatures?.doctor || null;
+        if(restoredSignature?.image_data){
+          altaState.remoteSignature = { ...restoredSignature, source: restoredSignature.source || 'saved_draft' };
+          altaState.signaturePreferredSource = 'remote';
+        }
+        altaState.step = Math.min(Math.max(Number(payload.workflow_step || 1), 1), 8);
+        syncAltaInputsFromState();
+        updateAltaSignatureStatus();
+        renderAltaStep();
+      }else{
+        const tempSession = getDocModalTempSession({ documentType: 'alta_medica', patientId });
+        if(tempSession?.snapshot){
+          const decision = await askDocModalTempRecoveryDecision({
+            documentLabel: 'Alta médica', savedAt: tempSession.saved_at
+          });
+          if(decision === 'continue'){
+            applyAltaTempSnapshot(tempSession.snapshot);
+            setAltaNotice('Se recuperó tu captura temporal reciente.');
+          }else{
+            clearDocModalTempSession({ documentType: 'alta_medica', patientId });
+          }
         }
       }
       if(!els.altaModalEl || !window.bootstrap?.Modal) return;
       try{
         window.bootstrap.Modal.getOrCreateInstance(els.altaModalEl).show();
       }catch(_){}
+      if(draftRef && (altaState.step === 6 || altaState.step === 8)){
+        try{ await loadAltaCanonicalPreview({ final: altaState.step === 8 }); }
+        catch(error){ setAltaNotice(sanitizeText(error?.message || 'No se pudo mostrar la vista previa.')); }
+      }
     };
     const closeAltaModal = ()=>{
       if(!els.altaModalEl || !window.bootstrap?.Modal) return;
       try{
         window.bootstrap.Modal.getOrCreateInstance(els.altaModalEl)?.hide();
       }catch(_){}
-    };
-    const buildAltaRenderedText = (payload = {})=>{
-      const lines = [];
-      const content = (payload?.content && typeof payload.content === 'object') ? payload.content : {};
-      const alta = (payload?.alta && typeof payload.alta === 'object') ? payload.alta : {};
-      const patientName = sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente');
-      const altaTypeLabel = sanitizeText(alta.type_label || getAltaTypeLabel(alta.type || 'mejoria'));
-      lines.push('ALTA MÉDICA');
-      lines.push('');
-      lines.push(`Paciente: ${patientName}`);
-      const emissionDate = sanitizeText(payload?.report?.emission_date || '');
-      if(emissionDate){
-        lines.push(`Fecha: ${formatConsentUiDate(emissionDate, { withTime: false }) || emissionDate}`);
-      }
-      if(altaTypeLabel){
-        lines.push(`Tipo de alta: ${altaTypeLabel}`);
-      }
-      const pushSection = (title, value)=>{
-        const safe = normalizeConsentInputRaw(value || '');
-        if(!safe) return;
-        lines.push('');
-        lines.push(`${title}:`);
-        lines.push(safe);
-      };
-      pushSection('Motivo de egreso', content.motivo_egreso);
-      pushSection('Resumen clínico', content.resumen_evolucion);
-      pushSection('Diagnóstico final', content.diagnostico_final);
-      pushSection('Estado actual', content.estado_paciente);
-      pushSection('Datos relevantes', content.datos_relevantes);
-      pushSection('Indicaciones - Tratamiento', content.tratamiento);
-      pushSection('Indicaciones - Cuidados generales', content.cuidados_generales);
-      pushSection('Indicaciones - Signos de alarma', content.signos_alarma);
-      const followupDate = sanitizeText(content.followup_date || '');
-      const followupTime = sanitizeText(content.followup_time || '');
-      const followupDateLabel = followupDate ? (formatConsentUiDate(followupDate, { withTime: false }) || followupDate) : '';
-      const followupTimeLabel = followupTime ? followupTime.slice(0, 5) : '';
-      const followupLine = [followupDateLabel, followupTimeLabel].filter(Boolean).join(' · ');
-      pushSection('Seguimiento - Cita de control', normalizeConsentInputRaw(followupLine || content.cita_control || ''));
-      pushSection('Seguimiento - Motivo de control', content.followup_note);
-      pushSection('Seguimiento - Recomendaciones', content.recomendaciones);
-      return lines.join('\n');
     };
     let agendaConsultorioByDoctor = Object.create(null);
     const resolveAltaFollowupDateTime = (form = null)=>{
@@ -50492,7 +50444,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const doctorPrefill = readDoctorPrefillProfile();
       const doctorBranding = resolveDoctorBranding(actorUserId);
       const tipoAlta = sanitizeText(altaState.form.tipo_alta || 'mejoria') || 'mejoria';
-      const finalText = normalizeConsentInputRaw(altaState.form.final_text || buildAltaFinalTextFromForm(altaState.form));
       const signature = getActiveAltaDoctorSignature(nowSql);
       if(normalizedStatus === 'issued'){
         if(!normalizeConsentInputRaw(altaState.form.motivo_egreso || '')) return { error: 'Motivo de egreso es obligatorio para emitir.' };
@@ -50504,7 +50455,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           if(!sanitizeText(altaState.form.followup_date || '')) return { error: 'Fecha de control es obligatoria para registrar cita en Agenda.' };
           if(!sanitizeText(altaState.form.followup_time || '')) return { error: 'Hora de control es obligatoria para registrar cita en Agenda.' };
         }
-        if(!finalText) return { error: 'La vista final editable no puede emitirse vacía.' };
         if(!signature) return { error: 'Firma del médico es obligatoria para emitir.' };
       }
       const followup = resolveAltaFollowupDateTime(altaState.form);
@@ -50528,8 +50478,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || '')
       };
       const payload = {
-        contract_version: 1,
+        contract_version: 2,
         status: normalizedStatus,
+        workflow_step: Math.min(Math.max(Number(altaState.step || 1), 1), 8),
         report: {
           issued_at: nowSql,
           emission_date: sanitizeText(altaState.form.fecha_alta || nowSql.slice(0, 10)),
@@ -50570,11 +50521,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form_snapshot: {
           fecha_alta: sanitizeText(altaState.form.fecha_alta || ''),
           ...content,
-          final_text: finalText,
           signature_source: sanitizeText(altaState.signaturePreferredSource || '')
         }
       };
-      payload.rendered_text = finalText || buildAltaRenderedText(payload);
       const definition = getClinicalDocumentDefinition('alta_medica');
       const context = { patient_id: patientId, care_setting: 'consulta' };
       payload.canonical_document = buildClinicalCanonicalPayload({
@@ -50596,11 +50545,79 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actorUserId,
         source: 'documents_clinicos_alta_medica'
       });
+      if(altaState.activeDraftRef){
+        body.draft_ref = altaState.activeDraftRef;
+        body.expected_version = altaState.activeDraftVersion;
+      }
       return { patientId, body, normalizedStatus };
+    };
+    const loadAltaCanonicalPreview = async ({ final = false } = {})=>{
+      const content = final ? els.altaFinalPreview : els.altaPreview;
+      if(final) altaState.finalReviewReady = false;
+      else altaState.previewReady = false;
+      documentUi.review({ content, continueButton: final ? els.altaEmit : els.altaNext,
+        state: 'loading', message: 'Preparando vista previa…', focus: false });
+      try{
+        const prepared = await buildAltaDocument('draft');
+        if(prepared?.error) throw new Error(prepared.error);
+        const doctorId = resolveCanonicalDocumentsDoctorId();
+        if(!doctorId) throw new Error('No se pudo resolver el médico.');
+        const url = `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(prepared.patientId)}/alta-preview`;
+        const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(prepared.body) });
+        const json = await response.json().catch(()=>null);
+        if(!response.ok || json?.ok !== true || !json?.data?.html)
+          throw new Error(sanitizeText(json?.message || 'No se pudo preparar la vista previa.'));
+        const html = String(json.data.html);
+        documentUi.review({ content, continueButton: final ? els.altaEmit : els.altaNext,
+          state: 'ready', html });
+        if(final){
+          altaState.finalReviewHtml = html;
+          altaState.finalReviewReady = true;
+        }else{
+          altaState.previewReady = true;
+        }
+        renderAltaStep();
+        return html;
+      }catch(error){
+        documentUi.review({ content, continueButton: final ? els.altaEmit : els.altaNext,
+          state: 'error', message: sanitizeText(error?.message || 'No se pudo preparar la vista previa.'),
+          retry: ()=>void loadAltaCanonicalPreview({ final }) });
+        renderAltaStep();
+        throw error;
+      }
+    };
+    const persistAltaDocument = async (status = 'draft')=>{
+      const prepared = await buildAltaDocument(status);
+      if(prepared?.error) throw new Error(prepared.error);
+      const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
+      if(!createUrl) throw new Error('No se pudo resolver el médico para guardar el alta médica.');
+      const resp = await fetch(createUrl, { method: 'POST', credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json',
+          'Idempotency-Key': `alta:${window.crypto.randomUUID()}` },
+        body: JSON.stringify(prepared.body) });
+      const json = await resp.json().catch(()=>null);
+      if(!resp.ok || json?.ok !== true)
+        throw new Error(sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`));
+      const saved = json.data?.document || {};
+      const ref = sanitizeText(saved.document_id || saved.document_uuid || '');
+      if(!ref || Number(saved.version || 0) < 1)
+        throw new Error('El servidor no devolvió la identidad y versión del alta.');
+      if(altaState.activeDraftRef && ref !== altaState.activeDraftRef)
+        throw new Error('La identidad del borrador cambió inesperadamente.');
+      altaState.activeDraftRef = ref;
+      altaState.activeDraftVersion = Number(saved.version);
+      await listCanonicalConsents();
+      return { json, prepared, saved };
     };
     const saveAltaDocument = async (status = 'draft')=>{
       if(altaState.saving) return;
       if(status === 'issued'){
+        if(Number(altaState.step || 0) !== 8 || !altaState.finalReviewReady){
+          setAltaNotice('Revisa la versión final del documento antes de emitir.');
+          return;
+        }
         const validation = runAltaEmitGuidedValidation();
         if(!validation.ok){
           const noticeText = sanitizeText(validation?.rule?.notice || 'Completa los campos obligatorios para emitir.');
@@ -50632,26 +50649,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             setAltaAgendaStatus(`Cita registrada en Agenda (${agendaResult.appointmentId}).`, 'success');
           }
         }
-        const prepared = await buildAltaDocument(status);
-        if(prepared?.error){
-          throw new Error(prepared.error);
+        if(status === 'issued' && !altaState.activeDraftRef){
+          await persistAltaDocument('draft');
         }
-        const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
-        if(!createUrl){
-          throw new Error('No se pudo resolver el médico para guardar el alta médica.');
-        }
-        const resp = await fetch(createUrl, {
-          method: 'POST',
-          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify(prepared.body),
-          credentials: 'same-origin'
-        });
-        const json = await resp.json().catch(()=> null);
-        if(!resp.ok || !json || json.ok !== true){
-          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el alta médica.';
-          throw new Error(msg);
-        }
+        const { json, prepared, saved } = await persistAltaDocument(status);
         if(prepared.normalizedStatus === 'issued'){
+          const persistedHtml = String(saved?.content?.payload?.alta_snapshot?.html || '');
+          if(!persistedHtml || persistedHtml !== altaState.finalReviewHtml)
+            throw new Error('La versión emitida no coincide con la revisión final.');
           clearDocModalTempSession({ documentType: 'alta_medica', patientId: prepared.patientId });
           await presentEmittedDocument(json, 'alta_medica', els.altaModalEl);
         }else{
@@ -55330,7 +55335,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.className = 'exp-card exp-card--secondary';
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
-        const resumableDraft = (isConsentDoc || isInformeDoc || isNotaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) && status === 'draft';
+        const resumableDraft = (isConsentDoc || isInformeDoc || isNotaDoc || isAltaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) && status === 'draft';
         const definition = getClinicalDocumentDefinition(documentType);
         const emittedActions = status === 'generated' && Array.isArray(definition.post_emission_actions)
           ? definition.post_emission_actions : [];
@@ -55339,7 +55344,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.innerHTML = `
           <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
             <span>${title.replace(/</g, '&lt;')}</span>
-            <span class="badge bg-light text-dark border">${((isConsentDoc || isInformeDoc || isNotaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
+            <span class="badge bg-light text-dark border">${((isConsentDoc || isInformeDoc || isNotaDoc || isAltaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
@@ -55354,6 +55359,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
         if(isInformeDoc && status === 'draft') card.dataset.informeDraft = '1';
         if(isNotaDoc && status === 'draft') card.dataset.notaDraft = '1';
+        if(isAltaDoc && status === 'draft') card.dataset.altaDraft = '1';
         if(isResponsivaDoc && status === 'draft') card.dataset.responsivaDraft = '1';
         if(isCertificadoDoc && status === 'draft') card.dataset.certificadoDraft = '1';
         if(isInterconsultaDoc && status === 'draft') card.dataset.interconsultaDraft = '1';
@@ -57821,16 +57827,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }else{
           altaState.form[key] = normalizeConsentInputRaw(inputEl.value || '');
         }
-        if(key === 'final_text'){
-          altaState.finalEdited = trimConsentInputValue(altaState.form.final_text || '') !== '';
-        }else if(key === 'followup_date' || key === 'followup_time' || key === 'followup_note'){
+        altaState.previewReady = false;
+        altaState.finalReviewReady = false;
+        altaState.finalReviewHtml = '';
+        if(altaState.remoteSignature?.source === 'saved_draft'){
+          altaState.remoteSignature = null;
+          altaState.signaturePreferredSource = altaState.registeredSignatureData ? 'registered' : '';
+          updateAltaSignatureStatus();
+        }
+        if(key === 'followup_date' || key === 'followup_time' || key === 'followup_note'){
           if(sanitizeText(altaState.form.agenda_event_id || '')){
             altaState.form.agenda_event_id = '';
             setAltaAgendaStatus('Se actualizó seguimiento. La cita se volverá a registrar con los nuevos datos.', 'muted');
           }
-        }else if(key !== 'fecha_alta' && key !== 'tipo_alta' && !altaState.finalEdited && Number(altaState.step || 1) >= 6){
-          altaState.form.final_text = buildAltaFinalTextFromForm(altaState.form);
-          if(els.altaFinalText) els.altaFinalText.value = altaState.form.final_text;
         }
         clearWizardFieldError('alta_medica', key);
         const patientId = resolveActivePatientIdForConsent();
@@ -57855,7 +57864,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindAltaField(els.altaFollowupTime, 'followup_time', 'change');
     bindAltaField(els.altaFollowupNote, 'followup_note');
     bindAltaField(els.altaRecomendaciones, 'recomendaciones');
-    bindAltaField(els.altaFinalText, 'final_text');
     els.altaCreateAgendaEvent?.addEventListener('change', ()=>{
       altaState.form.create_agenda_event = !!els.altaCreateAgendaEvent?.checked;
       if(!altaState.form.create_agenda_event){
@@ -57882,23 +57890,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         buildSnapshot: buildAltaTempSnapshot
       });
     });
-    els.altaNext?.addEventListener('click', (event)=>{
+    els.altaNext?.addEventListener('click', async (event)=>{
       event.preventDefault();
       const current = Number(altaState.step || 1);
-      if(current === 6){
+      if(current === 6 && !altaState.previewReady) return;
+      if(current === 7){
         const signature = getActiveAltaDoctorSignature(formatNowSql());
         if(!signature){
-          setAltaNotice('Captura la firma del médico para continuar a la vista final editable.');
+          setAltaNotice('Captura la firma del médico para continuar a la revisión final.');
           renderAltaStep();
           return;
         }
         setAltaNotice('');
       }
-      altaState.step = Math.min(7, current + 1);
-      if(Number(altaState.step || 1) === 7){
-        ensureAltaFinalText();
-      }
+      altaState.step = Math.min(8, current + 1);
       renderAltaStep();
+      if(altaState.step === 6 || altaState.step === 8){
+        try{ await loadAltaCanonicalPreview({ final: altaState.step === 8 }); }
+        catch(error){ setAltaNotice(sanitizeText(error?.message || 'No se pudo mostrar la vista previa.')); }
+      }
       const patientId = resolveActivePatientIdForConsent();
       scheduleDocModalTempSessionSave({
         documentType: 'alta_medica',
@@ -58813,6 +58823,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.informeDraft === '1') openInformeModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.notaDraft === '1') openNotaModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.altaDraft === '1') openAltaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.certificadoDraft === '1') openCertificadoModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.interconsultaDraft === '1') openInterconsultaModal({ draftRef: card.getAttribute('data-doc-uuid') });
@@ -58827,6 +58838,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.informeDraft === '1') openInformeModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.notaDraft === '1') openNotaModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.altaDraft === '1') openAltaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.certificadoDraft === '1') openCertificadoModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.interconsultaDraft === '1') openInterconsultaModal({ draftRef: card.getAttribute('data-doc-uuid') });
@@ -58837,6 +58849,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const draftRef = sanitizeText(event.detail?.document_uuid || '');
       if(patientId && patientId === resolveActivePatientIdForConsent() && draftRef){
         openResponsivaModal({ draftRef });
+      }
+    });
+    window.addEventListener('mxmed:resume-alta-draft', (event)=>{
+      const patientId = sanitizeText(event.detail?.patient_id || '');
+      const draftRef = sanitizeText(event.detail?.document_uuid || '');
+      if(patientId && patientId === resolveActivePatientIdForConsent() && draftRef){
+        openAltaModal({ draftRef });
       }
     });
     window.addEventListener('mxmed:resume-certificado-draft', (event)=>{

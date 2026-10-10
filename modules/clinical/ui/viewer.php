@@ -2472,7 +2472,13 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($isAltaDoc): ?>
+    <?php if ($isAltaDoc && (int)($payload['alta_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['alta_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['alta_snapshot']['html']; ?>
+      </div>
+    <?php endif; ?>
+    <?php if ($isAltaDoc && trim((string)($payload['alta_snapshot']['html'] ?? '')) === ''): ?>
       <?php
       $altaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
       $altaMeta = is_array($payload['alta'] ?? null) ? $payload['alta'] : [];
@@ -2575,6 +2581,9 @@ if (!$embed) {
         $altaFollowupTimeOut !== '' ? $altaFollowupTimeOut : '',
       ]))));
       $altaRecomendaciones = trim((string)($altaContent['recomendaciones'] ?? ''));
+      // Historical Alta kept an independently editable final body. Preserve it for old rows only.
+      $altaLegacyFinalText = trim((string)($payload['form_snapshot']['final_text'] ?? ''));
+      if ($altaLegacyFinalText === '') $altaLegacyFinalText = trim((string)($payload['rendered_text'] ?? $renderedText));
       $altaIndicacionesText = implode("\n", array_values(array_filter([
         $altaTratamiento !== '' ? ('Tratamiento: ' . $altaTratamiento) : '',
         $altaCuidadosGenerales !== '' ? ('Cuidados generales: ' . $altaCuidadosGenerales) : '',
@@ -2657,6 +2666,12 @@ if (!$embed) {
           <section class="informe-doc-body-section doc-base-section">
             <div class="informe-doc-section-title doc-base-section-title">Seguimiento</div>
             <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($altaSeguimientoText)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($altaLegacyFinalText !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Texto final histórico</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($altaLegacyFinalText)); ?></div>
           </section>
         <?php endif; ?>
         <section class="informe-doc-sign doc-base-signature doc-base-print-safe">

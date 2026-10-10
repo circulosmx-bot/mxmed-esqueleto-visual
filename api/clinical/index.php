@@ -385,7 +385,7 @@ function clinical_documents_assert_generic_type_allowed(array $payload): void
 {
     // Informe and Interconsulta new writes belong exclusively to their versioned writers.
     $type = strtolower(trim((string)($payload['document_type'] ?? '')));
-    if ($type === 'informe_medico' || $type === 'interconsulta') {
+    if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica'], true)) {
         throw new InvalidArgumentException(strtoupper($type) . '_GENERIC_WRITE_FORBIDDEN');
     }
 }
@@ -397,6 +397,8 @@ function clinical_documents_is_contract_write_error(string $message): bool
         'INTERCONSULTA_CONTRACT_VERSION_UNSUPPORTED',
         'INFORME_MEDICO_GENERIC_WRITE_FORBIDDEN',
         'INTERCONSULTA_GENERIC_WRITE_FORBIDDEN',
+        'ALTA_CONTRACT_VERSION_UNSUPPORTED',
+        'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN',
     ], true);
 }
 
@@ -7403,7 +7405,7 @@ try {
             }
 
             $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
-            if (in_array($documentType, ['informe_medico', 'interconsulta'], true)) {
+            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica'], true)) {
                 $code = strtoupper($documentType) . '_GENERIC_WRITE_FORBIDDEN';
                 clinical_send_response(['ok' => false, 'error' => ['code' => $code, 'message' => $code],
                     'message' => $code, 'data' => null,
@@ -9368,6 +9370,34 @@ try {
                 return;
             }
         }
+        if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'alta-preview') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = ['route' => 'doctors/{doctor_id}/patients/{patient_id}/alta-preview'];
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($doctorId !== (string)$scopedDoctorContext['doctor_id']
+                    || !clinical_patient_exists($pdo, $patientId)
+                    || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response(['ok' => false, 'error' => 'forbidden', 'meta' => $meta], 403);
+                    return;
+                }
+                $request = json_decode((string)file_get_contents('php://input'), true);
+                $body = is_array($request) ? $request : [];
+                if (($body['document_type'] ?? '') !== 'alta_medica'
+                    || ($body['payload']['contract_version'] ?? null) !== 2
+                    || trim((string)($body['context']['patient_id'] ?? '')) !== $patientId
+                    || trim((string)($body['payload']['actor_snapshot']['user_id'] ?? '')) !== (string)$scopedDoctorContext['user_id'])
+                    throw new InvalidArgumentException('ALTA_PREVIEW_CONTEXT_INVALID');
+                require_once __DIR__ . '/../_lib/clinical_alta_render.php';
+                clinical_send_response(['ok' => true, 'data' => [
+                    'html' => clinical_alta_render_html((array)$body['payload'])], 'meta' => $meta], 200);
+                return;
+            } catch (Throwable $error) {
+                clinical_send_response(['ok' => false, 'error' => 'ALTA_PREVIEW_INVALID', 'meta' => $meta], 400);
+                return;
+            }
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'informe-preview') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
@@ -9546,6 +9576,21 @@ try {
                     $replay = ($result['_idempotency_replay'] ?? false) === true;
                     $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
                     if ($document === null) throw new RuntimeException('NOTA_DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
+                        'data' => ['document_id' => $result['document_uuid'], 'document' => $document],
+                        'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
+                    return;
+                }
+                if (($payload['document_type'] ?? null) === 'alta_medica') {
+                    if (($payload['payload']['contract_version'] ?? null) !== 2)
+                        throw new InvalidArgumentException('ALTA_CONTRACT_VERSION_UNSUPPORTED');
+                    if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('ALTA_MULTIPART_UNSUPPORTED');
+                    require_once __DIR__ . '/../_lib/clinical_alta_write.php';
+                    $result = clinical_alta_write($pdo, $scopedDoctorContext, $patientId, $payload,
+                        (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                    $replay = ($result['_idempotency_replay'] ?? false) === true;
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
+                    if ($document === null) throw new RuntimeException('ALTA_DOCUMENT_NOT_FOUND');
                     clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
                         'data' => ['document_id' => $result['document_uuid'], 'document' => $document],
                         'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);

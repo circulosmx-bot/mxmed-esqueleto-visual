@@ -130,6 +130,11 @@ if ($action === 'save') {
             'message' => 'M6_COHORT_CONFIG_INVALID',
         ], 500);
     }
+    if (in_array('alta_medica', [strtolower(trim((string)($body['type'] ?? ''))),
+        strtolower(trim((string)($body['document_type'] ?? '')))], true)) {
+        mxmed_json_response(['ok' => false, 'error' => 'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN',
+            'message' => 'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN'], 422);
+    }
     $body['context']['patient_id'] = $patientId;
     try {
         $doc = mxmed_build_clinical_document($body);
