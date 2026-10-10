@@ -40604,6 +40604,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       actividadClinicaNotasEncounterMeta.classList.remove('d-none');
     };
     const setNeutral = (message)=>{
+      if(actividadClinicaNotasActions){
+        delete actividadClinicaNotasActions.dataset.notaEncounterKey;
+        delete actividadClinicaNotasActions.dataset.notaPatientId;
+        actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-nota-document"]')?.classList.add('d-none');
+      }
       if(actividadClinicaNotasStatusBadge){
         actividadClinicaNotasStatusBadge.textContent = 'Sin consulta activa';
         actividadClinicaNotasStatusBadge.classList.remove('is-active');
@@ -40649,6 +40654,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if(!hasActiveEncounter){
       setNeutral('Puedes registrar información clínica a nivel del expediente del paciente.');
       return;
+    }
+    if(actividadClinicaNotasActions){
+      actividadClinicaNotasActions.dataset.notaEncounterKey = encounterKey;
+      actividadClinicaNotasActions.dataset.notaPatientId = patientId;
+      actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-nota-document"]')?.classList.remove('d-none');
     }
 
     if(actividadClinicaNotasStatusBadge){
@@ -41175,6 +41185,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     syncNoteCaptureTokenStatus({ manual: true });
   });
   actividadClinicaNotasActions?.addEventListener('click', async (event)=>{
+    const notaDocumentBtn = event.target.closest('[data-action="actividad-tab-open-nota-document"]');
+    if(notaDocumentBtn){
+      event.preventDefault();
+      const key = sanitizeText(actividadClinicaNotasActions.dataset.notaEncounterKey || '');
+      const patientId = sanitizeText(actividadClinicaNotasActions.dataset.notaPatientId || '');
+      if(key && patientId && patientId === sanitizeText(getActivePatientId()))
+        window.dispatchEvent(new CustomEvent('mxmed:open-nota-from-encounter',
+        { detail: { patient_id: patientId, encounter_key: key } }));
+      return;
+    }
     const noteBtn = event.target.closest('[data-action="actividad-tab-open-nota"]');
     if(noteBtn){
       event.preventDefault();
@@ -42307,6 +42327,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       notaWizard: root.querySelector('#nm_wizard'),
       notaStepLabel: root.querySelector('#nm_step_label'),
       notaNotice: root.querySelector('#nm_notice'),
+      notaSourceSummary: root.querySelector('#nm_source_summary'),
+      notaSourceChoose: root.querySelector('#nm_source_choose'),
+      notaSourceUnlink: root.querySelector('#nm_source_unlink'),
+      notaSourceImport: root.querySelector('#nm_source_import'),
+      notaSourceChooser: root.querySelector('#nm_source_chooser'),
+      notaSourceOptions: root.querySelector('#nm_source_options'),
+      notaSourceConfirm: root.querySelector('#nm_source_confirm'),
+      notaSourceCancel: root.querySelector('#nm_source_cancel'),
+      notaSourceImportPanel: root.querySelector('#nm_source_import_panel'),
+      notaSourceCandidates: root.querySelector('#nm_source_candidates'),
+      notaSourceApply: root.querySelector('#nm_source_apply'),
+      notaSourceImportCancel: root.querySelector('#nm_source_import_cancel'),
+      notaSourceConflict: root.querySelector('#nm_source_conflict'),
+      notaSourceConflictText: root.querySelector('#nm_source_conflict_text'),
+      notaSourceReplaceCancel: root.querySelector('#nm_source_replace_cancel'),
+      notaSourceReplaceConfirm: root.querySelector('#nm_source_replace_confirm'),
       notaStep1: root.querySelector('#nm_step_1'),
       notaStep2: root.querySelector('#nm_step_2'),
       notaStep3: root.querySelector('#nm_step_3'),
@@ -42779,6 +42815,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       saving: false,
       activeDraftRef: '',
       activeDraftVersion: 0,
+      encounterSource: null,
+      encounterImports: [],
+      encounterProjection: null,
+      proposedImport: null,
       professionalHeader: 'shown',
       storedDoctorSignature: null,
       signatureBindingStatus: 'absent',
@@ -48379,6 +48419,178 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       'signos_vitales', 'resultados_relevantes', 'analisis_clinico',
       'estudios_sugeridos', 'seguimiento'
     ];
+    const notaSourceLabels = Object.freeze({
+      reason_evolution: 'Motivo / evolución (narrativa combinada)',
+      vital_observation: 'Signo vital', physical_exam: 'Exploración física',
+      assessment: 'Impresión diagnóstica', plan: 'Plan', diagnostic_order: 'Orden de estudios'
+    });
+    const notaDestinationLabels = Object.freeze({
+      motivo_consulta: 'Motivo de consulta', padecimiento_actual: 'Padecimiento actual / evolución',
+      signos_vitales: 'Signos vitales', exploracion_fisica: 'Exploración física',
+      impresion_diagnostica: 'Impresión diagnóstica',
+      tratamiento_indicaciones: 'Tratamiento e indicaciones', estudios_sugeridos: 'Estudios sugeridos'
+    });
+    const notaSourceApi = (id = '')=>{
+      const doctor = resolveCanonicalDocumentsDoctorId();
+      const patient = resolveActivePatientIdForConsent();
+      if(!doctor || !patient) throw new Error('No se pudo confirmar el paciente o médico.');
+      const base = `/api/clinical/index.php/doctors/${encodeURIComponent(doctor)}/patients/${encodeURIComponent(patient)}/nota-encounters`;
+      return id ? `${base}/${encodeURIComponent(id)}` : base;
+    };
+    const fetchNotaSource = async (id = '')=>{
+      const response = await fetch(notaSourceApi(id), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const json = await response.json().catch(()=>null);
+      if(!response.ok || json?.ok !== true)
+        throw new Error(sanitizeText(json?.message || 'No se pudo cargar la consulta autorizada.'));
+      return json.data;
+    };
+    const renderNotaEncounterSource = ()=>{
+      const source = notaState.encounterSource;
+      const linked = Number(source?.encounter_id || 0) > 0;
+      if(els.notaSourceSummary) els.notaSourceSummary.textContent = linked
+        ? `${sanitizeText(source.encounter_dt || '')} · ${source.status === 'closed' ? 'Cerrada' : 'Abierta'}${source.origin ? ` · ${sanitizeText(source.origin)}` : ''} · ${sanitizeText(source.display_key || `enc:${source.encounter_id}`)}`
+        : 'Sin consulta vinculada';
+      els.notaSourceUnlink?.classList.toggle('d-none', !linked);
+      els.notaSourceImport?.classList.toggle('d-none', !linked);
+    };
+    const invalidateNotaForImportedContent = ()=>{
+      notaState.previewHtml = '';
+      notaState.previewApproved = false;
+      notaState.finalReviewedHash = '';
+      if(notaState.storedDoctorSignature){
+        notaState.storedDoctorSignature = null;
+        notaState.signatureBindingStatus = 'stale_or_unverified_signature';
+        updateNotaSignatureStatus();
+      }
+      if(notaState.qr.status === 'pending') void invalidateNotaQr('content_changed');
+      const patientId = resolveActivePatientIdForConsent();
+      scheduleDocModalTempSessionSave({ documentType: 'nota_medica', patientId,
+        buildSnapshot: buildNotaTempSnapshot });
+    };
+    const openNotaEncounterChooser = async (explicitKey = '')=>{
+      els.notaSourceImportPanel?.classList.add('d-none');
+      els.notaSourceChooser?.classList.remove('d-none');
+      if(els.notaSourceOptions) els.notaSourceOptions.textContent = 'Cargando consultas…';
+      try{
+        const rows = await fetchNotaSource();
+        if(!els.notaSourceOptions) return;
+        els.notaSourceOptions.replaceChildren();
+        const explicitId = /(?:^|#)enc:([1-9][0-9]*)$/.exec(sanitizeText(explicitKey || ''))?.[1] || '';
+        if(explicitKey && !explicitId) throw new Error('El contexto no identifica una Consulta exacta. Selecciónala manualmente.');
+        if(explicitId && !rows.some(row=>String(row.encounter_id) === explicitId)){
+          const exact = await fetchNotaSource(explicitId);
+          rows.unshift(exact.encounter);
+        }
+        if(!rows.length){ els.notaSourceOptions.textContent = 'No hay consultas elegibles. Puedes continuar sin consulta vinculada.'; return; }
+        for(const row of rows){
+          const label = document.createElement('label');
+          label.className = 'd-flex align-items-start gap-2 border rounded p-2 mb-2';
+          const radio = document.createElement('input');
+          radio.type = 'radio'; radio.name = 'nm_source_option'; radio.value = String(row.encounter_id);
+          radio.checked = explicitId !== '' && explicitId === radio.value;
+          const span = document.createElement('span');
+          span.textContent = `${sanitizeText(row.encounter_dt || '')} · ${row.status === 'closed' ? 'Cerrada' : 'Abierta'}${row.origin ? ` · ${sanitizeText(row.origin)}` : ''} · ${sanitizeText(row.display_key || '')}`;
+          label.append(radio, span); els.notaSourceOptions.append(label);
+        }
+      }catch(error){
+        if(els.notaSourceOptions) els.notaSourceOptions.textContent = sanitizeText(error?.message || 'No se pudieron cargar las consultas.');
+      }
+    };
+    const confirmNotaEncounterSource = async ()=>{
+      const selected = els.notaSourceOptions?.querySelector('input[name="nm_source_option"]:checked');
+      if(!selected){ setNotaNotice('Selecciona una consulta y confirma el vínculo.'); return; }
+      try{
+        const result = await fetchNotaSource(selected.value);
+        if(notaState.encounterSource && Number(notaState.encounterSource.encounter_id) !== Number(selected.value)
+          && !window.confirm('Cambiar la consulta no borrará el texto ya importado. ¿Continuar?')) return;
+        const row = result.encounter;
+        notaState.encounterSource = { ...row,
+          patient_id: resolveActivePatientIdForConsent(),
+          doctor_id: resolveCanonicalDocumentsDoctorId(),
+          confirmed_at: new Date().toISOString() };
+        notaState.encounterProjection = result;
+        els.notaSourceChooser?.classList.add('d-none');
+        els.notaSourceImportPanel?.classList.add('d-none');
+        renderNotaEncounterSource();
+        scheduleDocModalTempSessionSave({ documentType: 'nota_medica',
+          patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildNotaTempSnapshot });
+        setNotaNotice('Consulta vinculada. Ningún dato se agregó a la Nota.');
+      }catch(error){ setNotaNotice(sanitizeText(error?.message || 'No se pudo vincular la consulta.')); }
+    };
+    const openNotaImportReview = async ()=>{
+      const id = Number(notaState.encounterSource?.encounter_id || 0);
+      if(!id) return;
+      try{
+        const result = await fetchNotaSource(String(id));
+        if(Number(result.encounter?.encounter_id) !== id) throw new Error('La consulta cambió inesperadamente.');
+        notaState.encounterProjection = result;
+        const container = els.notaSourceCandidates;
+        if(!container) return;
+        container.replaceChildren();
+        const candidates = Array.isArray(result.candidates) ? result.candidates : [];
+        if(!candidates.length) container.textContent = 'Esta consulta no tiene información compatible para traer.';
+        for(const [index, candidate] of candidates.entries()){
+          const box = document.createElement('div'); box.className = 'border rounded p-2 mb-2';
+          const label = document.createElement('label'); label.className = 'd-flex gap-2 align-items-start fw-semibold';
+          const check = document.createElement('input'); check.type = 'checkbox';
+          check.dataset.notaCandidate = String(index); check.className = 'form-check-input mt-1';
+          const title = document.createElement('span');
+          title.textContent = `${notaSourceLabels[candidate.source_type] || candidate.source_type} · ${candidate.source_record_id}`;
+          label.append(check, title); box.append(label);
+          const preview = document.createElement('div');
+          preview.className = 'small mt-1'; preview.style.whiteSpace = 'pre-wrap'; preview.style.overflowWrap = 'anywhere';
+          preview.textContent = candidate.text; box.append(preview);
+          if(candidate.destinations?.length > 1){
+            const destinationLabel = document.createElement('label');
+            destinationLabel.className = 'd-block small mt-2'; destinationLabel.textContent = 'Destino de esta narrativa';
+            const select = document.createElement('select'); select.className = 'form-select form-select-sm mt-1';
+            select.dataset.notaDestination = String(index);
+            for(const key of candidate.destinations){
+              const option = document.createElement('option'); option.value = key;
+              option.textContent = notaDestinationLabels[key] || key; select.append(option);
+            }
+            destinationLabel.append(select); box.append(destinationLabel);
+          }
+          container.append(box);
+        }
+        els.notaSourceConflict?.classList.add('d-none');
+        els.notaSourceChooser?.classList.add('d-none');
+        els.notaSourceImportPanel?.classList.remove('d-none');
+      }catch(error){ setNotaNotice(sanitizeText(error?.message || 'No se pudo revisar la consulta.')); }
+    };
+    const prepareNotaImport = ()=>{
+      const selected = [...(els.notaSourceCandidates?.querySelectorAll('input[data-nota-candidate]:checked') || [])];
+      const candidates = notaState.encounterProjection?.candidates || [];
+      const byDestination = new Map();
+      const imports = [];
+      for(const check of selected){
+        const index = Number(check.dataset.notaCandidate);
+        const item = candidates[index]; if(!item) continue;
+        const destination = els.notaSourceCandidates.querySelector(`select[data-nota-destination="${index}"]`)?.value
+          || item.destinations?.[0];
+        if(!notaDestinationLabels[destination]) continue;
+        const text = normalizeConsentInputRaw(item.text || ''); if(!text) continue;
+        byDestination.set(destination, [...(byDestination.get(destination) || []), text]);
+        imports.push({ destination_key: destination, encounter_id: Number(notaState.encounterSource.encounter_id),
+          source_type: item.source_type, source_record_id: item.source_record_id,
+          source_version_or_updated_at: item.source_version_or_updated_at,
+          status_at_import: notaState.encounterProjection.encounter.status,
+          imported_at: new Date().toISOString(), imported_snapshot: text });
+      }
+      if(!imports.length) throw new Error('Selecciona al menos un dato para agregar.');
+      const fields = Object.fromEntries([...byDestination].map(([key, texts])=>[key, texts.join('\n')]));
+      return { fields, imports };
+    };
+    const applyNotaImport = (proposal)=>{
+      notaState.form = { ...notaState.form, ...proposal.fields };
+      notaState.encounterImports = [...notaState.encounterImports, ...proposal.imports];
+      notaState.proposedImport = null;
+      syncNotaInputsFromState();
+      invalidateNotaForImportedContent();
+      els.notaSourceConflict?.classList.add('d-none');
+      els.notaSourceImportPanel?.classList.add('d-none');
+      setNotaNotice('Información agregada. Revisa y edita los campos antes de guardar.');
+    };
     const syncNotaInputsFromState = ()=>{
       if(els.notaDate) els.notaDate.value = sanitizeText(notaState.form.emission_date || '');
       if(els.notaType) els.notaType.value = sanitizeText(notaState.form.tipo_nota || 'consulta_inicial') || 'consulta_inicial';
@@ -48721,6 +48933,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const buildNotaTempSnapshot = ()=>({
       step: Number(notaState.step || 1) || 1,
+      encounter_source: notaState.encounterSource,
+      encounter_imports: notaState.encounterImports,
       signature_source: sanitizeText(notaState.signaturePreferredSource || ''),
       form: {
         emission_date: sanitizeText(notaState.form.emission_date || ''),
@@ -48756,7 +48970,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form.tratamiento_indicaciones,
         form.estudios_sugeridos,
         form.seguimiento
-      ].some((value)=> trimConsentInputValue(value || '') !== '');
+      ].some((value)=> trimConsentInputValue(value || '') !== '') || Number(snapshot?.encounter_source?.encounter_id || 0) > 0;
     };
     const applyNotaTempSnapshot = (snapshot = null)=>{
       const safe = (snapshot && typeof snapshot === 'object') ? snapshot : {};
@@ -48780,8 +48994,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         seguimiento: normalizeConsentInputRaw(form.seguimiento ?? notaState.form.seguimiento ?? '')
       };
       notaState.signaturePreferredSource = sanitizeText(safe.signature_source || notaState.signaturePreferredSource || '');
+      notaState.encounterSource = safe.encounter_source && typeof safe.encounter_source === 'object' ? safe.encounter_source : null;
+      notaState.encounterImports = Array.isArray(safe.encounter_imports) ? safe.encounter_imports : [];
       notaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 7);
       syncNotaInputsFromState();
+      renderNotaEncounterSource();
       refreshNotaRegisteredSignature();
       renderNotaStep();
     };
@@ -48791,6 +49008,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       notaState.saving = false;
       notaState.activeDraftRef = '';
       notaState.activeDraftVersion = 0;
+      notaState.encounterSource = null;
+      notaState.encounterImports = [];
+      notaState.encounterProjection = null;
+      notaState.proposedImport = null;
       notaState.professionalHeader = 'shown';
       notaState.previewApproved = false;
       notaState.previewHtml = '';
@@ -48853,6 +49074,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       notaState.saving = false;
       notaState.activeDraftRef = '';
       notaState.activeDraftVersion = 0;
+      notaState.encounterSource = null;
+      notaState.encounterImports = [];
+      notaState.encounterProjection = null;
+      notaState.proposedImport = null;
       notaState.professionalHeader = 'shown';
       notaState.previewApproved = false;
       notaState.previewHtml = '';
@@ -48885,6 +49110,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       setNotaRemoteStatus('', 'muted');
       els.notaSignatureInlinePrompt?.classList.add('d-none');
       syncNotaInputsFromState();
+      renderNotaEncounterSource();
       initNotaSignaturePad();
       syncNotaSignatureCanvasSize({ preserveDrawing: false });
       clearNotaSignaturePad();
@@ -48895,7 +49121,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return true;
     };
-    const openNotaModal = async ({ draftRef = '' } = {})=>{
+    const openNotaModal = async ({ draftRef = '', encounterKey = '' } = {})=>{
       if(!startNotaDraft()) return;
       const patientId = resolveActivePatientIdForConsent();
       if(draftRef){
@@ -48918,6 +49144,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         notaState.form = { ...notaState.form, ...payload.content,
           emission_date: sanitizeText(payload.report?.emission_date || ''),
           tipo_nota: sanitizeText(payload.note?.type || 'consulta_inicial') };
+        notaState.encounterSource = payload.encounter_source || null;
+        notaState.encounterImports = Array.isArray(payload.encounter_imports) ? payload.encounter_imports : [];
+        renderNotaEncounterSource();
         notaState.professionalHeader = window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload);
         notaState.storedDoctorSignature = payload.signatures?.doctor || null;
         notaState.step = 6;
@@ -48947,6 +49176,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       try{
         window.bootstrap.Modal.getOrCreateInstance(els.notaModalEl).show();
       }catch(_){}
+      if(!draftRef && encounterKey) void openNotaEncounterChooser(encounterKey);
     };
     const closeNotaModal = ()=>{
       if(!els.notaModalEl || !window.bootstrap?.Modal) return;
@@ -49065,6 +49295,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
         },
         content,
+        encounter_source: notaState.encounterSource,
+        encounter_imports: notaState.encounterImports,
         signatures: {
           doctor: signature
         },
@@ -49077,6 +49309,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       payload.rendered_text = buildNotaRenderedText(payload);
       const definition = getClinicalDocumentDefinition('nota_medica');
       const context = { patient_id: patientId, care_setting: 'consulta' };
+      if(notaState.encounterSource?.encounter_id) context.encounter_id = String(notaState.encounterSource.encounter_id);
       payload.canonical_document = buildClinicalCanonicalPayload({
         definition,
         payload,
@@ -57073,6 +57306,47 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindNotaField(els.notaTratamientoIndicaciones, 'tratamiento_indicaciones');
     bindNotaField(els.notaEstudiosSugeridos, 'estudios_sugeridos');
     bindNotaField(els.notaSeguimiento, 'seguimiento');
+    els.notaSourceChoose?.addEventListener('click', ()=>void openNotaEncounterChooser());
+    els.notaSourceCancel?.addEventListener('click', ()=>els.notaSourceChooser?.classList.add('d-none'));
+    els.notaSourceConfirm?.addEventListener('click', ()=>void confirmNotaEncounterSource());
+    els.notaSourceUnlink?.addEventListener('click', ()=>{
+      if(notaState.encounterImports.length && !window.confirm('Desvincular no borrará el texto ni su procedencia histórica. ¿Continuar?')) return;
+      notaState.encounterSource = null;
+      notaState.encounterProjection = null;
+      els.notaSourceChooser?.classList.add('d-none');
+      els.notaSourceImportPanel?.classList.add('d-none');
+      renderNotaEncounterSource();
+      scheduleDocModalTempSessionSave({ documentType: 'nota_medica',
+        patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildNotaTempSnapshot });
+    });
+    els.notaSourceImport?.addEventListener('click', ()=>void openNotaImportReview());
+    els.notaSourceImportCancel?.addEventListener('click', ()=>els.notaSourceImportPanel?.classList.add('d-none'));
+    els.notaSourceApply?.addEventListener('click', ()=>{
+      try{
+        const proposal = prepareNotaImport();
+        const conflicts = Object.keys(proposal.fields).filter(key=>trimConsentInputValue(notaState.form[key] || '') !== '');
+        if(conflicts.length){
+          notaState.proposedImport = proposal;
+          if(els.notaSourceConflictText) els.notaSourceConflictText.textContent =
+            `Ya hay contenido en: ${conflicts.map(key=>notaDestinationLabels[key]).join(', ')}. Reemplazar aplicará todos los campos seleccionados juntos.`;
+          els.notaSourceConflict?.classList.remove('d-none');
+          els.notaSourceReplaceConfirm?.focus();
+        }else applyNotaImport(proposal);
+      }catch(error){ setNotaNotice(sanitizeText(error?.message || 'No se pudo preparar la importación.')); }
+    });
+    els.notaSourceReplaceCancel?.addEventListener('click', ()=>{
+      notaState.proposedImport = null;
+      els.notaSourceConflict?.classList.add('d-none');
+    });
+    els.notaSourceReplaceConfirm?.addEventListener('click', ()=>{
+      if(notaState.proposedImport) applyNotaImport(notaState.proposedImport);
+    });
+    window.addEventListener('mxmed:open-nota-from-encounter', (event)=>{
+      const patientId = sanitizeText(event.detail?.patient_id || '');
+      const key = sanitizeText(event.detail?.encounter_key || '');
+      if(patientId && patientId === resolveActivePatientIdForConsent() && /(?:^|#)enc:[1-9][0-9]*$/.test(key))
+        void openNotaModal({ encounterKey: key });
+    });
     els.notaHeaderOptions?.forEach(option=>option.addEventListener('change', ()=>{
       if(!option.checked) return;
       notaState.professionalHeader = option.value === 'hidden' ? 'hidden' : 'shown';

@@ -9261,6 +9261,49 @@ try {
                 return;
             }
         }
+        if ($method === 'GET' && ($segments[2] ?? '') === 'patients'
+            && ($segments[4] ?? '') === 'nota-encounters' && in_array(count($segments), [5, 6], true)) {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = ['method' => 'GET', 'route' => 'doctors/{doctor_id}/patients/{patient_id}/nota-encounters'];
+            if ($doctorId !== (string)$scopedDoctorContext['doctor_id']) {
+                clinical_send_response(['ok'=>false,'error'=>'forbidden','meta'=>$meta], 403); return;
+            }
+            try {
+                $pdo = clinical_documents_pdo();
+                if (!clinical_patient_exists($pdo, $patientId)
+                    || !clinical_require_doctor_patient_scope($pdo, $doctorId, $patientId, $meta['route'])) return;
+                if (!clinical_m6_patient_route_uses_v1($scopedDoctorContext, $patientId))
+                    throw new InvalidArgumentException('NOTA_M6_CANONICAL_REQUIRED');
+                clinical_encounter_integrity_assert_schema_ready($pdo);
+                require_once __DIR__ . '/../_lib/clinical_nota_encounter_source.php';
+                if (count($segments) === 5) {
+                    $query = $pdo->prepare("SELECT encounter_id, patient_id, doctor_id, appointment_id,
+                        encounter_dt, encounter_type, status, created_at, updated_at
+                        FROM clinical_encounters WHERE patient_id=? AND doctor_id=?
+                        AND status IN ('open','closed') ORDER BY encounter_dt DESC, encounter_id DESC LIMIT 30");
+                    $query->execute([$patientId, $doctorId]);
+                    $data = array_map('clinical_nota_source_display', $query->fetchAll(PDO::FETCH_ASSOC));
+                } else {
+                    $rawId = rawurldecode((string)$segments[5]);
+                    if (preg_match('/^[1-9][0-9]*$/', $rawId) !== 1)
+                        throw new InvalidArgumentException('NOTA_ENCOUNTER_INVALID');
+                    $row = clinical_nota_source_encounter($pdo, (int)$rawId, $patientId, $doctorId);
+                    $data = clinical_nota_source_projection($pdo, $row);
+                }
+                clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>$meta], 200);
+            } catch (InvalidArgumentException $error) {
+                $code = $error->getMessage();
+                $status = $code === 'NOTA_M6_CANONICAL_REQUIRED' ? 409
+                    : ($code === 'NOTA_ENCOUNTER_STATUS_INVALID' ? 409 : 404);
+                clinical_send_response(['ok'=>false,'error'=>$code,'meta'=>$meta], $status);
+            } catch (Throwable $error) {
+                $schema = str_starts_with($error->getMessage(), 'SCHEMA_NOT_READY');
+                clinical_send_response(['ok'=>false,'error'=>$schema ? 'SCHEMA_NOT_READY' : 'server_error',
+                    'meta'=>$meta], $schema ? 503 : 500);
+            }
+            return;
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'nota-preview') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));

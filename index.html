@@ -8323,6 +8323,9 @@
                       <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-nota" data-ac-kind="nota">
                         Nota de evolución
                       </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm d-none" data-action="actividad-tab-open-nota-document">
+                        Nota médica (documento)
+                      </button>
                       <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-receta" data-ac-kind="receta">
                         Receta
                       </button>
@@ -9589,6 +9592,37 @@
                     <div class="alert alert-warning py-2 d-none" id="nm_notice"></div>
                     <div id="nm_step_1">
                       <h3 class="h6 text-uppercase mb-3">Tipo y contexto</h3>
+                      <section class="border rounded p-3 mb-3" aria-labelledby="nm_source_title">
+                        <h4 class="h6 text-uppercase mb-2" id="nm_source_title">Documento · Consulta de origen</h4>
+                        <div id="nm_source_summary" class="small mb-2" aria-live="polite">Sin consulta vinculada</div>
+                        <div class="d-flex flex-wrap gap-2">
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="nm_source_choose">Vincular / Cambiar consulta</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="nm_source_unlink">Desvincular</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm d-none" id="nm_source_import">Traer información de la consulta</button>
+                        </div>
+                        <div id="nm_source_chooser" class="d-none border-top mt-3 pt-3">
+                          <div class="fw-semibold small mb-2">Selecciona una consulta exacta</div>
+                          <div id="nm_source_options" class="small" role="radiogroup" aria-label="Consultas disponibles"></div>
+                          <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" id="nm_source_confirm">Confirmar vínculo</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_source_cancel">Cancelar</button>
+                          </div>
+                        </div>
+                        <div id="nm_source_import_panel" class="d-none border-top mt-3 pt-3" aria-label="Revisar información de la consulta">
+                          <div class="fw-semibold small mb-2">Revisa y selecciona lo que deseas traer</div>
+                          <div id="nm_source_candidates" class="small"></div>
+                          <div class="small text-muted mt-2">El texto es editable. Estudios sugeridos no crea una orden.</div>
+                          <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" id="nm_source_apply">Agregar al documento</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_source_import_cancel">Cancelar</button>
+                          </div>
+                          <div id="nm_source_conflict" class="d-none alert alert-warning mt-3 mb-0" role="alert">
+                            <div id="nm_source_conflict_text" class="small mb-2"></div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_source_replace_cancel">Cancelar</button>
+                            <button type="button" class="btn btn-warning btn-sm" id="nm_source_replace_confirm">Reemplazar</button>
+                          </div>
+                        </div>
+                      </section>
                       <div class="row g-2 mb-3">
                         <div class="col-md-6">
                           <label class="form-label" for="nm_note_type">Tipo de nota</label>
