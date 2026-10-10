@@ -5253,3 +5253,22 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #modalConsentimientoInformado .ci-form-additional > .row{margin:0;padding:0 16px 16px;border-top:1px solid #d8e8ed}
 #p-expediente #modalConsentimientoInformado .ci-form-additional:not([open]) > .row{display:none}
 @media(max-width:600px){#p-expediente #modalConsentimientoInformado .ci-form-section{padding:12px}}
+
+/* INF-FORM01: purpose-led Informe capture; canonical document styling stays shared. */
+#p-expediente #im_wizard .im-form-section{min-width:0;margin-bottom:14px;padding:14px 16px;border:1px solid #c8e2e9;border-radius:10px;background:#fbfdfe}
+#p-expediente #im_wizard .im-form-section--primary{border-color:#add8e2;background:#f3fbfd}
+#p-expediente #im_wizard .im-form-section h4{margin:0 0 11px;color:#07536e;font-size:14px;font-weight:700;line-height:1.3;letter-spacing:.025em}
+#p-expediente #im_wizard .im-form-section .form-label{margin-bottom:5px}
+#p-expediente #im_wizard .im-derived-context{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 14px}
+#p-expediente #im_wizard .im-derived-context>div{min-width:0;padding:8px 10px;border:1px solid #d8e8ed;border-radius:8px;background:#f8fcfd}
+#p-expediente #im_wizard .im-derived-context span{display:block;color:#526976;font-size:12px;line-height:1.3}
+#p-expediente #im_wizard .im-derived-context strong{display:block;margin-top:2px;color:#123f60;font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+#p-expediente #im_wizard .im-additional-info{margin:0 0 14px;border:1px solid #c8e2e9;border-radius:10px;background:#fbfdfe}
+#p-expediente #im_wizard .im-additional-info summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 16px;color:#07536e;font-size:14px;font-weight:700;line-height:1.3;letter-spacing:.025em;cursor:pointer;list-style:none}
+#p-expediente #im_wizard .im-additional-info summary::-webkit-details-marker{display:none}
+#p-expediente #im_wizard .im-additional-info summary::after{content:'expand_more';font:normal 22px/1 'Material Symbols Rounded';color:#008fa4}
+#p-expediente #im_wizard .im-additional-info[open] summary::after{content:'expand_less'}
+#p-expediente #im_wizard .im-additional-info summary:focus-visible{outline:2px solid #008c9b;outline-offset:-3px;border-radius:8px}
+#p-expediente #im_wizard .im-additional-info__body{margin:0;padding:13px 16px 16px;border-top:1px solid #d8e8ed}
+@media(max-width:900px){#p-expediente #im_wizard .im-derived-context{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){#p-expediente #im_wizard .im-derived-context{grid-template-columns:repeat(2,minmax(0,1fr))}#p-expediente #im_wizard .im-form-section{padding:12px}}

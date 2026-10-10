@@ -42270,9 +42270,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeStep4: root.querySelector('#im_step_4'),
       informeReason: root.querySelector('#im_reason'),
       informeEmissionDate: root.querySelector('#im_emission_date'),
+      informeEmissionDateDisplay: root.querySelector('#im_emission_date_display'),
       informePatientName: root.querySelector('#im_patient_name'),
       informePatientAge: root.querySelector('#im_patient_age'),
       informePatientSex: root.querySelector('#im_patient_sex'),
+      informePhysicianName: root.querySelector('#im_physician_name'),
+      informeAdditionalInfo: root.querySelector('#im_additional_info'),
       informeClinicalSummary: root.querySelector('#im_clinical_summary'),
       informeCurrentIllness: root.querySelector('#im_current_illness'),
       informeRelevantHistory: root.querySelector('#im_relevant_history'),
@@ -47766,6 +47769,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const syncInformeInputsFromState = ()=>{
       if(els.informeReason) els.informeReason.value = sanitizeText(informeState.form.reason || '');
       if(els.informeEmissionDate) els.informeEmissionDate.value = sanitizeText(informeState.form.emission_date || '');
+      if(els.informeEmissionDateDisplay) els.informeEmissionDateDisplay.textContent = sanitizeText(informeState.form.emission_date || '');
       if(els.informeCurrentIllness) els.informeCurrentIllness.value = sanitizeText(informeState.form.current_illness || '');
       if(els.informeRelevantHistory) els.informeRelevantHistory.value = sanitizeText(informeState.form.relevant_history || '');
       if(els.informeClinicalSummary) els.informeClinicalSummary.value = sanitizeText(informeState.form.clinical_summary || '');
@@ -47774,6 +47778,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.informePlan) els.informePlan.value = sanitizeText(informeState.form.plan || '');
       if(els.informePrognosis) els.informePrognosis.value = sanitizeText(informeState.form.prognosis || '');
       if(els.informeClosingStatement) els.informeClosingStatement.value = sanitizeText(informeState.form.closing_statement || '');
+    };
+    const syncInformeAdditionalInfoDisclosure = (resumed = false)=>{
+      if(!els.informeAdditionalInfo) return;
+      const form = informeState.form;
+      const defaultClosing = 'Se emite el presente informe médico para los fines clínicos correspondientes.';
+      const hasAdditionalContent = [form.relevant_history, form.plan, form.prognosis]
+        .some(value=>trimConsentInputValue(value || '') !== '')
+        || (!!trimConsentInputValue(form.closing_statement || '')
+          && trimConsentInputValue(form.closing_statement) !== defaultClosing);
+      els.informeAdditionalInfo.open = resumed && hasAdditionalContent;
     };
     const renderInformePreview = async ({ final = false } = {})=>{
       const generation = ++informeState.previewGeneration;
@@ -47885,6 +47899,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === informeState.professionalHeader; });
       informeState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
       syncInformeInputsFromState();
+      syncInformeAdditionalInfoDisclosure(true);
       renderInformeStep();
     };
     const resetInformeWizard = ()=>{
@@ -47921,6 +47936,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       clearInformeSignaturePad();
       refreshInformeRegisteredSignature();
       syncInformeInputsFromState();
+      syncInformeAdditionalInfoDisclosure();
       renderInformeStep();
       if(els.informeWizard){
         els.informeWizard.classList.add('d-none');
@@ -47935,9 +47951,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         return false;
       }
       const patient = readInformePatientContext();
-      if(els.informePatientName) els.informePatientName.value = patient.name;
-      if(els.informePatientAge) els.informePatientAge.value = patient.age;
-      if(els.informePatientSex) els.informePatientSex.value = patient.sex;
+      if(els.informePatientName) els.informePatientName.textContent = patient.name;
+      if(els.informePatientAge) els.informePatientAge.textContent = patient.age;
+      if(els.informePatientSex) els.informePatientSex.textContent = patient.sex;
+      if(els.informePhysicianName) els.informePhysicianName.textContent = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       const today = new Date();
       const y = String(today.getFullYear());
       const m = String(today.getMonth() + 1).padStart(2, '0');
@@ -47971,6 +47988,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeState.remoteSignature = null;
       els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === 'shown'; });
       syncInformeInputsFromState();
+      syncInformeAdditionalInfoDisclosure();
       setInformeNotice('');
       initInformeSignaturePad();
       syncInformeSignatureCanvasSize();
@@ -48009,6 +48027,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         informeState.storedDoctorSignature = payload.signatures?.doctor || null;
         informeState.step = 3;
         syncInformeInputsFromState();
+        syncInformeAdditionalInfoDisclosure(true);
         els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === informeState.professionalHeader; });
         const prepared = await buildInformeDocument('draft');
         informeState.signatureBindingStatus = await window.mxmedInformeSignatureBinding.classify(

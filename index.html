@@ -9275,72 +9275,69 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="im_notice"></div>
                     <div id="im_step_1">
-                      <div class="row g-3">
-                        <div class="col-md-8">
-                          <label class="form-label" for="im_reason">Motivo del informe</label>
-                          <input class="form-control" id="im_reason" placeholder="Ej. Informe para seguimiento clínico y referencia interinstitucional">
-                        </div>
-                        <div class="col-md-4">
-                          <label class="form-label" for="im_emission_date">Fecha de emisión</label>
-                          <input class="form-control" id="im_emission_date" type="date">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Paciente</label>
-                          <input class="form-control" id="im_patient_name" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Edad</label>
-                          <input class="form-control" id="im_patient_age" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Sexo</label>
-                          <input class="form-control" id="im_patient_sex" readonly>
-                        </div>
-                        <div class="col-12">
-                          <div class="fw-semibold mb-1">PRESENTACIÓN DEL DOCUMENTO</div>
-                          <div class="small mb-2">Encabezado profesional</div>
-                          <label class="me-3"><input type="radio" name="im_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
-                          <label><input type="radio" name="im_professional_header" value="hidden"> Generar sin encabezado profesional</label>
-                        </div>
+                      <section class="im-form-section im-form-section--primary" aria-labelledby="im-purpose-title">
+                        <h4 id="im-purpose-title">PROPÓSITO DEL INFORME</h4>
+                        <label class="form-label fw-semibold" for="im_reason">Motivo del informe</label>
+                        <input class="form-control" id="im_reason" placeholder="Ej. Informe para seguimiento clínico y referencia interinstitucional">
+                        <div class="form-text">¿Para qué se emite este informe?</div>
+                      </section>
+                      <div class="im-derived-context" aria-label="Datos del informe">
+                        <div><span>Fecha de emisión</span><strong id="im_emission_date_display"></strong><input id="im_emission_date" type="hidden"></div>
+                        <div><span>Paciente</span><strong id="im_patient_name"></strong></div>
+                        <div><span>Edad</span><strong id="im_patient_age"></strong></div>
+                        <div><span>Sexo</span><strong id="im_patient_sex"></strong></div>
+                        <div><span>Médico emisor</span><strong id="im_physician_name"></strong></div>
                       </div>
                     </div>
                     <div id="im_step_2" class="d-none">
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label" for="im_relevant_history">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="im_relevant_history" rows="3" placeholder="Antecedentes clínicos relevantes para contextualizar el informe."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="im_clinical_summary">Resumen clínico</label>
-                          <textarea class="form-control" id="im_clinical_summary" rows="4" placeholder="Contexto clínico, antecedentes relevantes y evolución breve."></textarea>
-                        </div>
-                        <div class="col-12">
+                      <section class="im-form-section im-form-section--primary" aria-labelledby="im-summary-title">
+                        <h4 id="im-summary-title">RESUMEN CLÍNICO</h4>
+                        <label class="form-label fw-semibold" for="im_clinical_summary">Resumen clínico</label>
+                        <textarea class="form-control" id="im_clinical_summary" rows="4" placeholder="Contexto, evolución y situación clínica actual."></textarea>
+                        <div class="form-text">Describe qué ha ocurrido clínicamente y el contexto relevante.</div>
+                      </section>
+                      <section class="im-form-section" aria-labelledby="im-assessment-title">
+                        <h4 id="im-assessment-title">VALORACIÓN E IMPRESIÓN DIAGNÓSTICA</h4>
+                        <div class="mb-3">
                           <label class="form-label" for="im_findings">Hallazgos / valoración médica</label>
-                          <textarea class="form-control" id="im_findings" rows="4" placeholder="Exploración, resultados relevantes y valoración clínica."></textarea>
+                          <textarea class="form-control" id="im_findings" rows="3" placeholder="Lo observado o valorado en esta atención."></textarea>
                         </div>
-                        <div class="col-12">
-                          <label class="form-label" for="im_diagnostic_impression">Impresión diagnóstica / diagnóstico</label>
-                          <textarea class="form-control" id="im_diagnostic_impression" rows="3" placeholder="Diagnóstico, prediagnóstico o juicio clínico."></textarea>
+                        <label class="form-label fw-semibold" for="im_diagnostic_impression">Impresión diagnóstica / diagnóstico</label>
+                        <textarea class="form-control" id="im_diagnostic_impression" rows="3" placeholder="Juicio clínico o impresión diagnóstica del médico."></textarea>
+                      </section>
+                      <details class="im-additional-info" id="im_additional_info">
+                        <summary>INFORMACIÓN CLÍNICA ADICIONAL</summary>
+                        <div class="im-additional-info__body row g-3">
+                          <div class="col-12">
+                            <label class="form-label" for="im_relevant_history">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
+                            <textarea class="form-control" id="im_relevant_history" rows="3" placeholder="Solo los antecedentes necesarios para comprender el informe."></textarea>
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label" for="im_plan">Plan / manejo / recomendaciones</label>
+                            <textarea class="form-control" id="im_plan" rows="3" placeholder="Manejo, indicaciones o seguimiento propuesto."></textarea>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label" for="im_prognosis">Pronóstico</label>
+                            <select class="form-select" id="im_prognosis">
+                              <option value="">Seleccionar</option>
+                              <option value="favorable">Favorable</option>
+                              <option value="reservado">Reservado</option>
+                              <option value="en_evolucion">En evolución</option>
+                              <option value="condicionado">Condicionado</option>
+                            </select>
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label" for="im_closing_statement">Declaración de cierre</label>
+                            <textarea class="form-control" id="im_closing_statement" rows="3" placeholder="Cierre formal del informe médico emitido para los fines clínicos correspondientes."></textarea>
+                          </div>
                         </div>
-                        <div class="col-12">
-                          <label class="form-label" for="im_plan">Plan / manejo / recomendaciones</label>
-                          <textarea class="form-control" id="im_plan" rows="3" placeholder="Tratamiento, indicaciones, seguimiento o recomendaciones."></textarea>
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="im_prognosis">Pronóstico</label>
-                          <select class="form-select" id="im_prognosis">
-                            <option value="">Seleccionar</option>
-                            <option value="favorable">Favorable</option>
-                            <option value="reservado">Reservado</option>
-                            <option value="en_evolucion">En evolución</option>
-                            <option value="condicionado">Condicionado</option>
-                          </select>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="im_closing_statement">Declaración de cierre</label>
-                          <textarea class="form-control" id="im_closing_statement" rows="3" placeholder="Cierre formal del informe médico emitido para los fines clínicos correspondientes."></textarea>
-                        </div>
-                      </div>
+                      </details>
+                      <section class="im-form-section im-form-section--presentation" aria-labelledby="im-presentation-title">
+                        <h4 id="im-presentation-title">PRESENTACIÓN DEL DOCUMENTO</h4>
+                        <div class="small mb-2">Encabezado profesional</div>
+                        <label class="me-3"><input type="radio" name="im_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                        <label><input type="radio" name="im_professional_header" value="hidden"> Generar sin encabezado profesional</label>
+                      </section>
                     </div>
                     <div id="im_step_3" class="d-none">
                       <div class="row g-3">
