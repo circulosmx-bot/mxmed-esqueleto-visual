@@ -381,8 +381,28 @@ function clinical_documents_force_request_patient_id(array $payload, string $pat
     return $payload;
 }
 
+function clinical_documents_assert_generic_type_allowed(array $payload): void
+{
+    // Informe and Interconsulta new writes belong exclusively to their versioned writers.
+    $type = strtolower(trim((string)($payload['document_type'] ?? '')));
+    if ($type === 'informe_medico' || $type === 'interconsulta') {
+        throw new InvalidArgumentException(strtoupper($type) . '_GENERIC_WRITE_FORBIDDEN');
+    }
+}
+
+function clinical_documents_is_contract_write_error(string $message): bool
+{
+    return in_array($message, [
+        'INFORME_CONTRACT_VERSION_UNSUPPORTED',
+        'INTERCONSULTA_CONTRACT_VERSION_UNSUPPORTED',
+        'INFORME_MEDICO_GENERIC_WRITE_FORBIDDEN',
+        'INTERCONSULTA_GENERIC_WRITE_FORBIDDEN',
+    ], true);
+}
+
 function clinical_documents_save_create_request(PDO $pdo, array $payload, ?array $uploadFile, bool $isMultipart, bool $requireCanonicalPatient = false): array
 {
+    clinical_documents_assert_generic_type_allowed($payload);
     $looksLikeUploadDocument = $isMultipart && (
         is_array($uploadFile)
         || trim((string)($payload['document_type'] ?? '')) !== ''
@@ -1941,6 +1961,7 @@ function clinical_encounter_finalize(PDO $pdo, array $encounterRow, string $clos
 
 function clinical_documents_save_passthrough(PDO $pdo, array $args, bool $requireCanonicalPatient = false): array
 {
+    clinical_documents_assert_generic_type_allowed($args);
     require_once __DIR__ . '/../_lib/clinical_documents.php';
 
     mxmed_ensure_clinical_docs_schema($pdo);
@@ -2236,6 +2257,7 @@ function clinical_store_uploaded_file(array $file, string $documentUuid): array
 
 function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array $uploadFile, bool $requireCanonicalPatient = false): array
 {
+    clinical_documents_assert_generic_type_allowed($payload);
     $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
     $title = trim((string)($payload['title'] ?? ''));
     $summary = trim((string)($payload['summary'] ?? ''));
@@ -7381,6 +7403,13 @@ try {
             }
 
             $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
+            if (in_array($documentType, ['informe_medico', 'interconsulta'], true)) {
+                $code = strtoupper($documentType) . '_GENERIC_WRITE_FORBIDDEN';
+                clinical_send_response(['ok' => false, 'error' => ['code' => $code, 'message' => $code],
+                    'message' => $code, 'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents']], 422);
+                return;
+            }
             $title = trim((string)($payload['title'] ?? ''));
             $summary = trim((string)($payload['summary'] ?? ''));
             $payloadData = $payload['payload'] ?? [];
@@ -9522,8 +9551,9 @@ try {
                         'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
                     return;
                 }
-                if (($payload['document_type'] ?? null) === 'informe_medico'
-                    && (int)($payload['payload']['contract_version'] ?? 0) === 2) {
+                if (($payload['document_type'] ?? null) === 'informe_medico') {
+                    if (($payload['payload']['contract_version'] ?? null) !== 2)
+                        throw new InvalidArgumentException('INFORME_CONTRACT_VERSION_UNSUPPORTED');
                     if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('INFORME_MULTIPART_UNSUPPORTED');
                     require_once __DIR__ . '/../_lib/clinical_informe_write.php';
                     $result = clinical_informe_write($pdo, $scopedDoctorContext, $patientId, $payload,
@@ -9536,8 +9566,9 @@ try {
                         'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
                     return;
                 }
-                if (($payload['document_type'] ?? null) === 'interconsulta'
-                    && (int)($payload['payload']['contract_version'] ?? 0) === 2) {
+                if (($payload['document_type'] ?? null) === 'interconsulta') {
+                    if (($payload['payload']['contract_version'] ?? null) !== 2)
+                        throw new InvalidArgumentException('INTERCONSULTA_CONTRACT_VERSION_UNSUPPORTED');
                     if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('INTERCONSULTA_MULTIPART_UNSUPPORTED');
                     require_once __DIR__ . '/../_lib/clinical_interconsulta_write.php';
                     $result = clinical_interconsulta_write($pdo, $scopedDoctorContext, $patientId, $payload,
@@ -9682,6 +9713,11 @@ try {
                 return;
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());
+                if (clinical_documents_is_contract_write_error($msg)) {
+                    clinical_send_response(['ok' => false, 'error' => ['code' => $msg, 'message' => $msg],
+                        'message' => $msg, 'data' => null, 'meta' => $meta], 422);
+                    return;
+                }
                 $consentRepresentative = isset($consentBody) && is_array($consentBody)
                     && (string)($consentBody['payload']['form_snapshot']['firmante_tipo'] ?? 'paciente') !== 'paciente';
                 $consentSignatureMessages = [
@@ -10350,6 +10386,11 @@ try {
                 return;
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());
+                if (clinical_documents_is_contract_write_error($msg)) {
+                    clinical_send_response(['ok' => false, 'error' => ['code' => $msg, 'message' => $msg],
+                        'message' => $msg, 'data' => null, 'meta' => $meta], 422);
+                    return;
+                }
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'invalid_params',
