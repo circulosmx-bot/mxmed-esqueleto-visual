@@ -2924,6 +2924,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .save-wrap.saved .save-ok{display:inline-flex; align-items:center; justify-content:center}
 
+/* Nota narratives use explicit errors and signature status, not field checkmarks. */
+#nm_wizard .save-wrap .save-ok{display:none !important}
+#nm_wizard .save-wrap input.form-control,
+#nm_wizard .save-wrap textarea.form-control{padding-right:.75rem}
+#nm_wizard .save-wrap select.form-select{padding-right:2.25rem}
+
 /* Reservar espacio para el autosave sin mover iconos nativos */
 .save-wrap input.form-control,
 .save-wrap textarea.form-control{

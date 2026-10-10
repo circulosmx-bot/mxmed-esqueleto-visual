@@ -42333,6 +42333,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       notaTratamientoIndicaciones: root.querySelector('#nm_tratamiento_indicaciones'),
       notaEstudiosSugeridos: root.querySelector('#nm_estudios_sugeridos'),
       notaSeguimiento: root.querySelector('#nm_seguimiento'),
+      notaAdditionalInfo: root.querySelector('#nm_additional_info'),
       notaHeaderOptions: Array.from(root.querySelectorAll('input[name="nm_professional_header"]')),
       notaPreviewPhase: root.querySelector('#nm_preview_phase'),
       notaPreviewFrame: root.querySelector('#nm_preview_frame'),
@@ -48373,6 +48374,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const key = sanitizeText(value || '').toLowerCase();
       return sanitizeText(notaTypeLabels[key] || '') || 'Nota médica';
     };
+    const notaAdditionalFields = [
+      'sintomas_relevantes', 'tiempo_evolucion', 'informacion_referida_paciente',
+      'signos_vitales', 'resultados_relevantes', 'analisis_clinico',
+      'estudios_sugeridos', 'seguimiento'
+    ];
     const syncNotaInputsFromState = ()=>{
       if(els.notaDate) els.notaDate.value = sanitizeText(notaState.form.emission_date || '');
       if(els.notaType) els.notaType.value = sanitizeText(notaState.form.tipo_nota || 'consulta_inicial') || 'consulta_inicial';
@@ -48389,6 +48395,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.notaTratamientoIndicaciones) els.notaTratamientoIndicaciones.value = sanitizeText(notaState.form.tratamiento_indicaciones || '');
       if(els.notaEstudiosSugeridos) els.notaEstudiosSugeridos.value = sanitizeText(notaState.form.estudios_sugeridos || '');
       if(els.notaSeguimiento) els.notaSeguimiento.value = sanitizeText(notaState.form.seguimiento || '');
+      if(els.notaAdditionalInfo){
+        els.notaAdditionalInfo.open = notaAdditionalFields.some(key=>
+          trimConsentInputValue(notaState.form[key] || '') !== '');
+      }
       els.notaHeaderOptions?.forEach(option=>{ option.checked = option.value === notaState.professionalHeader; });
     };
     const setNotaNotice = (message = '')=>{

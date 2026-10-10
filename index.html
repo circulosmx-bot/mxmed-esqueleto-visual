@@ -9588,12 +9588,9 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="nm_notice"></div>
                     <div id="nm_step_1">
-                      <div class="row g-3">
-                        <div class="col-md-4">
-                          <label class="form-label" for="nm_date">Fecha</label>
-                          <input class="form-control" id="nm_date" type="date">
-                        </div>
-                        <div class="col-md-4">
+                      <h3 class="h6 text-uppercase mb-3">Tipo y contexto</h3>
+                      <div class="row g-2 mb-3">
+                        <div class="col-md-6">
                           <label class="form-label" for="nm_note_type">Tipo de nota</label>
                           <select class="form-select" id="nm_note_type">
                             <option value="consulta_inicial">Consulta inicial</option>
@@ -9601,34 +9598,62 @@
                             <option value="nota_subsecuente">Nota subsecuente</option>
                           </select>
                         </div>
-                        <div class="col-md-4">
-                          <label class="form-label">Médico</label>
-                          <input class="form-control" id="nm_doctor_name" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="nm_motivo_consulta">Motivo de consulta</label>
-                          <textarea class="form-control" id="nm_motivo_consulta" rows="3" placeholder="Paciente refiere dolor abdominal de 48 horas de evolución, acompañado de náusea."></textarea>
-                        </div>
                         <div class="col-md-6">
-                          <label class="form-label">Paciente</label>
-                          <input class="form-control" id="nm_patient_name" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Edad</label>
-                          <input class="form-control" id="nm_patient_age" readonly>
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label">Sexo</label>
-                          <input class="form-control" id="nm_patient_sex" readonly>
+                          <label class="form-label" for="nm_date">Fecha</label>
+                          <input class="form-control" id="nm_date" type="date" readonly>
                         </div>
                       </div>
+                      <div class="border rounded bg-light-subtle p-2 mb-3" aria-label="Contexto del paciente y médico">
+                        <div class="row g-2">
+                        <div class="col-md-4">
+                          <label class="form-label small text-muted mb-0" for="nm_doctor_name">Médico</label>
+                          <input class="form-control-plaintext form-control-sm py-0" id="nm_doctor_name" readonly>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label small text-muted mb-0" for="nm_patient_name">Paciente</label>
+                          <input class="form-control-plaintext form-control-sm py-0" id="nm_patient_name" readonly>
+                        </div>
+                        <div class="col-md-2">
+                          <label class="form-label small text-muted mb-0" for="nm_patient_age">Edad</label>
+                          <input class="form-control-plaintext form-control-sm py-0" id="nm_patient_age" readonly>
+                        </div>
+                        <div class="col-md-2">
+                          <label class="form-label small text-muted mb-0" for="nm_patient_sex">Sexo</label>
+                          <input class="form-control-plaintext form-control-sm py-0" id="nm_patient_sex" readonly>
+                        </div>
+                        </div>
+                      </div>
+                      <h3 class="h6 text-uppercase mb-2">Motivo y evolución</h3>
+                      <label class="form-label fw-semibold" for="nm_motivo_consulta">Motivo de consulta</label>
+                      <textarea class="form-control" id="nm_motivo_consulta" rows="4" placeholder="Paciente refiere dolor abdominal de 48 horas de evolución, acompañado de náusea."></textarea>
+                      <div class="form-text">Razón principal de la atención.</div>
                     </div>
                     <div id="nm_step_2" class="d-none">
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label" for="nm_padecimiento_actual">Padecimiento actual</label>
-                          <textarea class="form-control" id="nm_padecimiento_actual" rows="4" placeholder="Cuadro clínico actual con evolución y síntomas predominantes."></textarea>
-                        </div>
+                      <h3 class="h6 text-uppercase mb-3">Motivo y evolución</h3>
+                      <label class="form-label fw-semibold" for="nm_padecimiento_actual">Padecimiento actual</label>
+                      <textarea class="form-control" id="nm_padecimiento_actual" rows="5" placeholder="Cuadro clínico actual con evolución y síntomas predominantes."></textarea>
+                      <div class="form-text">Describe el cuadro actual y su evolución.</div>
+                    </div>
+                    <div id="nm_step_3" class="d-none">
+                      <h3 class="h6 text-uppercase mb-3">Hallazgos</h3>
+                      <label class="form-label fw-semibold" for="nm_exploracion_fisica">Exploración física</label>
+                      <textarea class="form-control" id="nm_exploracion_fisica" rows="5" placeholder="Abdomen blando, dolor a la palpación en mesogastrio, sin datos de irritación peritoneal."></textarea>
+                      <div class="form-text">Registra los hallazgos relevantes de la valoración.</div>
+                    </div>
+                    <div id="nm_step_4" class="d-none">
+                      <h3 class="h6 text-uppercase mb-3">Impresión diagnóstica</h3>
+                      <label class="form-label fw-semibold" for="nm_impresion_diagnostica">Impresión diagnóstica</label>
+                      <textarea class="form-control" id="nm_impresion_diagnostica" rows="5" placeholder="Gastroenteritis aguda no complicada."></textarea>
+                      <div class="form-text">Juicio clínico, diagnóstico o prediagnóstico.</div>
+                    </div>
+                    <div id="nm_step_5" class="d-none">
+                      <h3 class="h6 text-uppercase mb-3">Plan e indicaciones</h3>
+                      <label class="form-label fw-semibold" for="nm_tratamiento_indicaciones">Tratamiento e indicaciones</label>
+                      <textarea class="form-control" id="nm_tratamiento_indicaciones" rows="5" placeholder="Reposo relativo, hidratación oral, dieta blanda y paracetamol en caso de dolor."></textarea>
+                      <div class="form-text">Manejo, indicaciones y conducta clínica.</div>
+                      <details class="border rounded p-3 mt-3" id="nm_additional_info">
+                        <summary class="fw-semibold">INFORMACIÓN CLÍNICA ADICIONAL</summary>
+                        <div class="row g-3 mt-1">
                         <div class="col-md-6">
                           <label class="form-label" for="nm_sintomas_relevantes">Síntomas relevantes</label>
                           <textarea class="form-control" id="nm_sintomas_relevantes" rows="3" placeholder="Dolor abdominal tipo cólico, náusea y distensión leve."></textarea>
@@ -9641,56 +9666,35 @@
                           <label class="form-label" for="nm_info_paciente">Información referida por paciente</label>
                           <textarea class="form-control" id="nm_info_paciente" rows="3" placeholder="Niega fiebre, vómito y antecedente reciente de alimentos en mal estado."></textarea>
                         </div>
-                      </div>
-                    </div>
-                    <div id="nm_step_3" class="d-none">
-                      <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-md-6">
                           <label class="form-label" for="nm_signos_vitales">Signos vitales</label>
                           <textarea class="form-control" id="nm_signos_vitales" rows="3" placeholder="TA 110/70 mmHg, FC 84 lpm, FR 18 rpm, Temp 36.7°C, SatO2 98%."></textarea>
                         </div>
-                        <div class="col-12">
-                          <label class="form-label" for="nm_exploracion_fisica">Exploración física</label>
-                          <textarea class="form-control" id="nm_exploracion_fisica" rows="4" placeholder="Abdomen blando, dolor a la palpación en mesogastrio, sin datos de irritación peritoneal."></textarea>
-                        </div>
-                        <div class="col-12">
+                        <div class="col-md-6">
                           <label class="form-label" for="nm_resultados_relevantes">Resultados relevantes</label>
                           <textarea class="form-control" id="nm_resultados_relevantes" rows="3" placeholder="Sin estudios de laboratorio o gabinete al momento de la valoración."></textarea>
                         </div>
-                      </div>
-                    </div>
-                    <div id="nm_step_4" class="d-none">
-                      <div class="row g-3">
                         <div class="col-12">
-                          <label class="form-label" for="nm_impresion_diagnostica">Impresión diagnóstica</label>
-                          <textarea class="form-control" id="nm_impresion_diagnostica" rows="4" placeholder="Gastroenteritis aguda no complicada."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="nm_analisis_clinico">Análisis clínico</label>
-                          <textarea class="form-control" id="nm_analisis_clinico" rows="4" placeholder="Cuadro compatible con proceso gastrointestinal agudo sin datos de alarma."></textarea>
-                        </div>
-                      </div>
-                    </div>
-                    <div id="nm_step_5" class="d-none">
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label" for="nm_tratamiento_indicaciones">Tratamiento e indicaciones</label>
-                          <textarea class="form-control" id="nm_tratamiento_indicaciones" rows="4" placeholder="Reposo relativo, hidratación oral, dieta blanda y paracetamol en caso de dolor."></textarea>
+                          <label class="form-label" for="nm_analisis_clinico">Análisis clínico <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="nm_analisis_clinico" rows="3" placeholder="Cuadro compatible con proceso gastrointestinal agudo sin datos de alarma."></textarea>
+                          <div class="form-text">Razonamiento o interpretación que sustenta la impresión diagnóstica.</div>
                         </div>
                         <div class="col-12">
                           <label class="form-label" for="nm_estudios_sugeridos">Estudios sugeridos <span class="text-muted">(opcional)</span></label>
                           <textarea class="form-control" id="nm_estudios_sugeridos" rows="3" placeholder="Biometría hemática y química sanguínea si persiste sintomatología."></textarea>
+                          <div class="form-text">Este texto no crea una orden de estudios.</div>
                         </div>
                         <div class="col-12">
                           <label class="form-label" for="nm_seguimiento">Seguimiento</label>
                           <textarea class="form-control" id="nm_seguimiento" rows="3" placeholder="Revaloración en 48 horas o antes si presenta datos de alarma."></textarea>
                         </div>
-                        <div class="col-12">
-                          <div class="fw-semibold mb-2">PRESENTACIÓN DEL DOCUMENTO</div>
-                          <div class="small mb-2">Encabezado profesional</div>
-                          <label class="d-block"><input type="radio" name="nm_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
-                          <label class="d-block"><input type="radio" name="nm_professional_header" value="hidden"> Generar sin encabezado profesional</label>
                         </div>
+                      </details>
+                      <div class="border-top mt-3 pt-3">
+                        <h3 class="h6 text-uppercase mb-2">Presentación del documento</h3>
+                        <div class="small mb-2">Encabezado profesional</div>
+                        <label class="d-block"><input type="radio" name="nm_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                        <label class="d-block"><input type="radio" name="nm_professional_header" value="hidden"> Generar sin encabezado profesional</label>
                       </div>
                     </div>
                     <div id="nm_step_6" class="d-none">
