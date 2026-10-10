@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_informe_binding.php';
 require_once __DIR__ . '/clinical_informe_render.php';
 require_once __DIR__ . '/clinical_informe_qr.php';
+require_once __DIR__ . '/clinical_nota_encounter_source.php';
 
 /** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
 function clinical_informe_qr_entry_unchanged($previous, $incoming): bool
@@ -44,6 +45,26 @@ function clinical_informe_write(PDO $pdo, array $doctor, string $patientId, arra
         throw new InvalidArgumentException('INFORME_ACTOR_MISMATCH');
     if (trim((string)($body['context']['patient_id'] ?? '')) !== $patientId)
         throw new InvalidArgumentException('INFORME_PATIENT_MISMATCH');
+    $source = $payload['encounter_source'] ?? null;
+    if ($source !== null && !is_array($source))
+        throw new InvalidArgumentException('INFORME_ENCOUNTER_SOURCE_INVALID');
+    $sourceId = is_array($source) ? (int)($source['encounter_id'] ?? 0) : 0;
+    if ($source !== null && ($sourceId < 1 || trim((string)($source['confirmed_at'] ?? '')) === ''))
+        throw new InvalidArgumentException('INFORME_ENCOUNTER_CONFIRMATION_REQUIRED');
+    if (trim((string)($body['context']['encounter_id'] ?? '')) !== ($sourceId > 0 ? (string)$sourceId : ''))
+        throw new InvalidArgumentException('INFORME_ENCOUNTER_CONTEXT_MISMATCH');
+    if (isset($payload['encounter_imports']) && !is_array($payload['encounter_imports']))
+        throw new InvalidArgumentException('INFORME_IMPORTS_INVALID');
+    $allowedDestinations = ['clinical_summary', 'findings', 'diagnostic_impression', 'plan'];
+    $allowedSources = ['reason_evolution', 'physical_exam', 'vital_observation', 'assessment', 'plan'];
+    foreach ((array)($payload['encounter_imports'] ?? []) as $import) {
+        if (!is_array($import) || !in_array((string)($import['destination_key'] ?? ''), $allowedDestinations, true)
+            || !in_array((string)($import['source_type'] ?? ''), $allowedSources, true)
+            || (int)($import['encounter_id'] ?? 0) < 1
+            || trim((string)($import['source_record_id'] ?? '')) === ''
+            || !is_string($import['imported_snapshot'] ?? null))
+            throw new InvalidArgumentException('INFORME_IMPORT_PROVENANCE_INVALID');
+    }
     $key = clinical_idempotency_key_validate($idempotencyKey);
     clinical_encounter_integrity_assert_schema_ready($pdo);
     $semantic = clinical_document_semantic_request($body, null) + [
@@ -54,7 +75,7 @@ function clinical_informe_write(PDO $pdo, array $doctor, string $patientId, arra
     $service = new ClinicalEncounterIntegrityService($pdo);
     return $service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT', (string)$doctor['doctor_id'],
         'PATIENT', $patientId, $key, $semantic, 'document_id', (string)$doctor['user_id'],
-        function () use ($pdo, $doctor, $patientId, $body, $payload, $intent, $draftRef, $expectedVersion): int {
+        function () use ($pdo, $doctor, $patientId, $body, $payload, $intent, $draftRef, $expectedVersion, $sourceId): int {
             if (!clinical_has_active_doctor_patient_link($pdo, (string)$doctor['doctor_id'], $patientId))
                 throw new InvalidArgumentException('INFORME_PATIENT_SCOPE_INVALID');
             $existing = null;
@@ -73,14 +94,64 @@ function clinical_informe_write(PDO $pdo, array $doctor, string $patientId, arra
                 if ((int)$existing['version'] !== $expectedVersion)
                     throw new ClinicalIdempotencyException('INFORME_DRAFT_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
             }
-            $writeContext = ['patient_id' => $patientId, 'care_setting' => 'consulta'];
+            $sourceRow = $sourceId > 0
+                ? clinical_nota_source_encounter($pdo, $sourceId, $patientId, (string)$doctor['doctor_id']) : null;
+            $previousPayload = $existing !== null ? json_decode((string)$existing['payload_json'], true) : null;
+            $priorImports = (array)($previousPayload['encounter_imports'] ?? []);
+            $projectionCache = [];
+            foreach ((array)($payload['encounter_imports'] ?? []) as $import) {
+                $importId = (int)$import['encounter_id'];
+                $scope = $pdo->prepare('SELECT 1 FROM clinical_encounters WHERE encounter_id=? AND patient_id=? AND doctor_id=?');
+                $scope->execute([$importId, $patientId, (string)$doctor['doctor_id']]);
+                if (!$scope->fetchColumn()) throw new InvalidArgumentException('INFORME_IMPORT_SCOPE_INVALID');
+                $retained = false;
+                foreach ($priorImports as $prior) {
+                    if (clinical_informe_qr_entry_unchanged($prior, $import)) { $retained = true; break; }
+                }
+                if ($retained) continue;
+                if ($importId !== $sourceId) throw new InvalidArgumentException('INFORME_IMPORT_SOURCE_MISMATCH');
+                if (!isset($projectionCache[$importId])) {
+                    $importRow = clinical_nota_source_encounter($pdo, $importId, $patientId, (string)$doctor['doctor_id']);
+                    $projectionCache[$importId] = clinical_informe_source_projection($pdo, $importRow);
+                }
+                $matched = false;
+                foreach ($projectionCache[$importId]['candidates'] as $candidate) {
+                    $snapshot = static fn(string $text): string => trim(str_replace(["\r\n", "\r"], "\n", $text));
+                    if ($candidate['source_type'] === $import['source_type']
+                        && $candidate['source_record_id'] === $import['source_record_id']
+                        && $candidate['source_version_or_updated_at'] === ($import['source_version_or_updated_at'] ?? null)
+                        && in_array($import['destination_key'], $candidate['destinations'], true)
+                        && $snapshot((string)$candidate['text']) === $snapshot((string)$import['imported_snapshot'])) {
+                        $matched = true; break;
+                    }
+                }
+                if (!$matched) throw new InvalidArgumentException('INFORME_IMPORT_SOURCE_CHANGED');
+            }
+            $writeContext = $sourceRow !== null ? [
+                'patient_id' => $patientId, 'care_setting' => 'consulta',
+                'encounter_id' => (string)$sourceId,
+                'appointment_id' => $sourceRow['appointment_id'] ?? null,
+            ] : ['patient_id' => $patientId, 'care_setting' => 'consulta'];
             $canonical = $body;
             $canonical['context'] = $writeContext;
             $canonical['actor'] = ['user_id' => (string)$doctor['user_id']];
             $canonical['payload'] = $payload;
+            if ($sourceRow !== null) {
+                $priorSource = (array)($previousPayload['encounter_source'] ?? []);
+                $sameSource = (int)($priorSource['encounter_id'] ?? 0) === $sourceId;
+                $canonical['payload']['encounter_source'] = clinical_nota_source_display($sourceRow) + [
+                    'patient_id' => $patientId,
+                    'doctor_id' => (string)$doctor['doctor_id'],
+                    'confirmed_at' => $sameSource ? (string)($priorSource['confirmed_at'] ?? gmdate('c')) : gmdate('c'),
+                    'status_at_confirmation' => $sameSource
+                        ? (string)($priorSource['status_at_confirmation'] ?? $sourceRow['status'])
+                        : (string)$sourceRow['status'],
+                ];
+            } else {
+                $canonical['payload']['encounter_source'] = null;
+            }
             $canonical['payload']['rendered_text'] = clinical_informe_canonical_text($canonical['payload']);
             $uploadedQrRoles = [];
-            $previousPayload = $existing !== null ? json_decode((string)$existing['payload_json'], true) : null;
             foreach (['doctor'] as $role) {
                 $canonical['payload']['signature_binding_status'][$role] =
                     clinical_informe_binding_classify($canonical, (string)$doctor['doctor_id'], $pdo);
@@ -124,11 +195,14 @@ function clinical_informe_write(PDO $pdo, array $doctor, string $patientId, arra
             $id = (int)$existing['id'];
             $encoded = json_encode($canonical['payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
             $update = $pdo->prepare('UPDATE clinical_documents SET title=?,summary=?,payload_json=?,rendered_text=?,
+                encounter_ref_id=?,encounter_id=?,appointment_id=?,
                 event_datetime=?,status=?,version=version+1,updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,
                 edited_flag=1,generated_at=CASE WHEN ?=\'generated\' THEN UTC_TIMESTAMP() ELSE NULL END
                 WHERE id=? AND version=? AND status=\'draft\'');
             $update->execute([(string)($body['title'] ?? 'Informe médico'), (string)($body['summary'] ?? ''),
                 $encoded, (string)$canonical['payload']['rendered_text'],
+                $sourceId > 0 ? $sourceId : null, $sourceId > 0 ? (string)$sourceId : null,
+                $sourceRow['appointment_id'] ?? null,
                 (string)($body['event_datetime'] ?? gmdate('Y-m-d H:i:s')),
                 $nextStatus, (string)$doctor['user_id'], $nextStatus, $id, $expectedVersion]);
             if ($update->rowCount() !== 1)

@@ -9262,10 +9262,12 @@ try {
             }
         }
         if ($method === 'GET' && ($segments[2] ?? '') === 'patients'
-            && ($segments[4] ?? '') === 'nota-encounters' && in_array(count($segments), [5, 6], true)) {
+            && in_array(($segments[4] ?? ''), ['nota-encounters', 'informe-encounters'], true)
+            && in_array(count($segments), [5, 6], true)) {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
-            $meta = ['method' => 'GET', 'route' => 'doctors/{doctor_id}/patients/{patient_id}/nota-encounters'];
+            $sourceRoute = (string)$segments[4];
+            $meta = ['method' => 'GET', 'route' => 'doctors/{doctor_id}/patients/{patient_id}/' . $sourceRoute];
             if ($doctorId !== (string)$scopedDoctorContext['doctor_id']) {
                 clinical_send_response(['ok'=>false,'error'=>'forbidden','meta'=>$meta], 403); return;
             }
@@ -9289,7 +9291,9 @@ try {
                     if (preg_match('/^[1-9][0-9]*$/', $rawId) !== 1)
                         throw new InvalidArgumentException('NOTA_ENCOUNTER_INVALID');
                     $row = clinical_nota_source_encounter($pdo, (int)$rawId, $patientId, $doctorId);
-                    $data = clinical_nota_source_projection($pdo, $row);
+                    $data = $sourceRoute === 'informe-encounters'
+                        ? clinical_informe_source_projection($pdo, $row)
+                        : clinical_nota_source_projection($pdo, $row);
                 }
                 clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>$meta], 200);
             } catch (InvalidArgumentException $error) {

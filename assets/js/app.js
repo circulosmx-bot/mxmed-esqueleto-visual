@@ -40608,6 +40608,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         delete actividadClinicaNotasActions.dataset.notaEncounterKey;
         delete actividadClinicaNotasActions.dataset.notaPatientId;
         actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-nota-document"]')?.classList.add('d-none');
+        actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-informe-document"]')?.classList.add('d-none');
       }
       if(actividadClinicaNotasStatusBadge){
         actividadClinicaNotasStatusBadge.textContent = 'Sin consulta activa';
@@ -40659,6 +40660,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       actividadClinicaNotasActions.dataset.notaEncounterKey = encounterKey;
       actividadClinicaNotasActions.dataset.notaPatientId = patientId;
       actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-nota-document"]')?.classList.remove('d-none');
+      actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-informe-document"]')?.classList.remove('d-none');
     }
 
     if(actividadClinicaNotasStatusBadge){
@@ -41185,6 +41187,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     syncNoteCaptureTokenStatus({ manual: true });
   });
   actividadClinicaNotasActions?.addEventListener('click', async (event)=>{
+    const informeDocumentBtn = event.target.closest('[data-action="actividad-tab-open-informe-document"]');
+    if(informeDocumentBtn){
+      event.preventDefault();
+      const key = sanitizeText(actividadClinicaNotasActions.dataset.notaEncounterKey || '');
+      const patientId = sanitizeText(actividadClinicaNotasActions.dataset.notaPatientId || '');
+      if(key && patientId && patientId === sanitizeText(getActivePatientId()))
+        window.dispatchEvent(new CustomEvent('mxmed:open-informe-from-encounter',
+          { detail: { patient_id: patientId, encounter_key: key } }));
+      return;
+    }
     const notaDocumentBtn = event.target.closest('[data-action="actividad-tab-open-nota-document"]');
     if(notaDocumentBtn){
       event.preventDefault();
@@ -42288,6 +42300,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeStep2: root.querySelector('#im_step_2'),
       informeStep3: root.querySelector('#im_step_3'),
       informeStep4: root.querySelector('#im_step_4'),
+      informeSourceSummary: root.querySelector('#im_source_summary'),
+      informeSourceChoose: root.querySelector('#im_source_choose'),
+      informeSourceUnlink: root.querySelector('#im_source_unlink'),
+      informeSourceImport: root.querySelector('#im_source_import'),
+      informeSourceChooser: root.querySelector('#im_source_chooser'),
+      informeSourceOptions: root.querySelector('#im_source_options'),
+      informeSourceConfirm: root.querySelector('#im_source_confirm'),
+      informeSourceCancel: root.querySelector('#im_source_cancel'),
+      informeSourceImportPanel: root.querySelector('#im_source_import_panel'),
+      informeSourceCandidates: root.querySelector('#im_source_candidates'),
+      informeSourceApply: root.querySelector('#im_source_apply'),
+      informeSourceImportCancel: root.querySelector('#im_source_import_cancel'),
+      informeSourceConflict: root.querySelector('#im_source_conflict'),
+      informeSourceConflictText: root.querySelector('#im_source_conflict_text'),
+      informeSourceReplaceCancel: root.querySelector('#im_source_replace_cancel'),
+      informeSourceReplaceConfirm: root.querySelector('#im_source_replace_confirm'),
       informeReason: root.querySelector('#im_reason'),
       informeEmissionDate: root.querySelector('#im_emission_date'),
       informeEmissionDateDisplay: root.querySelector('#im_emission_date_display'),
@@ -47803,15 +47831,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         sex: sanitizeText(snapshot?.sexo || '')
       };
     };
-    const readInformeReasonPrefillFromContext = ()=>{
-      const fromCurrentIllness = sanitizeText(pane.querySelector('#ne_citas_padecimiento')?.value || '');
-      if(fromCurrentIllness) return fromCurrentIllness;
-      const currentIllnessReadonly = sanitizeText(pane.querySelector('#ne_padecimiento_ro')?.textContent || '');
-      if(currentIllnessReadonly && currentIllnessReadonly.toLowerCase() !== 'no registrado'){
-        return currentIllnessReadonly;
-      }
-      return sanitizeText(readMotivoConsulta() || '');
-    };
     const syncInformeInputsFromState = ()=>{
       if(els.informeReason) els.informeReason.value = sanitizeText(informeState.form.reason || '');
       if(els.informeEmissionDate) els.informeEmissionDate.value = sanitizeText(informeState.form.emission_date || '');
@@ -47897,6 +47916,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const buildInformeTempSnapshot = ()=>({
       step: Number(informeState.step || 1) || 1,
+      encounter_source: informeState.encounterSource,
+      encounter_imports: informeState.encounterImports,
       form: {
         professional_header: informeState.professionalHeader,
         emission_date: sanitizeText(informeState.form.emission_date || ''),
@@ -47942,9 +47963,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         closing_statement: normalizeConsentInputRaw(form.closing_statement ?? informeState.form.closing_statement ?? '')
       };
       informeState.professionalHeader = form.professional_header === 'hidden' ? 'hidden' : 'shown';
+      informeState.encounterSource = safe.encounter_source && typeof safe.encounter_source === 'object'
+        ? safe.encounter_source : null;
+      informeState.encounterImports = Array.isArray(safe.encounter_imports) ? safe.encounter_imports : [];
       els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === informeState.professionalHeader; });
       informeState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
       syncInformeInputsFromState();
+      renderInformeEncounterSource();
       syncInformeAdditionalInfoDisclosure(true);
       renderInformeStep();
     };
@@ -47955,6 +47980,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeState.saving = false;
       informeState.activeDraftRef = '';
       informeState.activeDraftVersion = 0;
+      informeState.encounterSource = null;
+      informeState.encounterImports = [];
+      informeState.encounterProjection = null;
+      informeState.proposedImport = null;
       informeState.professionalHeader = 'shown';
       informeState.storedDoctorSignature = null;
       informeState.signatureBindingStatus = 'absent';
@@ -48005,10 +48034,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const y = String(today.getFullYear());
       const m = String(today.getMonth() + 1).padStart(2, '0');
       const d = String(today.getDate()).padStart(2, '0');
-      const reasonPrefill = readInformeReasonPrefillFromContext();
       informeState.form = {
         emission_date: `${y}-${m}-${d}`,
-        reason: reasonPrefill,
+        reason: '',
         current_illness: '',
         relevant_history: '',
         clinical_summary: '',
@@ -48022,6 +48050,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeState.saving = false;
       informeState.activeDraftRef = '';
       informeState.activeDraftVersion = 0;
+      informeState.encounterSource = null;
+      informeState.encounterImports = [];
+      informeState.encounterProjection = null;
+      informeState.proposedImport = null;
       informeState.professionalHeader = 'shown';
       informeState.storedDoctorSignature = null;
       informeState.signatureBindingStatus = 'absent';
@@ -48034,6 +48066,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeState.remoteSignature = null;
       els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === 'shown'; });
       syncInformeInputsFromState();
+      renderInformeEncounterSource();
       syncInformeAdditionalInfoDisclosure();
       setInformeNotice('');
       initInformeSignaturePad();
@@ -48046,7 +48079,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return true;
     };
-    const openInformeModal = async ({ draftRef = '' } = {})=>{
+    const openInformeModal = async ({ draftRef = '', encounterKey = '' } = {})=>{
       const shouldOpen = startInformeDraft();
       if(!shouldOpen) return;
       const patientId = resolveActivePatientIdForConsent();
@@ -48069,6 +48102,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         informeState.activeDraftVersion = Number(doc.version || 0);
         informeState.form = { ...informeState.form, ...payload.form_snapshot,
           ...payload.content, emission_date: sanitizeText(payload.report?.emission_date || '') };
+        informeState.encounterSource = payload.encounter_source || null;
+        informeState.encounterImports = Array.isArray(payload.encounter_imports) ? payload.encounter_imports : [];
+        renderInformeEncounterSource();
         informeState.professionalHeader = window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload);
         informeState.storedDoctorSignature = payload.signatures?.doctor || null;
         informeState.step = 3;
@@ -48078,7 +48114,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const prepared = await buildInformeDocument('draft');
         informeState.signatureBindingStatus = await window.mxmedInformeSignatureBinding.classify(
           prepared.body, resolveCanonicalDocumentsDoctorId(), informeState.registeredSignatureData);
-      }else{
+      }else if(!encounterKey){
       const tempSession = getDocModalTempSession({ documentType: 'informe_medico', patientId });
       if(tempSession?.snapshot){
         const decision = await askDocModalTempRecoveryDecision({
@@ -48099,6 +48135,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         modal.show();
         window.setTimeout(()=>{ syncInformeSignatureCanvasSize(); }, 40);
         renderInformeStep();
+        if(!draftRef && encounterKey) void openInformeEncounterChooser(encounterKey);
       }catch(_){}
     };
     const closeInformeModal = ()=>{
@@ -48159,19 +48196,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const actorUserId = resolveClinicalActorUserId();
       const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       const nowSql = formatNowSql();
-      let encounterKey = '';
-      if(typeof window.getActiveEncounterKey === 'function'){
-        encounterKey = sanitizeText(window.getActiveEncounterKey());
-      }
-      if(encounterKey && typeof window.mxmedIsOperationalEncounterForPatient === 'function'){
-        const isOperational = window.mxmedIsOperationalEncounterForPatient(patientId, encounterKey) === true;
-        if(!isOperational) encounterKey = '';
-      }
-      let appointmentId = '';
-      if(typeof window.resolveActiveEncounterForPatient === 'function'){
-        const resolved = await window.resolveActiveEncounterForPatient(patientId, { source: 'informe_medico_canonico' }).catch(()=> null);
-        appointmentId = sanitizeText(resolved?.appointmentId || resolved?.appointment_id || '');
-      }
       const patientSnapshot = readPatientSnapshot();
       const doctorPrefill = readDoctorPrefillProfile();
       const doctorBranding = resolveDoctorBranding(actorUserId);
@@ -48180,8 +48204,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         patient_id: patientId,
         care_setting: 'consulta'
       };
-      if(encounterKey) context.encounter_key = encounterKey;
-      if(appointmentId) context.appointment_id = appointmentId;
+      if(informeState.encounterSource?.encounter_id)
+        context.encounter_id = String(informeState.encounterSource.encounter_id);
       const content = {
         reason,
         // Historical compatibility key; new reports do not duplicate the visible reason.
@@ -48228,6 +48252,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
         },
         content,
+        encounter_source: informeState.encounterSource,
+        encounter_imports: informeState.encounterImports,
         signatures: {
           doctor: doctorSignature
         },
@@ -48419,6 +48445,199 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       'signos_vitales', 'resultados_relevantes', 'analisis_clinico',
       'estudios_sugeridos', 'seguimiento'
     ];
+    // Shared encounter-source controller primitives. Field mapping remains document-specific.
+    const documentEncounterApi = (route, id = '')=>{
+      const doctor = resolveCanonicalDocumentsDoctorId();
+      const patient = resolveActivePatientIdForConsent();
+      if(!doctor || !patient) throw new Error('No se pudo confirmar el paciente o médico.');
+      const base = `/api/clinical/index.php/doctors/${encodeURIComponent(doctor)}/patients/${encodeURIComponent(patient)}/${route}`;
+      return id ? `${base}/${encodeURIComponent(id)}` : base;
+    };
+    const fetchDocumentEncounter = async (route, id = '')=>{
+      const response = await fetch(documentEncounterApi(route, id),
+        { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const json = await response.json().catch(()=>null);
+      if(!response.ok || json?.ok !== true)
+        throw new Error(sanitizeText(json?.message || 'No se pudo cargar la consulta autorizada.'));
+      return json.data;
+    };
+    const renderDocumentEncounterSummary = (source, summary, unlink, importButton)=>{
+      const linked = Number(source?.encounter_id || 0) > 0;
+      if(summary) summary.textContent = linked
+        ? `${sanitizeText(source.encounter_dt || '')} · ${source.status === 'closed' ? 'Cerrada' : 'Abierta'}${source.origin ? ` · ${sanitizeText(source.origin)}` : ''} · ${sanitizeText(source.display_key || `enc:${source.encounter_id}`)}`
+        : 'Sin consulta vinculada';
+      unlink?.classList.toggle('d-none', !linked);
+      importButton?.classList.toggle('d-none', !linked);
+    };
+    const renderDocumentEncounterOptions = (container, rows, explicitId, radioName)=>{
+      container.replaceChildren();
+      if(!rows.length){
+        container.textContent = 'No hay consultas elegibles. Puedes continuar sin consulta vinculada.';
+        return;
+      }
+      for(const row of rows){
+        const label = document.createElement('label');
+        label.className = 'd-flex align-items-start gap-2 border rounded p-2 mb-2';
+        const radio = document.createElement('input');
+        radio.type = 'radio'; radio.name = radioName; radio.value = String(row.encounter_id);
+        radio.checked = explicitId !== '' && explicitId === radio.value;
+        const span = document.createElement('span');
+        span.textContent = `${sanitizeText(row.encounter_dt || '')} · ${row.status === 'closed' ? 'Cerrada' : 'Abierta'}${row.origin ? ` · ${sanitizeText(row.origin)}` : ''} · ${sanitizeText(row.display_key || '')}`;
+        label.append(radio, span); container.append(label);
+      }
+    };
+    const renderDocumentEncounterCandidates = (container, projection, sourceLabels, destinationLabels, prefix)=>{
+      container.replaceChildren();
+      const candidates = Array.isArray(projection?.candidates) ? projection.candidates : [];
+      if(!candidates.length) container.textContent = 'Esta consulta no tiene información compatible para traer.';
+      for(const [index, candidate] of candidates.entries()){
+        const box = document.createElement('div'); box.className = 'border rounded p-2 mb-2';
+        const label = document.createElement('label'); label.className = 'd-flex gap-2 align-items-start fw-semibold';
+        const check = document.createElement('input'); check.type = 'checkbox';
+        check.dataset[`${prefix}Candidate`] = String(index); check.className = 'form-check-input mt-1';
+        const title = document.createElement('span');
+        title.textContent = `${sourceLabels[candidate.source_type] || candidate.source_type} · ${candidate.source_record_id}`;
+        label.append(check, title); box.append(label);
+        const meta = document.createElement('div'); meta.className = 'small text-muted mt-1';
+        meta.textContent = `${sanitizeText(candidate.updated_at || projection.encounter?.encounter_dt || '')} · ${sanitizeText(candidate.source_type)} · ${candidate.destinations.map(key=>destinationLabels[key] || key).join(' / ')}`;
+        box.append(meta);
+        const preview = document.createElement('div');
+        preview.className = 'small mt-1'; preview.style.whiteSpace = 'pre-wrap'; preview.style.overflowWrap = 'anywhere';
+        preview.textContent = candidate.text; box.append(preview);
+        if(candidate.destinations?.length > 1){
+          const destinationLabel = document.createElement('label');
+          destinationLabel.className = 'd-block small mt-2'; destinationLabel.textContent = 'Destino de esta narrativa';
+          const select = document.createElement('select'); select.className = 'form-select form-select-sm mt-1';
+          select.dataset[`${prefix}Destination`] = String(index);
+          for(const key of candidate.destinations){
+            const option = document.createElement('option'); option.value = key;
+            option.textContent = destinationLabels[key] || key; select.append(option);
+          }
+          destinationLabel.append(select); box.append(destinationLabel);
+        }
+        container.append(box);
+      }
+    };
+    const prepareDocumentEncounterImport = (container, projection, source, destinationLabels, prefix, strategy)=>{
+      const selected = [...(container?.querySelectorAll(`input[data-${prefix}-candidate]:checked`) || [])];
+      const candidates = projection?.candidates || [];
+      const byDestination = new Map();
+      const imports = [];
+      for(const check of selected){
+        const index = Number(check.dataset[`${prefix}Candidate`]);
+        const item = candidates[index]; if(!item) continue;
+        const destination = container.querySelector(`select[data-${prefix}-destination="${index}"]`)?.value
+          || item.destinations?.[0];
+        if(!destinationLabels[destination]) continue;
+        const text = normalizeConsentInputRaw(item.text || ''); if(!text) continue;
+        if(strategy === 'single' && byDestination.has(destination))
+          throw new Error(`Selecciona una sola fuente para ${destinationLabels[destination]} por vez.`);
+        byDestination.set(destination, [...(byDestination.get(destination) || []), text]);
+        imports.push({ destination_key: destination, encounter_id: Number(source.encounter_id),
+          source_type: item.source_type, source_record_id: item.source_record_id,
+          source_version_or_updated_at: item.source_version_or_updated_at,
+          status_at_import: projection.encounter.status,
+          imported_at: new Date().toISOString(), imported_snapshot: text });
+      }
+      if(!imports.length) throw new Error('Selecciona al menos un dato para agregar.');
+      return { fields: Object.fromEntries([...byDestination].map(([key, texts])=>[key, texts.join('\n')])), imports };
+    };
+    const informeSourceLabels = Object.freeze({
+      reason_evolution: 'Motivo / evolución de la consulta',
+      physical_exam: 'Exploración física', vital_observation: 'Signo vital',
+      assessment: 'Valoración médica', plan: 'Plan de la consulta'
+    });
+    const informeDestinationLabels = Object.freeze({
+      clinical_summary: 'Resumen clínico', findings: 'Hallazgos',
+      diagnostic_impression: 'Impresión diagnóstica', plan: 'Plan'
+    });
+    const fetchInformeSource = (id = '')=> fetchDocumentEncounter('informe-encounters', id);
+    const renderInformeEncounterSource = ()=> renderDocumentEncounterSummary(
+      informeState.encounterSource, els.informeSourceSummary,
+      els.informeSourceUnlink, els.informeSourceImport);
+    const openInformeEncounterChooser = async (explicitKey = '')=>{
+      els.informeSourceImportPanel?.classList.add('d-none');
+      els.informeSourceChooser?.classList.remove('d-none');
+      if(els.informeSourceOptions) els.informeSourceOptions.textContent = 'Cargando consultas…';
+      try{
+        const rows = await fetchInformeSource();
+        if(!els.informeSourceOptions) return;
+        const explicitId = /(?:^|#)enc:([1-9][0-9]*)$/.exec(sanitizeText(explicitKey || ''))?.[1] || '';
+        if(explicitKey && !explicitId)
+          throw new Error('El contexto no identifica una Consulta exacta. Selecciónala manualmente.');
+        if(explicitId && !rows.some(row=>String(row.encounter_id) === explicitId)){
+          const exact = await fetchInformeSource(explicitId);
+          rows.unshift(exact.encounter);
+        }
+        renderDocumentEncounterOptions(els.informeSourceOptions, rows, explicitId, 'im_source_option');
+        if(explicitId) setInformeNotice('Confirma la Consulta de origen antes de traer información.');
+      }catch(error){
+        if(els.informeSourceOptions) els.informeSourceOptions.textContent =
+          sanitizeText(error?.message || 'No se pudieron cargar las consultas.');
+      }
+    };
+    const confirmInformeEncounterSource = async ()=>{
+      const selected = els.informeSourceOptions?.querySelector('input[name="im_source_option"]:checked');
+      if(!selected){ setInformeNotice('Selecciona una consulta y confirma el vínculo.'); return; }
+      try{
+        const result = await fetchInformeSource(selected.value);
+        if(informeState.encounterSource && Number(informeState.encounterSource.encounter_id) !== Number(selected.value)
+          && !window.confirm('Cambiar la consulta no borrará el texto ya importado. ¿Continuar?')) return;
+        informeState.encounterSource = { ...result.encounter,
+          patient_id: resolveActivePatientIdForConsent(),
+          doctor_id: resolveCanonicalDocumentsDoctorId(),
+          confirmed_at: new Date().toISOString() };
+        informeState.encounterProjection = result;
+        els.informeSourceChooser?.classList.add('d-none');
+        els.informeSourceImportPanel?.classList.add('d-none');
+        renderInformeEncounterSource();
+        scheduleDocModalTempSessionSave({ documentType: 'informe_medico',
+          patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInformeTempSnapshot });
+        setInformeNotice('Consulta vinculada. Ningún dato se agregó al Informe.');
+      }catch(error){ setInformeNotice(sanitizeText(error?.message || 'No se pudo vincular la consulta.')); }
+    };
+    const openInformeImportReview = async ()=>{
+      const id = Number(informeState.encounterSource?.encounter_id || 0);
+      if(!id) return;
+      try{
+        const result = await fetchInformeSource(String(id));
+        if(Number(result.encounter?.encounter_id) !== id)
+          throw new Error('La consulta cambió inesperadamente.');
+        informeState.encounterProjection = result;
+        if(!els.informeSourceCandidates) return;
+        renderDocumentEncounterCandidates(els.informeSourceCandidates, result,
+          informeSourceLabels, informeDestinationLabels, 'informe');
+        els.informeSourceConflict?.classList.add('d-none');
+        els.informeSourceChooser?.classList.add('d-none');
+        els.informeSourceImportPanel?.classList.remove('d-none');
+      }catch(error){ setInformeNotice(sanitizeText(error?.message || 'No se pudo revisar la consulta.')); }
+    };
+    const prepareInformeImport = ()=> prepareDocumentEncounterImport(
+      els.informeSourceCandidates, informeState.encounterProjection, informeState.encounterSource,
+      informeDestinationLabels, 'informe', 'single');
+    const applyInformeImport = (proposal)=>{
+      informeState.form = { ...informeState.form, ...proposal.fields };
+      informeState.encounterImports = [...informeState.encounterImports, ...proposal.imports];
+      informeState.proposedImport = null;
+      informeState.previewHtml = '';
+      informeState.previewGeneration += 1;
+      informeState.reviewedHash = '';
+      if(informeState.storedDoctorSignature){
+        informeState.signatureBindingStatus = 'stale_or_unverified_signature';
+        informeState.signaturePreferredSource = '';
+        updateInformeSignatureStatus();
+      }
+      if(informeState.qr.status === 'pending') void invalidateInformeQr('content_changed');
+      syncInformeInputsFromState();
+      syncInformeAdditionalInfoDisclosure(true);
+      informeState.step = 2;
+      renderInformeStep();
+      els.informeSourceConflict?.classList.add('d-none');
+      els.informeSourceImportPanel?.classList.add('d-none');
+      scheduleDocModalTempSessionSave({ documentType: 'informe_medico',
+        patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInformeTempSnapshot });
+      setInformeNotice('Información agregada. Revisa y edita los campos antes de guardar.');
+    };
     const notaSourceLabels = Object.freeze({
       reason_evolution: 'Motivo / evolución (narrativa combinada)',
       vital_observation: 'Signo vital', physical_exam: 'Exploración física',
@@ -48430,29 +48649,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       impresion_diagnostica: 'Impresión diagnóstica',
       tratamiento_indicaciones: 'Tratamiento e indicaciones', estudios_sugeridos: 'Estudios sugeridos'
     });
-    const notaSourceApi = (id = '')=>{
-      const doctor = resolveCanonicalDocumentsDoctorId();
-      const patient = resolveActivePatientIdForConsent();
-      if(!doctor || !patient) throw new Error('No se pudo confirmar el paciente o médico.');
-      const base = `/api/clinical/index.php/doctors/${encodeURIComponent(doctor)}/patients/${encodeURIComponent(patient)}/nota-encounters`;
-      return id ? `${base}/${encodeURIComponent(id)}` : base;
-    };
-    const fetchNotaSource = async (id = '')=>{
-      const response = await fetch(notaSourceApi(id), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
-      const json = await response.json().catch(()=>null);
-      if(!response.ok || json?.ok !== true)
-        throw new Error(sanitizeText(json?.message || 'No se pudo cargar la consulta autorizada.'));
-      return json.data;
-    };
-    const renderNotaEncounterSource = ()=>{
-      const source = notaState.encounterSource;
-      const linked = Number(source?.encounter_id || 0) > 0;
-      if(els.notaSourceSummary) els.notaSourceSummary.textContent = linked
-        ? `${sanitizeText(source.encounter_dt || '')} · ${source.status === 'closed' ? 'Cerrada' : 'Abierta'}${source.origin ? ` · ${sanitizeText(source.origin)}` : ''} · ${sanitizeText(source.display_key || `enc:${source.encounter_id}`)}`
-        : 'Sin consulta vinculada';
-      els.notaSourceUnlink?.classList.toggle('d-none', !linked);
-      els.notaSourceImport?.classList.toggle('d-none', !linked);
-    };
+    const fetchNotaSource = (id = '')=> fetchDocumentEncounter('nota-encounters', id);
+    const renderNotaEncounterSource = ()=> renderDocumentEncounterSummary(
+      notaState.encounterSource, els.notaSourceSummary, els.notaSourceUnlink, els.notaSourceImport);
     const invalidateNotaForImportedContent = ()=>{
       notaState.previewHtml = '';
       notaState.previewApproved = false;
@@ -48482,16 +48681,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           rows.unshift(exact.encounter);
         }
         if(!rows.length){ els.notaSourceOptions.textContent = 'No hay consultas elegibles. Puedes continuar sin consulta vinculada.'; return; }
-        for(const row of rows){
-          const label = document.createElement('label');
-          label.className = 'd-flex align-items-start gap-2 border rounded p-2 mb-2';
-          const radio = document.createElement('input');
-          radio.type = 'radio'; radio.name = 'nm_source_option'; radio.value = String(row.encounter_id);
-          radio.checked = explicitId !== '' && explicitId === radio.value;
-          const span = document.createElement('span');
-          span.textContent = `${sanitizeText(row.encounter_dt || '')} · ${row.status === 'closed' ? 'Cerrada' : 'Abierta'}${row.origin ? ` · ${sanitizeText(row.origin)}` : ''} · ${sanitizeText(row.display_key || '')}`;
-          label.append(radio, span); els.notaSourceOptions.append(label);
-        }
+        renderDocumentEncounterOptions(els.notaSourceOptions, rows, explicitId, 'nm_source_option');
       }catch(error){
         if(els.notaSourceOptions) els.notaSourceOptions.textContent = sanitizeText(error?.message || 'No se pudieron cargar las consultas.');
       }
@@ -48526,61 +48716,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         notaState.encounterProjection = result;
         const container = els.notaSourceCandidates;
         if(!container) return;
-        container.replaceChildren();
-        const candidates = Array.isArray(result.candidates) ? result.candidates : [];
-        if(!candidates.length) container.textContent = 'Esta consulta no tiene información compatible para traer.';
-        for(const [index, candidate] of candidates.entries()){
-          const box = document.createElement('div'); box.className = 'border rounded p-2 mb-2';
-          const label = document.createElement('label'); label.className = 'd-flex gap-2 align-items-start fw-semibold';
-          const check = document.createElement('input'); check.type = 'checkbox';
-          check.dataset.notaCandidate = String(index); check.className = 'form-check-input mt-1';
-          const title = document.createElement('span');
-          title.textContent = `${notaSourceLabels[candidate.source_type] || candidate.source_type} · ${candidate.source_record_id}`;
-          label.append(check, title); box.append(label);
-          const preview = document.createElement('div');
-          preview.className = 'small mt-1'; preview.style.whiteSpace = 'pre-wrap'; preview.style.overflowWrap = 'anywhere';
-          preview.textContent = candidate.text; box.append(preview);
-          if(candidate.destinations?.length > 1){
-            const destinationLabel = document.createElement('label');
-            destinationLabel.className = 'd-block small mt-2'; destinationLabel.textContent = 'Destino de esta narrativa';
-            const select = document.createElement('select'); select.className = 'form-select form-select-sm mt-1';
-            select.dataset.notaDestination = String(index);
-            for(const key of candidate.destinations){
-              const option = document.createElement('option'); option.value = key;
-              option.textContent = notaDestinationLabels[key] || key; select.append(option);
-            }
-            destinationLabel.append(select); box.append(destinationLabel);
-          }
-          container.append(box);
-        }
+        renderDocumentEncounterCandidates(container, result, notaSourceLabels,
+          notaDestinationLabels, 'nota');
         els.notaSourceConflict?.classList.add('d-none');
         els.notaSourceChooser?.classList.add('d-none');
         els.notaSourceImportPanel?.classList.remove('d-none');
       }catch(error){ setNotaNotice(sanitizeText(error?.message || 'No se pudo revisar la consulta.')); }
     };
-    const prepareNotaImport = ()=>{
-      const selected = [...(els.notaSourceCandidates?.querySelectorAll('input[data-nota-candidate]:checked') || [])];
-      const candidates = notaState.encounterProjection?.candidates || [];
-      const byDestination = new Map();
-      const imports = [];
-      for(const check of selected){
-        const index = Number(check.dataset.notaCandidate);
-        const item = candidates[index]; if(!item) continue;
-        const destination = els.notaSourceCandidates.querySelector(`select[data-nota-destination="${index}"]`)?.value
-          || item.destinations?.[0];
-        if(!notaDestinationLabels[destination]) continue;
-        const text = normalizeConsentInputRaw(item.text || ''); if(!text) continue;
-        byDestination.set(destination, [...(byDestination.get(destination) || []), text]);
-        imports.push({ destination_key: destination, encounter_id: Number(notaState.encounterSource.encounter_id),
-          source_type: item.source_type, source_record_id: item.source_record_id,
-          source_version_or_updated_at: item.source_version_or_updated_at,
-          status_at_import: notaState.encounterProjection.encounter.status,
-          imported_at: new Date().toISOString(), imported_snapshot: text });
-      }
-      if(!imports.length) throw new Error('Selecciona al menos un dato para agregar.');
-      const fields = Object.fromEntries([...byDestination].map(([key, texts])=>[key, texts.join('\n')]));
-      return { fields, imports };
-    };
+    const prepareNotaImport = ()=> prepareDocumentEncounterImport(
+      els.notaSourceCandidates, notaState.encounterProjection, notaState.encounterSource,
+      notaDestinationLabels, 'nota', 'concat');
     const applyNotaImport = (proposal)=>{
       notaState.form = { ...notaState.form, ...proposal.fields };
       notaState.encounterImports = [...notaState.encounterImports, ...proposal.imports];
@@ -57151,6 +57296,48 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         });
       });
     };
+    els.informeSourceChoose?.addEventListener('click', ()=>void openInformeEncounterChooser());
+    els.informeSourceCancel?.addEventListener('click', ()=>els.informeSourceChooser?.classList.add('d-none'));
+    els.informeSourceConfirm?.addEventListener('click', ()=>void confirmInformeEncounterSource());
+    els.informeSourceUnlink?.addEventListener('click', ()=>{
+      if(informeState.encounterImports.length
+        && !window.confirm('Desvincular no borrará el texto ni su procedencia histórica. ¿Continuar?')) return;
+      informeState.encounterSource = null;
+      informeState.encounterProjection = null;
+      els.informeSourceChooser?.classList.add('d-none');
+      els.informeSourceImportPanel?.classList.add('d-none');
+      renderInformeEncounterSource();
+      scheduleDocModalTempSessionSave({ documentType: 'informe_medico',
+        patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInformeTempSnapshot });
+    });
+    els.informeSourceImport?.addEventListener('click', ()=>void openInformeImportReview());
+    els.informeSourceImportCancel?.addEventListener('click', ()=>els.informeSourceImportPanel?.classList.add('d-none'));
+    els.informeSourceApply?.addEventListener('click', ()=>{
+      try{
+        const proposal = prepareInformeImport();
+        const conflicts = Object.keys(proposal.fields).filter(key=>trimConsentInputValue(informeState.form[key] || '') !== '');
+        if(conflicts.length){
+          informeState.proposedImport = proposal;
+          if(els.informeSourceConflictText) els.informeSourceConflictText.textContent =
+            `Ya hay contenido en: ${conflicts.map(key=>informeDestinationLabels[key]).join(', ')}. Reemplazar aplicará todos los campos seleccionados juntos.`;
+          els.informeSourceConflict?.classList.remove('d-none');
+          els.informeSourceReplaceConfirm?.focus();
+        }else applyInformeImport(proposal);
+      }catch(error){ setInformeNotice(sanitizeText(error?.message || 'No se pudo preparar la importación.')); }
+    });
+    els.informeSourceReplaceCancel?.addEventListener('click', ()=>{
+      informeState.proposedImport = null;
+      els.informeSourceConflict?.classList.add('d-none');
+    });
+    els.informeSourceReplaceConfirm?.addEventListener('click', ()=>{
+      if(informeState.proposedImport) applyInformeImport(informeState.proposedImport);
+    });
+    window.addEventListener('mxmed:open-informe-from-encounter', (event)=>{
+      const patientId = sanitizeText(event.detail?.patient_id || '');
+      const key = sanitizeText(event.detail?.encounter_key || '');
+      if(patientId && patientId === resolveActivePatientIdForConsent() && /(?:^|#)enc:[1-9][0-9]*$/.test(key))
+        void openInformeModal({ encounterKey: key });
+    });
     bindInformeField(els.informeReason, 'reason');
     bindInformeField(els.informeEmissionDate, 'emission_date');
     bindInformeField(els.informeCurrentIllness, 'current_illness');

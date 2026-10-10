@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/** An exact, physician-owned Consulta is the only source accepted by Nota. */
+/** Shared exact, physician-owned Consulta authority for clinical documents. */
 function clinical_nota_source_encounter(PDO $pdo, int $encounterId, string $patientId, string $doctorId): array
 {
     if ($encounterId < 1 || $patientId === '' || $doctorId === '')
@@ -36,7 +36,7 @@ function clinical_nota_source_display(array $row): array
 }
 
 /** Read-only import candidates. Patient-level and appointment-inferred documents are excluded. */
-function clinical_nota_source_projection(PDO $pdo, array $row): array
+function clinical_document_source_projection(PDO $pdo, array $row, string $documentType): array
 {
     $id = (int)$row['encounter_id'];
     $patientId = (string)$row['patient_id'];
@@ -48,12 +48,17 @@ function clinical_nota_source_projection(PDO $pdo, array $row): array
     foreach ($sections->fetchAll(PDO::FETCH_ASSOC) as $section) {
         $type = (string)$section['section_type'];
         $text = trim((string)($section['narrative_text'] ?? ''));
-        $destinations = [
+        $notaDestinations = [
             'reason_evolution' => ['motivo_consulta', 'padecimiento_actual'],
             'assessment' => ['impresion_diagnostica'],
             'plan' => ['tratamiento_indicaciones'],
             'physical_exam' => ['exploracion_fisica'],
         ][$type];
+        $informeDestinations = [
+            'reason_evolution' => ['clinical_summary'], 'assessment' => ['diagnostic_impression'],
+            'plan' => ['plan'], 'physical_exam' => ['findings'],
+        ][$type];
+        $destinations = $documentType === 'informe_medico' ? $informeDestinations : $notaDestinations;
         if ($type === 'physical_exam') {
             $payload = json_decode((string)$section['payload_json'], true) ?: [];
             $names = ['general'=>'Estado general','head_neck'=>'Cabeza y cuello','cardiovascular'=>'Cardiovascular',
@@ -93,8 +98,11 @@ function clinical_nota_source_projection(PDO $pdo, array $row): array
             'source_version_or_updated_at' => (string)$vital['row_version'] . '@' . (string)$vital['updated_at'],
             'updated_at' => (string)$vital['updated_at'],
             'text' => trim(($vitalNames[$code] ?? $code) . ' (' . $code . '): ' . $value . ' ' . (string)$vital['unit'])
-                . ' · ' . (string)$vital['effective_at'], 'destinations' => ['signos_vitales']];
+                . ' · ' . (string)$vital['effective_at'],
+            'destinations' => [$documentType === 'informe_medico' ? 'findings' : 'signos_vitales']];
     }
+    if ($documentType === 'informe_medico')
+        return ['encounter' => clinical_nota_source_display($row), 'candidates' => $candidates];
     $orders = $pdo->prepare("SELECT id, document_uuid, document_type, title, version, updated_at
         FROM clinical_documents WHERE patient_id=? AND encounter_ref_id=?
         AND document_type IN ('lab_order','imaging_order','orders','order','orden_estudio')
@@ -109,4 +117,14 @@ function clinical_nota_source_projection(PDO $pdo, array $row): array
             'destinations' => ['estudios_sugeridos']];
     }
     return ['encounter' => clinical_nota_source_display($row), 'candidates' => $candidates];
+}
+
+function clinical_nota_source_projection(PDO $pdo, array $row): array
+{
+    return clinical_document_source_projection($pdo, $row, 'nota_medica');
+}
+
+function clinical_informe_source_projection(PDO $pdo, array $row): array
+{
+    return clinical_document_source_projection($pdo, $row, 'informe_medico');
 }

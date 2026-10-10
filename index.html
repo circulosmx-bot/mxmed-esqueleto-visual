@@ -8326,6 +8326,9 @@
                       <button type="button" class="btn btn-outline-primary btn-sm d-none" data-action="actividad-tab-open-nota-document">
                         Nota médica (documento)
                       </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm d-none" data-action="actividad-tab-open-informe-document">
+                        Informe médico (documento)
+                      </button>
                       <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-receta" data-ac-kind="receta">
                         Receta
                       </button>
@@ -9278,6 +9281,37 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="im_notice"></div>
                     <div id="im_step_1">
+                      <section class="border rounded p-3 mb-3" aria-labelledby="im_source_title">
+                        <h4 class="h6 text-uppercase mb-2" id="im_source_title">Documento · Consulta de origen</h4>
+                        <div id="im_source_summary" class="small mb-2" aria-live="polite">Sin consulta vinculada</div>
+                        <div class="d-flex flex-wrap gap-2">
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="im_source_choose">Vincular / Cambiar consulta</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="im_source_unlink">Desvincular</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm d-none" id="im_source_import">Traer información de la consulta</button>
+                        </div>
+                        <div id="im_source_chooser" class="d-none border-top mt-3 pt-3">
+                          <div class="fw-semibold small mb-2">Selecciona una consulta exacta</div>
+                          <div id="im_source_options" class="small" role="radiogroup" aria-label="Consultas disponibles"></div>
+                          <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" id="im_source_confirm">Confirmar vínculo</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="im_source_cancel">Cancelar</button>
+                          </div>
+                        </div>
+                        <div id="im_source_import_panel" class="d-none border-top mt-3 pt-3" aria-label="Revisar información de la consulta">
+                          <div class="fw-semibold small mb-2">Revisa y selecciona lo que deseas traer</div>
+                          <div id="im_source_candidates" class="small"></div>
+                          <div class="small text-muted mt-2">El texto importado es editable y conserva su procedencia interna.</div>
+                          <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" id="im_source_apply">Agregar al documento</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="im_source_import_cancel">Cancelar</button>
+                          </div>
+                          <div id="im_source_conflict" class="d-none alert alert-warning mt-3 mb-0" role="alert">
+                            <div id="im_source_conflict_text" class="small mb-2"></div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="im_source_replace_cancel">Cancelar</button>
+                            <button type="button" class="btn btn-warning btn-sm" id="im_source_replace_confirm">Reemplazar</button>
+                          </div>
+                        </div>
+                      </section>
                       <section class="im-form-section im-form-section--primary" aria-labelledby="im-purpose-title">
                         <h4 id="im-purpose-title">PROPÓSITO DEL INFORME</h4>
                         <label class="form-label fw-semibold" for="im_reason">Motivo del informe</label>
