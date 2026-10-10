@@ -40609,6 +40609,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         delete actividadClinicaNotasActions.dataset.notaPatientId;
         actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-nota-document"]')?.classList.add('d-none');
         actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-informe-document"]')?.classList.add('d-none');
+        actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-interconsulta-document"]')?.classList.add('d-none');
       }
       if(actividadClinicaNotasStatusBadge){
         actividadClinicaNotasStatusBadge.textContent = 'Sin consulta activa';
@@ -40661,6 +40662,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       actividadClinicaNotasActions.dataset.notaPatientId = patientId;
       actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-nota-document"]')?.classList.remove('d-none');
       actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-informe-document"]')?.classList.remove('d-none');
+      actividadClinicaNotasActions.querySelector('[data-action="actividad-tab-open-interconsulta-document"]')?.classList.remove('d-none');
     }
 
     if(actividadClinicaNotasStatusBadge){
@@ -41187,6 +41189,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     syncNoteCaptureTokenStatus({ manual: true });
   });
   actividadClinicaNotasActions?.addEventListener('click', async (event)=>{
+    const interconsultaDocumentBtn = event.target.closest('[data-action="actividad-tab-open-interconsulta-document"]');
+    if(interconsultaDocumentBtn){
+      event.preventDefault();
+      const key = sanitizeText(actividadClinicaNotasActions.dataset.notaEncounterKey || '');
+      const patientId = sanitizeText(actividadClinicaNotasActions.dataset.notaPatientId || '');
+      if(key && patientId && patientId === sanitizeText(getActivePatientId()))
+        window.dispatchEvent(new CustomEvent('mxmed:open-interconsulta-from-encounter',
+          { detail: { patient_id: patientId, encounter_key: key } }));
+      return;
+    }
     const informeDocumentBtn = event.target.closest('[data-action="actividad-tab-open-informe-document"]');
     if(informeDocumentBtn){
       event.preventDefault();
@@ -42474,6 +42486,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       interconsultaWizard: root.querySelector('#ix_wizard'),
       interconsultaStepLabel: root.querySelector('#ix_step_label'),
       interconsultaNotice: root.querySelector('#ix_notice'),
+      interconsultaSourceSummary: root.querySelector('#ix_source_summary'),
+      interconsultaSourceChoose: root.querySelector('#ix_source_choose'),
+      interconsultaSourceUnlink: root.querySelector('#ix_source_unlink'),
+      interconsultaSourceImport: root.querySelector('#ix_source_import'),
+      interconsultaSourceChooser: root.querySelector('#ix_source_chooser'),
+      interconsultaSourceOptions: root.querySelector('#ix_source_options'),
+      interconsultaSourceConfirm: root.querySelector('#ix_source_confirm'),
+      interconsultaSourceCancel: root.querySelector('#ix_source_cancel'),
+      interconsultaSourceImportPanel: root.querySelector('#ix_source_import_panel'),
+      interconsultaSourceCandidates: root.querySelector('#ix_source_candidates'),
+      interconsultaSourceApply: root.querySelector('#ix_source_apply'),
+      interconsultaSourceImportCancel: root.querySelector('#ix_source_import_cancel'),
+      interconsultaSourceConflict: root.querySelector('#ix_source_conflict'),
+      interconsultaSourceConflictText: root.querySelector('#ix_source_conflict_text'),
+      interconsultaSourceReplaceCancel: root.querySelector('#ix_source_replace_cancel'),
+      interconsultaSourceReplaceConfirm: root.querySelector('#ix_source_replace_confirm'),
       interconsultaStep1: root.querySelector('#ix_step_1'),
       interconsultaStep2: root.querySelector('#ix_step_2'),
       interconsultaStep3: root.querySelector('#ix_step_3'),
@@ -43097,6 +43125,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       saving: false,
       activeDraftRef: '',
       activeDraftVersion: 0,
+      encounterSource: null,
+      encounterImports: [],
+      encounterProjection: null,
+      proposedImport: null,
       issuedAt: '',
       professionalHeader: 'shown',
       storedDoctorSignature: null,
@@ -48638,6 +48670,100 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInformeTempSnapshot });
       setInformeNotice('Información agregada. Revisa y edita los campos antes de guardar.');
     };
+    const interconsultaSourceLabels = Object.freeze({
+      reason_evolution: 'Motivo / evolución de la consulta (material de referencia)',
+      assessment: 'Valoración médica', physical_exam: 'Exploración física',
+      vital_observation: 'Signo vital', diagnostic_order: 'Orden de estudios',
+      diagnostic_result: 'Resultado de estudio'
+    });
+    const interconsultaDestinationLabels = Object.freeze({
+      reason: 'Motivo de interconsulta (revisar como motivo de referencia)',
+      summary: 'Resumen clínico', studies: 'Estudios / resultados relacionados'
+    });
+    const fetchInterconsultaSource = (id = '')=> fetchDocumentEncounter('interconsulta-encounters', id);
+    const renderInterconsultaEncounterSource = ()=> renderDocumentEncounterSummary(
+      interconsultaState.encounterSource, els.interconsultaSourceSummary,
+      els.interconsultaSourceUnlink, els.interconsultaSourceImport);
+    const openInterconsultaEncounterChooser = async (explicitKey = '')=>{
+      els.interconsultaSourceImportPanel?.classList.add('d-none');
+      els.interconsultaSourceChooser?.classList.remove('d-none');
+      if(els.interconsultaSourceOptions) els.interconsultaSourceOptions.textContent = 'Cargando consultas…';
+      try{
+        const rows = await fetchInterconsultaSource();
+        const explicitId = /(?:^|#)enc:([1-9][0-9]*)$/.exec(sanitizeText(explicitKey || ''))?.[1] || '';
+        if(explicitKey && !explicitId)
+          throw new Error('El contexto no identifica una Consulta exacta. Selecciónala manualmente.');
+        if(explicitId && !rows.some(row=>String(row.encounter_id) === explicitId)){
+          const exact = await fetchInterconsultaSource(explicitId);
+          rows.unshift(exact.encounter);
+        }
+        if(els.interconsultaSourceOptions)
+          renderDocumentEncounterOptions(els.interconsultaSourceOptions, rows, explicitId, 'ix_source_option');
+        if(explicitId) setInterconsultaNotice('Confirma la Consulta de origen antes de traer información.');
+      }catch(error){
+        if(els.interconsultaSourceOptions) els.interconsultaSourceOptions.textContent =
+          sanitizeText(error?.message || 'No se pudieron cargar las consultas.');
+      }
+    };
+    const confirmInterconsultaEncounterSource = async ()=>{
+      const selected = els.interconsultaSourceOptions?.querySelector('input[name="ix_source_option"]:checked');
+      if(!selected){ setInterconsultaNotice('Selecciona una consulta y confirma el vínculo.'); return; }
+      try{
+        const result = await fetchInterconsultaSource(selected.value);
+        if(interconsultaState.encounterSource
+          && Number(interconsultaState.encounterSource.encounter_id) !== Number(selected.value)
+          && !window.confirm('Cambiar la consulta no borrará el texto ya importado. ¿Continuar?')) return;
+        interconsultaState.encounterSource = { ...result.encounter,
+          patient_id: resolveActivePatientIdForConsent(),
+          doctor_id: resolveCanonicalDocumentsDoctorId(),
+          confirmed_at: new Date().toISOString() };
+        interconsultaState.encounterProjection = result;
+        els.interconsultaSourceChooser?.classList.add('d-none');
+        els.interconsultaSourceImportPanel?.classList.add('d-none');
+        renderInterconsultaEncounterSource();
+        scheduleDocModalTempSessionSave({ documentType: 'interconsulta',
+          patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInterconsultaTempSnapshot });
+        setInterconsultaNotice('Consulta vinculada. Ningún dato se agregó a la Interconsulta.');
+      }catch(error){ setInterconsultaNotice(sanitizeText(error?.message || 'No se pudo vincular la consulta.')); }
+    };
+    const openInterconsultaImportReview = async ()=>{
+      const id = Number(interconsultaState.encounterSource?.encounter_id || 0);
+      if(!id) return;
+      try{
+        const result = await fetchInterconsultaSource(String(id));
+        if(Number(result.encounter?.encounter_id) !== id)
+          throw new Error('La consulta cambió inesperadamente.');
+        interconsultaState.encounterProjection = result;
+        if(!els.interconsultaSourceCandidates) return;
+        renderDocumentEncounterCandidates(els.interconsultaSourceCandidates, result,
+          interconsultaSourceLabels, interconsultaDestinationLabels, 'interconsulta');
+        els.interconsultaSourceConflict?.classList.add('d-none');
+        els.interconsultaSourceChooser?.classList.add('d-none');
+        els.interconsultaSourceImportPanel?.classList.remove('d-none');
+      }catch(error){ setInterconsultaNotice(sanitizeText(error?.message || 'No se pudo revisar la consulta.')); }
+    };
+    const applyInterconsultaImport = (proposal)=>{
+      interconsultaState.form = { ...interconsultaState.form, ...proposal.fields };
+      interconsultaState.encounterImports = [...interconsultaState.encounterImports, ...proposal.imports];
+      interconsultaState.proposedImport = null;
+      interconsultaState.finalReviewedHash = '';
+      interconsultaState.previewGeneration += 1;
+      if(interconsultaState.storedDoctorSignature){
+        interconsultaState.signatureBindingStatus = 'stale_or_unverified_signature';
+        interconsultaState.signaturePreferredSource = '';
+        updateInterconsultaSignatureStatus();
+      }
+      if(interconsultaState.qr.status === 'pending') void invalidateInterconsultaQr('content_changed');
+      syncInterconsultaInputsFromState();
+      if(proposal.fields.studies) els.interconsultaClinicalDetails.open = true;
+      interconsultaState.step = proposal.fields.reason ? 2 : proposal.fields.summary ? 3 : 5;
+      renderInterconsultaStep();
+      els.interconsultaSourceConflict?.classList.add('d-none');
+      els.interconsultaSourceImportPanel?.classList.add('d-none');
+      scheduleDocModalTempSessionSave({ documentType: 'interconsulta',
+        patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInterconsultaTempSnapshot });
+      setInterconsultaNotice('Información agregada. Revisa y edita los campos antes de guardar.');
+    };
     const notaSourceLabels = Object.freeze({
       reason_evolution: 'Motivo / evolución (narrativa combinada)',
       vital_observation: 'Signo vital', physical_exam: 'Exploración física',
@@ -50936,6 +51062,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const buildInterconsultaTempSnapshot = ()=>({
       step: Number(interconsultaState.step || 1) || 1,
       professionalHeader: interconsultaState.professionalHeader,
+      encounter_source: interconsultaState.encounterSource,
+      encounter_imports: interconsultaState.encounterImports,
       form: {
         recipient_mode: sanitizeText(interconsultaState.form.recipient_mode || 'doctor') || 'doctor',
         recipient: {
@@ -50977,7 +51105,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form.comments,
         form.closing_statement,
         form.final_note
-      ].some((value)=> trimConsentInputValue(value || '') !== '');
+      ].some((value)=> trimConsentInputValue(value || '') !== '')
+        || Number(snapshot?.encounter_source?.encounter_id || 0) > 0;
     };
     const applyInterconsultaTempSnapshot = (snapshot = null)=>{
       const safe = (snapshot && typeof snapshot === 'object') ? snapshot : {};
@@ -51008,6 +51137,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         final_note: normalizeConsentInputRaw(form.final_note ?? interconsultaState.form.final_note ?? '')
       };
       interconsultaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
+      interconsultaState.encounterSource = safe.encounter_source && typeof safe.encounter_source === 'object'
+        ? safe.encounter_source : null;
+      interconsultaState.encounterImports = Array.isArray(safe.encounter_imports) ? safe.encounter_imports : [];
+      interconsultaState.encounterProjection = null;
+      renderInterconsultaEncounterSource();
       interconsultaState.professionalHeader = safe.professionalHeader === 'hidden' ? 'hidden' : 'shown';
       els.interconsultaHeaderOptions?.forEach(option=>{
         option.checked = option.value === interconsultaState.professionalHeader;
@@ -51021,6 +51155,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       interconsultaState.saving = false;
       interconsultaState.activeDraftRef = '';
       interconsultaState.activeDraftVersion = 0;
+      interconsultaState.encounterSource = null;
+      interconsultaState.encounterImports = [];
+      interconsultaState.encounterProjection = null;
+      interconsultaState.proposedImport = null;
+      els.interconsultaSourceChooser?.classList.add('d-none');
+      els.interconsultaSourceImportPanel?.classList.add('d-none');
+      renderInterconsultaEncounterSource();
       interconsultaState.issuedAt = '';
       interconsultaState.professionalHeader = 'shown';
       interconsultaState.storedDoctorSignature = null;
@@ -51073,6 +51214,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       interconsultaState.saving = false;
       interconsultaState.activeDraftRef = '';
       interconsultaState.activeDraftVersion = 0;
+      interconsultaState.encounterSource = null;
+      interconsultaState.encounterImports = [];
+      interconsultaState.encounterProjection = null;
+      interconsultaState.proposedImport = null;
+      els.interconsultaSourceChooser?.classList.add('d-none');
+      els.interconsultaSourceImportPanel?.classList.add('d-none');
+      renderInterconsultaEncounterSource();
       interconsultaState.issuedAt = formatNowSql();
       interconsultaState.professionalHeader = 'shown';
       interconsultaState.storedDoctorSignature = null;
@@ -51116,7 +51264,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return true;
     };
-    const openInterconsultaModal = async ({ draftRef = '' } = {})=>{
+    const openInterconsultaModal = async ({ draftRef = '', encounterKey = '' } = {})=>{
       const shouldOpen = startInterconsultaDraft();
       if(!shouldOpen) return;
       const patientId = resolveActivePatientIdForConsent();
@@ -51139,6 +51287,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         interconsultaState.activeDraftVersion = Number(doc.version || 0);
         interconsultaState.issuedAt = sanitizeText(payload.report?.issued_at || formatNowSql());
         interconsultaState.professionalHeader = window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload);
+        interconsultaState.encounterSource = payload.encounter_source || null;
+        interconsultaState.encounterImports = Array.isArray(payload.encounter_imports) ? payload.encounter_imports : [];
+        renderInterconsultaEncounterSource();
         interconsultaState.storedDoctorSignature = payload.signatures?.doctor || null;
         interconsultaState.form = {
           ...interconsultaState.form,
@@ -51171,6 +51322,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
       }
       }
+      if(!draftRef && encounterKey) void openInterconsultaEncounterChooser(encounterKey);
       if(!els.interconsultaModalEl || !window.bootstrap?.Modal) return;
       try{
         const modal = window.bootstrap.Modal.getOrCreateInstance(els.interconsultaModalEl);
@@ -51282,15 +51434,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const actorUserId = resolveClinicalActorUserId();
       const actorName = sanitizeText(window.mxmedStore?.doctorProfile?.full_name || window.mxmedStore?.doctorProfile?.display_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       const nowSql = interconsultaState.issuedAt || formatNowSql();
-      let encounterKey = '';
-      if(typeof window.getActiveEncounterKey === 'function'){
-        encounterKey = sanitizeText(window.getActiveEncounterKey());
-      }
-      let appointmentId = '';
-      if(typeof window.resolveActiveEncounterForPatient === 'function'){
-        const resolved = await window.resolveActiveEncounterForPatient(patientId, { source: 'interconsulta_canonica' }).catch(()=> null);
-        appointmentId = sanitizeText(resolved?.appointmentId || resolved?.appointment_id || '');
-      }
       const patientSnapshot = readPatientSnapshot();
       const doctorPrefill = readDoctorPrefillProfile();
       const doctorBranding = resolveDoctorBranding(actorUserId);
@@ -51302,8 +51445,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         patient_id: patientId,
         care_setting: 'consulta'
       };
-      if(encounterKey) context.encounter_key = encounterKey;
-      if(appointmentId) context.appointment_id = appointmentId;
+      if(interconsultaState.encounterSource?.encounter_id)
+        context.encounter_id = String(interconsultaState.encounterSource.encounter_id);
       const content = {
         reason,
         summary,
@@ -51362,6 +51505,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
         },
         presentation: { version: 1, professional_header: interconsultaState.professionalHeader },
+        encounter_source: interconsultaState.encounterSource,
+        encounter_imports: interconsultaState.encounterImports,
         content,
         signatures: {
           doctor: doctorSignature
@@ -57833,6 +57978,52 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setAltaSignaturePreferredSource('remote');
       }
       renderAltaStep();
+    });
+    els.interconsultaSourceChoose?.addEventListener('click', ()=>void openInterconsultaEncounterChooser());
+    els.interconsultaSourceCancel?.addEventListener('click', ()=>els.interconsultaSourceChooser?.classList.add('d-none'));
+    els.interconsultaSourceConfirm?.addEventListener('click', ()=>void confirmInterconsultaEncounterSource());
+    els.interconsultaSourceUnlink?.addEventListener('click', ()=>{
+      if(interconsultaState.encounterImports.length
+        && !window.confirm('Desvincular no borrará el texto ni su procedencia histórica. ¿Continuar?')) return;
+      interconsultaState.encounterSource = null;
+      interconsultaState.encounterProjection = null;
+      els.interconsultaSourceChooser?.classList.add('d-none');
+      els.interconsultaSourceImportPanel?.classList.add('d-none');
+      renderInterconsultaEncounterSource();
+      scheduleDocModalTempSessionSave({ documentType: 'interconsulta',
+        patientId: resolveActivePatientIdForConsent(), buildSnapshot: buildInterconsultaTempSnapshot });
+    });
+    els.interconsultaSourceImport?.addEventListener('click', ()=>void openInterconsultaImportReview());
+    els.interconsultaSourceImportCancel?.addEventListener('click',
+      ()=>els.interconsultaSourceImportPanel?.classList.add('d-none'));
+    els.interconsultaSourceApply?.addEventListener('click', ()=>{
+      try{
+        const proposal = prepareDocumentEncounterImport(
+          els.interconsultaSourceCandidates, interconsultaState.encounterProjection,
+          interconsultaState.encounterSource, interconsultaDestinationLabels, 'interconsulta', 'single');
+        const conflicts = Object.keys(proposal.fields).filter(key=>
+          trimConsentInputValue(interconsultaState.form[key] || '') !== '');
+        if(conflicts.length){
+          interconsultaState.proposedImport = proposal;
+          if(els.interconsultaSourceConflictText) els.interconsultaSourceConflictText.textContent =
+            `Ya hay contenido en: ${conflicts.map(key=>interconsultaDestinationLabels[key]).join(', ')}. Reemplazar aplicará todos los campos seleccionados juntos.`;
+          els.interconsultaSourceConflict?.classList.remove('d-none');
+          els.interconsultaSourceReplaceConfirm?.focus();
+        }else applyInterconsultaImport(proposal);
+      }catch(error){ setInterconsultaNotice(sanitizeText(error?.message || 'No se pudo preparar la importación.')); }
+    });
+    els.interconsultaSourceReplaceCancel?.addEventListener('click', ()=>{
+      interconsultaState.proposedImport = null;
+      els.interconsultaSourceConflict?.classList.add('d-none');
+    });
+    els.interconsultaSourceReplaceConfirm?.addEventListener('click', ()=>{
+      if(interconsultaState.proposedImport) applyInterconsultaImport(interconsultaState.proposedImport);
+    });
+    window.addEventListener('mxmed:open-interconsulta-from-encounter', (event)=>{
+      const patientId = sanitizeText(event.detail?.patient_id || '');
+      const key = sanitizeText(event.detail?.encounter_key || '');
+      if(patientId && patientId === resolveActivePatientIdForConsent() && /(?:^|#)enc:[1-9][0-9]*$/.test(key))
+        void openInterconsultaModal({ encounterKey: key });
     });
     const bindInterconsultaField = (inputEl, onUpdate, eventName = '')=>{
       if(!inputEl || typeof onUpdate !== 'function') return;

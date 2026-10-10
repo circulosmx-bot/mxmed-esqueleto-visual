@@ -8329,6 +8329,9 @@
                       <button type="button" class="btn btn-outline-primary btn-sm d-none" data-action="actividad-tab-open-informe-document">
                         Informe médico (documento)
                       </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm d-none" data-action="actividad-tab-open-interconsulta-document">
+                        Interconsulta (documento)
+                      </button>
                       <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-receta" data-ac-kind="receta">
                         Receta
                       </button>
@@ -9442,6 +9445,37 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="ix_notice"></div>
                     <div id="ix_step_1">
+                      <section class="border rounded p-3 mb-3" aria-labelledby="ix_source_title">
+                        <h4 class="h6 text-uppercase mb-2" id="ix_source_title">Documento · Consulta de origen</h4>
+                        <div id="ix_source_summary" class="small mb-2" aria-live="polite">Sin consulta vinculada</div>
+                        <div class="d-flex flex-wrap gap-2">
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="ix_source_choose">Vincular / Cambiar consulta</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ix_source_unlink">Desvincular</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm d-none" id="ix_source_import">Traer información de la consulta</button>
+                        </div>
+                        <div id="ix_source_chooser" class="d-none border-top mt-3 pt-3">
+                          <div class="fw-semibold small mb-2">Selecciona una consulta exacta</div>
+                          <div id="ix_source_options" class="small" role="radiogroup" aria-label="Consultas disponibles"></div>
+                          <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" id="ix_source_confirm">Confirmar vínculo</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_source_cancel">Cancelar</button>
+                          </div>
+                        </div>
+                        <div id="ix_source_import_panel" class="d-none border-top mt-3 pt-3" aria-label="Revisar información de la consulta">
+                          <div class="fw-semibold small mb-2">Revisa y selecciona lo que deseas traer</div>
+                          <div id="ix_source_candidates" class="small"></div>
+                          <div class="small text-muted mt-2">Cada dato seleccionado reemplaza un solo campo editable. El motivo de la consulta es material de referencia; revisa el motivo de la interconsulta antes de guardar. Los estudios y resultados son referencias, no crean órdenes.</div>
+                          <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" id="ix_source_apply">Agregar al documento</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_source_import_cancel">Cancelar</button>
+                          </div>
+                          <div id="ix_source_conflict" class="d-none alert alert-warning mt-3 mb-0" role="alert">
+                            <div id="ix_source_conflict_text" class="small mb-2"></div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_source_replace_cancel">Cancelar</button>
+                            <button type="button" class="btn btn-warning btn-sm" id="ix_source_replace_confirm">Reemplazar</button>
+                          </div>
+                        </div>
+                      </section>
                       <h3 class="fs-5 mb-2">Destino de la interconsulta</h3>
                       <div class="row g-3">
                         <div class="col-12">

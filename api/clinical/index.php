@@ -9262,7 +9262,7 @@ try {
             }
         }
         if ($method === 'GET' && ($segments[2] ?? '') === 'patients'
-            && in_array(($segments[4] ?? ''), ['nota-encounters', 'informe-encounters'], true)
+            && in_array(($segments[4] ?? ''), ['nota-encounters', 'informe-encounters', 'interconsulta-encounters'], true)
             && in_array(count($segments), [5, 6], true)) {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
@@ -9291,9 +9291,11 @@ try {
                     if (preg_match('/^[1-9][0-9]*$/', $rawId) !== 1)
                         throw new InvalidArgumentException('NOTA_ENCOUNTER_INVALID');
                     $row = clinical_nota_source_encounter($pdo, (int)$rawId, $patientId, $doctorId);
-                    $data = $sourceRoute === 'informe-encounters'
-                        ? clinical_informe_source_projection($pdo, $row)
-                        : clinical_nota_source_projection($pdo, $row);
+                    $data = $sourceRoute === 'interconsulta-encounters'
+                        ? clinical_interconsulta_source_projection($pdo, $row)
+                        : ($sourceRoute === 'informe-encounters'
+                            ? clinical_informe_source_projection($pdo, $row)
+                            : clinical_nota_source_projection($pdo, $row));
                 }
                 clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>$meta], 200);
             } catch (InvalidArgumentException $error) {

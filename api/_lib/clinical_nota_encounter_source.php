@@ -58,7 +58,12 @@ function clinical_document_source_projection(PDO $pdo, array $row, string $docum
             'reason_evolution' => ['clinical_summary'], 'assessment' => ['diagnostic_impression'],
             'plan' => ['plan'], 'physical_exam' => ['findings'],
         ][$type];
-        $destinations = $documentType === 'informe_medico' ? $informeDestinations : $notaDestinations;
+        $interconsultaDestinations = [
+            'reason_evolution' => ['reason', 'summary'], 'assessment' => ['summary'],
+            'plan' => [], 'physical_exam' => ['summary'],
+        ][$type];
+        $destinations = $documentType === 'interconsulta' ? $interconsultaDestinations
+            : ($documentType === 'informe_medico' ? $informeDestinations : $notaDestinations);
         if ($type === 'physical_exam') {
             $payload = json_decode((string)$section['payload_json'], true) ?: [];
             $names = ['general'=>'Estado general','head_neck'=>'Cabeza y cuello','cardiovascular'=>'Cardiovascular',
@@ -74,7 +79,7 @@ function clinical_document_source_projection(PDO $pdo, array $row, string $docum
             }
             $text = implode("\n", $lines);
         }
-        if ($text === '') continue;
+        if ($text === '' || !$destinations) continue;
         $candidates[] = ['source_type' => $type, 'source_record_id' => 'section:' . $id . ':' . $type,
             'source_version_or_updated_at' => (string)$section['row_version'] . '@' . (string)$section['updated_at'],
             'updated_at' => (string)$section['updated_at'], 'text' => $text, 'destinations' => $destinations];
@@ -99,7 +104,8 @@ function clinical_document_source_projection(PDO $pdo, array $row, string $docum
             'updated_at' => (string)$vital['updated_at'],
             'text' => trim(($vitalNames[$code] ?? $code) . ' (' . $code . '): ' . $value . ' ' . (string)$vital['unit'])
                 . ' · ' . (string)$vital['effective_at'],
-            'destinations' => [$documentType === 'informe_medico' ? 'findings' : 'signos_vitales']];
+            'destinations' => [$documentType === 'interconsulta' ? 'summary'
+                : ($documentType === 'informe_medico' ? 'findings' : 'signos_vitales')]];
     }
     if ($documentType === 'informe_medico')
         return ['encounter' => clinical_nota_source_display($row), 'candidates' => $candidates];
@@ -114,7 +120,28 @@ function clinical_document_source_projection(PDO $pdo, array $row, string $docum
             'source_version_or_updated_at' => (string)$order['version'] . '@' . (string)$order['updated_at'],
             'updated_at' => (string)$order['updated_at'],
             'text' => 'Orden de estudios: ' . trim((string)$order['title']) . ' · ' . (string)$order['document_uuid'],
-            'destinations' => ['estudios_sugeridos']];
+            'destinations' => [$documentType === 'interconsulta' ? 'studies' : 'estudios_sugeridos']];
+    }
+    if ($documentType === 'interconsulta') {
+        // The existing OR02B read authority resolves the exact source order version.
+        // Lineage-head display is deliberately excluded from encounter attribution.
+        require_once __DIR__ . '/clinical_order_result_read.php';
+        clinical_or_schema_guard($pdo);
+        $cte = clinical_or_cte($pdo, $patientId);
+        $results = $pdo->prepare("{$cte} SELECT d.id,d.document_uuid,d.document_type,d.title,d.version,d.updated_at
+            FROM result_relation rel JOIN clinical_documents d ON d.id=rel.id
+            LEFT JOIN clinical_documents source ON source.id=rel.source_order_id
+            WHERE d.status='generated' AND (d.encounter_ref_id=? OR source.encounter_ref_id=?)
+            ORDER BY d.id");
+        $results->execute([$id, $id]);
+        foreach ($results->fetchAll(PDO::FETCH_ASSOC) as $result) {
+            $candidates[] = ['source_type' => 'diagnostic_result',
+                'source_record_id' => 'document:' . (int)$result['id'] . ':' . (string)$result['document_uuid'],
+                'source_version_or_updated_at' => (string)$result['version'] . '@' . (string)$result['updated_at'],
+                'updated_at' => (string)$result['updated_at'],
+                'text' => 'Resultado de estudio: ' . trim((string)$result['title']) . ' · ' . (string)$result['document_uuid'],
+                'destinations' => ['studies']];
+        }
     }
     return ['encounter' => clinical_nota_source_display($row), 'candidates' => $candidates];
 }
@@ -127,4 +154,9 @@ function clinical_nota_source_projection(PDO $pdo, array $row): array
 function clinical_informe_source_projection(PDO $pdo, array $row): array
 {
     return clinical_document_source_projection($pdo, $row, 'informe_medico');
+}
+
+function clinical_interconsulta_source_projection(PDO $pdo, array $row): array
+{
+    return clinical_document_source_projection($pdo, $row, 'interconsulta');
 }
