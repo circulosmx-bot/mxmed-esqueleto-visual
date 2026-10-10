@@ -9685,12 +9685,24 @@
                           <label class="form-label" for="nm_seguimiento">Seguimiento</label>
                           <textarea class="form-control" id="nm_seguimiento" rows="3" placeholder="Revaloración en 48 horas o antes si presenta datos de alarma."></textarea>
                         </div>
+                        <div class="col-12">
+                          <div class="fw-semibold mb-2">PRESENTACIÓN DEL DOCUMENTO</div>
+                          <div class="small mb-2">Encabezado profesional</div>
+                          <label class="d-block"><input type="radio" name="nm_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                          <label class="d-block"><input type="radio" name="nm_professional_header" value="hidden"> Generar sin encabezado profesional</label>
+                        </div>
                       </div>
                     </div>
                     <div id="nm_step_6" class="d-none">
+                      <div id="nm_preview_phase">
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa de la Nota médica completa</div>
+                        <div id="nm_preview_frame" class="document-sheet-frame" aria-label="Vista previa de Nota médica"></div>
+                        <button type="button" class="btn btn-primary btn-sm mt-2" id="nm_preview_continue">Continuar a firmas</button>
+                      </div>
+                      <div id="nm_signature_phase" class="d-none">
                       <div class="row g-3">
                         <div class="col-12">
-                          <div class="border rounded p-2">
+                          <div class="border rounded p-2" id="nm_signature_block">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                               <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
                               <span class="small text-muted" id="nm_signature_status">Sin firma</span>
@@ -9714,6 +9726,7 @@
                             <div class="mx-signature-pad" data-signature-role="doctor">
                               <canvas id="nm_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
+                            <img id="nm_signature_accepted" class="d-none img-fluid rounded border bg-white mt-2" alt="Firma médica aplicada" style="max-height:140px;object-fit:contain;">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
                               <button type="button" class="btn btn-outline-dark btn-sm" id="nm_signature_qr_open">Firmar desde tu celular</button>
                               <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_signature_clear">Volver a firmar</button>
@@ -9729,11 +9742,12 @@
                           </div>
                         </div>
                       </div>
+                      </div>
                     </div>
                     <div id="nm_step_7" class="d-none">
                       <div class="border rounded p-3 bg-light-subtle">
-                        <div class="small text-uppercase text-muted fw-semibold mb-2">Vista final editable</div>
-                        <textarea class="form-control" id="nm_final_text" rows="18" placeholder="La redacción final de la nota médica aparecerá aquí para revisión antes de emitir."></textarea>
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Revisión final de la Nota médica</div>
+                        <div id="nm_final_preview_frame" class="document-sheet-frame" aria-label="Revisión final de Nota médica"></div>
                         <div class="small text-muted mt-2"><strong>Firma del médico:</strong> <span id="nm_final_signature_state">Sin firma</span></div>
                       </div>
                     </div>
@@ -11092,6 +11106,7 @@
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/certificado-signature-binding.js?v=cert-imp01"></script>
 <script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
+<script src="assets/js/clinical/nota-signature-binding.js?v=nm-imp01"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/app.js?v=cert-form01"></script>

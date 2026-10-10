@@ -2219,7 +2219,16 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($isNotaDoc): ?>
+    <?php if ($isNotaDoc && (int)($payload['contract_version'] ?? 0) === 2
+        && (int)($payload['nota_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['nota_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['nota_snapshot']['html']; ?>
+      </div>
+    <?php endif; ?>
+    <?php if ($isNotaDoc && ((int)($payload['contract_version'] ?? 0) !== 2
+        || trim((string)($payload['nota_snapshot']['html'] ?? '')) === '')): ?>
+
       <?php
       $notaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
       $notaData = is_array($payload['note'] ?? null) ? $payload['note'] : [];
@@ -2314,6 +2323,12 @@ if (!$embed) {
       $notaTratamientoIndicaciones = trim((string)($notaContent['tratamiento_indicaciones'] ?? ''));
       $notaEstudiosSugeridos = trim((string)($notaContent['estudios_sugeridos'] ?? ''));
       $notaSeguimiento = trim((string)($notaContent['seguimiento'] ?? ''));
+      // Legacy notes could store a separately edited final body. Keep it readable
+      // without making it an authority for new contract-version 2 notes.
+      $notaLegacyFinalText = trim((string)($payload['form_snapshot']['final_text'] ?? ''));
+      if ($notaLegacyFinalText === '' && (int)($document['content']['edited_flag'] ?? 0) === 1) {
+        $notaLegacyFinalText = trim($renderedText !== '' ? $renderedText : (string)($payload['rendered_text'] ?? ''));
+      }
       ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
       <article class="informe-doc-sheet nota-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">
@@ -2427,6 +2442,12 @@ if (!$embed) {
           <section class="informe-doc-body-section doc-base-section">
             <div class="informe-doc-section-title doc-base-section-title">Seguimiento</div>
             <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaSeguimiento)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaLegacyFinalText !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Redacción final histórica</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaLegacyFinalText)); ?></div>
           </section>
         <?php endif; ?>
         <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
