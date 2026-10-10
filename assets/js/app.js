@@ -47727,7 +47727,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!window.bootstrap?.Modal) return false;
       postEmission.documentUuid = uuid;
       postEmission.documentType = documentType;
-      modal.querySelector('#document_post_emission_title').textContent = `✓ ${definition.title} emitido correctamente`;
+      const emittedText = documentType === 'interconsulta' ? 'emitida correctamente' : 'emitido correctamente';
+      modal.querySelector('#document_post_emission_title').textContent = `✓ ${definition.title} ${emittedText}`;
       const actions = Array.isArray(definition.post_emission_actions) ? definition.post_emission_actions : [];
       modal.querySelector('[data-post-emission="view"]').hidden = !actions.includes('view');
       modal.querySelector('[data-post-emission="print"]').hidden = !definition.printable || !actions.includes('print');
