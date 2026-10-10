@@ -9401,15 +9401,16 @@
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="ix_notice"></div>
                     <div id="ix_step_1">
+                      <h3 class="fs-5 mb-2">Destino de la interconsulta</h3>
                       <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-12">
                           <label class="form-label" for="ix_recipient_mode">Tipo de destinatario</label>
                           <select class="form-select" id="ix_recipient_mode">
                             <option value="doctor">Médico específico</option>
                             <option value="service">Especialidad / servicio</option>
                           </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="d-none">
                           <label class="form-label" for="ix_recipient_source">Origen del destinatario</label>
                           <select class="form-select" id="ix_recipient_source">
                             <option value="manual">Captura manual</option>
@@ -9424,63 +9425,88 @@
                           <label class="form-label" for="ix_specialty">Especialidad</label>
                           <input class="form-control" id="ix_specialty" placeholder="Especialidad clínica">
                         </div>
-                        <div class="col-md-6 d-none" id="ix_wrap_service">
+                        <div class="col-12 d-none" id="ix_wrap_service">
                           <label class="form-label" for="ix_service">Especialidad / servicio destino</label>
                           <input class="form-control" id="ix_service" placeholder="Ej. Cardiología, Medicina interna, Urgencias">
                         </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ix_facility">Institución / sede <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ix_facility" placeholder="Hospital, clínica o consultorio">
-                        </div>
-                        <div class="col-md-4">
-                          <label class="form-label" for="ix_city">Ciudad <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ix_city" placeholder="Ciudad">
-                        </div>
-                        <div class="col-md-4">
-                          <label class="form-label" for="ix_contact">Contacto <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ix_contact" placeholder="Teléfono o correo">
-                        </div>
                       </div>
+                      <details class="border rounded p-3 mt-3" id="ix_destination_details">
+                        <summary class="fw-semibold">Datos adicionales del destino</summary>
+                        <div class="row g-3 mt-1" id="ix_destination_additional_fields">
+                          <div class="col-md-6">
+                            <label class="form-label" for="ix_facility">Institución / sede <span class="text-muted">(opcional)</span></label>
+                            <input class="form-control" id="ix_facility" placeholder="Hospital, clínica o consultorio">
+                          </div>
+                          <div class="ix-destination-city col-md-3">
+                            <label class="form-label" for="ix_city">Ciudad <span class="text-muted">(opcional)</span></label>
+                            <input class="form-control" id="ix_city" placeholder="Ciudad">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label" for="ix_contact">Contacto <span class="text-muted">(opcional)</span></label>
+                            <input class="form-control" id="ix_contact" placeholder="Teléfono o correo">
+                          </div>
+                        </div>
+                      </details>
                     </div>
                     <div id="ix_step_2" class="d-none">
+                      <h3 class="fs-5 mb-2">Motivo</h3>
                       <div class="row g-3">
                         <div class="col-12">
                           <label class="form-label" for="ix_reason">Motivo de interconsulta</label>
                           <textarea class="form-control" id="ix_reason" rows="4" placeholder="Describe el motivo clínico de la referencia."></textarea>
+                          <div class="form-text">¿Por qué se solicita la interconsulta?</div>
                         </div>
                       </div>
                     </div>
                     <div id="ix_step_3" class="d-none">
+                      <h3 class="fs-5 mb-2">Resumen clínico</h3>
                       <div class="row g-3">
                         <div class="col-12">
                           <label class="form-label" for="ix_summary">Resumen clínico de referencia</label>
                           <textarea class="form-control" id="ix_summary" rows="5" placeholder="Contexto clínico relevante para orientar al interconsultante."></textarea>
                         </div>
-                        <div class="col-12">
-                          <label class="form-label" for="ix_background">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="ix_background" rows="3" placeholder="Antecedentes clínicos, comorbilidades o datos de contexto relevantes."></textarea>
-                          <div class="form-text">Campo complementario: úsalo solo para antecedentes que ayuden a contextualizar el resumen clínico.</div>
-                        </div>
                       </div>
                     </div>
                     <div id="ix_step_4" class="d-none">
+                      <h3 class="fs-5 mb-2">Solicitud al especialista</h3>
                       <div class="row g-3">
                         <div class="col-12">
                           <label class="form-label" for="ix_request">Solicitud clínica puntual</label>
                           <textarea class="form-control" id="ix_request" rows="4" placeholder="Especifica la valoración, opinión o intervención solicitada."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="ix_studies">Estudios relevantes <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="ix_studies" rows="2" placeholder="Estudios, resultados o datos complementarios para referencia."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="ix_comments">Comentarios al colega <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="ix_comments" rows="2" placeholder="Mensaje clínico breve para el interconsultante."></textarea>
+                          <div class="form-text">¿Qué valoración, opinión o intervención se solicita al colega?</div>
                         </div>
                       </div>
                     </div>
                     <div id="ix_step_5" class="d-none">
                       <div class="row g-3">
+                        <div class="col-12">
+                          <details class="border rounded p-3" id="ix_clinical_details">
+                            <summary class="fw-semibold">Información clínica adicional</summary>
+                            <div class="row g-3 mt-1">
+                              <div class="col-12">
+                                <label class="form-label" for="ix_background">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
+                                <textarea class="form-control" id="ix_background" rows="3" placeholder="Antecedentes clínicos, comorbilidades o datos de contexto relevantes."></textarea>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label" for="ix_studies">Estudios relevantes <span class="text-muted">(opcional)</span></label>
+                                <textarea class="form-control" id="ix_studies" rows="2" placeholder="Estudios, resultados o datos complementarios para referencia."></textarea>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label" for="ix_comments">Comentarios al colega <span class="text-muted">(opcional)</span></label>
+                                <textarea class="form-control" id="ix_comments" rows="2" placeholder="Mensaje clínico breve para el interconsultante."></textarea>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label" for="ix_final_note">Observación final del emisor <span class="text-muted">(opcional)</span></label>
+                                <textarea class="form-control" id="ix_final_note" rows="2" placeholder="Observación final opcional."></textarea>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label" for="ix_closing">Cierre formal personalizado <span class="text-muted">(opcional)</span></label>
+                                <textarea class="form-control" id="ix_closing" rows="3" placeholder="Se emite la presente interconsulta para valoración por [destino], con base en el contexto clínico descrito."></textarea>
+                                <div class="form-text">Si queda vacío, el cierre se genera a partir del destino.</div>
+                              </div>
+                            </div>
+                          </details>
+                        </div>
                         <div class="col-12">
                           <fieldset class="border rounded p-3" id="ix_header_options">
                             <legend class="float-none w-auto px-2 fs-6">Presentación del documento</legend>
@@ -9488,14 +9514,6 @@
                             <label class="d-block"><input type="radio" name="ix_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
                             <label class="d-block"><input type="radio" name="ix_professional_header" value="hidden"> Generar sin encabezado profesional</label>
                           </fieldset>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="ix_closing">Cierre formal</label>
-                          <textarea class="form-control" id="ix_closing" rows="3" placeholder="Se emite la presente interconsulta para valoración por [destino], con base en el contexto clínico descrito."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label" for="ix_final_note">Observación final del emisor <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="ix_final_note" rows="2" placeholder="Observación final opcional."></textarea>
                         </div>
                         <div class="col-12">
                           <div class="border rounded p-2" id="ix_signature_block">

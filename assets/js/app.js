@@ -42419,6 +42419,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       interconsultaWrapDoctorName: root.querySelector('#ix_wrap_doctor_name'),
       interconsultaWrapSpecialty: root.querySelector('#ix_wrap_specialty'),
       interconsultaWrapService: root.querySelector('#ix_wrap_service'),
+      interconsultaDestinationPrimaryFields: root.querySelector('#ix_step_1 > .row'),
+      interconsultaDestinationAdditionalFields: root.querySelector('#ix_destination_additional_fields'),
+      interconsultaDestinationDetails: root.querySelector('#ix_destination_details'),
+      interconsultaClinicalDetails: root.querySelector('#ix_clinical_details'),
       interconsultaReason: root.querySelector('#ix_reason'),
       interconsultaSummary: root.querySelector('#ix_summary'),
       interconsultaBackground: root.querySelector('#ix_background'),
@@ -50103,14 +50107,31 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const updateInterconsultaRecipientModeUI = ()=>{
       const mode = sanitizeText(interconsultaState.form.recipient_mode || 'doctor') || 'doctor';
       const isService = mode === 'service';
-      els.interconsultaWrapDoctorName?.classList.toggle('d-none', isService);
+      const primary = els.interconsultaDestinationPrimaryFields;
+      const additional = els.interconsultaDestinationAdditionalFields;
+      if(primary && additional){
+        if(isService){
+          primary.append(els.interconsultaWrapService);
+          additional.prepend(els.interconsultaWrapSpecialty);
+          additional.prepend(els.interconsultaWrapDoctorName);
+        }else{
+          primary.append(els.interconsultaWrapDoctorName, els.interconsultaWrapSpecialty);
+        }
+      }
+      els.interconsultaWrapDoctorName?.classList.remove('d-none');
       els.interconsultaWrapService?.classList.toggle('d-none', !isService);
       if(els.interconsultaWrapSpecialty){
         const label = els.interconsultaWrapSpecialty.querySelector('label');
         if(label){
-          label.textContent = isService ? 'Médico específico (opcional)' : 'Especialidad';
+          label.textContent = isService ? 'Especialidad registrada (opcional)' : 'Especialidad';
         }
       }
+      const doctorLabel = els.interconsultaWrapDoctorName?.querySelector('label');
+      if(doctorLabel) doctorLabel.textContent = isService ? 'Médico específico (opcional)' : 'Nombre del médico destino';
+      els.interconsultaWrapDoctorName?.classList.toggle('col-12', isService);
+      els.interconsultaWrapDoctorName?.classList.toggle('col-md-6', !isService);
+      els.interconsultaWrapSpecialty?.classList.toggle('col-12', isService);
+      els.interconsultaWrapSpecialty?.classList.toggle('col-md-6', !isService);
     };
     const syncInterconsultaSignatureCanvasSize = ({ preserveDrawing = true } = {})=>{
       if(!els.interconsultaSignatureCanvas) return;
@@ -50342,6 +50363,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.interconsultaClosing) els.interconsultaClosing.value = sanitizeText(form.closing_statement || '');
       if(els.interconsultaFinalNote) els.interconsultaFinalNote.value = sanitizeText(form.final_note || '');
       updateInterconsultaRecipientModeUI();
+      if(els.interconsultaDestinationDetails){
+        els.interconsultaDestinationDetails.open = [recipient.facility, recipient.city, recipient.contact,
+          form.recipient_mode === 'service' && recipient.doctor_name,
+          form.recipient_mode === 'service' && recipient.specialty]
+          .some(value=>!!trimConsentInputValue(value || ''));
+      }
+      if(els.interconsultaClinicalDetails){
+        els.interconsultaClinicalDetails.open = [form.background, form.studies, form.comments,
+          form.final_note, form.closing_statement]
+          .some(value=>!!trimConsentInputValue(value || ''));
+      }
       updateInterconsultaSignatureStatus();
     };
     const renderInterconsultaStep = ()=>{
@@ -50397,6 +50429,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const buildInterconsultaTempSnapshot = ()=>({
       step: Number(interconsultaState.step || 1) || 1,
+      professionalHeader: interconsultaState.professionalHeader,
       form: {
         recipient_mode: sanitizeText(interconsultaState.form.recipient_mode || 'doctor') || 'doctor',
         recipient: {
@@ -50469,6 +50502,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         final_note: normalizeConsentInputRaw(form.final_note ?? interconsultaState.form.final_note ?? '')
       };
       interconsultaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
+      interconsultaState.professionalHeader = safe.professionalHeader === 'hidden' ? 'hidden' : 'shown';
+      els.interconsultaHeaderOptions?.forEach(option=>{
+        option.checked = option.value === interconsultaState.professionalHeader;
+      });
       syncInterconsultaInputsFromState();
       renderInterconsultaStep();
     };
@@ -56900,6 +56937,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindInterconsultaField(els.interconsultaRecipientMode, (el)=>{
       interconsultaState.form.recipient_mode = sanitizeText(el.value || 'doctor') || 'doctor';
       updateInterconsultaRecipientModeUI();
+      if(els.interconsultaDestinationDetails && interconsultaState.form.recipient_mode === 'service'){
+        const recipient = interconsultaState.form.recipient;
+        if(recipient.doctor_name || recipient.specialty) els.interconsultaDestinationDetails.open = true;
+      }
       renderInterconsultaStep();
     }, 'change');
     bindInterconsultaField(els.interconsultaRecipientSource, (el)=>{
