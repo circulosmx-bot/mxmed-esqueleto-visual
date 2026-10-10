@@ -2000,7 +2000,13 @@ if (!$embed) {
       <?php endif; ?>
     <?php endif; ?>
 
-    <?php if ($isInformeDoc): ?>
+    <?php if ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['informe_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['informe_snapshot']['html']; ?>
+      </div>
+    <?php endif; ?>
+    <?php if ($isInformeDoc && trim((string)($payload['informe_snapshot']['html'] ?? '')) === ''): ?>
       <?php
       $informeDateOut = clinical_doc_format_date((string)($informeReport['emission_date'] ?? ($informeReport['issued_at'] ?? $date)), false);
       $informePatientName = trim((string)($informePatientNameContext !== '' ? $informePatientNameContext : 'Paciente'));

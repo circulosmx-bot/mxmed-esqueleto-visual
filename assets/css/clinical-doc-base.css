@@ -228,6 +228,11 @@
   border-top: 1px solid #9fb6c4;
   width: min(100%, 320px);
 }
+.informe-doc-sheet .informe-doc-sign-line {
+  width: min(100%, 320px);
+  margin: 28px auto 6px;
+  border-top: 1px solid #9fb6c4;
+}
 .responsiva-doc-sheet .responsiva-doc-signature-block .informe-doc-sign-image {
   display: block;
   margin: 6px auto;

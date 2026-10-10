@@ -129,11 +129,13 @@
       const isResponsivaSignature = mode === 'responsiva-signature';
       const isCertificadoSignature = mode === 'certificado-signature';
       const isInterconsultaSignature = mode === 'interconsulta-signature';
-      const isSignatureMode = mode === 'signature' || isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature;
-      const signatureRoute = isInterconsultaSignature ? 'interconsulta-qr-sessions'
+      const isInformeSignature = mode === 'informe-signature';
+      const isSignatureMode = mode === 'signature' || isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature;
+      const signatureRoute = isInformeSignature ? 'informe-qr-sessions'
+        : isInterconsultaSignature ? 'interconsulta-qr-sessions'
         : isCertificadoSignature ? 'certificado-qr-sessions'
         : (isResponsivaSignature ? 'responsiva-qr-sessions' : 'note-capture-tokens');
-      const signatureDocument = isInterconsultaSignature ? 'la interconsulta' : isCertificadoSignature ? 'el certificado'
+      const signatureDocument = isInformeSignature ? 'el informe' : isInterconsultaSignature ? 'la interconsulta' : isCertificadoSignature ? 'el certificado'
         : (isResponsivaSignature ? 'la responsiva' : 'el consentimiento');
       const signatureObjectPronoun = isResponsivaSignature || isInterconsultaSignature ? 'firmarla' : 'firmarlo';
       let signatureHasStroke = false;
@@ -271,18 +273,18 @@
       }
 
       if(isSignatureMode){
-        if ((isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature) && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
+        if ((isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature) && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
           setMsg(`Abre el enlace HTTPS seguro para revisar y firmar ${signatureDocument}.`, 'err');
           return;
         }
-        titleEl.textContent = isInterconsultaSignature ? 'Interconsulta' : isCertificadoSignature ? 'Certificado médico'
+        titleEl.textContent = isInformeSignature ? 'Informe médico' : isInterconsultaSignature ? 'Interconsulta' : isCertificadoSignature ? 'Certificado médico'
           : (isResponsivaSignature ? 'Responsiva médica' : 'Consentimiento informado');
         introEl.textContent = 'Revisa el documento antes de firmar esta versión.';
-        consentReview.querySelector('h2').textContent = isInterconsultaSignature ? 'Revisar interconsulta' : isCertificadoSignature ? 'Revisar certificado'
+        consentReview.querySelector('h2').textContent = isInformeSignature ? 'Revisar informe médico' : isInterconsultaSignature ? 'Revisar interconsulta' : isCertificadoSignature ? 'Revisar certificado'
           : (isResponsivaSignature ? 'Revisar responsiva' : 'Revisa el consentimiento');
-        consentReviewFrame.title = isInterconsultaSignature ? 'Interconsulta que se firmará' : isCertificadoSignature ? 'Certificado que se firmará'
+        consentReviewFrame.title = isInformeSignature ? 'Informe médico que se firmará' : isInterconsultaSignature ? 'Interconsulta que se firmará' : isCertificadoSignature ? 'Certificado que se firmará'
           : (isResponsivaSignature ? 'Responsiva que se firmará' : 'Consentimiento que se firmará');
-        consentReviewFrame.classList.toggle('interconsulta-review-frame', isInterconsultaSignature);
+        consentReviewFrame.classList.toggle('interconsulta-review-frame', isInterconsultaSignature || isInformeSignature);
         form.classList.add('d-none');
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
@@ -297,14 +299,14 @@
             })
             .then(data=>{
               if(data.status!=='pending') throw new Error('Este QR ya fue utilizado o expiró. Solicita uno nuevo.');
-              const interconsultaMobileStyle = isInterconsultaSignature
+              const interconsultaMobileStyle = (isInterconsultaSignature || isInformeSignature)
                 ? `<meta name="viewport" content="width=device-width, initial-scale=1"><style>
                     html,body{margin:0;max-width:100%;overflow-x:hidden}
-                    .interconsulta-doc-sheet{width:100% !important;min-height:0 !important;padding:16px !important;box-shadow:none !important}
-                    .interconsulta-doc-sheet *{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere}
-                    .interconsulta-doc-sheet .doc-base-footer-block{transform:none}
+                    .interconsulta-doc-sheet,.informe-doc-sheet{width:100% !important;min-height:0 !important;padding:16px !important;box-shadow:none !important}
+                    .interconsulta-doc-sheet *,.informe-doc-sheet *{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere}
+                    .interconsulta-doc-sheet .doc-base-footer-block,.informe-doc-sheet .doc-base-footer-block{transform:none}
                   </style>` : '';
-              consentReviewFrame.srcdoc=(isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature)
+              consentReviewFrame.srcdoc=(isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature)
                 ? `<link rel="stylesheet" href="/assets/css/clinical-doc-base.css"><link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css">${interconsultaMobileStyle}${String(data.review_html || '')}`
                 : String(data.review_html || '');
               consentSigner.textContent=`${data.role_label}: ${data.signer_name || 'Médico responsable'}`;

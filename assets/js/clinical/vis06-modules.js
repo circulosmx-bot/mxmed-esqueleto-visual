@@ -137,6 +137,12 @@
           detail:{patient_id:selectedPatient(),document_uuid:row.document_uuid}
         }))));
       }
+      if(view.kind==='documents' && row.document_type==='informe_medico' && row.status==='draft'
+        && actor && actor===String(row.created_by_user_id || '')){
+        actions.prepend(button('Continuar borrador',()=>window.dispatchEvent(new CustomEvent('mxmed:resume-informe-draft',{
+          detail:{patient_id:selectedPatient(),document_uuid:row.document_uuid}
+        }))));
+      }
       if(row.has_private_binary==1)actions.append(button('Abrir archivo',()=>privateRead(row,view)));
       if(rows.some(r=>String(r.lineage_root_id || r.id)===String(row.lineage_root_id || row.id)&&String(r.id)!==String(row.id)))actions.append(button('Ver historial',()=>{view.lastTrigger=detail;revealRecord(row,view);}));
       card.append(main,actions);view.list.append(card);

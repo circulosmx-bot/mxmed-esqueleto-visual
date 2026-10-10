@@ -42282,6 +42282,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informePrognosis: root.querySelector('#im_prognosis'),
       informeClosingStatement: root.querySelector('#im_closing_statement'),
       informePreview: root.querySelector('#im_preview'),
+      informePreviewHeading: root.querySelector('#im_preview_heading'),
+      informeHeaderOptions: root.querySelectorAll('[name="im_professional_header"]'),
       informePrev: root.querySelector('#im_prev'),
       informeNext: root.querySelector('#im_next'),
       informeSave: root.querySelector('#im_save'),
@@ -42291,6 +42293,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       informeSignatureRegisteredWrap: root.querySelector('#im_signature_registered_wrap'),
       informeSignatureRegisteredPreview: root.querySelector('#im_signature_registered_preview'),
       informeSignatureCanvas: root.querySelector('#im_signature_canvas'),
+      informeSignatureBlock: root.querySelector('#im_signature_block'),
+      informeSignatureApplied: root.querySelector('#im_signature_applied'),
       informeSignatureQrOpen: root.querySelector('#im_signature_qr_open'),
       informeSignatureClear: root.querySelector('#im_signature_clear'),
       informeSignatureStatus: root.querySelector('#im_signature_status'),
@@ -42762,6 +42766,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const informeState = {
       step: 1,
       saving: false,
+      activeDraftRef: '',
+      activeDraftVersion: 0,
+      professionalHeader: 'shown',
+      storedDoctorSignature: null,
+      signatureBindingStatus: 'absent',
+      previewHtml: '',
+      previewGeneration: 0,
+      reviewedHash: '',
+      qr: { token: '', status: '', generation: 0 },
       signaturePad: null,
       signatureHasStroke: false,
       signaturePreferredSource: '',
@@ -44468,11 +44481,24 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ctx.strokeStyle = '#0f172a';
       informeState.signatureHasStroke = false;
       if(informeState.signaturePreferredSource === 'local'){
-        informeState.signaturePreferredSource = informeState.registeredSignatureData ? 'registered' : '';
+        informeState.signaturePreferredSource = '';
       }
     };
     const updateInformeSignatureStatus = ()=>{
       if(!els.informeSignatureStatus) return;
+      const applied = informeState.storedDoctorSignature;
+      if(applied?.image_data){
+        documentUi.signature({ block: els.informeSignatureBlock, statusEl: els.informeSignatureStatus,
+          image: els.informeSignatureApplied, canvas: els.informeSignatureCanvas,
+          imageData: applied.image_data, status: informeState.signatureBindingStatus,
+          hasSignature: true, manageSurface: true,
+          text: informeState.signatureBindingStatus === 'valid_bound_signature'
+            ? 'Firma médica aplicada a esta versión' : 'La firma requiere revisión' });
+        return;
+      }
+      documentUi.signature({ block: els.informeSignatureBlock, statusEl: els.informeSignatureStatus,
+        image: els.informeSignatureApplied, canvas: els.informeSignatureCanvas,
+        status: 'absent', hasSignature: false, manageSurface: true });
       const hasRegistered = !!informeState.registeredSignatureData;
       const hasRemote = informeState.signaturePreferredSource === 'remote' && !!sanitizeText(informeState.remoteSignature?.image_data || '');
       if(hasRemote){
@@ -44493,32 +44519,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         els.informeSignatureSourceRegistered.checked = informeState.signaturePreferredSource === 'registered';
       }
     };
-    const pullInformeDoctorRemoteSignature = ()=>{
-      const remote = (state.doctorRemoteSignature && typeof state.doctorRemoteSignature === 'object')
-        ? state.doctorRemoteSignature
-        : null;
-      const imageData = sanitizeText(remote?.image_data || '');
-      if(!imageData){
-        informeState.remoteSignature = null;
-        if(informeState.signaturePreferredSource === 'remote'){
-          informeState.signaturePreferredSource = informeState.signatureHasStroke
-            ? 'local'
-            : (informeState.registeredSignatureData ? 'registered' : '');
-        }
-        return false;
-      }
-      informeState.remoteSignature = {
-        type: 'drawn',
-        source: 'remote_qr',
-        role: 'doctor',
-        image_data: imageData,
-        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
-        signer_name: sanitizeText(remote?.signer_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
-        token: sanitizeText(remote?.token || '')
-      };
-      informeState.signaturePreferredSource = 'remote';
-      return true;
-    };
     const refreshInformeRegisteredSignature = ()=>{
       informeState.registeredSignatureData = readRegisteredDoctorSignature();
       const hasRegistered = !!informeState.registeredSignatureData;
@@ -44538,9 +44538,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!hasRegistered && informeState.signaturePreferredSource === 'registered'){
         informeState.signaturePreferredSource = informeState.signatureHasStroke ? 'local' : '';
       }
-      if(hasRegistered && !informeState.signaturePreferredSource && !informeState.signatureHasStroke){
-        informeState.signaturePreferredSource = 'registered';
-      }
       updateInformeSignatureStatus();
     };
     const setInformeSignaturePreferredSource = (source = '')=>{
@@ -44550,12 +44547,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }else if(normalized === 'remote' && informeState.remoteSignature){
         informeState.signaturePreferredSource = 'remote';
       }else if(normalized === 'local' && informeState.signatureHasStroke){
-        informeState.signaturePreferredSource = 'local';
-      }else if(informeState.remoteSignature){
-        informeState.signaturePreferredSource = 'remote';
-      }else if(informeState.registeredSignatureData){
-        informeState.signaturePreferredSource = 'registered';
-      }else if(informeState.signatureHasStroke){
         informeState.signaturePreferredSource = 'local';
       }else{
         informeState.signaturePreferredSource = '';
@@ -44578,6 +44569,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       let drawing = false;
       const start = (event)=>{
         if(informeState.saving) return;
+        informeState.storedDoctorSignature = null;
+        informeState.signatureBindingStatus = 'absent';
+        informeState.reviewedHash = '';
         drawing = true;
         const pt = readPoint(event);
         ctx.beginPath();
@@ -44618,12 +44612,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       informeState.signatureHasStroke = false;
+      informeState.storedDoctorSignature = null;
+      informeState.signatureBindingStatus = 'absent';
       if(informeState.signaturePreferredSource === 'local'){
-        if(informeState.remoteSignature){
-          informeState.signaturePreferredSource = 'remote';
-        }else{
-          informeState.signaturePreferredSource = informeState.registeredSignatureData ? 'registered' : '';
-        }
+        informeState.signaturePreferredSource = '';
       }
       updateInformeSignatureStatus();
     };
@@ -47783,84 +47775,70 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.informePrognosis) els.informePrognosis.value = sanitizeText(informeState.form.prognosis || '');
       if(els.informeClosingStatement) els.informeClosingStatement.value = sanitizeText(informeState.form.closing_statement || '');
     };
-    const renderInformePreview = ()=>{
-      if(!els.informePreview) return;
-      const patient = readInformePatientContext();
-      const reason = sanitizeText(informeState.form.reason || '');
-      const currentIllness = sanitizeText(informeState.form.current_illness || '');
-      const relevantHistory = sanitizeText(informeState.form.relevant_history || '');
-      const summary = sanitizeText(informeState.form.clinical_summary || '');
-      const findings = sanitizeText(informeState.form.findings || '');
-      const diagnostic = sanitizeText(informeState.form.diagnostic_impression || '');
-      const plan = sanitizeText(informeState.form.plan || '');
-      const prognosisMap = {
-        favorable: 'Favorable',
-        reservado: 'Reservado',
-        en_evolucion: 'En evolución',
-        condicionado: 'Condicionado'
-      };
-      const prognosis = sanitizeText(prognosisMap[sanitizeText(informeState.form.prognosis || '').toLowerCase()] || informeState.form.prognosis || '');
-      const closing = sanitizeText(informeState.form.closing_statement || '');
-      const emissionDate = formatConsentUiDate(informeState.form.emission_date || '', { withTime: false }) || sanitizeText(informeState.form.emission_date || '');
-      const sections = [
-        reason ? `<div><strong>Motivo:</strong> ${escapeHtml(reason)}</div>` : '',
-        // Future: make this label dynamic by case status (activo/cerrado) if/when that context is available.
-        currentIllness ? `<div class="mt-2"><strong>Motivo de atención:</strong><br>${escapeHtml(currentIllness).replace(/\n/g, '<br>')}</div>` : '',
-        relevantHistory ? `<div class="mt-2"><strong>Antecedentes relevantes:</strong><br>${escapeHtml(relevantHistory).replace(/\n/g, '<br>')}</div>` : '',
-        summary ? `<div class="mt-2"><strong>Resumen clínico:</strong><br>${escapeHtml(summary).replace(/\n/g, '<br>')}</div>` : '',
-        findings ? `<div class="mt-2"><strong>Hallazgos / valoración:</strong><br>${escapeHtml(findings).replace(/\n/g, '<br>')}</div>` : '',
-        diagnostic ? `<div class="mt-2"><strong>Impresión diagnóstica:</strong><br>${escapeHtml(diagnostic).replace(/\n/g, '<br>')}</div>` : '',
-        plan ? `<div class="mt-2"><strong>Plan / recomendaciones:</strong><br>${escapeHtml(plan).replace(/\n/g, '<br>')}</div>` : '',
-        prognosis ? `<div class="mt-2"><strong>Pronóstico:</strong> ${escapeHtml(prognosis)}</div>` : '',
-        closing ? `<div class="mt-2"><strong>Cierre:</strong><br>${escapeHtml(closing).replace(/\n/g, '<br>')}</div>` : ''
-      ].filter(Boolean);
-      els.informePreview.innerHTML = `
-        <div><strong>Informe médico</strong></div>
-        <div class="text-muted">${escapeHtml(patient.name)}${patient.age ? ` · ${escapeHtml(patient.age)} años` : ''}${patient.sex ? ` · ${escapeHtml(patient.sex)}` : ''}</div>
-        <div class="text-muted mb-2">${escapeHtml(emissionDate || 'Sin fecha')}</div>
-        ${sections.join('')}
-      `;
+    const renderInformePreview = async ({ final = false } = {})=>{
+      const generation = ++informeState.previewGeneration;
+      const prepared = await buildInformeDocument('draft');
+      if(prepared?.error) throw new Error(prepared.error);
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      const url = `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(prepared.patientId)}/informe-preview`;
+      documentUi.review({ content: els.informePreview, continueButton: els.informeNext,
+        state: 'loading', message: 'Preparando vista previa…', focus: false });
+      const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(prepared.body) });
+      const json = await response.json().catch(()=>null);
+      if(!response.ok || json?.ok !== true || !json?.data?.html)
+        throw new Error(sanitizeText(json?.message || 'No se pudo preparar la vista previa.'));
+      if(generation !== informeState.previewGeneration) return null;
+      informeState.previewHtml = String(json.data.html);
+      documentUi.review({ content: els.informePreview, continueButton: els.informeNext,
+        state: 'ready', html: informeState.previewHtml });
+      if(final){
+        informeState.reviewedHash = await window.mxmedInformeSignatureBinding.hash(prepared.body);
+        if(els.informeEmit) els.informeEmit.disabled = false;
+      }
+      return prepared;
     };
     const renderInformeStep = ()=>{
       if(!els.informeWizard) return;
-      const step = Number(informeState.step || 1);
-      const maxStep = 4;
-      const normalizedStep = Math.min(Math.max(step, 1), maxStep);
-      informeState.step = normalizedStep;
-      if(els.informeStep1) els.informeStep1.classList.toggle('d-none', normalizedStep !== 1);
-      if(els.informeStep2) els.informeStep2.classList.toggle('d-none', normalizedStep !== 2);
-      if(els.informeStep3) els.informeStep3.classList.toggle('d-none', normalizedStep !== 3);
-      if(els.informeStep4) els.informeStep4.classList.toggle('d-none', normalizedStep !== 4);
-      if(els.informeStepLabel) els.informeStepLabel.textContent = `Paso ${normalizedStep} de 4`;
-      if(els.informePrev) els.informePrev.disabled = normalizedStep === 1 || informeState.saving;
+      const step = Math.min(Math.max(Number(informeState.step || 1), 1), 5);
+      informeState.step = step;
+      els.informeStep1?.classList.toggle('d-none', step !== 1);
+      els.informeStep2?.classList.toggle('d-none', step !== 2);
+      els.informeStep3?.classList.toggle('d-none', step !== 4);
+      els.informeStep4?.classList.toggle('d-none', step !== 3 && step !== 5);
+      if(els.informeStepLabel) els.informeStepLabel.textContent = step === 5 ? 'Revisión final del informe' : `Paso ${step} de 5`;
+      if(els.informePreviewHeading) els.informePreviewHeading.textContent = step === 5
+        ? 'Revisión final del informe' : 'Vista previa del informe completo';
+      if(els.informePrev) els.informePrev.disabled = step === 1 || informeState.saving;
       if(els.informeNext){
-        els.informeNext.classList.toggle('d-none', normalizedStep >= 4);
-        els.informeNext.disabled = informeState.saving;
+        els.informeNext.classList.toggle('d-none', step >= 5);
+        els.informeNext.textContent = step === 3 ? 'Continuar a firmas' : step === 4 ? 'Revisión final' : 'Continuar';
+        els.informeNext.disabled = informeState.saving || (step === 3 && !informeState.previewHtml);
       }
-      const showActions = normalizedStep === 4;
-      if(els.informeSave){
-        els.informeSave.classList.toggle('d-none', !showActions);
-        els.informeSave.disabled = informeState.saving;
-      }
-      if(els.informeEmit){
-        els.informeEmit.classList.toggle('d-none', !showActions);
-        els.informeEmit.disabled = informeState.saving;
-      }
-      if(els.informeCancel){
-        els.informeCancel.classList.toggle('d-none', !showActions);
-        els.informeCancel.disabled = informeState.saving;
-      }
-      if(normalizedStep !== 3){
-        els.informeSignatureInlinePrompt?.classList.add('d-none');
-      }
-      if(normalizedStep === 4){
-        renderInformePreview();
+      els.informeSave?.classList.toggle('d-none', step < 4);
+      els.informeEmit?.classList.toggle('d-none', step !== 5);
+      if(els.informeEmit) els.informeEmit.disabled = informeState.saving || !informeState.reviewedHash;
+      els.informeCancel?.classList.toggle('d-none', step < 4);
+      if(step !== 4) els.informeSignatureInlinePrompt?.classList.add('d-none');
+      if(step === 3 || step === 5){
+        if(step === 5){
+          informeState.reviewedHash = '';
+          if(els.informeEmit) els.informeEmit.disabled = true;
+        }
+        void renderInformePreview({ final: step === 5 }).catch(error=>{
+          informeState.reviewedHash = '';
+          documentUi.review({ content: els.informePreview, continueButton: els.informeNext,
+            state: 'error', message: sanitizeText(error?.message || 'No se pudo preparar la vista previa.'),
+            retry: ()=>void renderInformePreview({ final: step === 5 }) });
+        });
       }
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.informeWizard));
     };
     const buildInformeTempSnapshot = ()=>({
       step: Number(informeState.step || 1) || 1,
       form: {
+        professional_header: informeState.professionalHeader,
         emission_date: sanitizeText(informeState.form.emission_date || ''),
         reason: normalizeConsentInputRaw(informeState.form.reason || ''),
         current_illness: normalizeConsentInputRaw(informeState.form.current_illness || ''),
@@ -47903,13 +47881,26 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         prognosis: sanitizeText(form.prognosis ?? informeState.form.prognosis ?? ''),
         closing_statement: normalizeConsentInputRaw(form.closing_statement ?? informeState.form.closing_statement ?? '')
       };
-      informeState.step = Math.min(Math.max(Number(safe.step || 1), 1), 4);
+      informeState.professionalHeader = form.professional_header === 'hidden' ? 'hidden' : 'shown';
+      els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === informeState.professionalHeader; });
+      informeState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
       syncInformeInputsFromState();
       renderInformeStep();
     };
     const resetInformeWizard = ()=>{
+      if(['pending', 'uploaded'].includes(informeState.qr.status))
+        void invalidateInformeQr('wizard_reset');
       informeState.step = 1;
       informeState.saving = false;
+      informeState.activeDraftRef = '';
+      informeState.activeDraftVersion = 0;
+      informeState.professionalHeader = 'shown';
+      informeState.storedDoctorSignature = null;
+      informeState.signatureBindingStatus = 'absent';
+      informeState.previewHtml = '';
+      informeState.previewGeneration += 1;
+      informeState.reviewedHash = '';
+      informeState.qr = { token: '', status: '', generation: informeState.qr.generation + 1 };
       informeState.form = {
         emission_date: '',
         reason: '',
@@ -47936,6 +47927,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     };
     const startInformeDraft = ()=>{
+      if(['pending', 'uploaded'].includes(informeState.qr.status))
+        void invalidateInformeQr('new_document');
       const patientId = resolveActivePatientIdForConsent();
       if(!patientId){
         setInformeNotice('Selecciona paciente antes de crear el informe médico.');
@@ -47964,9 +47957,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       informeState.step = 1;
       informeState.saving = false;
+      informeState.activeDraftRef = '';
+      informeState.activeDraftVersion = 0;
+      informeState.professionalHeader = 'shown';
+      informeState.storedDoctorSignature = null;
+      informeState.signatureBindingStatus = 'absent';
+      informeState.previewHtml = '';
+      informeState.previewGeneration += 1;
+      informeState.reviewedHash = '';
+      informeState.qr = { token: '', status: '', generation: informeState.qr.generation + 1 };
       informeState.signatureHasStroke = false;
       informeState.signaturePreferredSource = '';
       informeState.remoteSignature = null;
+      els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === 'shown'; });
       syncInformeInputsFromState();
       setInformeNotice('');
       initInformeSignaturePad();
@@ -47979,10 +47982,38 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return true;
     };
-    const openInformeModal = async ()=>{
+    const openInformeModal = async ({ draftRef = '' } = {})=>{
       const shouldOpen = startInformeDraft();
       if(!shouldOpen) return;
       const patientId = resolveActivePatientIdForConsent();
+      if(draftRef){
+        const url = buildScopedCanonicalDocumentDetailUrl(draftRef);
+        const response = url ? await fetch(url, { headers: { Accept: 'application/json' },
+          credentials: 'same-origin' }).catch(()=>null) : null;
+        const json = response?.ok ? await response.json().catch(()=>null) : null;
+        const doc = json?.data?.document || null;
+        const payload = doc?.content?.payload || null;
+        const actorUserId = await resolveResponsivaAuthenticatedActorUserId();
+        if(!doc || doc.document_type !== 'informe_medico' || doc.status !== 'draft'
+          || sanitizeText(doc.context?.patient_id) !== patientId
+          || sanitizeText(doc.audit?.created_by_user_id) !== actorUserId
+          || !payload || payload.contract_version !== 2 || payload.status !== 'draft'){
+          showCatalogFeedback('No se pudo reanudar este borrador de forma segura.', 'error');
+          return;
+        }
+        informeState.activeDraftRef = sanitizeText(doc.document_id || draftRef);
+        informeState.activeDraftVersion = Number(doc.version || 0);
+        informeState.form = { ...informeState.form, ...payload.form_snapshot,
+          ...payload.content, emission_date: sanitizeText(payload.report?.emission_date || '') };
+        informeState.professionalHeader = window.mxmedLegalDocumentPresentation.professionalHeaderMode(payload);
+        informeState.storedDoctorSignature = payload.signatures?.doctor || null;
+        informeState.step = 3;
+        syncInformeInputsFromState();
+        els.informeHeaderOptions?.forEach(option=>{ option.checked = option.value === informeState.professionalHeader; });
+        const prepared = await buildInformeDocument('draft');
+        informeState.signatureBindingStatus = await window.mxmedInformeSignatureBinding.classify(
+          prepared.body, resolveCanonicalDocumentsDoctorId(), informeState.registeredSignatureData);
+      }else{
       const tempSession = getDocModalTempSession({ documentType: 'informe_medico', patientId });
       if(tempSession?.snapshot){
         const decision = await askDocModalTempRecoveryDecision({
@@ -47996,11 +48027,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           clearDocModalTempSession({ documentType: 'informe_medico', patientId });
         }
       }
+      }
       if(!els.informeModalEl || !window.bootstrap?.Modal) return;
       try{
         const modal = window.bootstrap.Modal.getOrCreateInstance(els.informeModalEl);
         modal.show();
         window.setTimeout(()=>{ syncInformeSignatureCanvasSize(); }, 40);
+        renderInformeStep();
       }catch(_){}
     };
     const closeInformeModal = ()=>{
@@ -48009,43 +48042,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         window.bootstrap.Modal.getOrCreateInstance(els.informeModalEl)?.hide();
       }catch(_){}
     };
-    const getActiveInformeDoctorSignature = (nowSql = '')=>{
-      const signedAt = sanitizeText(nowSql || formatNowSql());
-      const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
-      if(informeState.signaturePreferredSource === 'remote' && informeState.remoteSignature){
-        return {
-          type: 'drawn',
-          role: 'doctor',
-          image_data: sanitizeText(informeState.remoteSignature.image_data || ''),
-          signed_at: sanitizeText(informeState.remoteSignature.signed_at || signedAt),
-          signer_name: sanitizeText(informeState.remoteSignature.signer_name || signerName),
-          source: 'remote_qr',
-          token: sanitizeText(informeState.remoteSignature.token || '')
-        };
-      }
-      if(informeState.signaturePreferredSource === 'registered' && informeState.registeredSignatureData){
-        return {
-          type: 'drawn',
-          role: 'doctor',
-          image_data: informeState.registeredSignatureData,
-          signed_at: signedAt,
-          signer_name: signerName,
-          source: 'registered_profile'
-        };
-      }
-      const localSignature = exportInformeSignatureData();
-      if(localSignature){
-        return {
-          type: 'drawn',
-          role: 'doctor',
-          image_data: localSignature,
-          signed_at: signedAt,
-          signer_name: signerName,
-          source: 'local_canvas'
-        };
-      }
-      return null;
-    };
+    const getActiveInformeDoctorSignature = ()=> informeState.storedDoctorSignature;
     const buildInformeRenderedText = (payload = {})=>{
       const lines = [];
       const patientName = sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente');
@@ -48122,8 +48119,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(appointmentId) context.appointment_id = appointmentId;
       const content = {
         reason,
-        // `current_illness` stays only as compatibility key for previous consumers.
-        current_illness: normalizeConsentInputRaw(informeState.form.current_illness || reason || ''),
+        // Historical compatibility key; new reports do not duplicate the visible reason.
+        current_illness: normalizeConsentInputRaw(informeState.form.current_illness || ''),
         relevant_history: normalizeConsentInputRaw(informeState.form.relevant_history || ''),
         clinical_summary: normalizeConsentInputRaw(informeState.form.clinical_summary || ''),
         findings: normalizeConsentInputRaw(informeState.form.findings || ''),
@@ -48133,8 +48130,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         closing_statement: normalizeConsentInputRaw(informeState.form.closing_statement || '')
       };
       const payload = {
-        contract_version: 1,
+        contract_version: 2,
         status: normalizedStatus,
+        presentation: { version: 1, professional_header: informeState.professionalHeader },
         report: {
           issued_at: nowSql,
           emission_date: sanitizeText(informeState.form.emission_date || nowSql.slice(0, 10)),
@@ -48196,6 +48194,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         actorUserId,
         source: 'documents_clinicos_informe_medico'
       });
+      if(informeState.activeDraftRef){
+        body.draft_ref = informeState.activeDraftRef;
+        body.expected_version = informeState.activeDraftVersion;
+      }
       return { patientId, body, normalizedStatus };
     };
     const loadCertificadoCanonicalPreview = async ({ final = false } = {})=>{
@@ -48273,63 +48275,73 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         refreshCertificadoSignatureStatus();
       }
     };
+    const persistInformeDocument = async (status = 'draft')=>{
+      const prepared = await buildInformeDocument(status);
+      if(prepared?.error) throw new Error(prepared.error);
+      const url = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
+      if(!url) throw new Error('No se pudo resolver el médico.');
+      const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json',
+          'Idempotency-Key': `informe:${window.crypto.randomUUID()}` },
+        body: JSON.stringify(prepared.body) });
+      const json = await response.json().catch(()=>null);
+      if(!response.ok || json?.ok !== true)
+        throw new Error(sanitizeText(json?.message || json?.error || 'No se pudo guardar el informe.'));
+      const saved = json.data?.document || {};
+      const ref = sanitizeText(saved.document_id || saved.document_uuid || '');
+      if(!ref || Number(saved.version || 0) < 1) throw new Error('El servidor no devolvió la versión del informe.');
+      if(informeState.activeDraftRef && ref !== informeState.activeDraftRef)
+        throw new Error('La identidad del borrador cambió inesperadamente.');
+      informeState.activeDraftRef = ref;
+      informeState.activeDraftVersion = Number(saved.version);
+      await listCanonicalConsents();
+      return json;
+    };
+    const bindCurrentInformePhysicianSignature = async ()=>{
+      if(informeState.storedDoctorSignature?.source === 'remote_qr') return;
+      const source = informeState.signaturePreferredSource;
+      const image = source === 'registered' ? informeState.registeredSignatureData
+        : source === 'local' ? exportInformeSignatureData() : '';
+      if(!image) return;
+      const prepared = await buildInformeDocument('draft');
+      if(prepared?.error) throw new Error(prepared.error);
+      const signature = { type: 'drawn', role: 'doctor', source: source === 'registered' ? 'registered_profile' : 'local_canvas',
+        image_data: image, signer_name: sanitizeText(prepared.body.payload.actor_snapshot.full_name),
+        signed_at: formatNowSql() };
+      const bound = await window.mxmedInformeSignatureBinding.bind(prepared.body,
+        resolveCanonicalDocumentsDoctorId(), signature);
+      if(!bound) throw new Error('La firma debe contener trazos visibles.');
+      informeState.storedDoctorSignature = bound;
+      informeState.signatureBindingStatus = 'valid_bound_signature';
+    };
     const saveInformeDocument = async (status = 'draft')=>{
       if(informeState.saving) return;
       informeState.saving = true;
       setInformeNotice('');
-      if(els.informeSave){
-        els.informeSave.disabled = true;
-        els.informeSave.textContent = 'Guardando...';
-      }
-      if(els.informeEmit){
-        els.informeEmit.disabled = true;
-        els.informeEmit.textContent = 'Emitiendo...';
-      }
       try{
-        const prepared = await buildInformeDocument(status);
-        if(prepared?.error){
-          throw new Error(prepared.error);
+        if(status === 'issued'){
+          if(informeState.step !== 5 || !informeState.reviewedHash)
+            throw new Error('Revisa el informe completo antes de emitir.');
+          const prepared = await buildInformeDocument('issued');
+          if(prepared?.error || await window.mxmedInformeSignatureBinding.hash(prepared.body) !== informeState.reviewedHash)
+            throw new Error('El informe cambió. Revísalo y firma la versión actual.');
+          const classification = await window.mxmedInformeSignatureBinding.classify(prepared.body,
+            resolveCanonicalDocumentsDoctorId(), informeState.registeredSignatureData);
+          if(classification !== 'valid_bound_signature')
+            throw new Error('Se requiere una firma médica válida para la versión actual.');
         }
-        const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
-        if(!createUrl){
-          throw new Error('No se pudo resolver el médico para guardar el informe médico.');
-        }
-        const resp = await fetch(createUrl, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(prepared.body),
-          credentials: 'same-origin'
-        });
-        const json = await resp.json().catch(()=> null);
-        if(!resp.ok || !json || json.ok !== true){
-          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el informe médico.';
-          throw new Error(msg);
-        }
-        if(prepared.normalizedStatus === 'issued'){
-          clearDocModalTempSession({ documentType: 'informe_medico', patientId: prepared.patientId });
+        const json = await persistInformeDocument(status);
+        if(status === 'issued'){
+          const patientId = resolveActivePatientIdForConsent();
+          clearDocModalTempSession({ documentType: 'informe_medico', patientId });
           await presentEmittedDocument(json, 'informe_medico', els.informeModalEl);
-        }else{
-          listCanonicalConsents();
-        }
+        }else showCatalogFeedback('Borrador de informe médico guardado correctamente.', 'success');
         resetInformeWizard();
         closeInformeModal();
-        if(prepared.normalizedStatus !== 'issued') showCatalogFeedback('Borrador de informe médico guardado correctamente.', 'success');
       }catch(error){
         setInformeNotice(sanitizeText(error?.message || 'No se pudo guardar el informe médico.'));
-        showCatalogFeedback(sanitizeText(error?.message || 'No se pudo guardar el informe médico.'), 'error');
       }finally{
         informeState.saving = false;
-        if(els.informeSave){
-          els.informeSave.disabled = false;
-          els.informeSave.textContent = 'Guardar borrador';
-        }
-        if(els.informeEmit){
-          els.informeEmit.disabled = false;
-          els.informeEmit.textContent = 'Emitir informe';
-        }
         renderInformeStep();
       }
     };
@@ -51304,18 +51316,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!responsivaQrModal) return;
       const certificate = type === 'certificado';
       const interconsulta = type === 'interconsulta';
+      const informe = type === 'informe';
       const title = responsivaQrModal.querySelector('#rm-qr-title');
       const intro = responsivaQrModal.querySelector('.modal-header p');
       const reviewStep = responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
       const image = responsivaQrEl('image');
-      if(title) title.textContent = interconsulta ? 'Firmar Interconsulta con celular'
+      if(title) title.textContent = informe ? 'Firmar Informe médico con celular' : interconsulta ? 'Firmar Interconsulta con celular'
         : certificate ? 'Firmar Certificado médico con celular' : 'Firmar Responsiva con celular';
-      if(intro) intro.textContent = interconsulta ? 'Revisa y firma esta versión de la interconsulta desde tu teléfono.' : certificate
+      if(intro) intro.textContent = informe ? 'Revisa y firma esta versión del informe desde tu teléfono.' : interconsulta ? 'Revisa y firma esta versión de la interconsulta desde tu teléfono.' : certificate
         ? 'Revisa y firma esta versión del certificado desde tu teléfono.'
         : 'Revisa y firma esta versión de la responsiva desde tu teléfono.';
       if(reviewStep) reviewStep.innerHTML = '<span aria-hidden="true">2</span>'
-        + (interconsulta ? 'Revisa la interconsulta' : certificate ? 'Revisa el certificado' : 'Revisa la responsiva');
-      if(image) image.setAttribute('aria-label', interconsulta ? 'Código QR para firmar la interconsulta' : certificate
+        + (informe ? 'Revisa el informe' : interconsulta ? 'Revisa la interconsulta' : certificate ? 'Revisa el certificado' : 'Revisa la responsiva');
+      if(image) image.setAttribute('aria-label', informe ? 'Código QR para firmar el informe médico' : interconsulta ? 'Código QR para firmar la interconsulta' : certificate
         ? 'Código QR para firmar el certificado médico' : 'Código QR para firmar la responsiva');
     };
     const openResponsivaSignatureQr = async (role = 'signer')=>{
@@ -52887,6 +52900,136 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         return;
       }
       els.certificadoSignatureStatus.textContent = 'Sin firma';
+    };
+    const openInformeDoctorSignatureQr = async ()=>{
+      if(!window.isSecureContext || !window.crypto?.subtle?.digest){
+        setInformeNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        return;
+      }
+      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      await invalidateInformeQr('new_session');
+      informeState.qr.generation += 1;
+      const generation = informeState.qr.generation;
+      informeState.qr.status = 'preparing';
+      informeState.qr.token = '';
+      ensureModalAttachedToBody(responsivaQrModal);
+      setSharedDocumentQrCopy('informe');
+      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Informe médico';
+      responsivaQrEl('waiting')?.classList.remove('d-none');
+      responsivaQrEl('received')?.classList.add('d-none');
+      responsivaQrEl('image')?.replaceChildren();
+      informeHandoffShell.phase('waiting', { message: 'Preparando código…' });
+      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      try{
+        await persistInformeDocument('draft');
+        if(generation !== informeState.qr.generation) return;
+        const data = await informeHandoffShell.adapter.createSession({
+          document_uuid: informeState.activeDraftRef,
+          document_version: informeState.activeDraftVersion, role: 'doctor'
+        });
+        if(generation !== informeState.qr.generation) return;
+        const token = sanitizeText(data.token || '');
+        const path = sanitizeText(data.mobile_url || '');
+        if(!token || !path || typeof QRCode !== 'function') throw new Error('No se pudo mostrar el código QR.');
+        const url = new URL(path, window.location.origin).href;
+        informeState.qr.token = token;
+        informeState.qr.status = 'pending';
+        const image = responsivaQrEl('image');
+        image?.replaceChildren();
+        new QRCode(image, { text: url, width: 216, height: 216,
+          colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        const link = responsivaQrEl('link');
+        if(link) link.href = url;
+        informeHandoffShell.phase('waiting', { message: 'Esperando firma…' });
+        informeHandoffPoller.start();
+        void pollInformeQr();
+      }catch(error){
+        if(generation !== informeState.qr.generation) return;
+        informeState.qr.status = 'error';
+        informeHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo iniciar la firma.') });
+      }
+    };
+    const invalidateInformeQr = async (reason = 'changed')=>{
+      const token = informeState.qr.token;
+      if(!token || !['pending','uploaded'].includes(informeState.qr.status)) return;
+      informeHandoffPoller?.stop();
+      informeState.qr.generation += 1;
+      informeState.qr.status = 'stale';
+      informeHandoffShell.phase('error', { message: 'El informe cambió. Genera un nuevo código.' });
+      await fetch(`/api/clinical/index.php/informe-qr-sessions/${encodeURIComponent(token)}/invalidate`, {
+        method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' },
+        body: JSON.stringify({ reason }) }).catch(()=>{});
+    };
+    const informeHandoffShell = documentUi.handoff({
+      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
+      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
+      preview: responsivaQrEl('preview'),
+      adapter: {
+        createSession: async data=>{
+          const response = await fetch('/api/clinical/index.php/informe-qr-sessions', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(data) });
+          const json = await response.json().catch(()=>null);
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo generar el código QR.');
+          return json.data || {};
+        },
+        getStatus: async token=>{
+          const response = await fetch(`/api/clinical/index.php/informe-qr-sessions/${encodeURIComponent(token)}/status`, {
+            headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
+          const json = await response.json().catch(()=>null);
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo verificar la firma.');
+          return json.data || {};
+        },
+        receive: async (data, token, generation)=>{
+          const signature = data.signature;
+          const prepared = await buildInformeDocument('draft');
+          if(prepared?.error || signature?.binding?.document_uuid !== informeState.activeDraftRef
+            || Number(signature?.binding?.document_version) !== informeState.activeDraftVersion
+            || signature?.binding?.content_fingerprint !== await window.mxmedInformeSignatureBinding.hash(prepared.body))
+            throw new Error('El informe cambió. Genera un nuevo código.');
+          informeState.storedDoctorSignature = signature;
+          informeState.signaturePreferredSource = 'remote';
+          informeState.signatureBindingStatus = 'valid_bound_signature';
+          await persistInformeDocument('draft');
+          if(generation !== informeState.qr.generation || token !== informeState.qr.token) return;
+          informeState.qr.status = 'consumed';
+          informeHandoffShell.phase('received', { message: 'Firma recibida correctamente',
+            imageData: signature.image_data, signer: signature.signer_name || '' });
+          updateInformeSignatureStatus();
+          setInformeNotice('Firma recibida correctamente.', 'success');
+        },
+        mapTerminal: status=> status === 'expired' ? 'El código expiró. Genera uno nuevo.'
+          : 'El informe cambió. Genera uno nuevo.'
+      }
+    });
+    const informeHandoffPoller = informeHandoffShell.createPoller(()=>void pollInformeQr(), 2000);
+    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+      void invalidateInformeQr('modal_closed');
+      informeHandoffPoller.stop();
+      informeState.qr.generation += 1;
+    });
+    const pollInformeQr = async ()=>{
+      const { token, generation } = informeState.qr;
+      if(!token || informeState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      try{
+        const data = await informeHandoffShell.adapter.getStatus(token);
+        if(generation !== informeState.qr.generation || token !== informeState.qr.token
+          || informeState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+        if(data.status === 'uploaded' && data.signature){
+          informeState.qr.status = 'saving';
+          informeHandoffPoller.stop();
+          await informeHandoffShell.adapter.receive(data, token, generation);
+        }else if(['expired','stale','cancelled','consumed'].includes(data.status)){
+          informeState.qr.status = data.status;
+          informeHandoffPoller.stop();
+          informeHandoffShell.phase('error', { message: informeHandoffShell.adapter.mapTerminal(data.status) });
+        }
+      }catch(error){
+        if(generation === informeState.qr.generation)
+          informeHandoffShell.phase('error', { message: sanitizeText(error?.message || 'No se pudo recibir la firma.') });
+      }
     };
     const openCertificadoDoctorSignatureQr = async ()=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
@@ -54467,7 +54610,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.className = 'exp-card exp-card--secondary';
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
-        const resumableDraft = (isConsentDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) && status === 'draft';
+        const resumableDraft = (isConsentDoc || isInformeDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) && status === 'draft';
         const definition = getClinicalDocumentDefinition(documentType);
         const emittedActions = status === 'generated' && Array.isArray(definition.post_emission_actions)
           ? definition.post_emission_actions : [];
@@ -54476,7 +54619,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.innerHTML = `
           <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
             <span>${title.replace(/</g, '&lt;')}</span>
-            <span class="badge bg-light text-dark border">${((isConsentDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
+            <span class="badge bg-light text-dark border">${((isConsentDoc || isInformeDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
@@ -54489,6 +54632,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             : `<div class="small fw-semibold mt-2"><span class="text-primary">${resumableDraft ? 'Continuar borrador' : 'Ver detalle'}</span></div>`) : ''}
         `;
         if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
+        if(isInformeDoc && status === 'draft') card.dataset.informeDraft = '1';
         if(isResponsivaDoc && status === 'draft') card.dataset.responsivaDraft = '1';
         if(isCertificadoDoc && status === 'draft') card.dataset.certificadoDraft = '1';
         if(isInterconsultaDoc && status === 'draft') card.dataset.interconsultaDraft = '1';
@@ -56562,6 +56706,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           return;
         }
         informeState.form[key] = normalizeConsentInputRaw(inputEl.value || '');
+        informeState.previewHtml = '';
+        informeState.previewGeneration += 1;
+        informeState.reviewedHash = '';
+        if(informeState.storedDoctorSignature){
+          informeState.signatureBindingStatus = 'stale_or_unverified_signature';
+          informeState.signaturePreferredSource = '';
+          updateInformeSignatureStatus();
+        }
+        if(informeState.qr.status === 'pending') void invalidateInformeQr('content_changed');
         const patientId = resolveActivePatientIdForConsent();
         scheduleDocModalTempSessionSave({
           documentType: 'informe_medico',
@@ -56580,6 +56733,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindInformeField(els.informePlan, 'plan');
     bindInformeField(els.informePrognosis, 'prognosis');
     bindInformeField(els.informeClosingStatement, 'closing_statement');
+    els.informeHeaderOptions?.forEach(option=> option.addEventListener('change', ()=>{
+      if(!option.checked) return;
+      informeState.professionalHeader = option.value === 'hidden' ? 'hidden' : 'shown';
+      informeState.previewHtml = '';
+      informeState.previewGeneration += 1;
+      informeState.reviewedHash = '';
+      if(informeState.storedDoctorSignature){
+        informeState.signatureBindingStatus = 'stale_or_unverified_signature';
+        informeState.signaturePreferredSource = '';
+        updateInformeSignatureStatus();
+      }
+      if(informeState.qr.status === 'pending') void invalidateInformeQr('header_changed');
+    }));
     els.informePrev?.addEventListener('click', (event)=>{
       event.preventDefault();
       informeState.step = Math.max(1, Number(informeState.step || 1) - 1);
@@ -56591,9 +56757,33 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         buildSnapshot: buildInformeTempSnapshot
       });
     });
-    els.informeNext?.addEventListener('click', (event)=>{
+    els.informeNext?.addEventListener('click', async (event)=>{
       event.preventDefault();
-      informeState.step = Math.min(4, Number(informeState.step || 1) + 1);
+      if(informeState.saving) return;
+      try{
+        if(informeState.step === 3){
+          if(!informeState.previewHtml) throw new Error('Espera la vista previa completa antes de continuar.');
+          informeState.saving = true;
+          await persistInformeDocument('draft');
+        }else if(informeState.step === 4){
+          await bindCurrentInformePhysicianSignature();
+          const prepared = await buildInformeDocument('draft');
+          if(prepared?.error) throw new Error(prepared.error);
+          informeState.signatureBindingStatus = await window.mxmedInformeSignatureBinding.classify(
+            prepared.body, resolveCanonicalDocumentsDoctorId(), informeState.registeredSignatureData);
+          updateInformeSignatureStatus();
+          if(informeState.signatureBindingStatus !== 'valid_bound_signature')
+            throw new Error('Aplica una firma médica válida antes de la revisión final.');
+        }
+      }catch(error){
+        setInformeNotice(sanitizeText(error?.message || 'No fue posible continuar.'));
+        informeState.saving = false;
+        renderInformeStep();
+        return;
+      }
+      informeState.saving = false;
+      informeState.step = Math.min(5, Number(informeState.step || 1) + 1);
+      setInformeNotice('');
       renderInformeStep();
       const patientId = resolveActivePatientIdForConsent();
       scheduleDocModalTempSessionSave({
@@ -56617,33 +56807,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     els.informeSignatureSourceRegistered?.addEventListener('change', ()=>{
       if(els.informeSignatureSourceRegistered?.checked){
+        informeState.storedDoctorSignature = null;
+        informeState.signatureBindingStatus = 'absent';
+        informeState.reviewedHash = '';
         setInformeSignaturePreferredSource('registered');
       }
     });
-    els.informeSignatureQrOpen?.addEventListener('click', async (event)=>{
+    els.informeSignatureQrOpen?.addEventListener('click', (event)=>{
       event.preventDefault();
-      try{
-        await openConsentSignatureQrModal('doctor');
-        window.setTimeout(()=>{
-          if(pullInformeDoctorRemoteSignature()){
-            setInformeNotice('Firma remota del médico recibida para el informe.');
-            updateInformeSignatureStatus();
-            renderInformeStep();
-          }
-        }, 250);
-      }catch(error){
-        setInformeNotice(sanitizeText(error?.message || 'No se pudo iniciar firma remota del médico.'));
-      }
+      void openInformeDoctorSignatureQr();
     });
     els.informeSignatureClear?.addEventListener('click', (event)=>{
       event.preventDefault();
       clearInformeSignaturePad();
       informeState.remoteSignature = null;
-      if(informeState.registeredSignatureData){
-        setInformeSignaturePreferredSource('registered');
-      }else{
-        setInformeSignaturePreferredSource('');
-      }
+      informeState.storedDoctorSignature = null;
+      informeState.reviewedHash = '';
+      setInformeSignaturePreferredSource('');
     });
     els.informeModalEl?.addEventListener('hidden.bs.modal', ()=>{
       const patientId = resolveActivePatientIdForConsent();
@@ -57757,6 +57937,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(action === 'view'){ openClinicalDocumentViewer(card.dataset.docUuid); return; }
       if(action === 'print'){ openClinicalDocumentPrint(card.dataset.docUuid); return; }
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.informeDraft === '1') openInformeModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.certificadoDraft === '1') openCertificadoModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.interconsultaDraft === '1') openInterconsultaModal({ draftRef: card.getAttribute('data-doc-uuid') });
@@ -57769,6 +57950,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!card) return;
       event.preventDefault();
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.informeDraft === '1') openInformeModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.responsivaDraft === '1') openResponsivaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.certificadoDraft === '1') openCertificadoModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.interconsultaDraft === '1') openInterconsultaModal({ draftRef: card.getAttribute('data-doc-uuid') });
@@ -57786,6 +57968,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const draftRef = sanitizeText(event.detail?.document_uuid || '');
       if(patientId && patientId === resolveActivePatientIdForConsent() && draftRef){
         openCertificadoModal({ draftRef });
+      }
+    });
+    window.addEventListener('mxmed:resume-informe-draft', (event)=>{
+      const patientId = sanitizeText(event.detail?.patient_id || '');
+      const draftRef = sanitizeText(event.detail?.document_uuid || '');
+      if(patientId && patientId === resolveActivePatientIdForConsent() && draftRef){
+        openInformeModal({ draftRef });
       }
     });
     window.addEventListener('mxmed:resume-interconsulta-draft', (event)=>{

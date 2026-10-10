@@ -9296,6 +9296,12 @@
                           <label class="form-label">Sexo</label>
                           <input class="form-control" id="im_patient_sex" readonly>
                         </div>
+                        <div class="col-12">
+                          <div class="fw-semibold mb-1">PRESENTACIÓN DEL DOCUMENTO</div>
+                          <div class="small mb-2">Encabezado profesional</div>
+                          <label class="me-3"><input type="radio" name="im_professional_header" value="shown" checked> Mostrar logotipo y datos profesionales</label>
+                          <label><input type="radio" name="im_professional_header" value="hidden"> Generar sin encabezado profesional</label>
+                        </div>
                       </div>
                     </div>
                     <div id="im_step_2" class="d-none">
@@ -9330,16 +9336,16 @@
                             <option value="condicionado">Condicionado</option>
                           </select>
                         </div>
+                        <div class="col-12">
+                          <label class="form-label" for="im_closing_statement">Declaración de cierre</label>
+                          <textarea class="form-control" id="im_closing_statement" rows="3" placeholder="Cierre formal del informe médico emitido para los fines clínicos correspondientes."></textarea>
+                        </div>
                       </div>
                     </div>
                     <div id="im_step_3" class="d-none">
                       <div class="row g-3">
                         <div class="col-12">
-                          <label class="form-label" for="im_closing_statement">Declaración de cierre</label>
-                          <textarea class="form-control" id="im_closing_statement" rows="3" placeholder="Cierre formal del informe médico emitido para los fines clínicos correspondientes."></textarea>
-                        </div>
-                        <div class="col-12">
-                          <div class="border rounded p-2">
+                          <div class="border rounded p-2" id="im_signature_block">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                               <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
                               <span class="small text-muted" id="im_signature_status">Sin firma</span>
@@ -9362,6 +9368,7 @@
                             </div>
                             <div class="mx-signature-pad" data-signature-role="doctor">
                               <canvas id="im_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                              <img id="im_signature_applied" class="d-none img-fluid" alt="Firma médica aplicada">
                             </div>
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
                               <button type="button" class="btn btn-outline-dark btn-sm" id="im_signature_qr_open">Firmar desde tu celular</button>
@@ -9380,12 +9387,12 @@
                     </div>
                     <div id="im_step_4" class="d-none">
                       <div class="border rounded p-3 bg-light-subtle">
-                        <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
+                        <div class="small text-uppercase text-muted fw-semibold mb-2" id="im_preview_heading">Vista previa del informe completo</div>
                         <div id="im_preview" class="small"></div>
                       </div>
                     </div>
                     <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
-                      <span class="text-muted small" id="im_step_label">Paso 1 de 4</span>
+                      <span class="text-muted small" id="im_step_label">Paso 1 de 5</span>
                       <div class="d-flex flex-wrap justify-content-end gap-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="im_prev" disabled>Anterior</button>
                         <button type="button" class="btn btn-primary btn-sm" id="im_next">Continuar</button>
@@ -11087,6 +11094,7 @@
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/certificado-signature-binding.js?v=cert-imp01"></script>
+<script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/app.js?v=cert-form01"></script>

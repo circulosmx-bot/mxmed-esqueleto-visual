@@ -980,6 +980,10 @@ if (!$embed) {
   }
 </style>
 <?php endif; ?>
+<?php if ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1): ?>
+<link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
+<link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=inf-imp01">
+<?php endif; ?>
 <?php if ($isInformeDoc): ?>
 <style>
   .informe-print-sheet{
@@ -1414,6 +1418,9 @@ if (!$embed) {
         <?php endif; ?>
       </article>
       <?php endif; ?>
+    <?php elseif ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['informe_snapshot']['html'] ?? '')) !== ''): ?>
+      <?php echo (string)$payload['informe_snapshot']['html']; ?>
     <?php elseif ($isInformeDoc): ?>
       <?php
       $informeDateOut = $informeEmissionDate !== '' ? $informeEmissionDate : clinical_doc_format_date($date, false);

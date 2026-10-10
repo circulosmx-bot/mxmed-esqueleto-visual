@@ -7887,6 +7887,11 @@ try {
         clinical_certificado_qr_route(clinical_documents_pdo(), $method, $segments);
         return;
     }
+    if (($segments[0] ?? '') === 'informe-qr-sessions') {
+        require_once __DIR__ . '/../_lib/clinical_informe_qr.php';
+        clinical_informe_qr_route(clinical_documents_pdo(), $method, $segments);
+        return;
+    }
     if (($segments[0] ?? '') === 'interconsulta-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_interconsulta_qr.php';
         clinical_interconsulta_qr_route(clinical_documents_pdo(), $method, $segments);
@@ -9251,6 +9256,35 @@ try {
                 return;
             }
         }
+        if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'informe-preview') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = ['route' => 'doctors/{doctor_id}/patients/{patient_id}/informe-preview'];
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($doctorId !== (string)$scopedDoctorContext['doctor_id']
+                    || !clinical_patient_exists($pdo, $patientId)
+                    || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response(['ok' => false, 'error' => 'forbidden', 'meta' => $meta], 403);
+                    return;
+                }
+                $request = json_decode((string)file_get_contents('php://input'), true);
+                $body = is_array($request) ? $request : [];
+                if (($body['document_type'] ?? '') !== 'informe_medico'
+                    || trim((string)($body['context']['patient_id'] ?? '')) !== $patientId
+                    || trim((string)($body['payload']['actor_snapshot']['user_id'] ?? '')) !== (string)$scopedDoctorContext['user_id'])
+                    throw new InvalidArgumentException('INFORME_PREVIEW_CONTEXT_INVALID');
+                require_once __DIR__ . '/../_lib/clinical_informe_render.php';
+                if (!clinical_legal_document_presentation_valid((array)$body['payload']))
+                    throw new InvalidArgumentException('INFORME_PRESENTATION_INVALID');
+                clinical_send_response(['ok' => true, 'data' => [
+                    'html' => clinical_informe_render_html((array)$body['payload'])], 'meta' => $meta], 200);
+                return;
+            } catch (Throwable $error) {
+                clinical_send_response(['ok' => false, 'error' => 'INFORME_PREVIEW_INVALID', 'meta' => $meta], 400);
+                return;
+            }
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'responsiva-preview') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
@@ -9387,6 +9421,20 @@ try {
                     $replay = ($result['_idempotency_replay'] ?? false) === true;
                     $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
                     if ($document === null) throw new RuntimeException('CERTIFICADO_DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
+                        'data' => ['document_id' => $result['document_uuid'], 'document' => $document],
+                        'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
+                    return;
+                }
+                if (($payload['document_type'] ?? null) === 'informe_medico'
+                    && (int)($payload['payload']['contract_version'] ?? 0) === 2) {
+                    if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('INFORME_MULTIPART_UNSUPPORTED');
+                    require_once __DIR__ . '/../_lib/clinical_informe_write.php';
+                    $result = clinical_informe_write($pdo, $scopedDoctorContext, $patientId, $payload,
+                        (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                    $replay = ($result['_idempotency_replay'] ?? false) === true;
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
+                    if ($document === null) throw new RuntimeException('INFORME_DOCUMENT_NOT_FOUND');
                     clinical_send_response(['ok' => true, 'error' => null, 'message' => 'document saved',
                         'data' => ['document_id' => $result['document_uuid'], 'document' => $document],
                         'meta' => $meta + ['idempotency_replay' => $replay]], $replay ? 200 : 201);
