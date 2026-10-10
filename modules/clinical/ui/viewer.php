@@ -2654,7 +2654,12 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($isInterconsultaDoc): ?>
+    <?php if ($isInterconsultaDoc && (int)($payload['interconsulta_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['interconsulta_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['interconsulta_snapshot']['html']; ?>
+      </div>
+    <?php elseif ($isInterconsultaDoc): ?>
       <?php
       $interconsultaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
       $interconsultaContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
