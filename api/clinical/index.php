@@ -386,7 +386,7 @@ function clinical_documents_assert_generic_type_allowed(array $payload): void
     // Informe and Interconsulta new writes belong exclusively to their versioned writers.
     foreach (['document_type', 'type'] as $field) {
         $type = strtolower(trim((string)($payload[$field] ?? '')));
-        if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true)) {
+        if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre', 'prescription', 'receta', 'rx'], true)) {
             throw new InvalidArgumentException(strtoupper($type) . '_GENERIC_WRITE_FORBIDDEN');
         }
     }
@@ -403,6 +403,9 @@ function clinical_documents_is_contract_write_error(string $message): bool
         'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN',
         'CONSENTIMIENTO_MULTIMEDIA_GENERIC_WRITE_FORBIDDEN',
         'DOCUMENTO_LIBRE_GENERIC_WRITE_FORBIDDEN',
+        'PRESCRIPTION_GENERIC_WRITE_FORBIDDEN',
+        'RECETA_GENERIC_WRITE_FORBIDDEN',
+        'RX_GENERIC_WRITE_FORBIDDEN',
     ], true);
 }
 
@@ -3934,6 +3937,8 @@ function clinical_v1_document_record_by_token(PDO $pdo,string $token,bool $forUp
 
 function clinical_v1_document_amendment_request(array $request,array $original): array
 {
+    if (in_array(strtolower(trim((string)($original['document_type'] ?? ''))), ['prescription','receta','rx'], true))
+        throw new InvalidArgumentException('PRESCRIPTION_GENERIC_AMENDMENT_FORBIDDEN');
     $reason=clinical_document_amendment_reason_validate((string)($request['reason']??''));
     if(is_array($request['replacement']??null))$replacement=$request['replacement'];
     elseif(is_array($request['correction']??null))$replacement=$request['correction'];
@@ -7410,9 +7415,9 @@ try {
 
             $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
             $typeAlias = strtolower(trim((string)($payload['type'] ?? '')));
-            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true)
-                || in_array($typeAlias, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true)) {
-                $documentType = in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true) ? $documentType : $typeAlias;
+            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre', 'prescription', 'receta', 'rx'], true)
+                || in_array($typeAlias, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre', 'prescription', 'receta', 'rx'], true)) {
+                $documentType = in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre', 'prescription', 'receta', 'rx'], true) ? $documentType : $typeAlias;
                 $code = strtoupper($documentType) . '_GENERIC_WRITE_FORBIDDEN';
                 clinical_send_response(['ok' => false, 'error' => ['code' => $code, 'message' => $code],
                     'message' => $code, 'data' => null,
@@ -9564,6 +9569,52 @@ try {
                 return;
             }
         }
+        if (($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'prescriptions'
+            && in_array(count($segments), [5,6], true)) {
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $action = count($segments) === 6 ? (string)$segments[5] : '';
+            $routeName = 'doctors/{doctor_id}/patients/{patient_id}/prescriptions' . ($action !== '' ? '/'.$action : '');
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($patientId === '' || !clinical_patient_exists($pdo,$patientId)
+                    || !clinical_has_active_doctor_patient_link($pdo,$scopedDoctorId,$patientId))
+                    throw new InvalidArgumentException('PRESCRIPTION_PATIENT_SCOPE_INVALID');
+                require_once __DIR__ . '/../_lib/clinical_prescription_v2.php';
+                if ($method === 'GET' && $action === 'drafts') {
+                    $draftEncounterKey = trim((string)($_GET['encounter_key'] ?? ''));
+                    clinical_send_response(['ok'=>true,'data'=>['drafts'=>clinical_prescription_v2_drafts($pdo,$scopedDoctorContext,$patientId,$draftEncounterKey)],
+                        'meta'=>['route'=>$routeName]],200);return;
+                }
+                if ($method !== 'POST' || !in_array($action, ['', 'preview'], true))
+                    throw new InvalidArgumentException('PRESCRIPTION_ROUTE_INVALID');
+                $read = clinical_read_json_body();
+                if (($read['ok'] ?? false) !== true) throw new InvalidArgumentException('PRESCRIPTION_JSON_INVALID');
+                $body = (array)($read['data'] ?? []);
+                if ($action === 'preview') {
+                    $normalized = clinical_prescription_v2_normalize($pdo,$scopedDoctorContext,$patientId,$body,
+                        ($body['final_review'] ?? false) === true);
+                    clinical_send_response(['ok'=>true,'data'=>['html'=>clinical_prescription_v2_render($normalized),
+                        'payload'=>$normalized],'meta'=>['route'=>$routeName]],200);return;
+                }
+                $result = clinical_prescription_v2_write($pdo,$scopedDoctorContext,$patientId,$body,
+                    (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                $replay = ($result['_idempotency_replay'] ?? false) === true;
+                $document = clinical_documents_get_by_uuid_fetch($pdo,(string)$result['document_uuid']);
+                if ($document === null) throw new RuntimeException('PRESCRIPTION_DOCUMENT_NOT_FOUND');
+                clinical_send_response(['ok'=>true,'data'=>['document'=>$document],
+                    'meta'=>['route'=>$routeName,'idempotency_replay'=>$replay]],$replay?200:201);return;
+            } catch (ClinicalIdempotencyException $e) {
+                clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->getMessage(),
+                    'meta'=>['route'=>$routeName]],$e->httpStatus);return;
+            } catch (InvalidArgumentException $e) {
+                clinical_send_response(['ok'=>false,'error'=>$e->getMessage(),'message'=>$e->getMessage(),
+                    'meta'=>['route'=>$routeName]],422);return;
+            } catch (Throwable $e) {
+                clinical_send_response(['ok'=>false,'error'=>'PRESCRIPTION_WRITE_FAILED',
+                    'message'=>clinical_is_local_or_dev()?$e->getMessage():'No se pudo guardar la receta.',
+                    'meta'=>['route'=>$routeName]],500);return;
+            }
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
             clinical_m6_observability_route('C04_PATIENT_DOCUMENT', 'CREATE_DOCUMENT', 'PATIENT_LEVEL_C04');
             $doctorId = trim(rawurldecode((string)$segments[1]));
@@ -9622,6 +9673,10 @@ try {
                 }
 
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
+                foreach (['document_type','type'] as $prescriptionTypeField) {
+                    if (in_array(strtolower(trim((string)($payload[$prescriptionTypeField] ?? ''))), ['prescription','receta','rx'], true))
+                        throw new InvalidArgumentException('PRESCRIPTION_USE_CANONICAL_WRITER');
+                }
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
                 if (($payload['document_type'] ?? null) === 'documento_libre') {
@@ -9816,41 +9871,6 @@ try {
                     [$status,$body]=clinical_encounter_multipart_response($result);
                     $body['meta']['route']='doctors/{doctor_id}/patients/{patient_id}/documents';
                     clinical_send_response($body,$status);return;
-                }
-                if (in_array(strtolower(trim((string)($payload['document_type'] ?? ''))), ['prescription','receta','rx'], true)) {
-                    $payload['document_type']='prescription';
-                    if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('PRESCRIPTION_MULTIPART_UNSUPPORTED');
-                    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
-                    foreach (['encounter_key','encounter_id','appointment_id'] as $field) {
-                        if (trim((string)($payload[$field] ?? ($context[$field] ?? ''))) !== '') {
-                            throw new InvalidArgumentException('PATIENT_PRESCRIPTION_ENCOUNTER_FORBIDDEN');
-                        }
-                    }
-                    foreach ([$payload['doctor_id'] ?? null,$context['doctor_id'] ?? null] as $claimedDoctorId) {
-                        if ($claimedDoctorId !== null && trim((string)$claimedDoctorId) !== $doctorId) {
-                            throw new InvalidArgumentException('DOCTOR_CONTEXT_MISMATCH');
-                        }
-                    }
-                    $context['patient_id']=$patientId;
-                    $context['encounter_id']=null;
-                    $context['appointment_id']=null;
-                    $payload['context']=$context;
-                    $payload['actor']=['user_id'=>$scopedDoctorContext['user_id']];
-                    $key=clinical_idempotency_key_validate((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
-                    clinical_encounter_integrity_assert_schema_ready($pdo);
-                    $semantic=clinical_document_semantic_request($payload,null)+['patient_id'=>$patientId,'operation'=>'CREATE_ENCOUNTER_DOCUMENT'];
-                    $service=new ClinicalEncounterIntegrityService($pdo);
-                    $result=$service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT',$doctorId,'PATIENT',$patientId,$key,$semantic,
-                        'document_id',$scopedDoctorContext['user_id'],
-                        fn():int=>clinical_v1_document_insert($pdo,['patient_id'=>$patientId],$payload,$scopedDoctorContext['user_id']),
-                        fn(int $id):array=>clinical_v1_document_fetch($pdo,$id));
-                    $replay=($result['_idempotency_replay']??false)===true;
-                    $document=clinical_documents_get_by_token_fetch($pdo,(string)$result['document_uuid']);
-                    if($document===null)throw new RuntimeException('DOCUMENT_NOT_FOUND');
-                    clinical_send_response(['ok'=>true,'error'=>null,'message'=>'document saved','data'=>[
-                        'document_id'=>$result['document_uuid'],'document'=>$document],
-                        'meta'=>$meta+['idempotency_replay'=>$replay]],$replay?200:201);
-                    return;
                 }
                 // TAX03C: structured patient-level diagnostic orders use the canonical
                 // idempotent writer. The legacy lab/imaging request path remains available.
@@ -10702,6 +10722,12 @@ try {
                     ], 404);
                     return;
                 }
+                if (in_array(strtolower(trim((string)$sourceRow['document_type'])), ['prescription','receta','rx'], true)) {
+                    clinical_send_response(['ok'=>false,'error'=>'PRESCRIPTION_GENERIC_REPLICATE_FORBIDDEN',
+                        'message'=>'La receta no admite réplica genérica.',
+                        'meta'=>['route'=>'documents/{uuid}/replicate']],422);
+                    return;
+                }
 
                 $patientId = trim((string)($sourceRow['patient_id'] ?? ''));
                 if ($patientId === '') {
@@ -11506,6 +11532,11 @@ try {
                             'source' => 'clinical_documents_pdo',
                         ],
                     ], 404);
+                    return;
+                }
+                if (in_array(strtolower(trim((string)($document['document_type'] ?? ''))), ['prescription','receta','rx'], true)) {
+                    clinical_send_response(['ok'=>false,'error'=>'PRESCRIPTION_GENERIC_PATCH_FORBIDDEN',
+                        'message'=>'La receta no admite edición genérica.','meta'=>['route'=>'documents/{id_or_uuid}']],422);
                     return;
                 }
                 $docId = (int)($document['document_db_id'] ?? 0);

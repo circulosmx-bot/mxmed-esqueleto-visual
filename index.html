@@ -8544,7 +8544,12 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body ne-rx-modal-body">
+                        <div id="ne_rx_capture">
                         <div class="mx-clinical-header-host mb-3" id="ne_rx_context" data-clinical-header="slim" data-clinical-layout="modal"></div>
+                        <div class="d-flex justify-content-end align-items-center gap-2 mb-2">
+                          <span class="small text-muted" id="ne_rx_draft_status"></span>
+                          <button type="button" class="btn btn-outline-primary btn-sm d-none" id="ne_rx_continue_draft">Continuar borrador</button>
+                        </div>
                         <div class="ne-rx-dx mb-3" id="ne_rx_dx_block">
                           <div class="ne-rx-context-head">1. Contexto diagnóstico (obligatorio)</div>
                           <div class="row g-2 align-items-end">
@@ -8572,6 +8577,13 @@
                           <!-- filas dinámicas -->
                         </div>
                         <div class="ne-rx-section-title ne-rx-list-title mt-3 mb-2">3. Receta (<span id="ne_rx_count">0</span> medicamentos)</div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                          <label class="small fw-semibold mb-0" for="ne_rx_professional_header">Encabezado profesional</label>
+                          <select class="form-select form-select-sm w-auto" id="ne_rx_professional_header">
+                            <option value="shown">Mostrar logotipo y datos profesionales</option>
+                            <option value="hidden">Generar sin encabezado profesional</option>
+                          </select>
+                        </div>
                         <div class="d-flex justify-content-center align-items-center mt-2 gap-2 flex-wrap ne-rx-add-row">
                           <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_add">+ Agregar medicamento</button>
                           <div class="small d-none" id="ne_rx_feedback" role="status" aria-live="polite"></div>
@@ -8592,10 +8604,22 @@
                             <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="ne_rx_save_template" disabled>Guardar como plantilla de receta</button>
                           </div>
                           <div class="ne-rx-emit-wrap">
-                            <button type="button" class="btn btn-primary ne-rx-emit-btn" id="ne_rx_save">Emitir receta</button>
-                            <button type="button" class="btn btn-link btn-sm d-none ne-rx-open-doc-inline" id="ne_rx_open_doc">Ver e imprimir</button>
-                            <div class="small text-muted mt-2">Se guardará en el historial clínico del paciente.</div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_save_draft">Guardar borrador</button>
+                            <button type="button" class="btn btn-primary ne-rx-emit-btn" id="ne_rx_preview">Vista previa</button>
+                            <div class="small text-muted mt-2">La vista previa no guarda ni emite la receta.</div>
                           </div>
+                        </div>
+                        </div>
+                        <div id="ne_rx_review" class="d-none">
+                          <h6>Revisión final de receta</h6>
+                          <div class="small text-muted mb-2">Revisa el documento completo antes de emitirlo.</div>
+                          <div id="ne_rx_preview_html" class="doc-base-sheet-frame"></div>
+                          <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_back_to_capture">Volver a editar</button>
+                            <button type="button" class="btn btn-primary" id="ne_rx_save">Emitir receta</button>
+                          </div>
+                          <div id="ne_rx_review_status" class="small mt-2" role="status" aria-live="polite"></div>
+                          <button type="button" class="btn btn-link btn-sm d-none ne-rx-open-doc-inline" id="ne_rx_open_doc">Ver e imprimir</button>
                         </div>
                       </div>
                     </div>

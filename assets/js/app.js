@@ -35018,6 +35018,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const requestArgs = (args && typeof args === 'object') ? { ...args } : {};
       const context = (requestArgs.context && typeof requestArgs.context === 'object') ? { ...requestArgs.context } : {};
       const requestedDocumentType = String(requestArgs.document_type || requestArgs.type || '').trim();
+      if (['prescription', 'receta', 'rx'].includes(requestedDocumentType))
+        throw new Error('Usa el flujo canónico de receta médica.');
       const isEvolutionNote = requestedDocumentType === 'nota_evolucion';
       const isPrescription = requestedDocumentType === 'prescription';
       const prescriptionScope = isPrescription && typeof window.mxmedPrescriptionRuntimeScope === 'function'
@@ -38625,6 +38627,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         .then(({ document }) => {
           const text = document?.content?.rendered_text || '';
           const payload = document?.content?.payload || null;
+          if (document?.document_type === 'prescription' && Number(payload?.contract_version) === 2) {
+            const doctorId = String(window.resolveDoctorId?.() || window.mxmedStore?.doctorId || '').trim();
+            const token = String(document?.document_id || id || '').trim();
+            if (doctorId && token) {
+              const params = new URLSearchParams({ uuid: token, doctor_id: doctorId });
+              if (action === 'print') params.set('print', '1');
+              window.open(`/modules/clinical/ui/document.php?${params.toString()}`, '_blank', 'noopener');
+            }
+            return;
+          }
           if (action === 'view') openDocModal(text, { payload });
           if (action === 'print') printText(text);
         })
@@ -38655,11 +38667,138 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   // Rx modal
   const rxGuardModal = document.getElementById('modalReceta');
   let rxGuardBaseline = '', rxGuardStored = null, rxGuardPatient = '', rxGuardBypass = false, rxWriteBusy = false;
-  const rxGuardSnapshot = ()=>JSON.stringify({items:collectRxModal(),diagnosis:collectRxDiagnosticContext()});
+  let rxServerDraft = null, rxAvailableDraft = null, rxReviewedFingerprint = '';
+  const rxCapture = document.getElementById('ne_rx_capture');
+  const rxReview = document.getElementById('ne_rx_review');
+  const rxPreviewHtml = document.getElementById('ne_rx_preview_html');
+  const rxReviewStatus = document.getElementById('ne_rx_review_status');
+  const rxDraftStatus = document.getElementById('ne_rx_draft_status');
+  const rxContinueDraft = document.getElementById('ne_rx_continue_draft');
+  const rxSaveDraft = document.getElementById('ne_rx_save_draft');
+  const rxPreview = document.getElementById('ne_rx_preview');
+  const rxBackToCapture = document.getElementById('ne_rx_back_to_capture');
+  const rxProfessionalHeader = document.getElementById('ne_rx_professional_header');
+  const rxCanonicalScope = async () => {
+    const ctx = resolveRecetaRuntimeContext();
+    const patientId = /^p_/i.test(String(ctx.patient_id || ''))
+      ? String(ctx.patient_id) : await resolveCanonicalPatientIdSafe(ctx.patient_id);
+    const doctorId = String(window.resolveDoctorId?.() || window.mxmedStore?.doctorId
+      || window.mxmedStore?.doctor_id || window.mxmedStore?.activeProfessionalContext?.doctor_id
+      || window.mxmedDoctor?.doctor_id || '').trim();
+    if (!patientId || !doctorId) throw new Error('Selecciona un paciente y confirma el profesional.');
+    const current = resolveRecetaRuntimeContext();
+    if (current.patient_id !== ctx.patient_id || current.encounter_key !== ctx.encounter_key)
+      throw new Error('Cambió el contexto de la receta. Vuelve a abrirla.');
+    return { ctx, patientId, doctorId,
+      url: `${window.location.origin}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/prescriptions` };
+  };
+  const rxRequest = async (url, method = 'GET', body = null) => {
+    const options = { method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
+    if (body) {
+      options.headers['Content-Type'] = 'application/json';
+      if (method !== 'GET') options.headers['Idempotency-Key'] = window.crypto?.randomUUID?.()
+        || `rx-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      options.body = JSON.stringify(body);
+    }
+    const response = await fetch(url, options);
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) throw new Error(result?.message || result?.error || `HTTP ${response.status}`);
+    return result.data;
+  };
+  const rxCanonicalBody = (scope) => ({
+    document_type: 'prescription',
+    context: { patient_id: scope.patientId, ...(scope.ctx.encounter_key ? { encounter_key: scope.ctx.encounter_key } : {}) },
+    payload: {
+      contract_version: 2,
+      prescription: { items: collectRxModal().map((item, index) => ({
+        item_id: /^[a-zA-Z0-9_-]+$/.test(item.uid) ? item.uid : `item_${index + 1}`,
+        name: item.name, presentation: item.presentation, dose: item.dose, route: item.route,
+        frequency: item.frequency, duration: item.duration, quantity: item.quantity,
+        instructions: item.instructions, private_notes: item.private_notes
+      })), observaciones: '' },
+      diagnostic_context: collectRxDiagnosticContext(),
+      presentation: { version: 1, professional_header: rxProfessionalHeader?.value === 'hidden' ? 'hidden' : 'shown' }
+    }
+  });
+  const rxShowCapture = () => {
+    rxReview?.classList.add('d-none');
+    rxCapture?.classList.remove('d-none');
+    rxReviewedFingerprint = '';
+    if (els.rxSave) els.rxSave.disabled = false;
+    if (rxBackToCapture) rxBackToCapture.disabled = false;
+    if (rxReviewStatus) rxReviewStatus.textContent = '';
+    rxGuardModal?.querySelector('.modal-body')?.scrollTo({ top: 0 });
+  };
+  const rxLoadAvailableDraft = async () => {
+    const scope = await rxCanonicalScope();
+    const query = scope.ctx.encounter_key ? `?encounter_key=${encodeURIComponent(scope.ctx.encounter_key)}` : '';
+    const data = await rxRequest(`${scope.url}/drafts${query}`);
+    const current = resolveRecetaRuntimeContext();
+    if (current.patient_id !== scope.ctx.patient_id || current.encounter_key !== scope.ctx.encounter_key
+      || String(window.resolveDoctorId?.() || '') !== scope.doctorId) return;
+    rxAvailableDraft = data?.drafts?.[0] || null;
+    rxContinueDraft?.classList.toggle('d-none', !rxAvailableDraft);
+    if (rxDraftStatus) rxDraftStatus.textContent = rxAvailableDraft
+      ? 'Hay un borrador guardado en el expediente.' : '';
+  };
+  rxContinueDraft?.addEventListener('click', () => {
+    if (!rxAvailableDraft) return;
+    rxServerDraft = rxAvailableDraft;
+    const payload = rxServerDraft.payload || {};
+    setRxDraft(resolveRecetaRuntimeContext().patient_id, payload.prescription?.items || [],
+      { diagnostic_context: payload.diagnostic_context || {} });
+    renderRxModal();
+    if (rxProfessionalHeader) rxProfessionalHeader.value = payload.presentation?.professional_header === 'hidden' ? 'hidden' : 'shown';
+    if (rxDraftStatus) rxDraftStatus.textContent = `Borrador versión ${rxServerDraft.version}`;
+    rxContinueDraft.classList.add('d-none');
+    rxGuardBaseline = rxGuardSnapshot();
+  });
+  rxSaveDraft?.addEventListener('click', async () => {
+    if (rxWriteBusy) return;
+    rxWriteBusy = true; rxSaveDraft.disabled = true;
+    try {
+      const scope = await rxCanonicalScope();
+      const body = { ...rxCanonicalBody(scope), intent: 'draft',
+        ...(rxServerDraft ? { draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version } : {}) };
+      const data = await rxRequest(scope.url, 'POST', body);
+      const doc = data.document;
+      rxServerDraft = { document_uuid: doc.document_id, version: doc.version, payload: doc.content?.payload };
+      if (rxDraftStatus) rxDraftStatus.textContent = `Borrador guardado · versión ${doc.version}`;
+      setRxDraft(scope.ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
+      rxGuardStored = rxGuardReadStored(scope.ctx.patient_id); rxGuardBaseline = rxGuardSnapshot();
+      setRxFeedback('Borrador guardado en el expediente.', 'success');
+    } catch (error) { setRxFeedback(`No se pudo guardar el borrador (${error.message}).`, 'error'); }
+    finally { rxWriteBusy = false; rxSaveDraft.disabled = false; }
+  });
+  rxPreview?.addEventListener('click', async () => {
+    if (rxWriteBusy) return;
+    rxWriteBusy = true; rxPreview.disabled = true;
+    try {
+      const scope = await rxCanonicalScope();
+      const body = { ...rxCanonicalBody(scope), final_review: true };
+      const data = await rxRequest(`${scope.url}/preview`, 'POST', body);
+      if (rxPreviewHtml) rxPreviewHtml.innerHTML = data.html || '';
+      rxReviewedFingerprint = JSON.stringify(body);
+      rxCapture?.classList.add('d-none'); rxReview?.classList.remove('d-none');
+      rxGuardModal?.querySelector('.modal-body')?.scrollTo({ top: 0 });
+      setRxFeedback('', 'muted');
+    } catch (error) { setRxFeedback(`No se pudo previsualizar la receta (${error.message}).`, 'error'); }
+    finally { rxWriteBusy = false; rxPreview.disabled = false; }
+  });
+  rxBackToCapture?.addEventListener('click', rxShowCapture);
+  const rxGuardSnapshot = ()=>JSON.stringify({items:collectRxModal(),diagnosis:collectRxDiagnosticContext(),
+    professional_header:rxProfessionalHeader?.value || 'shown'});
   const rxGuardKey = patientId=>storage.rxKeyForPatient(patientId);
   const rxGuardReadStored = patientId=>{try{return localStorage.getItem(rxGuardKey(patientId));}catch(_){return null;}};
   const rxGuardDirty = ()=>!!(rxGuardModal?.classList.contains('show') && rxGuardBaseline && rxGuardSnapshot() !== rxGuardBaseline);
-  rxGuardModal?.addEventListener('show.bs.modal', renderRxModal);
+  rxGuardModal?.addEventListener('show.bs.modal', () => {
+    rxServerDraft = null; rxAvailableDraft = null;
+    rxShowCapture();
+    if (rxProfessionalHeader) rxProfessionalHeader.value = 'shown';
+    rxContinueDraft?.classList.add('d-none');
+    renderRxModal();
+    rxLoadAvailableDraft().catch((error) => setRxFeedback(`No se pudieron consultar los borradores (${error.message}).`, 'error'));
+  });
   rxGuardModal?.addEventListener('show.bs.modal',()=>{
     rxGuardPatient=resolveRecetaRuntimeContext().patient_id;
     rxGuardStored=rxGuardReadStored(rxGuardPatient);
@@ -38958,125 +39097,47 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     wrap.classList.add('is-quick-active');
   });
   els.rxSave?.addEventListener('click', async () => {
-    const recetaCtx = resolveRecetaRuntimeContext();
-    const patientKey = recetaCtx.patient_id;
-    const meds = collectRxModal();
-    const diagnosticContext = collectRxDiagnosticContext();
-    setRxDraft(patientKey, meds, { diagnostic_context: diagnosticContext });
-    renderRxSummary(patientKey);
-    const validItems = mapValidPrescriptionItems(meds);
-    const blockingErrors = validateRecetaBlockingErrors(recetaCtx, validItems, meds);
-    if ((diagnosticContext.mode === 'diagnostico' || diagnosticContext.mode === 'prediagnostico') && !diagnosticContext.text) {
-      blockingErrors.push('Completa el contexto diagnóstico para emitir la receta.');
-    }
-    if (blockingErrors.length) {
-      setRxFeedback(blockingErrors.join(' '), 'error');
-      setRxOpenDocumentAction('');
-      return;
-    }
-    const patient = recetaCtx.patient;
-    const actor = recetaCtx.actor;
-    const encounterKey = recetaCtx.encounter_key;
-    const appointmentId = recetaCtx.appointment_id;
-    const clinicalContext = collectPrescriptionClinicalContext(recetaCtx);
-    const localChecks = runPrescriptionLocalChecks(validItems);
-    if (rxAnalysisDraftState.status === 'completed') {
-      rxAnalysisDraftState = {
-        ...rxAnalysisDraftState,
-        results: {
-          ...(rxAnalysisDraftState.results || {}),
-          observations: localChecks
-        }
-      };
-      renderPrescriptionAnalysisSummary(rxAnalysisDraftState);
-    } else {
-      resetPrescriptionAnalysisDraft();
-    }
-    const payload = {
-      context: clinicalContext,
-      diagnostic_context: diagnosticContext,
-      medications: validItems,
-      analysis: {
-        status: rxAnalysisDraftState.status || 'idle',
-        last_run_at: rxAnalysisDraftState.last_run_at || null,
-        results: {
-          risks: Array.isArray(rxAnalysisDraftState?.results?.risks) ? rxAnalysisDraftState.results.risks : [],
-          precautions: Array.isArray(rxAnalysisDraftState?.results?.precautions) ? rxAnalysisDraftState.results.precautions : [],
-          observations: Array.isArray(rxAnalysisDraftState?.results?.observations) ? rxAnalysisDraftState.results.observations : localChecks
-        }
-      },
-      meta: {
-        source: 'manual',
-        version: 1
-      }
-    };
-    const context = {
-      patient_id: recetaCtx.patient_id,
-      canonical_patient_id: patient.canonical_patient_id || null,
-      encounter_id: null,
-      hospital_stay_id: null,
-      care_setting: 'consulta',
-      service: null
-    };
-    if (encounterKey) context.encounter_key = encounterKey;
-    if (appointmentId) context.appointment_id = appointmentId;
-    setRxFeedback('Guardando receta clínica…');
-    rxWriteBusy=true;
-    if (els.rxSave) {
-      els.rxSave.disabled = true;
-      els.rxSave.textContent = 'Guardando...';
-    }
+    if (rxWriteBusy || !rxReviewedFingerprint) return;
+    rxWriteBusy = true; els.rxSave.disabled = true;
     try {
-      const { source, document } = await api.saveClinicalDocument({
-        type: 'prescription',
-        document_type: 'prescription',
-        title: 'Receta médica',
-        context,
-        payload,
-        actor
-      });
+      const scope = await rxCanonicalScope();
+      const body = rxCanonicalBody(scope);
+      if (JSON.stringify({ ...body, final_review: true }) !== rxReviewedFingerprint)
+        throw new Error('La receta cambió después de la revisión. Vuelve a previsualizarla.');
+      const draftBody = { ...body, intent: 'draft',
+        ...(rxServerDraft ? { draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version } : {}) };
+      const draftData = await rxRequest(scope.url, 'POST', draftBody);
+      const draft = draftData.document;
+      rxServerDraft = { document_uuid: draft.document_id, version: draft.version, payload: draft.content?.payload };
+      const finalData = await rxRequest(scope.url, 'POST', { ...body, intent: 'finalize',
+        draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version });
+      const document = finalData.document;
       const savedToken = resolveSavedPrescriptionToken(document);
-      rxGuardStored=rxGuardReadStored(patientKey);rxGuardBaseline=rxGuardSnapshot();
-      setRxFeedback('Receta guardada correctamente.', 'success');
+      setRxFeedback('Receta emitida correctamente.', 'success');
+      if (rxReviewStatus) rxReviewStatus.textContent = 'Receta emitida correctamente.';
       setRxOpenDocumentAction(savedToken);
-      validItems.forEach((item) => registerMedicationUsageForDoctor(item));
-      try{
+      rxGuardStored = rxGuardReadStored(scope.ctx.patient_id); rxGuardBaseline = rxGuardSnapshot();
+      collectRxModal().filter((item) => item.name).forEach((item) => registerMedicationUsageForDoctor(item));
+      try {
         window.mxRegisterEncounterActivity?.('receta_guardada', {
-          encounterKey,
-          patientId: patient.patient_id,
-          source: source === 'legacy' ? 'receta_api_legacy' : 'receta_api'
+          encounterKey: scope.ctx.encounter_key, patientId: scope.ctx.patient_id, source: 'receta_v2'
         });
-      }catch(_){}
-      try{
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
-          detail: {
-            patient_id: recetaCtx.patient_id,
-            encounter_key: encounterKey || '',
-            appointment_id: appointmentId || '',
-            document_type: 'prescription',
-            source: 'actividad_clinica_receta',
-            document_ref: savedToken || ''
-          }
+          detail: { patient_id: scope.ctx.patient_id, encounter_key: scope.ctx.encounter_key || '',
+            document_type: 'prescription', source: 'receta_v2', document_ref: savedToken || '' }
         }));
-      }catch(_){}
-      renderTimeline();
-      refreshHistorialEmbedAfterPrescriptionSave();
-    } catch (err) {
-      setRxFeedback(`No se pudo guardar la receta clínica (${err?.message || 'error'}).`, 'error');
-      setRxOpenDocumentAction('');
+      } catch (_) {}
+      renderTimeline(); refreshHistorialEmbedAfterPrescriptionSave();
+      rxServerDraft = null; rxAvailableDraft = null;
+      if (rxDraftStatus) rxDraftStatus.textContent = 'Receta emitida.';
+      rxReviewedFingerprint = '';
+      rxBackToCapture.disabled = true;
+    } catch (error) {
+      setRxFeedback(`No se pudo emitir la receta (${error.message}).`, 'error');
+      if (rxReviewStatus) rxReviewStatus.textContent = `No se pudo emitir la receta (${error.message}).`;
     } finally {
-      rxWriteBusy=false;
-      if (els.rxSave) {
-        els.rxSave.disabled = false;
-        els.rxSave.textContent = 'Emitir receta';
-      }
+      rxWriteBusy = false; els.rxSave.disabled = !rxReviewedFingerprint;
     }
-    try{
-      window.mxRegisterEncounterActivity?.('receta_actualizada', {
-        patientId: patientKey,
-        source: 'receta_modal_local'
-      });
-    }catch(_){}
   });
   els.rxOpenDoc?.addEventListener('click', (event) => {
     event.preventDefault();

@@ -453,6 +453,8 @@ $isPdfDoc = ($renderMode === 'pdf' || $docTypeNorm === 'pdf');
 $isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
 $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], true);
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
+$isPrescriptionV2 = $isPrescriptionDoc && (int)($payload['contract_version'] ?? 0) === 2;
+$rxV2Html = $isPrescriptionV2 ? (string)($payload['prescription_snapshot']['html'] ?? '') : '';
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
 $isFreeDoc = ($docTypeNorm === 'documento_libre' && (int)($payload['contract_version'] ?? 0) === 1);
@@ -711,7 +713,8 @@ $informeDoctorSignatureSourceLabel = ($isInformeDoc ? (string)($informeSignature
 
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
-$replicateUrl = ($apiIndexBase !== '' && $uuid !== '' && $doctorId !== '') ? ($apiIndexBase . '/doctors/' . rawurlencode($doctorId) . '/documents/' . rawurlencode($uuid) . '/replicate') : '';
+$replicateUrl = (!$isPrescriptionDoc && $apiIndexBase !== '' && $uuid !== '' && $doctorId !== '')
+  ? ($apiIndexBase . '/doctors/' . rawurlencode($doctorId) . '/documents/' . rawurlencode($uuid) . '/replicate') : '';
 $replicateRedirectTemplate = '/modules/clinical/ui/document.php?' . carry_embed_params(['uuid' => '__UUID__']);
 $replicateTitleOverride = ($title !== '' && $title !== '-') ? ($title . ' (replicado)') : '';
 
@@ -726,7 +729,7 @@ if (!$embed) {
 ?>
 <?php if ($isPrescriptionDoc): ?>
 <style>
-  .rx-doc-sheet{
+  .rx-doc-sheet:not(.doc-base-sheet){
     background:#fff;
     border:1px solid #d7eaf2;
     border-radius:14px;
@@ -795,7 +798,7 @@ if (!$embed) {
     .no-print{display:none !important;}
     html, body{background:#fff !important;}
     .container.py-4{padding:0 !important;max-width:none !important;}
-    .rx-doc-sheet{
+    .rx-doc-sheet:not(.doc-base-sheet){
       border:0 !important;
       border-radius:0 !important;
       box-shadow:none !important;
@@ -803,6 +806,26 @@ if (!$embed) {
       gap:12px;
     }
     .rx-doc-list{gap:6px;}
+  }
+</style>
+<?php endif; ?>
+<?php if ($isPrescriptionV2): ?>
+<style>
+  @media print {
+    @page { size: Letter portrait; margin: 0; }
+    body > .header-top, body > .header-mid, body > .header-bottom { display: none !important; }
+    body, .mm-wrap, .mm-grid, .mm-main, .container.py-4 {
+      display: block !important; width: auto !important; min-height: 0 !important;
+      max-width: none !important; margin: 0 !important; padding: 0 !important;
+      background: #fff !important; border: 0 !important; box-shadow: none !important;
+    }
+    .rx-doc-sheet.doc-base-sheet--letter {
+      width: 100% !important; min-height: 0 !important; max-width: none !important;
+      margin: 0 !important; padding: 12mm 14mm !important; box-shadow: none !important;
+    }
+    .rx-doc-sheet .doc-base-sheet-inner, .rx-doc-sheet .doc-base-body {
+      min-height: 0 !important; flex: none !important;
+    }
   }
 </style>
 <?php endif; ?>
@@ -989,7 +1012,7 @@ if (!$embed) {
   }
 </style>
 <?php endif; ?>
-<?php if ($isFreeDoc || ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1)): ?>
+<?php if ($isPrescriptionV2 || $isFreeDoc || ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1)): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=inf-imp01">
 <?php endif; ?>
@@ -1158,7 +1181,13 @@ if (!$embed) {
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
-    <?php if ($isPrescriptionDoc): ?>
+    <?php if ($isPrescriptionV2): ?>
+      <?php if ($rxV2Html !== ''): ?>
+        <?php echo $rxV2Html; ?>
+      <?php else: ?>
+        <div class="alert alert-warning">La composición de esta receta no está disponible.</div>
+      <?php endif; ?>
+    <?php elseif ($isPrescriptionDoc): ?>
       <article class="rx-doc-sheet">
         <header class="rx-doc-header">
           <?php if ($rxDoctorLogo !== '' || $rxGroupLogo !== ''): ?>
@@ -1578,6 +1607,9 @@ if (!$embed) {
 </div>
 <script>
   (function () {
+    <?php if ($isPrescriptionV2 && (string)($_GET['print'] ?? '') === '1'): ?>
+    window.addEventListener('load', function () { window.print(); }, { once: true });
+    <?php endif; ?>
     document.addEventListener('click', function (event) {
       var printBtn = event.target && event.target.closest ? event.target.closest('[data-action="print-document"]') : null;
       if (printBtn) {

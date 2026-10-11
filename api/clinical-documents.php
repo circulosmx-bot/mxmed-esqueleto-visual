@@ -113,6 +113,12 @@ function mxmed_clinical_documents_validate_save_patient_id(PDO $pdo, array $body
 
 if ($action === 'save') {
     $body = mxmed_read_json_body();
+    foreach (['type', 'document_type'] as $typeField) {
+        if (in_array(strtolower(trim((string)($body[$typeField] ?? ''))), ['prescription', 'receta', 'rx'], true)) {
+            mxmed_json_response(['ok'=>false,'error'=>'PRESCRIPTION_GENERIC_WRITE_FORBIDDEN',
+                'message'=>'Usa el escritor canónico de recetas.'], 422);
+        }
+    }
     $patientId = mxmed_clinical_documents_validate_save_patient_id($pdo, $body);
     try {
         // M6_GUARD_C16_STANDALONE_SAVE: deny before document/participant INSERT.
