@@ -130,6 +130,10 @@ if ($action === 'save') {
             'message' => 'M6_COHORT_CONFIG_INVALID',
         ], 500);
     }
+    if (in_array('documento_libre', [strtolower(trim((string)($body['type'] ?? ''))),
+        strtolower(trim((string)($body['document_type'] ?? '')))], true)) {
+        mxmed_json_response(['ok'=>false,'error'=>'DOCUMENTO_LIBRE_GENERIC_WRITE_FORBIDDEN'], 422);
+    }
     if (in_array('alta_medica', [strtolower(trim((string)($body['type'] ?? ''))),
         strtolower(trim((string)($body['document_type'] ?? '')))], true)) {
         mxmed_json_response(['ok' => false, 'error' => 'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN',

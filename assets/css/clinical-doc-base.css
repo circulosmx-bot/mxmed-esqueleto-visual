@@ -287,6 +287,13 @@
 }
 
 /* Print-safe utilities for upcoming documents (Interconsulta/Certificados/Responsiva). */
+.free-doc-sheet { max-width: 100%; overflow-wrap: anywhere; }
+.free-doc-sheet .doc-base-text { white-space: normal; overflow-wrap: anywhere; }
+@media screen and (max-width: 767.98px) {
+  .free-doc-sheet.doc-base-sheet--letter {
+    width: 100%; min-height: 0; padding: 18px 14px;
+  }
+}
 @page {
   size: Letter portrait;
   margin: 0;

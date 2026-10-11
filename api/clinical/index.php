@@ -384,9 +384,11 @@ function clinical_documents_force_request_patient_id(array $payload, string $pat
 function clinical_documents_assert_generic_type_allowed(array $payload): void
 {
     // Informe and Interconsulta new writes belong exclusively to their versioned writers.
-    $type = strtolower(trim((string)($payload['document_type'] ?? '')));
-    if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia'], true)) {
-        throw new InvalidArgumentException(strtoupper($type) . '_GENERIC_WRITE_FORBIDDEN');
+    foreach (['document_type', 'type'] as $field) {
+        $type = strtolower(trim((string)($payload[$field] ?? '')));
+        if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true)) {
+            throw new InvalidArgumentException(strtoupper($type) . '_GENERIC_WRITE_FORBIDDEN');
+        }
     }
 }
 
@@ -400,6 +402,7 @@ function clinical_documents_is_contract_write_error(string $message): bool
         'ALTA_CONTRACT_VERSION_UNSUPPORTED',
         'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN',
         'CONSENTIMIENTO_MULTIMEDIA_GENERIC_WRITE_FORBIDDEN',
+        'DOCUMENTO_LIBRE_GENERIC_WRITE_FORBIDDEN',
     ], true);
 }
 
@@ -7406,7 +7409,10 @@ try {
             }
 
             $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
-            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia'], true)) {
+            $typeAlias = strtolower(trim((string)($payload['type'] ?? '')));
+            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true)
+                || in_array($typeAlias, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true)) {
+                $documentType = in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia', 'documento_libre'], true) ? $documentType : $typeAlias;
                 $code = strtoupper($documentType) . '_GENERIC_WRITE_FORBIDDEN';
                 clinical_send_response(['ok' => false, 'error' => ['code' => $code, 'message' => $code],
                     'message' => $code, 'data' => null,
@@ -9422,6 +9428,31 @@ try {
                 return;
             }
         }
+        if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'free-document-preview') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = ['route'=>'doctors/{doctor_id}/patients/{patient_id}/free-document-preview'];
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($doctorId !== (string)$scopedDoctorContext['doctor_id']
+                    || !clinical_patient_exists($pdo, $patientId)
+                    || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response(['ok'=>false,'error'=>'forbidden','meta'=>$meta], 403);
+                    return;
+                }
+                $request = json_decode((string)file_get_contents('php://input'), true);
+                require_once __DIR__ . '/../_lib/clinical_free_document.php';
+                $payload = clinical_free_document_normalize(is_array($request) ? $request : [],
+                    $pdo, $scopedDoctorContext, $patientId);
+                clinical_send_response(['ok'=>true,'data'=>['html'=>clinical_free_document_render_html($payload),
+                    'payload'=>$payload],'meta'=>$meta], 200);
+                return;
+            } catch (Throwable $error) {
+                clinical_send_response(['ok'=>false,'error'=>'FREE_DOCUMENT_PREVIEW_INVALID',
+                    'message'=>$error->getMessage(),'meta'=>$meta], 400);
+                return;
+            }
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'alta-preview') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
@@ -9571,6 +9602,19 @@ try {
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
+                if (($payload['document_type'] ?? null) === 'documento_libre') {
+                    if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('FREE_DOCUMENT_UPLOAD_NOT_SUPPORTED');
+                    require_once __DIR__ . '/../_lib/clinical_free_document_write.php';
+                    $result = clinical_free_document_write($pdo, $scopedDoctorContext, $patientId,
+                        $payload, (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                    $replay = ($result['_idempotency_replay'] ?? false) === true;
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
+                    if ($document === null) throw new RuntimeException('FREE_DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok'=>true,'error'=>null,'message'=>'document saved',
+                        'data'=>['document_id'=>$result['document_uuid'],'document'=>$document],
+                        'meta'=>$meta + ['idempotency_replay'=>$replay]], $replay ? 200 : 201);
+                    return;
+                }
                 if (($payload['document_type'] ?? null) === 'consentimiento_multimedia') {
                     if ($isMultipart || $uploadFile !== null)
                         throw new InvalidArgumentException('MULTIMEDIA_UPLOAD_NOT_SUPPORTED');

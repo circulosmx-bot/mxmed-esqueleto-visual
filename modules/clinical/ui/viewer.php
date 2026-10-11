@@ -717,6 +717,7 @@ $renderedTextEditedFlag = (int)($content['edited_flag'] ?? 0);
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isMultimediaConsentDoc = ($docTypeNorm === 'consentimiento_multimedia');
+$isFreeDoc = ($docTypeNorm === 'documento_libre' && (int)($payload['contract_version'] ?? 0) === 1);
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
 $isNotaDoc = ($docTypeNorm === 'nota_medica');
 $isAltaDoc = ($docTypeNorm === 'alta_medica');
@@ -871,6 +872,7 @@ $altaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQue
 $interconsultaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 $responsivaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 $certificadoPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$freePrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -957,7 +959,7 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
-<?php if ($isMultimediaConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
+<?php if ($isMultimediaConsentDoc || $isFreeDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=resp-imp01a">
 <?php endif; ?>
@@ -1563,13 +1565,15 @@ if (!$embed) {
         <?php if ($showDownloadAction): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
         <?php endif; ?>
-        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
+        <?php if ($isPdf || $isConsentDoc || $isFreeDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
-        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isNotaDoc && $notaPrintableHref !== '') || ($isAltaDoc && $altaPrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '') || ($isCertificadoDoc && $certificadoPrintableHref !== '')): ?>
+        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isFreeDoc && $freePrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isNotaDoc && $notaPrintableHref !== '') || ($isAltaDoc && $altaPrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '') || ($isCertificadoDoc && $certificadoPrintableHref !== '')): ?>
           <?php
             $docPrintableHref = $consentPrintableHref;
-            if ($isInformeDoc) {
+            if ($isFreeDoc) {
+              $docPrintableHref = $freePrintableHref;
+            } elseif ($isInformeDoc) {
               $docPrintableHref = $informePrintableHref;
             } elseif ($isNotaDoc) {
               $docPrintableHref = $notaPrintableHref;
@@ -2005,6 +2009,12 @@ if (!$embed) {
         && trim((string)($payload['frozen_snapshot']['html'] ?? '')) !== ''): ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
         <?php echo (string)$payload['frozen_snapshot']['html']; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($isFreeDoc): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php require_once __DIR__ . '/../../../api/_lib/clinical_free_document.php'; echo clinical_free_document_render_html($payload); ?>
       </div>
     <?php endif; ?>
 
@@ -3424,7 +3434,7 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isNotaDoc && !$isAltaDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
+    <?php if ($renderedText !== '' && ((!$isFreeDoc && !$isInformeDoc && !$isNotaDoc && !$isAltaDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
       <div class="mm-card mb-3">
         <div class="head"><h5><?php echo ($isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
         <div class="body">
@@ -3433,7 +3443,7 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isNotaDoc && !$isAltaDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
+    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isFreeDoc && !$isInformeDoc && !$isNotaDoc && !$isAltaDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
       <div class="mm-card">
         <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
@@ -3453,7 +3463,7 @@ if (!$embed) {
         loader.classList.add('d-none');
       });
     }
-    <?php if ($uuid !== '' && $errorMessage === '' && ($isConsentDoc || $isMultimediaConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) && (string)($_GET['autoprint'] ?? '') === '1'): ?>
+    <?php if ($uuid !== '' && $errorMessage === '' && ($isConsentDoc || $isMultimediaConsentDoc || $isFreeDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) && (string)($_GET['autoprint'] ?? '') === '1'): ?>
     window.addEventListener('load', function () {
       window.focus();
       document.querySelector('[data-role="viewer-print"]')?.click();

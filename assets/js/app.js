@@ -55797,6 +55797,180 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeDocRef)}`;
     };
 
+    // FREE-DOC02A: foundation remains behind an internal launch until signatures and emission ship.
+    const freeDocument = (()=>{
+      const state = {ref:'',version:0,sections:[],phase:'choices',saving:false};
+      const modal = document.createElement('div');
+      modal.className = 'modal fade'; modal.id = 'modalFreeDocumentFoundation';
+      modal.tabIndex = -1; modal.setAttribute('aria-labelledby','fd_title');
+      modal.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="fd_title">Documento libre · Borrador</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body"><div data-fd-error class="alert alert-danger d-none" role="alert"></div>
+          <section data-fd-choices><p class="small text-muted">Selecciona un borrador o comienza uno nuevo.</p><div data-fd-drafts class="d-grid gap-2 mb-3"></div><button type="button" class="btn btn-primary" data-fd-new>Nuevo borrador</button></section>
+          <section data-fd-capture class="d-none"><div class="alert alert-info small">Usa Documento libre cuando el contenido no corresponda a un documento clínico especializado disponible en México Médico.</div>
+            <div class="small text-muted mb-3" data-fd-patient></div>
+            <label class="form-label" for="fd_title_input">Título del documento</label><input class="form-control mb-3" id="fd_title_input" maxlength="120" required>
+            <label class="form-label" for="fd_purpose">Propósito (opcional)</label><input class="form-control mb-3" id="fd_purpose" maxlength="240">
+            <div class="alert alert-secondary small d-none" data-fd-specialized>Si este contenido corresponde a un consentimiento, certificado, alta o interconsulta, utiliza el documento especializado.</div>
+            <div data-fd-sections class="d-grid gap-3"></div><button type="button" class="btn btn-outline-primary btn-sm my-3" data-fd-add>Agregar sección</button>
+            <div><label class="form-label" for="fd_closing">Nota de cierre (opcional)</label><textarea class="form-control" id="fd_closing" rows="3" maxlength="2000"></textarea></div>
+            <fieldset class="mt-3"><legend class="fs-6">Presentación del documento</legend><label class="me-3"><input type="radio" name="fd_header" value="shown" checked> Mostrar logotipo y datos profesionales</label><label><input type="radio" name="fd_header" value="hidden"> Generar sin encabezado profesional</label></fieldset>
+          </section>
+          <section data-fd-review class="d-none"><p class="small text-muted">Revisión completa del borrador. La firma y emisión estarán disponibles en la siguiente fase.</p><div data-fd-preview class="mx-auto" style="max-width:900px;overflow-wrap:anywhere"></div></section>
+        </div><div class="modal-footer"><span class="small text-muted me-auto" data-fd-status></span>
+          <button type="button" class="btn btn-outline-secondary d-none" data-fd-back>Volver a editar</button>
+          <button type="button" class="btn btn-outline-primary d-none" data-fd-save>Guardar borrador</button>
+          <button type="button" class="btn btn-primary d-none" data-fd-preview-action>Vista previa</button>
+        </div></div></div>`;
+      pane.appendChild(modal);
+      const one = selector=>modal.querySelector(selector);
+      const error = message=>{one('[data-fd-error]').textContent=String(message || '');one('[data-fd-error]').classList.toggle('d-none',!message);};
+      const sectionId = ()=>`sec_${crypto.randomUUID()}`;
+      const sectionNode = item=>{
+        const card=document.createElement('div');card.className='border rounded p-3';card.dataset.fdSection=item.section_id;
+        card.innerHTML=`<div class="d-flex justify-content-between align-items-center mb-2"><strong data-fd-number></strong><div class="btn-group btn-group-sm" role="group" aria-label="Orden de sección"><button type="button" class="btn btn-outline-secondary" data-fd-up aria-label="Mover arriba">↑</button><button type="button" class="btn btn-outline-secondary" data-fd-down aria-label="Mover abajo">↓</button><button type="button" class="btn btn-outline-danger" data-fd-remove aria-label="Eliminar sección">Eliminar</button></div></div><label class="form-label">Título de sección</label><input class="form-control mb-2" data-fd-section-title maxlength="100" required><label class="form-label">Contenido</label><textarea class="form-control" data-fd-section-body rows="5" maxlength="10000" required></textarea>`;
+        card.querySelector('[data-fd-section-title]').setAttribute('aria-label','Título de sección');
+        card.querySelector('[data-fd-section-body]').setAttribute('aria-label','Contenido de sección');
+        card.querySelector('[data-fd-section-title]').value=item.section_title || '';
+        card.querySelector('[data-fd-section-body]').value=item.section_body || '';
+        return card;
+      };
+      const renderSections=()=>{
+        const box=one('[data-fd-sections]');box.replaceChildren();
+        state.sections.forEach((item,index)=>{
+          const node=sectionNode(item);node.querySelector('[data-fd-number]').textContent=`Sección ${index+1}`;
+          node.querySelector('[data-fd-up]').disabled=index===0;
+          node.querySelector('[data-fd-down]').disabled=index===state.sections.length-1;
+          node.querySelector('[data-fd-remove]').disabled=state.sections.length===1;
+          box.appendChild(node);
+        });
+        one('[data-fd-add]').disabled=state.sections.length>=10;
+      };
+      const syncSections=()=>{
+        state.sections=Array.from(one('[data-fd-sections]').children).map((node,index)=>({
+          section_id:node.dataset.fdSection,section_order:index+1,
+          section_title:node.querySelector('[data-fd-section-title]').value,
+          section_body:node.querySelector('[data-fd-section-body]').value}));
+      };
+      const phase=value=>{
+        state.phase=value;
+        for(const p of ['choices','capture','review']) one(`[data-fd-${p}]`).classList.toggle('d-none',p!==value);
+        one('[data-fd-save]').classList.toggle('d-none',value!=='capture');
+        one('[data-fd-preview-action]').classList.toggle('d-none',value!=='capture');
+        one('[data-fd-back]').classList.toggle('d-none',value!=='review');
+        one('.modal-body').scrollTop=0;
+      };
+      const collect=async()=>{
+        syncSections();
+        const patientId=resolveActivePatientIdForConsent();
+        const userId=await resolveResponsivaAuthenticatedActorUserId();
+        if(!patientId || !userId) throw new Error('Selecciona un paciente y una sesión médica.');
+        const title=one('#fd_title_input').value.trim();
+        if(!title || state.sections.length<1 || state.sections.length>10
+          || state.sections.some(s=>!s.section_title.trim() || !s.section_body.trim()))
+          throw new Error('Completa el título y todas las secciones antes de continuar.');
+        return {document_type:'documento_libre',type:'documento_libre',title,
+          context:{patient_id:patientId},actor:{user_id:userId},
+          ...(state.ref?{draft_ref:state.ref,expected_version:state.version}:{}),
+          ui_state:{wizard_step:state.phase==='review'?2:1},
+          payload:{contract_version:1,status:'draft',document:{title,purpose:one('#fd_purpose').value,
+            sections:state.sections,closing_note:one('#fd_closing').value},
+            presentation:{version:1,professional_header:one('input[name="fd_header"]:checked').value}}};
+      };
+      const preview=async()=>{
+        const body=await collect(); const doctorId=resolveCanonicalDocumentsDoctorId();
+        const url=`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(body.context.patient_id)}/free-document-preview`;
+        const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify(body)});
+        const json=await response.json().catch(()=>null);
+        if(!response.ok || json?.ok!==true) throw new Error(json?.message || 'No se pudo generar la vista previa.');
+        one('[data-fd-preview]').innerHTML=json.data.html;
+        return json.data.html;
+      };
+      const save=async()=>{
+        if(state.saving) return;
+        const body=await collect();const url=buildScopedCanonicalDocumentCreateUrl(body.context.patient_id);
+        if(!url) throw new Error('No se pudo resolver el médico.');
+        state.saving=true;one('[data-fd-save]').disabled=true;
+        try{
+          const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','Idempotency-Key':`free-document:${crypto.randomUUID()}`},body:JSON.stringify(body)});
+          const json=await response.json().catch(()=>null);
+          if(!response.ok || json?.ok!==true) throw new Error(json?.message || json?.error?.message || 'No se pudo guardar el borrador.');
+          const saved=json.data.document;
+          state.ref=String(saved.document_id || json.data.document_id);
+          state.version=Number(saved.version || state.version+1);
+          one('[data-fd-status]').textContent=`Borrador guardado · versión ${state.version}`;
+          await listCanonicalConsents();
+          return saved;
+        }finally{state.saving=false;one('[data-fd-save]').disabled=false;}
+      };
+      one('[data-fd-sections]').addEventListener('input',syncSections);
+      one('[data-fd-sections]').addEventListener('click',event=>{
+        const node=event.target.closest('[data-fd-section]');if(!node)return;
+        const index=state.sections.findIndex(s=>s.section_id===node.dataset.fdSection);
+        if(index<0)return;
+        syncSections();
+        if(event.target.closest('[data-fd-remove]') && state.sections.length>1) state.sections.splice(index,1);
+        else if(event.target.closest('[data-fd-up]') && index>0) [state.sections[index-1],state.sections[index]]=[state.sections[index],state.sections[index-1]];
+        else if(event.target.closest('[data-fd-down]') && index<state.sections.length-1) [state.sections[index],state.sections[index+1]]=[state.sections[index+1],state.sections[index]];
+        renderSections();
+      });
+      one('[data-fd-add]').addEventListener('click',()=>{syncSections();if(state.sections.length<10){state.sections.push({section_id:sectionId(),section_title:'',section_body:''});renderSections();}});
+      one('[data-fd-new]').addEventListener('click',()=>{
+        state.ref='';state.version=0;state.sections=[{section_id:sectionId(),section_title:'',section_body:''}];
+        one('#fd_title_input').value='';one('#fd_purpose').value='';one('#fd_closing').value='';
+        one('input[name="fd_header"][value="shown"]').checked=true;one('[data-fd-status]').textContent='Borrador nuevo';
+        error('');renderSections();phase('capture');
+      });
+      for(const id of ['#fd_title_input','#fd_purpose']) one(id).addEventListener('input',()=>{
+        const text=`${one('#fd_title_input').value} ${one('#fd_purpose').value}`;
+        one('[data-fd-specialized]').classList.toggle('d-none',!/consentimiento|certificado|alta|interconsulta/i.test(text));
+      });
+      one('[data-fd-save]').addEventListener('click',()=>{save().catch(e=>error(e.message));});
+      one('[data-fd-preview-action]').addEventListener('click',()=>{preview().then(()=>{error('');phase('review');}).catch(e=>error(e.message));});
+      one('[data-fd-back]').addEventListener('click',()=>phase('capture'));
+      one('[data-fd-drafts]').addEventListener('click',async event=>{
+        const ref=event.target.closest('[data-fd-ref]')?.dataset.fdRef;if(!ref)return;
+        try{
+          const url=buildScopedCanonicalDocumentDetailUrl(ref);const response=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json'}});
+          const json=await response.json();const doc=json?.data?.document;const currentUser=await resolveResponsivaAuthenticatedActorUserId();
+          if(!response.ok || doc?.document_type!=='documento_libre' || doc?.status!=='draft'
+            || doc?.audit?.created_by_user_id!==currentUser || doc?.context?.patient_id!==resolveActivePatientIdForConsent())
+            throw new Error('Borrador no disponible para esta sesión.');
+          const payload=doc.content.payload;state.ref=doc.document_id;state.version=Number(doc.version);
+          state.sections=payload.document.sections.map(s=>({...s}));
+          one('#fd_title_input').value=payload.document.title || '';
+          one('#fd_purpose').value=payload.document.purpose || '';
+          one('#fd_closing').value=payload.document.closing_note || '';
+          one(`input[name="fd_header"][value="${payload.presentation?.professional_header==='hidden'?'hidden':'shown'}"]`).checked=true;
+          renderSections();one('[data-fd-status]').textContent=`Continuar borrador · versión ${state.version}`;
+          error('');phase('capture');
+        }catch(e){error(e.message || 'No se pudo abrir el borrador.');}
+      });
+      const open=async()=>{
+        error('');const patientId=resolveActivePatientIdForConsent();
+        const currentUser=await resolveResponsivaAuthenticatedActorUserId();
+        const url=buildScopedCanonicalDocumentsListUrl(patientId,200,{document_type:'documento_libre'});
+        if(!url || !currentUser) throw new Error('Selecciona un paciente y una sesión médica.');
+        const patientName=readPatientSnapshot().full_name;
+        one('[data-fd-patient]').textContent=patientName && patientName!=='Paciente'
+          ? `Paciente: ${patientName}` : `Paciente activo: ${patientId}`;
+        const response=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json'}});
+        const json=await response.json().catch(()=>null);
+        if(!response.ok || json?.ok!==true) throw new Error('No se pudieron cargar los borradores.');
+        const box=one('[data-fd-drafts]');box.replaceChildren();
+        (json.data?.items || []).forEach(item=>{
+          const row=item.clinical_document || item;
+          if(row.document_type!=='documento_libre' || row.status!=='draft' || row.created_by_user_id!==currentUser)return;
+          const button=document.createElement('button');button.type='button';button.className='btn btn-outline-primary text-start';
+          button.dataset.fdRef=String(row.document_uuid || item.document_uuid || item.document_id || '');
+          button.textContent=`Continuar borrador · ${row.title || 'Documento libre'} · versión ${row.version || 1}`;box.append(button);
+        });
+        phase('choices');window.bootstrap.Modal.getOrCreateInstance(modal).show();
+      };
+      return {open,preview,save,modal,state};
+    })();
+    window.mxmedOpenFreeDocumentDraftFoundation = ()=>freeDocument.open().catch(e=>showCatalogFeedback(e.message,'error'));
+
     // MULTI-CONS02A foundation: 02B will connect the catalog card and signatures.
     // The server remains the only renderer and writer for this document.
     const multimediaState = { ref: '', version: 0, date: '', phase: 'capture', saving: false,

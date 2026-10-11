@@ -321,12 +321,20 @@ function clinical_doc_format_date(string $value, bool $includeTime = false): str
 }
 
 function http_get_json(string $url, int $timeoutSeconds = 8): array {
+  $headers = "Accept: application/json\r\n";
+  // The printable document uses the same scoped API as the viewer. Forward only
+  // this request's session cookie, and only to the configured same-host API.
+  $requestHost = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
+  if (parse_url($url, PHP_URL_HOST) === $requestHost && isset($_COOKIE['PHPSESSID'])
+      && preg_match('/^[A-Za-z0-9,-]+$/D', (string)$_COOKIE['PHPSESSID'])) {
+    $headers .= 'Cookie: PHPSESSID=' . $_COOKIE['PHPSESSID'] . "\r\n";
+  }
   $context = stream_context_create([
     'http' => [
       'method' => 'GET',
       'timeout' => $timeoutSeconds,
       'ignore_errors' => true,
-      'header' => "Accept: application/json\r\n",
+      'header' => $headers,
     ],
   ]);
 
@@ -447,6 +455,7 @@ $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], t
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
+$isFreeDoc = ($docTypeNorm === 'documento_libre' && (int)($payload['contract_version'] ?? 0) === 1);
 $showCommonDocActions = $isNoteDoc || $isOrderDoc || (!$isImageDoc && !$isPdfDoc);
 
 $rxSnapshot = ($isPrescriptionDoc && is_array($payload['snapshot'] ?? null)) ? $payload['snapshot'] : [];
@@ -980,7 +989,7 @@ if (!$embed) {
   }
 </style>
 <?php endif; ?>
-<?php if ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1): ?>
+<?php if ($isFreeDoc || ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1)): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=inf-imp01">
 <?php endif; ?>
@@ -1418,6 +1427,8 @@ if (!$embed) {
         <?php endif; ?>
       </article>
       <?php endif; ?>
+    <?php elseif ($isFreeDoc): ?>
+      <?php require_once __DIR__ . '/../../../api/_lib/clinical_free_document.php'; echo clinical_free_document_render_html($payload); ?>
     <?php elseif ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1
         && trim((string)($payload['informe_snapshot']['html'] ?? '')) !== ''): ?>
       <?php echo (string)$payload['informe_snapshot']['html']; ?>
