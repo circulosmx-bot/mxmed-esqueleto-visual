@@ -55824,7 +55824,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             <div class="small text-muted mb-3" data-fd-patient></div>
             <label class="form-label" for="fd_title_input">Título del documento</label><input class="form-control mb-3" id="fd_title_input" maxlength="120" required>
             <label class="form-label" for="fd_purpose">Propósito (opcional)</label><input class="form-control mb-3" id="fd_purpose" maxlength="240">
-            <div class="alert alert-secondary small d-none" data-fd-specialized>Si este contenido corresponde a un consentimiento, certificado, alta o interconsulta, utiliza el documento especializado.</div>
+            <div class="alert alert-secondary small d-none" data-fd-specialized>Si este contenido corresponde a un consentimiento, certificado, alta, interconsulta, informe, nota médica o responsiva, utiliza el documento especializado.</div>
             <div data-fd-sections class="d-grid gap-3"></div><button type="button" class="btn btn-outline-primary btn-sm my-3" data-fd-add>Agregar sección</button>
             <div><label class="form-label" for="fd_closing">Nota de cierre (opcional)</label><textarea class="form-control" id="fd_closing" rows="3" maxlength="2000"></textarea></div>
             <fieldset class="mt-3"><legend class="fs-6">Presentación del documento</legend><label class="me-3"><input type="radio" name="fd_header" value="shown" checked> Mostrar logotipo y datos profesionales</label><label><input type="radio" name="fd_header" value="hidden"> Generar sin encabezado profesional</label></fieldset>
@@ -55869,6 +55869,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const box=one('[data-fd-sections]');box.replaceChildren();
         state.sections.forEach((item,index)=>{
           const node=sectionNode(item);node.querySelector('[data-fd-number]').textContent=`Sección ${index+1}`;
+          node.querySelector('[data-fd-help="section_title"]').setAttribute('aria-label',`Ver ejemplo del título de la sección ${index+1}`);
+          node.querySelector('[data-fd-help="section_body"]').setAttribute('aria-label',`Ver ejemplo del contenido de la sección ${index+1}`);
           node.querySelector('[data-fd-up]').disabled=index===0;
           node.querySelector('[data-fd-down]').disabled=index===state.sections.length-1;
           node.querySelector('[data-fd-remove]').disabled=state.sections.length===1;
@@ -56080,8 +56082,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       one('[data-fd-sections]').addEventListener('input',()=>{syncSections();onMaterialEdit();});
       one('[data-fd-sections]').addEventListener('click',event=>{
         const helpButton=event.target.closest('[data-fd-help]');
-        if(helpButton){state.help?.open(helpButton.dataset.fdHelp,helpButton,
-          helpButton.closest('[data-fd-section]')?.querySelector(helpButton.dataset.fdHelp==='section_title'?'[data-fd-section-title]':'[data-fd-section-body]')?.id);return;}
+        if(helpButton){
+          const section=helpButton.closest('[data-fd-section]');
+          state.help?.open(helpButton.dataset.fdHelp,helpButton,
+            section?.querySelector(helpButton.dataset.fdHelp==='section_title'?'[data-fd-section-title]':'[data-fd-section-body]')?.id,
+            [...one('[data-fd-sections]').children].indexOf(section));
+          return;
+        }
         const node=event.target.closest('[data-fd-section]');if(!node)return;
         const index=state.sections.findIndex(s=>s.section_id===node.dataset.fdSection);
         if(index<0)return;
@@ -56103,7 +56110,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       one('[data-fd-capture]').addEventListener('change',onMaterialEdit);
       for(const id of ['#fd_title_input','#fd_purpose']) one(id).addEventListener('input',()=>{
         const text=`${one('#fd_title_input').value} ${one('#fd_purpose').value}`;
-        one('[data-fd-specialized]').classList.toggle('d-none',!/consentimiento|certificado|alta|interconsulta/i.test(text));
+        one('[data-fd-specialized]').classList.toggle('d-none',!/consentimiento|certificado|alta|interconsulta|informe|nota m[eé]dica|responsiva/i.test(text));
       });
       one('[data-fd-save]').addEventListener('click',()=>{save().catch(e=>error(e.message));});
       one('[data-fd-preview-action]').addEventListener('click',()=>{preview().then(()=>{error('');phase('review');}).catch(e=>error(e.message));});
@@ -56160,19 +56167,28 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }catch(e){error(e.message || 'No se pudo abrir el borrador.');}
       });
       const open=async(draftRef='')=>{
-        if(!state.help&&window.mxmedExampleFieldHelp){
-          state.help=window.mxmedExampleFieldHelp.mount({modal,id:'fd-help',
-            fieldMap:{fd_title_input:'title',fd_purpose:'purpose',fd_closing:'closing'},
-            contextLabel:'Documento',contextText:'Ejemplos de estructura; adapta el contenido al caso real.',
-            note:'Estos textos son ejemplos y no datos clínicos del paciente.',
-            sections:[
-              {key:'title',label:'Título del documento',text:'Comunicación clínica',explanation:'Usa un título breve y específico.'},
-              {key:'purpose',label:'Propósito',text:'Informar sobre la atención y sus recomendaciones.',explanation:'Indica para qué se emite el documento.'},
-              {key:'section_title',label:'Título de sección',text:'Motivo del documento',explanation:'Puedes ordenar secciones como Motivo, Información relevante y Recomendaciones.'},
-              {key:'section_body',label:'Contenido de sección',text:'Describe hechos y recomendaciones aplicables al caso.',explanation:'Redacta contenido clínico específico en texto simple.'},
-              {key:'closing',label:'Nota de cierre',text:'Se entrega este documento para los fines indicados.',explanation:'Cierra solo si aporta contexto.'}
-            ],canUseExample:({section})=>section.key==='section_title',
-            onUseExample:({section,destination})=>{destination.value=section.text;destination.dispatchEvent(new Event('input',{bubbles:true}));}});
+        if(!state.help&&window.mxmedFreeDocumentExampleHelp){
+          state.help=window.mxmedFreeDocumentExampleHelp.mount({modal,
+            getCurrent:()=>({title:one('#fd_title_input').value,purpose:one('#fd_purpose').value,
+              closing:one('#fd_closing').value,sections:[...one('[data-fd-sections]').children].map(section=>({
+                title:section.querySelector('[data-fd-section-title]').value,
+                body:section.querySelector('[data-fd-section-body]').value}))}),
+            applyField:(destination,text)=>{
+              destination.value=text;
+              destination.dispatchEvent(new Event('input',{bubbles:true}));
+            },
+            applyFull:example=>{
+              one('#fd_title_input').value=example.title;
+              one('#fd_purpose').value=example.purpose;
+              one('#fd_closing').value=example.closing;
+              state.sections=example.sections.map((section,index)=>({section_id:sectionId(),
+                section_order:index+1,section_title:section.title,section_body:section.body}));
+              renderSections();
+              one('#fd_title_input').dispatchEvent(new Event('input',{bubbles:true}));
+              const first=one('#fd_title_input');
+              first.focus({preventScroll:true});
+              first.scrollIntoView({block:'center'});
+            }});
         }
         error('');const patientId=resolveActivePatientIdForConsent();
         const currentUser=await resolveResponsivaAuthenticatedActorUserId();

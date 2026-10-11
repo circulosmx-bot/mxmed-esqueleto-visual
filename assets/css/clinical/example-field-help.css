@@ -32,3 +32,21 @@
 .mxeh-confirm button { margin-right:8px; padding:5px 10px; border:1px solid #8fcbd4; border-radius:6px; background:#fff; color:#07536e; cursor:pointer; }
 .mxeh-confirm .mxeh-replace { border-color:#007e99; background:#007e99; color:#fff; }
 @media (max-width:600px) { .mxeh-overlay { padding:8px; } .mxeh-dialog { max-height:90vh; } }
+
+/* Documento libre: the complete example stays in one vertically scrolling help surface. */
+.fdex-dialog { width:min(100%,800px); }
+.fdex-sections { overflow-x:hidden; overflow-wrap:anywhere; }
+.fdex-section-group { min-width:0; margin:8px 0; border-left:3px solid #cae5e9; padding-left:8px; }
+.fdex-section-heading { margin:0 0 6px; color:#315d70; font-size:11px; font-weight:700; letter-spacing:.04em; }
+.fdex-section-group .fdex-card+.fdex-card { margin-top:5px; }
+.fdex-card { min-width:0; }
+.fdex-footer { flex:none; display:flex; justify-content:flex-end; padding:11px 18px; border-top:1px solid #d8e8ed; background:#fff; }
+.fdex-full-use { margin:0; max-width:100%; text-align:center; }
+.fdex-confirm strong { display:block; margin-bottom:7px; }
+@media (max-width:600px) {
+  .fdex-dialog { max-height:calc(100dvh - 16px); }
+  .fdex-dialog .mxeh-header, .fdex-dialog .mxeh-intro, .fdex-footer { padding:10px 12px; }
+  .fdex-sections { padding:10px 12px; }
+  .fdex-footer { justify-content:stretch; }
+  .fdex-full-use { width:100%; }
+}
