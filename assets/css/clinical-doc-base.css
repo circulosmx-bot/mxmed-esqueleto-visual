@@ -275,6 +275,17 @@
   color: var(--doc-ink-secondary);
 }
 
+/* Multimedia consent preview keeps its letter layout on desktop and reflows on phones. */
+@media screen and (max-width: 767.98px) {
+  #modalConsentimientoMultimedia .doc-base-sheet-frame { padding: 4px; }
+  #modalConsentimientoMultimedia .doc-base-sheet--letter {
+    width: 100%;
+    min-height: 0;
+    padding: 18px 14px;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* Print-safe utilities for upcoming documents (Interconsulta/Certificados/Responsiva). */
 @page {
   size: Letter portrait;

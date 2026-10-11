@@ -385,7 +385,7 @@ function clinical_documents_assert_generic_type_allowed(array $payload): void
 {
     // Informe and Interconsulta new writes belong exclusively to their versioned writers.
     $type = strtolower(trim((string)($payload['document_type'] ?? '')));
-    if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica'], true)) {
+    if (in_array($type, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia'], true)) {
         throw new InvalidArgumentException(strtoupper($type) . '_GENERIC_WRITE_FORBIDDEN');
     }
 }
@@ -399,6 +399,7 @@ function clinical_documents_is_contract_write_error(string $message): bool
         'INTERCONSULTA_GENERIC_WRITE_FORBIDDEN',
         'ALTA_CONTRACT_VERSION_UNSUPPORTED',
         'ALTA_MEDICA_GENERIC_WRITE_FORBIDDEN',
+        'CONSENTIMIENTO_MULTIMEDIA_GENERIC_WRITE_FORBIDDEN',
     ], true);
 }
 
@@ -7405,7 +7406,7 @@ try {
             }
 
             $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
-            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica'], true)) {
+            if (in_array($documentType, ['informe_medico', 'interconsulta', 'alta_medica', 'consentimiento_multimedia'], true)) {
                 $code = strtoupper($documentType) . '_GENERIC_WRITE_FORBIDDEN';
                 clinical_send_response(['ok' => false, 'error' => ['code' => $code, 'message' => $code],
                     'message' => $code, 'data' => null,
@@ -9375,6 +9376,47 @@ try {
                 return;
             }
         }
+        if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'multimedia-preview') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = ['route' => 'doctors/{doctor_id}/patients/{patient_id}/multimedia-preview'];
+            try {
+                $pdo = clinical_documents_pdo();
+                if ($doctorId !== (string)$scopedDoctorContext['doctor_id']
+                    || !clinical_patient_exists($pdo, $patientId)
+                    || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response(['ok'=>false, 'error'=>'forbidden', 'meta'=>$meta], 403);
+                    return;
+                }
+                $body = json_decode((string)file_get_contents('php://input'), true);
+                if (!is_array($body) || ($body['document_type'] ?? '') !== 'consentimiento_multimedia'
+                    || ($body['payload']['contract_version'] ?? null) !== 1
+                    || trim((string)($body['context']['patient_id'] ?? '')) !== $patientId
+                    || trim((string)($body['payload']['patient_snapshot']['id'] ?? '')) !== $patientId
+                    || trim((string)($body['payload']['actor_snapshot']['user_id'] ?? '')) !== (string)$scopedDoctorContext['user_id'])
+                    throw new InvalidArgumentException('MULTIMEDIA_PREVIEW_CONTEXT_INVALID');
+                require_once __DIR__ . '/../_lib/clinical_multimedia_consent_render.php';
+                if (!clinical_legal_document_presentation_valid((array)$body['payload']))
+                    throw new InvalidArgumentException('MULTIMEDIA_PRESENTATION_INVALID');
+                $payload = (array)$body['payload'];
+                $payload['consent'] = clinical_multimedia_consent_normalize((array)($payload['consent'] ?? []));
+                $payload['consent']['declaration'] = clinical_multimedia_consent_declaration($payload['consent']);
+                $signer = (array)($payload['signer'] ?? []);
+                if (!in_array((string)($signer['mode'] ?? ''), ['patient','representative'], true)
+                    || ($signer['mode'] === 'representative'
+                        && (trim((string)($signer['name'] ?? '')) === ''
+                            || trim((string)($signer['character'] ?? '')) === ''
+                            || trim((string)($signer['relationship'] ?? '')) === ''
+                            || trim((string)($signer['authority'] ?? '')) === '')))
+                    throw new InvalidArgumentException('MULTIMEDIA_SIGNER_INVALID');
+                clinical_send_response(['ok'=>true, 'data'=>['html'=>clinical_multimedia_consent_render_html($payload)],
+                    'meta'=>$meta], 200);
+                return;
+            } catch (Throwable $error) {
+                clinical_send_response(['ok'=>false, 'error'=>'MULTIMEDIA_PREVIEW_INVALID', 'meta'=>$meta], 400);
+                return;
+            }
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'alta-preview') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
@@ -9524,6 +9566,20 @@ try {
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
+                if (($payload['document_type'] ?? null) === 'consentimiento_multimedia') {
+                    if ($isMultipart || $uploadFile !== null)
+                        throw new InvalidArgumentException('MULTIMEDIA_UPLOAD_NOT_SUPPORTED');
+                    require_once __DIR__ . '/../_lib/clinical_multimedia_consent_write.php';
+                    $result = clinical_multimedia_consent_write($pdo, $scopedDoctorContext, $patientId, $payload,
+                        (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                    $replay = ($result['_idempotency_replay'] ?? false) === true;
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, (string)$result['document_uuid']);
+                    if ($document === null) throw new RuntimeException('MULTIMEDIA_DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok'=>true, 'error'=>null, 'message'=>'document saved',
+                        'data'=>['document_id'=>$result['document_uuid'], 'document'=>$document],
+                        'meta'=>$meta + ['idempotency_replay'=>$replay]], $replay ? 200 : 201);
+                    return;
+                }
                 if (($payload['document_type'] ?? null) === 'consentimiento_informado') {
                     require_once __DIR__ . '/../_lib/clinical_consent_write.php';
                     $consentBody = $isMultipart

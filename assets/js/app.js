@@ -43528,6 +43528,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           line_height: 1.5
         })
       }),
+      consentimiento_multimedia: Object.freeze({
+        document_type: 'consentimiento_multimedia',
+        title: 'Consentimiento multimedia',
+        printable: true,
+        post_emission_actions: Object.freeze(['view','print','close']),
+        signatures_required: Object.freeze(['patient_or_representative','doctor']),
+        supports_professional_header: true
+      }),
       informe_medico: Object.freeze({
         document_type: 'informe_medico',
         title: 'Informe médico',
@@ -55656,7 +55664,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               )
             )
         );
-        const title = sanitizeText(doc.title || doc.summary || fallbackTitle);
+        const title = sanitizeText(doc.title || doc.summary || (documentType === 'consentimiento_multimedia' ? 'Consentimiento multimedia' : fallbackTitle));
         const summary = sanitizeText(doc.summary || '');
         const dtRaw = sanitizeText(doc.event_datetime || doc.created_at || '');
         const dateText = formatConsentUiDate(dtRaw, { withTime: true }) || '—';
@@ -55667,6 +55675,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           || {};
         const descriptorText = resolveConsentDescriptorText(payload, summary);
         const isConsentDoc = documentType === 'consentimiento_informado' || !documentType;
+        const isMultimediaDoc = documentType === 'consentimiento_multimedia';
         const isInformeDoc = documentType === 'informe_medico';
         const isNotaDoc = documentType === 'nota_medica';
         const isAltaDoc = documentType === 'alta_medica';
@@ -55711,7 +55720,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.className = 'exp-card exp-card--secondary';
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
-        const resumableDraft = (isConsentDoc || isInformeDoc || isNotaDoc || isAltaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) && status === 'draft';
+        const resumableDraft = (isConsentDoc || isMultimediaDoc || isInformeDoc || isNotaDoc || isAltaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) && status === 'draft';
         const definition = getClinicalDocumentDefinition(documentType);
         const emittedActions = status === 'generated' && Array.isArray(definition.post_emission_actions)
           ? definition.post_emission_actions : [];
@@ -55720,7 +55729,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         card.innerHTML = `
           <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
             <span>${title.replace(/</g, '&lt;')}</span>
-            <span class="badge bg-light text-dark border">${((isConsentDoc || isInformeDoc || isNotaDoc || isAltaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
+            <span class="badge bg-light text-dark border">${((isConsentDoc || isMultimediaDoc || isInformeDoc || isNotaDoc || isAltaDoc || isResponsivaDoc || isCertificadoDoc || isInterconsultaDoc) ? (status === 'draft' ? 'Borrador' : 'Emitido') : status).replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
           ${summary && !descriptorForLine ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
@@ -55733,6 +55742,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             : `<div class="small fw-semibold mt-2"><span class="text-primary">${resumableDraft ? 'Continuar borrador' : 'Ver detalle'}</span></div>`) : ''}
         `;
         if(isConsentDoc && status === 'draft') card.dataset.consentDraft = '1';
+        if(isMultimediaDoc && status === 'draft') card.dataset.multimediaDraft = '1';
         if(isInformeDoc && status === 'draft') card.dataset.informeDraft = '1';
         if(isNotaDoc && status === 'draft') card.dataset.notaDraft = '1';
         if(isAltaDoc && status === 'draft') card.dataset.altaDraft = '1';
@@ -55787,6 +55797,227 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeDocRef)}`;
     };
 
+    // MULTI-CONS02A foundation: 02B will connect the catalog card and signatures.
+    // The server remains the only renderer and writer for this document.
+    const multimediaState = { ref: '', version: 0, date: '', phase: 'capture', saving: false };
+    const ensureMultimediaModal = ()=>{
+      let modal = pane.querySelector('#modalConsentimientoMultimedia');
+      if(modal) return modal;
+      modal = document.createElement('div');
+      modal.className = 'modal fade';
+      modal.id = 'modalConsentimientoMultimedia';
+      modal.tabIndex = -1;
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'mmc_title');
+      modal.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="mmc_title">Consentimiento multimedia · Borrador</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body"><div class="alert alert-danger d-none" role="alert" data-mmc-error></div>
+          <div data-mmc-choices><p class="text-muted">Selecciona un borrador o comienza uno nuevo.</p><div data-mmc-drafts class="d-grid gap-2 mb-3"></div><button type="button" class="btn btn-primary" data-mmc-new>Nuevo borrador</button></div>
+          <div data-mmc-capture class="d-none">
+            <p class="text-muted small">La autorización de captura y los usos clínicos se seleccionan por separado.</p>
+            <fieldset class="mb-3"><legend class="fs-6">Material</legend>
+              <label class="me-3"><input type="checkbox" name="mmc_media" value="photo"> Fotografías</label>
+              <label class="me-3"><input type="checkbox" name="mmc_media" value="video"> Video</label>
+              <label><input type="checkbox" name="mmc_media" value="audio"> Audio</label></fieldset>
+            <label class="form-check mb-3"><input class="form-check-input" type="checkbox" data-mmc-capture-allowed><span class="form-check-label">Autorizo expresamente la captura del material seleccionado</span></label>
+            <fieldset class="mb-3"><legend class="fs-6">Usos clínicos autorizados</legend>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_record"> Integración al expediente clínico</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_followup"> Seguimiento de la evolución clínica</label></fieldset>
+            <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_identification">Identificación del material</label><select class="form-select" id="mmc_identification"><option value="">Selecciona</option><option value="identifiable">Identificable</option><option value="reduced_identification">Identificación reducida</option></select></div>
+              <div class="col-md-6"><label class="form-label" for="mmc_scope">Alcance</label><select class="form-select" id="mmc_scope"><option value="">Selecciona</option><option value="specific_event">Este evento o atención</option><option value="current_episode">Este episodio de atención</option><option value="current_condition_followup">Seguimiento del padecimiento actual</option><option value="custom_limited_scope">Otro alcance específico</option></select></div></div>
+            <div class="mb-3 d-none" data-mmc-custom-wrap><label class="form-label" for="mmc_custom_scope">Describe el alcance específico</label><textarea id="mmc_custom_scope" class="form-control" rows="2" maxlength="2000"></textarea></div>
+            <div class="row g-3 mb-3"><div class="col-md-4"><label class="form-label" for="mmc_validity">Vigencia</label><select class="form-select" id="mmc_validity"><option value="">Selecciona</option><option value="single_event">Solo este evento</option><option value="explicit_date_range">Periodo con fechas</option></select></div>
+              <div class="col-md-8 d-none" data-mmc-dates-wrap><div class="row g-2"><div class="col-6"><label class="form-label" for="mmc_valid_from">Desde</label><input class="form-control" type="date" id="mmc_valid_from"></div><div class="col-6"><label class="form-label" for="mmc_valid_to">Hasta</label><input class="form-control" type="date" id="mmc_valid_to"></div></div></div></div>
+            <details class="mb-3"><summary>Contexto clínico opcional</summary><div class="row g-3 mt-1">
+              <div class="col-md-6"><label class="form-label" for="mmc_event">Atención o procedimiento</label><input class="form-control" id="mmc_event" maxlength="2000"></div><div class="col-md-6"><label class="form-label" for="mmc_area">Área anatómica</label><input class="form-control" id="mmc_area" maxlength="2000"></div>
+              <div class="col-md-8"><label class="form-label" for="mmc_note">Nota de contexto clínico</label><input class="form-control" id="mmc_note" maxlength="2000"></div><div class="col-md-4"><label class="form-label" for="mmc_event_date">Fecha del evento</label><input class="form-control" type="date" id="mmc_event_date"></div></div></details>
+            <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_signer_mode">Firmante previsto</label><select class="form-select" id="mmc_signer_mode"><option value="patient">Paciente</option><option value="representative">Representante</option></select></div></div>
+            <div class="row g-3 mb-3 d-none" data-mmc-representative-wrap><div class="col-md-6"><label class="form-label" for="mmc_rep_name">Nombre del representante</label><input class="form-control" id="mmc_rep_name"></div><div class="col-md-6"><label class="form-label" for="mmc_rep_character">Carácter</label><input class="form-control" id="mmc_rep_character"></div><div class="col-md-6"><label class="form-label" for="mmc_rep_relationship">Relación o parentesco</label><input class="form-control" id="mmc_rep_relationship"></div><div class="col-md-6"><label class="form-label" for="mmc_rep_authority">Motivo o autoridad</label><input class="form-control" id="mmc_rep_authority"></div></div>
+            <fieldset class="mb-3"><legend class="fs-6">Encabezado profesional</legend><label class="me-3"><input type="radio" name="mmc_header" value="shown" checked> Mostrar</label><label><input type="radio" name="mmc_header" value="hidden"> Ocultar</label></fieldset>
+          </div>
+          <div data-mmc-review class="d-none"><p class="text-muted small">Revisa el documento completo antes de continuar.</p><div data-mmc-review-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
+          <div data-mmc-final class="d-none"><p class="alert alert-info">La firma y la emisión estarán disponibles en la siguiente fase.</p><div data-mmc-final-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
+        </div><div class="modal-footer"><span class="small text-muted me-auto" data-mmc-status></span><button type="button" class="btn btn-outline-secondary d-none" data-mmc-back>Volver a editar</button><button type="button" class="btn btn-outline-primary d-none" data-mmc-save>Guardar borrador</button><button type="button" class="btn btn-primary d-none" data-mmc-preview>Vista previa</button><button type="button" class="btn btn-primary d-none" data-mmc-continue>Continuar a revisión final</button></div>
+      </div></div>`;
+      pane.append(modal);
+      const get = selector=> modal.querySelector(selector);
+      const syncConditional = ()=>{
+        get('[data-mmc-custom-wrap]').classList.toggle('d-none', get('#mmc_scope').value !== 'custom_limited_scope');
+        get('[data-mmc-dates-wrap]').classList.toggle('d-none', get('#mmc_validity').value !== 'explicit_date_range');
+        get('[data-mmc-representative-wrap]').classList.toggle('d-none', get('#mmc_signer_mode').value !== 'representative');
+      };
+      const renderPhase = phase=>{
+        multimediaState.phase = phase;
+        for(const value of ['choices','capture','review','final']) get(`[data-mmc-${value}]`).classList.toggle('d-none', value !== phase);
+        get('[data-mmc-back]').classList.toggle('d-none', !['review','final'].includes(phase));
+        get('[data-mmc-save]').classList.toggle('d-none', !['capture','review','final'].includes(phase));
+        get('[data-mmc-preview]').classList.toggle('d-none', phase !== 'capture');
+        get('[data-mmc-continue]').classList.toggle('d-none', phase !== 'review');
+      };
+      const error = message=>{
+          const target = get('[data-mmc-error]');
+        target.textContent = String(message || '');
+        target.classList.toggle('d-none', !message);
+      };
+      const value = id=> String(get(`#mmc_${id}`)?.value || '').trim();
+      const checked = name=> Array.from(modal.querySelectorAll(`input[name="${name}"]:checked`)).map(input=>input.value);
+      const collect = async ()=>{
+        const patientId = resolveActivePatientIdForConsent();
+        const userId = await resolveResponsivaAuthenticatedActorUserId();
+        const patient = readPatientSnapshot();
+        const doctor = readDoctorPrefillProfile();
+        const actorName = sanitizeText(window.mxmedStore?.doctorProfile?.full_name || window.mxmedStore?.doctorProfile?.display_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+        if(!patientId || !userId || !actorName) throw new Error('No se pudo resolver el paciente o el médico.');
+        const isCustom = value('scope') === 'custom_limited_scope';
+        const isRange = value('validity') === 'explicit_date_range';
+        const isRep = value('signer_mode') === 'representative';
+        const consent = {
+          media_types: checked('mmc_media'), capture_allowed: !!get('[data-mmc-capture-allowed]').checked,
+          use_purposes: checked('mmc_purpose'), identification_scope: value('identification'),
+          authorization_scope: value('scope'), custom_scope_description: isCustom ? value('custom_scope') : '',
+          validity: {mode:value('validity'), valid_from:isRange ? value('valid_from') : '', valid_to:isRange ? value('valid_to') : ''},
+          context: {clinical_event_or_procedure:value('event'), anatomical_area:value('area'),
+            clinical_purpose_note:value('note'), event_date:value('event_date')}
+        };
+        return {document_type:'consentimiento_multimedia', type:'consentimiento_multimedia',
+          title:'Consentimiento multimedia', context:{patient_id:patientId}, actor:{user_id:userId},
+          ...(multimediaState.ref ? {draft_ref:multimediaState.ref, expected_version:multimediaState.version} : {}),
+          payload:{contract_version:1, status:'draft', consent,
+            signer:{mode:value('signer_mode'), name:isRep ? value('rep_name') : '',
+              character:isRep ? value('rep_character') : '', relationship:isRep ? value('rep_relationship') : '',
+              authority:isRep ? value('rep_authority') : ''},
+            patient_snapshot:{id:patientId, full_name:patient.full_name, age:patient.age, sex:patient.sexo},
+            actor_snapshot:{user_id:userId, full_name:actorName, specialty:doctor.specialty || '',
+              license:doctor.license || '', facility:doctor.facility || '', place:doctor.place || ''},
+            presentation:{version:1, professional_header:checked('mmc_header')[0] || 'shown'},
+            document_date:multimediaState.date, signatures:{}}
+        };
+      };
+      const preview = async ()=>{
+        const body = await collect();
+        const doctorId = resolveCanonicalDocumentsDoctorId();
+        if(!doctorId) throw new Error('No se pudo resolver el médico.');
+        const url = `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(body.context.patient_id)}/multimedia-preview`;
+        const response = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'},
+          credentials:'same-origin', body:JSON.stringify(body)});
+        const json = await response.json();
+        if(!response.ok || json?.ok !== true || !json?.data?.html) throw new Error('Revisa las selecciones obligatorias antes de continuar.');
+        return json.data.html;
+      };
+      get('#mmc_scope').addEventListener('change', syncConditional);
+      get('#mmc_validity').addEventListener('change', syncConditional);
+      get('#mmc_signer_mode').addEventListener('change', syncConditional);
+      get('[data-mmc-new]').addEventListener('click', ()=>{ modal.querySelectorAll('input').forEach(input=>{
+        if(input.type === 'checkbox' || input.type === 'radio') input.checked = input.type === 'radio' && input.value === 'shown';
+        else input.value = '';
+      }); modal.querySelectorAll('select').forEach(select=>select.selectedIndex=0);
+        get('#mmc_signer_mode').value='patient'; multimediaState.ref=''; multimediaState.version=0;
+        multimediaState.date=new Date().toISOString().slice(0,10); error(''); syncConditional(); renderPhase('capture'); });
+      get('[data-mmc-drafts]').addEventListener('click', async event=>{
+        const ref = event.target.closest('[data-mmc-ref]')?.dataset.mmcRef;
+        if(!ref) return;
+        try{
+          const url = buildScopedCanonicalDocumentDetailUrl(ref);
+          const response = await fetch(url, {credentials:'same-origin', headers:{Accept:'application/json'}});
+          const json = await response.json();
+          const doc = json?.data?.document || {};
+          const payload = doc?.content?.payload || {};
+          const currentUser = await resolveResponsivaAuthenticatedActorUserId();
+          if(!response.ok || doc.document_type !== 'consentimiento_multimedia'
+            || doc.status !== 'draft' || doc.audit?.created_by_user_id !== currentUser
+            || doc.context?.patient_id !== resolveActivePatientIdForConsent()) throw new Error('Borrador no disponible.');
+          const consent = payload.consent || {};
+          modal.querySelectorAll('input[name="mmc_media"],input[name="mmc_purpose"]').forEach(input=>{
+            input.checked=(input.name === 'mmc_media' ? consent.media_types : consent.use_purposes)?.includes(input.value) || false;
+          });
+          get('[data-mmc-capture-allowed]').checked=consent.capture_allowed === true;
+          const set=(id, value)=>{ const input=get(`#mmc_${id}`); if(input) input.value=String(value || ''); };
+          set('identification',consent.identification_scope); set('scope',consent.authorization_scope);
+          set('custom_scope',consent.custom_scope_description); set('validity',consent.validity?.mode);
+          set('valid_from',consent.validity?.valid_from); set('valid_to',consent.validity?.valid_to);
+          set('event',consent.context?.clinical_event_or_procedure); set('area',consent.context?.anatomical_area);
+          set('note',consent.context?.clinical_purpose_note); set('event_date',consent.context?.event_date);
+          set('signer_mode',payload.signer?.mode || 'patient'); set('rep_name',payload.signer?.name);
+          set('rep_character',payload.signer?.character); set('rep_relationship',payload.signer?.relationship);
+          set('rep_authority',payload.signer?.authority);
+          modal.querySelectorAll('input[name="mmc_header"]').forEach(input=>input.checked=input.value === (payload.presentation?.professional_header || 'shown'));
+          multimediaState.ref=ref; multimediaState.version=Number(doc.version || 1);
+          multimediaState.date=String(payload.document_date || new Date().toISOString().slice(0,10));
+          error(''); syncConditional(); renderPhase('capture');
+        }catch(e){error(e.message || 'No se pudo abrir el borrador.');}
+      });
+      get('[data-mmc-preview]').addEventListener('click', async ()=>{
+        try{error(''); get('[data-mmc-review-html]').innerHTML=await preview(); renderPhase('review');}
+        catch(e){error(e.message || 'No se pudo preparar la vista previa.');}
+      });
+      get('[data-mmc-continue]').addEventListener('click', async ()=>{
+        try{error(''); get('[data-mmc-final-html]').innerHTML=await preview(); renderPhase('final');}
+        catch(e){error(e.message || 'No se pudo preparar la revisión final.');}
+      });
+      get('[data-mmc-back]').addEventListener('click', ()=>{error(''); renderPhase('capture');});
+      get('[data-mmc-save]').addEventListener('click', async ()=>{
+        if(multimediaState.saving) return;
+        try{
+          const body=await collect(); const url=buildScopedCanonicalDocumentCreateUrl(body.context.patient_id);
+          if(!url) throw new Error('No se pudo resolver el médico.');
+          multimediaState.saving=true; get('[data-mmc-save]').disabled=true; error('');
+          const response=await fetch(url,{method:'POST',credentials:'same-origin',
+            headers:{'Content-Type':'application/json',Accept:'application/json',
+              'Idempotency-Key':`multimedia:${crypto.randomUUID()}`},body:JSON.stringify(body)});
+          const json=await response.json();
+          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo guardar el borrador.');
+          const doc=json.data.document || {};
+          multimediaState.ref=String(doc.document_uuid || json.data.document_id || '');
+          multimediaState.version=Number(doc.version || multimediaState.version + 1);
+          get('[data-mmc-status]').textContent=`Borrador guardado · versión ${multimediaState.version}`;
+          await listCanonicalConsents();
+        }catch(e){error(e.message || 'No se pudo guardar el borrador.');}
+        finally{multimediaState.saving=false; get('[data-mmc-save]').disabled=false;}
+      });
+      modal.__mxmedOpen = async ({draftRef=''}={})=>{
+        error(''); get('[data-mmc-status]').textContent='';
+        const patientId=resolveActivePatientIdForConsent();
+        if(!patientId) throw new Error('Selecciona un paciente.');
+        multimediaState.date=new Date().toISOString().slice(0,10);
+        renderPhase('choices');
+        const url=buildScopedCanonicalDocumentsListUrl(patientId,200,{document_type:'consentimiento_multimedia'});
+        if(!url) throw new Error('No se pudo resolver el médico.');
+        const response=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json'}});
+        const json=await response.json();
+        if(!response.ok || json?.ok !== true) throw new Error('No se pudieron consultar los borradores.');
+        const currentUser=await resolveResponsivaAuthenticatedActorUserId();
+        const drafts=(json.data?.items || []).filter(item=>{
+          const row=item.clinical_document || item;
+          return row.document_type === 'consentimiento_multimedia' && row.status === 'draft'
+            && row.created_by_user_id === currentUser;
+        });
+        get('[data-mmc-drafts]').replaceChildren();
+        drafts.forEach(item=>{
+          const row=item.clinical_document || item;
+          const button=document.createElement('button'); button.type='button';
+          button.className='btn btn-outline-primary text-start';
+          button.dataset.mmcRef=String(row.document_uuid || item.document_uuid || item.document_id || '');
+          button.textContent=`Continuar borrador · ${button.dataset.mmcRef.slice(0,8)} · versión ${row.version || 1}`;
+          get('[data-mmc-drafts]').append(button);
+        });
+        window.bootstrap.Modal.getOrCreateInstance(modal).show();
+        if(draftRef){
+          const button=Array.from(get('[data-mmc-drafts]').querySelectorAll('button'))
+            .find(item=>item.dataset.mmcRef === draftRef);
+          if(button) button.click();
+        }
+      };
+      return modal;
+    };
+    const openMultimediaModal = options=>{
+      const modal=ensureMultimediaModal();
+      return modal.__mxmedOpen(options).catch(error=>{
+        showCatalogFeedback(error.message || 'No se pudo abrir Consentimiento multimedia.', 'error');
+      });
+    };
+    window.mxmedOpenMultimediaConsentDraftFoundation = openMultimediaModal;
+
     const listCanonicalConsents = async ()=>{
       const patientId = resolveActivePatientIdForConsent();
       const hasPatient = !!patientId;
@@ -55809,7 +56040,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         });
         const json = await resp.json().catch(()=> null);
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
-        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico', 'nota_medica', 'alta_medica', 'interconsulta', 'responsiva_medica', 'certificado_medico']);
+        const allowedTypes = new Set(['consentimiento_informado', 'consentimiento_multimedia', 'informe_medico', 'nota_medica', 'alta_medica', 'interconsulta', 'responsiva_medica', 'certificado_medico']);
         const normalized = items.map((item)=>{
           const clinicalDoc = item?.clinical_document && typeof item.clinical_document === 'object' ? item.clinical_document : {};
           const clinicalPayload = parseObjectMaybeJson(clinicalDoc?.payload);
@@ -59282,6 +59513,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(action === 'view'){ openClinicalDocumentViewer(card.dataset.docUuid); return; }
       if(action === 'print'){ openClinicalDocumentPrint(card.dataset.docUuid); return; }
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.multimediaDraft === '1') openMultimediaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.informeDraft === '1') openInformeModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.notaDraft === '1') openNotaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.altaDraft === '1') openAltaModal({ draftRef: card.getAttribute('data-doc-uuid') });
@@ -59297,6 +59529,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!card) return;
       event.preventDefault();
       if(card.dataset.consentDraft === '1') openConsentModal({ draftRef: card.getAttribute('data-doc-uuid') });
+      else if(card.dataset.multimediaDraft === '1') openMultimediaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.informeDraft === '1') openInformeModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.notaDraft === '1') openNotaModal({ draftRef: card.getAttribute('data-doc-uuid') });
       else if(card.dataset.altaDraft === '1') openAltaModal({ draftRef: card.getAttribute('data-doc-uuid') });

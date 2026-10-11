@@ -716,6 +716,7 @@ $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 $renderedTextEditedFlag = (int)($content['edited_flag'] ?? 0);
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
+$isMultimediaConsentDoc = ($docTypeNorm === 'consentimiento_multimedia');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
 $isNotaDoc = ($docTypeNorm === 'nota_medica');
 $isAltaDoc = ($docTypeNorm === 'alta_medica');
@@ -956,7 +957,7 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
-<?php if ($isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
+<?php if ($isMultimediaConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=resp-imp01a">
 <?php endif; ?>
@@ -1998,6 +1999,13 @@ if (!$embed) {
         <?php endif; ?>
       </article>
       <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if ($isMultimediaConsentDoc && (int)($payload['frozen_snapshot']['version'] ?? 0) === 1
+        && trim((string)($payload['frozen_snapshot']['html'] ?? '')) !== ''): ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+        <?php echo (string)$payload['frozen_snapshot']['html']; ?>
+      </div>
     <?php endif; ?>
 
     <?php if ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1
