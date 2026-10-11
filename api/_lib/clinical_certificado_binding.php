@@ -32,6 +32,16 @@ function clinical_certificado_binding_projection(array $body): array {
         'rendered_text_contract'=>'structured_v1'
     ];
     // Keep the V1 serialization byte-for-byte for existing and untyped documents.
+    if (($cert['type']??'') === 'valoracion_preoperatoria') {
+        $projection['version'] = 3;
+        $projection['preop'] = $pick((array)($content['preop']??[]), [
+            'planned_procedure','planned_date','requester','assessment_scope','current_findings',
+            'history_state','history_detail','medications_state','medications_detail',
+            'allergies_state','allergies_detail','studies_state','studies_detail',
+            'clinical_considerations','conclusion','recommendations'
+        ]);
+        return $projection;
+    }
     if (!in_array((string)($cert['type']??''), ['aptitud_fisica','actividad_deportiva'], true))
         return $projection;
     $projection['version'] = 2;

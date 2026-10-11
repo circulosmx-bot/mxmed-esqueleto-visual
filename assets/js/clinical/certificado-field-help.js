@@ -8,7 +8,8 @@
     constancia_atencion: 'Constancia de atención médica',
     reposo_medico: 'Constancia de incapacidad temporal',
     aptitud_fisica: 'Certificado de aptitud física',
-    actividad_deportiva: 'Certificado para actividad deportiva'
+    actividad_deportiva: 'Certificado para actividad deportiva',
+    valoracion_preoperatoria: 'Constancia de valoración médica preoperatoria'
   };
   const recipient = {
     key: 'recipient', label: 'Destinatario específico',
@@ -26,7 +27,15 @@
     {key:'assessment_conclusion', label:'Conclusión estructurada', explanation:'', text:''},
     {key:'assessment_restriction_mode', label:'Estado de restricciones', explanation:'', text:''},
     {key:'assessment_restriction_detail', label:'Detalle de restricciones', explanation:'', text:''},
-    {key:'assessment_recommendations', label:'Recomendaciones', explanation:'', text:''}
+    {key:'assessment_recommendations', label:'Recomendaciones', explanation:'', text:''},
+    {key:'preop_procedure', label:'Procedimiento previsto', explanation:'', text:''},
+    {key:'preop_scope', label:'Alcance de la valoración', explanation:'', text:''},
+    {key:'preop_history', label:'Antecedentes relevantes', explanation:'', text:''},
+    {key:'preop_findings', label:'Estado y hallazgos', explanation:'', text:''},
+    {key:'preop_studies', label:'Estudios disponibles', explanation:'', text:''},
+    {key:'preop_considerations', label:'Consideraciones clínicas', explanation:'', text:''},
+    {key:'preop_conclusion', label:'Conclusión', explanation:'', text:''},
+    {key:'preop_recommendations', label:'Recomendaciones', explanation:'', text:''}
   ];
   const scenarios = {
     certificado_general: {
@@ -84,6 +93,19 @@
         {key:'assessment_recommendations',label:'Recomendaciones',explanation:'Indica una recomendación limitada al alcance evaluado.',text:'Iniciar de forma gradual y solicitar valoración ante síntomas nuevos.'}
       ]
     },
+    valoracion_preoperatoria: {
+      context: 'Caso ficticio: persona adulta valorada antes de una cirugía menor electiva. Se revisaron antecedentes y estudios disponibles; una consideración clínica requiere comunicación y seguimiento. La constancia no autoriza la cirugía ni sustituye la valoración anestésica.',
+      sections: [
+        {key:'preop_procedure',label:'Procedimiento previsto',explanation:'Nombra el procedimiento planificado, sin afirmar que está autorizado.',text:'Resección electiva de una lesión cutánea superficial.'},
+        {key:'preop_scope',label:'Alcance de la valoración',explanation:'Registra únicamente lo evaluado; la información no revisada queda sin documentar.',text:'Entrevista clínica, exploración general y revisión de los estudios disponibles al momento de la consulta.'},
+        {key:'preop_history',label:'Antecedentes relevantes',explanation:'Selecciona «Información documentada» si revisaste estos datos. Un campo vacío no significa ausencia de antecedentes.',text:'Antecedente de hipertensión en seguimiento; la persona refiere adherencia al tratamiento habitual.'},
+        {key:'preop_findings',label:'Estado y hallazgos',explanation:'Describe hallazgos de esta valoración, sin extrapolar a autorización quirúrgica.',text:'En la consulta se encontró clínicamente estable, consciente y orientada. Se documentó presión arterial para seguimiento antes del procedimiento.'},
+        {key:'preop_studies',label:'Estudios disponibles',explanation:'Registra solo los estudios efectivamente disponibles y revisados; no infieras resultados faltantes.',text:'Se revisó biometría hemática aportada por la persona; otros estudios no fueron presentados.'},
+        {key:'preop_considerations',label:'Consideraciones clínicas',explanation:'Comunica hallazgos que requieren seguimiento sin convertirlos en una autorización.',text:'Comunicar al equipo solicitante el valor de presión arterial documentado y verificar el seguimiento clínico correspondiente.'},
+        {key:'preop_conclusion',label:'Conclusión',explanation:'La conclusión refleja solo el alcance de la valoración. Abrir la ayuda no selecciona una opción.',text:'Se documentan consideraciones clínicas para el procedimiento',value:'consideraciones_documentadas'},
+        {key:'preop_recommendations',label:'Recomendaciones',explanation:'Indica un siguiente paso concreto, sin prometer riesgo cero ni alta anestésica.',text:'Continuar seguimiento de la presión arterial y compartir esta valoración con el equipo solicitante.'}
+      ]
+    },
     actividad_deportiva: {
       context: 'Persona adulta ficticia valorada para carrera recreativa de intensidad moderada; el ejemplo no certifica competencia ni alto rendimiento.',
       sections: [
@@ -135,7 +157,15 @@
       cm_assessment_conclusion: 'assessment_conclusion',
       cm_assessment_restriction_mode: 'assessment_restriction_mode',
       cm_assessment_restriction_detail: 'assessment_restriction_detail',
-      cm_assessment_recommendations: 'assessment_recommendations'
+      cm_assessment_recommendations: 'assessment_recommendations',
+      cm_preop_planned_procedure: 'preop_procedure',
+      cm_preop_assessment_scope: 'preop_scope',
+      cm_preop_history_detail: 'preop_history',
+      cm_preop_current_findings: 'preop_findings',
+      cm_preop_studies_detail: 'preop_studies',
+      cm_preop_clinical_considerations: 'preop_considerations',
+      cm_preop_conclusion: 'preop_conclusion',
+      cm_preop_recommendations: 'preop_recommendations'
     },
     sections: initialSections, resolveScenario,
     contextLabel: 'Caso ficticio', contextText: '',

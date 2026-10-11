@@ -8698,14 +8698,6 @@
                           </span>
                           <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="certificados_especiales" data-doc-title="Certificados especiales" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Certificados médicos para escenarios especiales o formatos normativos específicos.">
-                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">workspace_premium</span>
-                          <span class="docs-launcher-row-main">
-                            <span class="docs-launcher-row-title">Certificados especiales</span>
-                            <span class="docs-launcher-row-desc">Formatos especiales normativos.</span>
-                          </span>
-                          <span class="docs-launcher-row-status">Próximamente</span>
-                        </button>
                       </div>
                     </div>
                     <div class="docs-launcher-section mb-3">
@@ -10279,6 +10271,7 @@
                             <optgroup label="Valoraciones específicas">
                               <option value="aptitud_fisica">Certificado de aptitud física</option>
                               <option value="actividad_deportiva">Certificado para actividad deportiva</option>
+                              <option value="valoracion_preoperatoria">Constancia de valoración médica preoperatoria</option>
                             </optgroup>
                           </select>
                         </div>
@@ -10376,6 +10369,35 @@
                               <label class="form-label" for="cm_assessment_considerations">Consideraciones adicionales (opcional)</label>
                               <textarea class="form-control" id="cm_assessment_considerations" rows="2" maxlength="2000"></textarea>
                             </div>
+                          </div>
+                        </div>
+                        <div class="col-12 d-none" id="cm_preop">
+                          <div class="row g-3 border rounded p-2">
+                            <div class="col-12"><label class="form-label fw-semibold" for="cm_preop_planned_procedure">Procedimiento previsto</label><input class="form-control" id="cm_preop_planned_procedure" maxlength="500"></div>
+                            <div class="col-md-6"><label class="form-label" for="cm_preop_planned_date">Fecha prevista del procedimiento (opcional)</label><input class="form-control" id="cm_preop_planned_date" type="date"></div>
+                            <div class="col-md-6"><label class="form-label" for="cm_preop_requester">Servicio o médico solicitante (opcional)</label><input class="form-control" id="cm_preop_requester" maxlength="500"></div>
+                            <div class="col-12"><label class="form-label" for="cm_preop_assessment_scope">Alcance de la valoración (opcional)</label><input class="form-control" id="cm_preop_assessment_scope" maxlength="500" placeholder="Indica únicamente lo efectivamente valorado"></div>
+                            <div class="col-12"><label class="form-label fw-semibold" for="cm_preop_current_findings">Estado y hallazgos de la valoración</label><textarea class="form-control" id="cm_preop_current_findings" rows="3" maxlength="4000"></textarea></div>
+                            <div class="col-12 small text-muted">Deja sin seleccionar lo que no se revisó o no se documentó. Selecciona «Sin hallazgos relevantes» solo cuando lo hayas verificado.</div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="cm_preop_history_state">Antecedentes relevantes (opcional)</label><select class="form-select" id="cm_preop_history_state"><option value="">No documentado</option><option value="reviewed_information">Información documentada</option><option value="reviewed_no_relevant_findings">Sin hallazgos relevantes en lo revisado</option></select>
+                              <div class="d-none" id="cm_preop_history_detail_wrap"><label class="form-label mt-2" for="cm_preop_history_detail">Resumen de antecedentes revisados</label><textarea class="form-control" id="cm_preop_history_detail" rows="2" maxlength="4000" placeholder="Resume lo revisado cuando hay información"></textarea></div>
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="cm_preop_medications_state">Medicamentos revisados (opcional)</label><select class="form-select" id="cm_preop_medications_state"><option value="">No documentado</option><option value="reviewed_information">Información documentada</option><option value="reviewed_no_relevant_findings">Sin hallazgos relevantes en lo revisado</option></select>
+                              <div class="d-none" id="cm_preop_medications_detail_wrap"><label class="form-label mt-2" for="cm_preop_medications_detail">Resumen de medicamentos revisados</label><textarea class="form-control" id="cm_preop_medications_detail" rows="2" maxlength="4000" placeholder="Registra los medicamentos revisados"></textarea></div>
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="cm_preop_allergies_state">Alergias revisadas (opcional)</label><select class="form-select" id="cm_preop_allergies_state"><option value="">No documentado</option><option value="reviewed_information">Información documentada</option><option value="reviewed_no_relevant_findings">Sin hallazgos relevantes en lo revisado</option></select>
+                              <div class="d-none" id="cm_preop_allergies_detail_wrap"><label class="form-label mt-2" for="cm_preop_allergies_detail">Resumen de alergias revisadas</label><textarea class="form-control" id="cm_preop_allergies_detail" rows="2" maxlength="4000" placeholder="Registra las alergias revisadas"></textarea></div>
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="cm_preop_studies_state">Estudios disponibles (opcional)</label><select class="form-select" id="cm_preop_studies_state"><option value="">No documentado</option><option value="reviewed_information">Información documentada</option><option value="reviewed_no_relevant_findings">Sin hallazgos relevantes en lo revisado</option></select>
+                              <div class="d-none" id="cm_preop_studies_detail_wrap"><label class="form-label mt-2" for="cm_preop_studies_detail">Resumen de estudios revisados</label><textarea class="form-control" id="cm_preop_studies_detail" rows="2" maxlength="4000" placeholder="Indica los estudios efectivamente disponibles"></textarea></div>
+                            </div>
+                            <div class="col-12"><label class="form-label" for="cm_preop_clinical_considerations">Consideraciones clínicas (opcional)</label><textarea class="form-control" id="cm_preop_clinical_considerations" rows="2" maxlength="4000"></textarea></div>
+                            <div class="col-12"><label class="form-label fw-semibold" for="cm_preop_conclusion">Conclusión de la valoración</label><select class="form-select" id="cm_preop_conclusion"><option value="">Seleccionar conclusión</option><option value="valoracion_documentada">Valoración médica documentada</option><option value="requiere_valoracion_complementaria">Requiere valoración complementaria</option><option value="consideraciones_documentadas">Se documentan consideraciones clínicas para el procedimiento</option></select><div class="form-text">Esta constancia documenta una valoración; no autoriza cirugía ni sustituye la valoración anestésica.</div></div>
+                            <div class="col-12"><label class="form-label" for="cm_preop_recommendations">Recomendaciones (opcional)</label><textarea class="form-control" id="cm_preop_recommendations" rows="2" maxlength="4000"></textarea></div>
                           </div>
                         </div>
                         <div class="col-12">
@@ -11283,17 +11305,17 @@
 <script src="assets/js/clinical/consent-signature-binding.js?v=doc-present02"></script>
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
-<script src="assets/js/clinical/certificado-signature-binding.js?v=cert-ext02a"></script>
+<script src="assets/js/clinical/certificado-signature-binding.js?v=cert-ext02b"></script>
 <script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
 <script src="assets/js/clinical/nota-signature-binding.js?v=nm-imp01"></script>
 <script src="assets/js/clinical/alta-signature-binding.js?v=doc-close02c"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/app.js?v=cert-ext02a"></script>
+<script src="assets/js/app.js?v=cert-ext02b"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>
-<script src="assets/js/clinical/certificado-field-help.js?v=cert-ext02a"></script>
+<script src="assets/js/clinical/certificado-field-help.js?v=cert-ext02b"></script>
 <script src="assets/js/clinical/interconsulta-field-help.js?v=ix-help01"></script>
 <script src="assets/js/clinical/informe-field-help.js?v=inf-help01"></script>
 <script src="assets/js/clinical/nota-field-help.js?v=nm-help01"></script>

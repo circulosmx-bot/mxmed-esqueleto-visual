@@ -23,6 +23,16 @@
       rendered_text_contract:'structured_v1'
     };
     // Historical V1 object and key order must remain unchanged.
+    if(cert.type==='valoracion_preoperatoria'){
+      result.version=3;
+      result.preop=pick(content.preop||{},[
+        'planned_procedure','planned_date','requester','assessment_scope','current_findings',
+        'history_state','history_detail','medications_state','medications_detail',
+        'allergies_state','allergies_detail','studies_state','studies_detail',
+        'clinical_considerations','conclusion','recommendations'
+      ]);
+      return result;
+    }
     if(!['aptitud_fisica','actividad_deportiva'].includes(cert.type)) return result;
     result.version=2;
     result.assessment=pick(content.assessment||{},[

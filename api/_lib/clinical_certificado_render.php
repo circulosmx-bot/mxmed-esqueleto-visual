@@ -44,9 +44,45 @@ function clinical_certificado_assessment_parts(array $payload): array {
     return $parts;
 }
 
+/** Preoperative assessment only: blank optional topics are omitted, never interpreted as negative. */
+function clinical_certificado_preop_parts(array $payload): array {
+    if (($payload['certificate']['type']??'') !== 'valoracion_preoperatoria') return [];
+    $content=(array)($payload['content']??[]);
+    $p=(array)($content['preop']??[]);
+    $parts=[];
+    $add=static function(string $label,mixed $value) use (&$parts):void {
+        $text=trim((string)($value??''));
+        if($text!=='') $parts[]=$label.': '.$text;
+    };
+    $add('Procedimiento previsto',$p['planned_procedure']??'');
+    $add('Fecha prevista del procedimiento',$p['planned_date']??'');
+    $add('Servicio o médico solicitante',$p['requester']??'');
+    $add('Alcance de la valoración',$p['assessment_scope']??'');
+    $declaration=trim((string)($content['declaration_text']??''));
+    if($declaration!=='') $parts[]=$declaration;
+    $add('Estado y hallazgos de la valoración',$p['current_findings']??'');
+    foreach(['history'=>'Antecedentes relevantes','medications'=>'Medicamentos revisados',
+        'allergies'=>'Alergias revisadas','studies'=>'Estudios disponibles'] as $key=>$label) {
+        $state=(string)($p[$key.'_state']??'');
+        if($state==='reviewed_information') $add($label,$p[$key.'_detail']??'');
+        elseif($state==='reviewed_no_relevant_findings')
+            $parts[]=$label.': sin hallazgos relevantes documentados en lo revisado.';
+    }
+    $add('Consideraciones clínicas',$p['clinical_considerations']??'');
+    $conclusions=['valoracion_documentada'=>'Valoración médica documentada',
+        'requiere_valoracion_complementaria'=>'Requiere valoración complementaria',
+        'consideraciones_documentadas'=>'Se documentan consideraciones clínicas para el procedimiento'];
+    $add('Conclusión',$conclusions[(string)($p['conclusion']??'')]??'');
+    $add('Recomendaciones',$p['recommendations']??'');
+    return $parts;
+}
+
 function clinical_certificado_canonical_text(array $payload): string {
     $certificate=(array)($payload['certificate']??[]);
     $content=(array)($payload['content']??[]);
+    if(($certificate['type']??'')==='valoracion_preoperatoria')
+        return implode("\n\n",array_merge([(string)($certificate['type_label']??'Constancia de valoración médica preoperatoria'),
+            (string)($payload['patient_snapshot']['full_name']??'')],clinical_certificado_preop_parts($payload)));
     if(in_array((string)($certificate['type']??''),['aptitud_fisica','actividad_deportiva'],true))
         return implode("\n\n",array_merge([(string)($certificate['type_label']??'Certificado médico'),
             (string)($payload['patient_snapshot']['full_name']??'')],
@@ -90,7 +126,9 @@ function clinical_certificado_render_html(array $payload): string {
     $append=static function(mixed $value) use(&$parts):void {
         $text=trim((string)($value??'')); if($text!==''&&!in_array($text,$parts,true)) $parts[]=$text;
     };
-    if(in_array($type,['aptitud_fisica','actividad_deportiva'],true)) {
+    if($type==='valoracion_preoperatoria') {
+        foreach(clinical_certificado_preop_parts($payload) as $part) $append($part);
+    } elseif(in_array($type,['aptitud_fisica','actividad_deportiva'],true)) {
         foreach(clinical_certificado_assessment_parts($payload) as $part) $append($part);
     } else $append($content['declaration_text']??'');
     if($type==='certificado_general' && trim((string)($content['general_condition_label']??''))!=='')

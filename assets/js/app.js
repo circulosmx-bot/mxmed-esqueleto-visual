@@ -42695,6 +42695,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoAssessmentRecommendations: root.querySelector('#cm_assessment_recommendations'),
       certificadoAssessmentConsiderationsWrap: root.querySelector('#cm_assessment_considerations_wrap'),
       certificadoAssessmentConsiderations: root.querySelector('#cm_assessment_considerations'),
+      certificadoPreop: root.querySelector('#cm_preop'),
+      certificadoPreopFields: Object.fromEntries([
+        'planned_procedure','planned_date','requester','assessment_scope','current_findings',
+        'history_state','history_detail','medications_state','medications_detail',
+        'allergies_state','allergies_detail','studies_state','studies_detail',
+        'clinical_considerations','conclusion','recommendations'
+      ].map(key => [key, root.querySelector(`#cm_preop_${key}`)])),
       certificadoReturnNote: root.querySelector('#cm_return_note'),
       certificadoDeclarationText: root.querySelector('#cm_declaration_text'),
       certificadoObservationsModeOptions: Array.from(root.querySelectorAll('input[name="cm_observations_mode"]')),
@@ -43233,9 +43240,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       reposo_medico: 'Constancia de incapacidad temporal',
       certificado_general: 'Certificado médico general',
       aptitud_fisica: 'Certificado de aptitud física',
-      actividad_deportiva: 'Certificado para actividad deportiva'
+      actividad_deportiva: 'Certificado para actividad deportiva',
+      valoracion_preoperatoria: 'Constancia de valoración médica preoperatoria'
     });
     const CERTIFICATE_ASSESSMENT_TYPES = Object.freeze(['aptitud_fisica','actividad_deportiva']);
+    const CERTIFICATE_PREOP_TYPE = 'valoracion_preoperatoria';
+    const isCertificateSpecificType = type => CERTIFICATE_ASSESSMENT_TYPES.includes(type) || type === CERTIFICATE_PREOP_TYPE;
+    const CERTIFICATE_PREOP_CONCLUSIONS = Object.freeze({
+      valoracion_documentada: 'Valoración médica documentada',
+      requiere_valoracion_complementaria: 'Requiere valoración complementaria',
+      consideraciones_documentadas: 'Se documentan consideraciones clínicas para el procedimiento'
+    });
     const CERTIFICATE_ASSESSMENT_CONCLUSIONS = Object.freeze({
       apto_para_actividad_indicada: 'Apto para la actividad indicada',
       apto_con_restricciones: 'Apto con restricciones',
@@ -43246,6 +43261,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       activity:'', intensity:'', participation_purpose:'', current_findings:'', conclusion:'',
       restriction_mode:'', restriction_detail:'', general_condition:'', recommendations:'',
       additional_considerations:''
+    });
+    const newCertificatePreop = ()=>({
+      planned_procedure:'', planned_date:'', requester:'', assessment_scope:'', current_findings:'',
+      history_state:'', history_detail:'', medications_state:'', medications_detail:'',
+      allergies_state:'', allergies_detail:'', studies_state:'', studies_detail:'',
+      clinical_considerations:'', conclusion:'', recommendations:''
     });
     const certificateGeneralConditionLabels = Object.freeze({
       estable: 'Estable',
@@ -43341,7 +43362,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING,
-        assessment: newCertificateAssessment()
+        assessment: newCertificateAssessment(),
+        preop: newCertificatePreop()
       },
       usageNoteUserSelected: false
     };
@@ -53025,6 +53047,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             ? ' No se documentaron restricciones en esta valoración.' : ''));
       return `Con base en la valoración actual para ${scope} «${activity}», se documentan los siguientes hallazgos: ${findings}. Conclusión: ${conclusion}.${restrictions}`;
     };
+    const certificatePreopDeclaration = (preop = {})=>{
+      const procedure = normalizeConsentInputRaw(preop.planned_procedure || '');
+      const findings = normalizeConsentInputRaw(preop.current_findings || '');
+      const conclusion = CERTIFICATE_PREOP_CONCLUSIONS[preop.conclusion] || '';
+      if(!procedure || !findings || !conclusion) return '';
+      const sentencePart = (value)=>normalizeConsentInputRaw(value || '').replace(/[.!?]+$/u, '');
+      const scope = sentencePart(preop.assessment_scope || 'esta valoración médica');
+      const currentFindings = sentencePart(findings);
+      const considerations = sentencePart(preop.clinical_considerations || '');
+      return `Se documenta una valoración médica preoperatoria relacionada con el procedimiento previsto «${procedure}». El alcance de la evaluación fue ${scope}. Estado y hallazgos actuales: ${currentFindings}. Conclusión de esta valoración: ${conclusion}.${considerations ? ` Consideraciones clínicas: ${considerations}.` : ''}`;
+    };
     const getCertificateGeneralConditionLabel = (condition = '')=> sanitizeText(certificateGeneralConditionLabels[sanitizeText(condition || '')] || '');
     const setCertificadoNotice = (message = '')=>{
       if(!els.certificadoNotice) return;
@@ -53042,6 +53075,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.certificadoSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
     };
     const buildCertificateDeclarationBase = (type = '')=>{
+      if(type === CERTIFICATE_PREOP_TYPE)
+        return certificatePreopDeclaration(certificadoState.form.preop || {});
       if(CERTIFICATE_ASSESSMENT_TYPES.includes(type))
         return certificateAssessmentDeclaration(type, certificadoState.form.assessment || {});
       const patientName = sanitizeText(els.certificadoPatientName?.value || 'el paciente');
@@ -53167,7 +53202,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const syncCertificadoUsageUiFromState = ()=>{
       const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
-      if(CERTIFICATE_ASSESSMENT_TYPES.includes(currentType)){
+      if(isCertificateSpecificType(currentType)){
         certificadoState.form.usage_note_type = '';
         certificadoState.form.usage_note_custom = '';
         certificadoState.form.usage_note = '';
@@ -53249,7 +53284,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const alignCertificadoUsageWithContext = ()=>{
       const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
-      if(CERTIFICATE_ASSESSMENT_TYPES.includes(currentType)){
+      if(isCertificateSpecificType(currentType)){
         syncCertificadoUsageUiFromState();
         return;
       }
@@ -53330,6 +53365,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const isReposo = type === 'reposo_medico';
       const isGeneral = type === 'certificado_general';
       const isAssessment = CERTIFICATE_ASSESSMENT_TYPES.includes(type);
+      const isPreop = type === CERTIFICATE_PREOP_TYPE;
       const isSport = type === 'actividad_deportiva';
       els.certificadoWrapCareDate?.classList.toggle('d-none', !isConstancia);
       els.certificadoWrapRestDays?.classList.toggle('d-none', !isReposo);
@@ -53338,6 +53374,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.certificadoWrapReturnNote?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapGeneralCondition?.classList.toggle('d-none', !isGeneral);
       els.certificadoAssessment?.classList.toggle('d-none', !isAssessment);
+      els.certificadoPreop?.classList.toggle('d-none', !isPreop);
+      if(isPreop){
+        for(const topic of ['history','medications','allergies','studies']){
+          root.querySelector(`#cm_preop_${topic}_detail_wrap`)?.classList.toggle('d-none',
+            certificadoState.form.preop?.[`${topic}_state`] !== 'reviewed_information');
+        }
+      }
       els.certificadoAssessmentIntensityWrap?.classList.toggle('d-none', !isSport);
       els.certificadoAssessmentPurposeWrap?.classList.toggle('d-none', !isSport);
       els.certificadoAssessmentConsiderationsWrap?.classList.toggle('d-none', !isSport);
@@ -53354,7 +53397,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.certificadoWrapObservationsMode?.classList.toggle('d-none', !isGeneral);
       els.certificadoWrapObservations?.classList.toggle('d-none', !isGeneral || certificadoState.form.observations_mode !== 'present');
       els.certificadoWrapValidityNote?.classList.toggle('d-none', !isGeneral && !isAssessment);
-      els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo || isAssessment);
+      els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo || isAssessment || isPreop);
       if(isReposo){
         els.certificadoWrapUsageNoteOther?.classList.add('d-none');
       }
@@ -54320,6 +54363,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       })){
         if(element) element.value = sanitizeText(assessment[key] || '');
       }
+      const preop = { ...newCertificatePreop(), ...(certificadoState.form.preop || {}) };
+      for(const [key, element] of Object.entries(els.certificadoPreopFields || {})){
+        if(element) element.value = sanitizeText(preop[key] || '');
+      }
       if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = sanitizeText(certificadoState.form.declaration_text || '');
       if(els.certificadoObservations) els.certificadoObservations.value = sanitizeText(certificadoState.form.observations || '');
       syncCertificadoObservationsUiFromState();
@@ -54641,7 +54688,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note: normalizeConsentInputRaw(certificadoState.form.usage_note || ''),
         validity_note: normalizeConsentInputRaw(certificadoState.form.validity_note || ''),
         usage_note_user_selected: certificadoState.usageNoteUserSelected ? '1' : '',
-        assessment: { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}) }
+        assessment: { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}) },
+        preop: { ...newCertificatePreop(), ...(certificadoState.form.preop || {}) }
       }
     });
     const hasCertificadoTempContent = (snapshot = null)=>{
@@ -54664,7 +54712,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form.usage_note,
         form.validity_note,
         form.usage_note_user_selected,
-        ...Object.values(form.assessment || {})
+        ...Object.values(form.assessment || {}),
+        ...Object.values(form.preop || {})
       ].some((value)=> trimConsentInputValue(value || '') !== '');
     };
     const certificadoHasMeaningfulAdditionalInfo = (form = {})=>{
@@ -54701,7 +54750,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note_custom: normalizeConsentInputRaw(form.usage_note_custom ?? certificadoState.form.usage_note_custom ?? ''),
         usage_note: normalizeConsentInputRaw(form.usage_note ?? certificadoState.form.usage_note ?? ''),
         validity_note: normalizeConsentInputRaw(form.validity_note ?? certificadoState.form.validity_note ?? ''),
-        assessment: { ...newCertificateAssessment(), ...(form.assessment || {}) }
+        assessment: { ...newCertificateAssessment(), ...(form.assessment || {}) },
+        preop: { ...newCertificatePreop(), ...(form.preop || {}) }
       };
       certificadoState.subtypeForms = (safe.subtype_forms && typeof safe.subtype_forms === 'object')
         ? safe.subtype_forms : {};
@@ -54767,7 +54817,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING,
-        assessment: newCertificateAssessment()
+        assessment: newCertificateAssessment(),
+        preop: newCertificatePreop()
       };
       certificadoState.signatureHasStroke = false;
       certificadoState.signaturePreferredSource = '';
@@ -54845,7 +54896,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING,
-        assessment: newCertificateAssessment()
+        assessment: newCertificateAssessment(),
+        preop: newCertificatePreop()
       };
       certificadoState.signatureHasStroke = false;
       certificadoState.signaturePreferredSource = '';
@@ -54974,6 +55026,28 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const buildCertificadoRenderedText = (payload = {})=>{
       const certType = sanitizeText(payload?.certificate?.type || '');
       const certTypeLabel = sanitizeText(getCertificateTypeLabel(certType) || payload?.certificate?.type_label || 'CERTIFICADO MÉDICO');
+      if(certType === CERTIFICATE_PREOP_TYPE){
+        const p = payload?.content?.preop || {};
+        const lines = [certTypeLabel.toUpperCase(), `Paciente: ${sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente')}`];
+        const add = (label, value)=>{ const clean = normalizeConsentInputRaw(value || ''); if(clean) lines.push(`${label}: ${clean}`); };
+        add('Procedimiento previsto', p.planned_procedure);
+        add('Fecha prevista del procedimiento', p.planned_date);
+        add('Servicio o médico solicitante', p.requester);
+        add('Alcance de la valoración', p.assessment_scope);
+        const declaration = normalizeConsentInputRaw(payload?.content?.declaration_text || '');
+        if(declaration) lines.push(declaration);
+        add('Estado y hallazgos de la valoración', p.current_findings);
+        for(const [key, label] of Object.entries({history:'Antecedentes relevantes',medications:'Medicamentos revisados',
+          allergies:'Alergias revisadas',studies:'Estudios disponibles'})){
+          if(p[`${key}_state`] === 'reviewed_information') add(label,p[`${key}_detail`]);
+          else if(p[`${key}_state`] === 'reviewed_no_relevant_findings')
+            lines.push(`${label}: sin hallazgos relevantes documentados en lo revisado.`);
+        }
+        add('Consideraciones clínicas', p.clinical_considerations);
+        add('Conclusión', CERTIFICATE_PREOP_CONCLUSIONS[p.conclusion] || '');
+        add('Recomendaciones', p.recommendations);
+        return lines.join('\n\n');
+      }
       if(CERTIFICATE_ASSESSMENT_TYPES.includes(certType)){
         const assessment = payload?.content?.assessment || {};
         const lines = [certTypeLabel.toUpperCase(), `Paciente: ${sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente')}`];
@@ -55054,7 +55128,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const normalizedStatus = targetStatus === 'issued' ? 'issued' : 'draft';
       const type = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
       const isAssessment = CERTIFICATE_ASSESSMENT_TYPES.includes(type);
+      const isPreop = type === CERTIFICATE_PREOP_TYPE;
+      const isSpecific = isAssessment || isPreop;
       const assessment = { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}) };
+      const preop = { ...newCertificatePreop(), ...(certificadoState.form.preop || {}) };
+      for(const topic of ['history','medications','allergies','studies']){
+        if(preop[`${topic}_state`] !== 'reviewed_information') preop[`${topic}_detail`] = '';
+      }
       if(type === 'aptitud_fisica'){
         assessment.intensity = '';
         assessment.participation_purpose = '';
@@ -55070,9 +55150,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         observations: certificadoState.form.observations
       }));
       const validityTerm = normalizeConsentInputRaw(certificadoState.form.validity_term || '');
-      const usageNoteType = isAssessment ? '' : sanitizeText(certificadoState.form.usage_note_type || '');
-      const usageNoteCustom = isAssessment ? '' : normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
-      const usageNote = isAssessment ? '' : normalizeConsentInputRaw(resolveCertificateUsageText({
+      const usageNoteType = isSpecific ? '' : sanitizeText(certificadoState.form.usage_note_type || '');
+      const usageNoteCustom = isSpecific ? '' : normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
+      const usageNote = isSpecific ? '' : normalizeConsentInputRaw(resolveCertificateUsageText({
         type: usageNoteType,
         custom: usageNoteCustom,
         legacy: certificadoState.form.usage_note || ''
@@ -55089,7 +55169,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           legacy: normalizeConsentInputRaw(certificadoState.form.validity_note || '')
         })
         : '';
-      const purposeSentence = isAssessment ? '' : composeCertificatePurposeSentence({
+      const purposeSentence = isSpecific ? '' : composeCertificatePurposeSentence({
         hasRecipientHeader: !!recipientHeaderText,
         usageText: usageNote,
         type
@@ -55099,24 +55179,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         : '';
       const content = {
         declaration_text: declaration,
-        care_date: isAssessment ? '' : sanitizeText(certificadoState.form.care_date || ''),
-        rest_days: isAssessment ? '' : sanitizeText(certificadoState.form.rest_days || ''),
-        rest_start_date: isAssessment ? '' : sanitizeText(certificadoState.form.rest_start_date || ''),
-        rest_end_date: isAssessment ? '' : sanitizeText(certificadoState.form.rest_end_date || ''),
-        return_note: isAssessment ? '' : normalizeConsentInputRaw(certificadoState.form.return_note || ''),
-        general_condition: isAssessment ? '' : sanitizeText(certificadoState.form.general_condition || ''),
-        general_condition_label: isAssessment ? '' : getCertificateGeneralConditionLabel(certificadoState.form.general_condition),
-        observations_mode: isAssessment ? '' : observationsMode,
+        care_date: isSpecific ? '' : sanitizeText(certificadoState.form.care_date || ''),
+        rest_days: isSpecific ? '' : sanitizeText(certificadoState.form.rest_days || ''),
+        rest_start_date: isSpecific ? '' : sanitizeText(certificadoState.form.rest_start_date || ''),
+        rest_end_date: isSpecific ? '' : sanitizeText(certificadoState.form.rest_end_date || ''),
+        return_note: isSpecific ? '' : normalizeConsentInputRaw(certificadoState.form.return_note || ''),
+        general_condition: isSpecific ? '' : sanitizeText(certificadoState.form.general_condition || ''),
+        general_condition_label: isSpecific ? '' : getCertificateGeneralConditionLabel(certificadoState.form.general_condition),
+        observations_mode: isSpecific ? '' : observationsMode,
         observations: observationsForDoc,
-        validity_term: validityTerm,
+        validity_term: isPreop ? '' : validityTerm,
         usage_note_type: usageNoteType,
         usage_note_custom: usageNoteCustom,
         usage_note: usageNote,
         recipient_header: recipientHeaderText,
-        validity_note: isAssessment ? '' : validityLegacy,
+        validity_note: isSpecific ? '' : validityLegacy,
         closing_statement: purposeSentence
       };
       if(isAssessment) content.assessment = assessment;
+      if(isPreop) content.preop = preop;
       if(normalizedStatus === 'issued'){
         if(!type) return { error: 'Tipo de certificado es obligatorio para emitir.' };
         if(!declaration) return { error: 'Declaración principal es obligatoria para emitir.' };
@@ -55127,6 +55208,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           if(!assessment.restriction_mode) return { error: 'Selecciona el estado de restricciones.' };
           if(assessment.restriction_mode === 'con_restricciones' && !normalizeConsentInputRaw(assessment.restriction_detail))
             return { error: 'Describe las restricciones documentadas.' };
+        }
+        if(isPreop){
+          if(!normalizeConsentInputRaw(preop.planned_procedure)) return { error: 'Indica el procedimiento previsto.' };
+          if(!normalizeConsentInputRaw(preop.current_findings)) return { error: 'Captura el estado y los hallazgos de la valoración.' };
+          if(!CERTIFICATE_PREOP_CONCLUSIONS[preop.conclusion]) return { error: 'Selecciona una conclusión de la valoración.' };
+          if(preop.conclusion === 'consideraciones_documentadas' && !normalizeConsentInputRaw(preop.clinical_considerations))
+            return { error: 'Documenta las consideraciones clínicas indicadas en la conclusión.' };
+          for(const topic of ['history','medications','allergies','studies']){
+            if(preop[`${topic}_state`] === 'reviewed_information' && !normalizeConsentInputRaw(preop[`${topic}_detail`]))
+              return { error: 'Describe la información revisada en las secciones seleccionadas.' };
+          }
         }
         if(type === 'constancia_atencion' && !sanitizeText(content.care_date || '')){
           return { error: 'Fecha de atención es obligatoria para emitir este certificado.' };
@@ -55242,7 +55334,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           purpose_selection: sanitizeText(certificadoState.form.purpose_selection || ''),
           purpose_detail: normalizeConsentInputRaw(certificadoState.form.purpose_detail || ''),
           ...content,
-          assessment: isAssessment ? { ...assessment } : newCertificateAssessment()
+          assessment: isAssessment ? { ...assessment } : newCertificateAssessment(),
+          preop: isPreop ? { ...preop } : newCertificatePreop()
         }
       };
       payload.rendered_text = buildCertificadoRenderedText(payload);
@@ -58772,32 +58865,34 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     bindCertificadoField(els.certificadoType, (el)=>{
       const nextType = sanitizeText(el.value || 'certificado_general') || 'certificado_general';
       const previousType = sanitizeText(certificadoState.form.type || 'certificado_general');
-      if(nextType !== previousType && (CERTIFICATE_ASSESSMENT_TYPES.includes(previousType)
-        || CERTIFICATE_ASSESSMENT_TYPES.includes(nextType))){
+      if(nextType !== previousType && (isCertificateSpecificType(previousType)
+        || isCertificateSpecificType(nextType))){
         certificadoState.subtypeForms[previousType] = {
-          form: { ...certificadoState.form, assessment: { ...(certificadoState.form.assessment || {}) } },
+          form: { ...certificadoState.form, assessment: { ...(certificadoState.form.assessment || {}) },
+            preop: { ...(certificadoState.form.preop || {}) } },
           declarationEdited: certificadoState.declarationEdited
         };
         const saved = certificadoState.subtypeForms[nextType];
         if(saved?.form){
           certificadoState.form = { ...saved.form, type: nextType,
-            assessment: { ...newCertificateAssessment(), ...(saved.form.assessment || {}) } };
+            assessment: { ...newCertificateAssessment(), ...(saved.form.assessment || {}) },
+            preop: { ...newCertificatePreop(), ...(saved.form.preop || {}) } };
           certificadoState.declarationEdited = !!saved.declarationEdited;
-        }else if(CERTIFICATE_ASSESSMENT_TYPES.includes(nextType)){
+        }else if(isCertificateSpecificType(nextType)){
           certificadoState.form = { ...certificadoState.form, type: nextType,
             care_date:'', rest_days:'', rest_start_date:'', rest_end_date:'', return_note:'',
             general_condition:'', observations_mode:'', observations:'', usage_note_type:'',
             usage_note_custom:'', usage_note:'', validity_note:'', validity_term:'',
-            declaration_text:'', assessment:newCertificateAssessment() };
+            declaration_text:'', assessment:newCertificateAssessment(), preop:newCertificatePreop() };
           certificadoState.declarationEdited = false;
         }else{
           certificadoState.form = { ...certificadoState.form, type: nextType,
-            assessment:newCertificateAssessment(), validity_term:'7 días',
+            assessment:newCertificateAssessment(), preop:newCertificatePreop(), validity_term:'7 días',
             general_condition:'apto_general' };
           certificadoState.declarationEdited = false;
         }
       }else certificadoState.form.type = nextType;
-      if(!CERTIFICATE_ASSESSMENT_TYPES.includes(nextType)) alignCertificadoUsageWithContext();
+      if(!isCertificateSpecificType(nextType)) alignCertificadoUsageWithContext();
       if(!certificadoState.declarationEdited){
         certificadoState.form.declaration_text = buildCertificateDeclarationBase(nextType);
       }
@@ -58871,6 +58966,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = certificadoState.form.declaration_text;
         }
       });
+    }
+    for(const [key, element] of Object.entries(els.certificadoPreopFields || {})){
+      bindCertificadoField(element, (el)=>{
+        certificadoState.form.preop = { ...newCertificatePreop(), ...(certificadoState.form.preop || {}),
+          [key]: normalizeConsentInputRaw(el.value || '') };
+        if(key.endsWith('_detail') && certificadoState.form.preop[key]){
+          const stateKey = key.replace(/_detail$/, '_state');
+          certificadoState.form.preop[stateKey] = 'reviewed_information';
+          if(els.certificadoPreopFields[stateKey]) els.certificadoPreopFields[stateKey].value = 'reviewed_information';
+        }
+        if(key.endsWith('_state')) syncCertificadoTypeUi();
+        if(!certificadoState.declarationEdited){
+          certificadoState.form.declaration_text = buildCertificateDeclarationBase(certificadoState.form.type);
+          if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = certificadoState.form.declaration_text;
+        }
+      }, element?.tagName === 'SELECT' || element?.type === 'date' ? 'change' : 'input');
     }
     bindCertificadoField(els.certificadoReturnNote, (el)=>{
       certificadoState.form.return_note = normalizeConsentInputRaw(el.value || '');

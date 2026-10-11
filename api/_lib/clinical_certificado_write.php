@@ -35,8 +35,71 @@ function clinical_certificado_write(PDO $pdo, array $doctor, string $patientId, 
         throw new InvalidArgumentException('CERTIFICADO_INTENT_INVALID');
     $certificateType = (string)($payload['certificate']['type'] ?? '');
     if (!in_array($certificateType, ['certificado_general', 'constancia_atencion', 'reposo_medico',
-        'aptitud_fisica', 'actividad_deportiva'], true))
+        'aptitud_fisica', 'actividad_deportiva', 'valoracion_preoperatoria'], true))
         throw new InvalidArgumentException('CERTIFICADO_TYPE_INVALID');
+    $content = (array)($payload['content'] ?? []);
+    $preop = (array)($content['preop'] ?? []);
+    if ($certificateType === 'valoracion_preoperatoria') {
+        if (($payload['certificate']['type_label'] ?? '') !== 'Constancia de valoración médica preoperatoria')
+            throw new InvalidArgumentException('CERTIFICADO_TYPE_LABEL_INVALID');
+        if (!is_string($content['declaration_text'] ?? '')
+            || mb_strlen((string)($content['declaration_text'] ?? '')) > 4000)
+            throw new InvalidArgumentException('CERTIFICADO_PREOP_DECLARATION_INVALID');
+        $preopKeys = ['planned_procedure','planned_date','requester','assessment_scope','current_findings',
+            'history_state','history_detail','medications_state','medications_detail',
+            'allergies_state','allergies_detail','studies_state','studies_detail',
+            'clinical_considerations','conclusion','recommendations'];
+        foreach ($preop as $key => $value) {
+            if (!in_array($key, $preopKeys, true) || !is_string($value)
+                || mb_strlen($value) > (str_ends_with($key, '_detail') || in_array($key,
+                    ['current_findings','clinical_considerations','recommendations'],true) ? 4000 : 500))
+                throw new InvalidArgumentException('CERTIFICADO_PREOP_FIELD_INVALID');
+        }
+        $date = (string)($preop['planned_date'] ?? '');
+        if ($date !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$date)
+            || !checkdate((int)substr($date,5,2),(int)substr($date,8,2),(int)substr($date,0,4))))
+            throw new InvalidArgumentException('CERTIFICADO_PREOP_DATE_INVALID');
+        foreach (['history','medications','allergies','studies'] as $topic) {
+            $state = (string)($preop[$topic.'_state'] ?? '');
+            $detail = trim((string)($preop[$topic.'_detail'] ?? ''));
+            if (!in_array($state,['','reviewed_information','reviewed_no_relevant_findings'],true)
+                || ($state !== 'reviewed_information' && $detail !== '')
+                || ($state === 'reviewed_information' && $detail === ''))
+                throw new InvalidArgumentException('CERTIFICADO_PREOP_INFORMATION_STATE_INVALID');
+        }
+        $conclusion = (string)($preop['conclusion'] ?? '');
+        if ($conclusion !== '' && !in_array($conclusion,[
+            'valoracion_documentada','requiere_valoracion_complementaria','consideraciones_documentadas'],true))
+            throw new InvalidArgumentException('CERTIFICADO_PREOP_CONCLUSION_INVALID');
+        foreach (['care_date','rest_days','rest_start_date','rest_end_date','return_note',
+            'general_condition','general_condition_label','observations_mode','observations',
+            'usage_note_type','usage_note_custom','usage_note','validity_term','validity_note',
+            'closing_statement'] as $hiddenKey) {
+            if (trim((string)($content[$hiddenKey] ?? '')) !== '')
+                throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        }
+        foreach ((array)($content['assessment'] ?? []) as $value) {
+            if (trim((string)$value) !== '')
+                throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        }
+        if (trim((string)($payload['certificate']['usage_type'] ?? '')) !== ''
+            || trim((string)($payload['certificate']['usage_custom'] ?? '')) !== '')
+            throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        if ($intent === 'issued') {
+            if ($conclusion === 'consideraciones_documentadas'
+                && trim((string)($preop['clinical_considerations'] ?? '')) === '')
+                throw new InvalidArgumentException('CERTIFICADO_PREOP_CONSIDERATIONS_REQUIRED');
+            foreach (['planned_procedure','current_findings','conclusion'] as $requiredKey) {
+                if (trim((string)($preop[$requiredKey] ?? '')) === '')
+                    throw new InvalidArgumentException('CERTIFICADO_PREOP_'.strtoupper($requiredKey).'_REQUIRED');
+            }
+        }
+    } elseif ($preop !== []) {
+        foreach ($preop as $value) {
+            if (!is_string($value) || trim($value) !== '')
+                throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        }
+    }
     if (in_array($certificateType, ['aptitud_fisica', 'actividad_deportiva'], true)) {
         $labels = ['aptitud_fisica' => 'Certificado de aptitud física',
             'actividad_deportiva' => 'Certificado para actividad deportiva'];
