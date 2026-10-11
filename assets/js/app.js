@@ -55799,7 +55799,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     // MULTI-CONS02A foundation: 02B will connect the catalog card and signatures.
     // The server remains the only renderer and writer for this document.
-    const multimediaState = { ref: '', version: 0, date: '', phase: 'capture', saving: false };
+    const multimediaState = { ref: '', version: 0, date: '', phase: 'capture', saving: false,
+      signatures: {signer:null, doctor:null}, qr: {token:'',role:'',status:'',timer:0,generation:0},
+      ink:false, drawnRole:'', reviewedHtml:'', finalHtml:'' };
     const ensureMultimediaModal = ()=>{
       let modal = pane.querySelector('#modalConsentimientoMultimedia');
       if(modal) return modal;
@@ -55821,7 +55823,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               <label class="me-3"><input type="checkbox" name="mmc_media" value="video"> Video</label>
               <label><input type="checkbox" name="mmc_media" value="audio"> Audio</label></fieldset>
             <label class="form-check mb-3"><input class="form-check-input" type="checkbox" data-mmc-capture-allowed><span class="form-check-label">Autorizo expresamente la captura del material seleccionado</span></label>
-            <fieldset class="mb-3"><legend class="fs-6">Usos clínicos autorizados</legend>
+            <fieldset class="mb-3"><legend class="fs-6">Usos clínicos autorizados <button type="button" class="btn btn-link btn-sm p-0" data-mmc-help="purposes">ⓘ Ver ejemplo</button></legend>
               <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_record"> Integración al expediente clínico</label>
               <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_followup"> Seguimiento de la evolución clínica</label></fieldset>
             <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_identification">Identificación del material</label><select class="form-select" id="mmc_identification"><option value="">Selecciona</option><option value="identifiable">Identificable</option><option value="reduced_identification">Identificación reducida</option></select></div>
@@ -55837,11 +55839,94 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             <fieldset class="mb-3"><legend class="fs-6">Encabezado profesional</legend><label class="me-3"><input type="radio" name="mmc_header" value="shown" checked> Mostrar</label><label><input type="radio" name="mmc_header" value="hidden"> Ocultar</label></fieldset>
           </div>
           <div data-mmc-review class="d-none"><p class="text-muted small">Revisa el documento completo antes de continuar.</p><div data-mmc-review-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
-          <div data-mmc-final class="d-none"><p class="alert alert-info">La firma y la emisión estarán disponibles en la siguiente fase.</p><div data-mmc-final-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
-        </div><div class="modal-footer"><span class="small text-muted me-auto" data-mmc-status></span><button type="button" class="btn btn-outline-secondary d-none" data-mmc-back>Volver a editar</button><button type="button" class="btn btn-outline-primary d-none" data-mmc-save>Guardar borrador</button><button type="button" class="btn btn-primary d-none" data-mmc-preview>Vista previa</button><button type="button" class="btn btn-primary d-none" data-mmc-continue>Continuar a revisión final</button></div>
+          <div data-mmc-signatures class="d-none"><p class="text-muted">Las dos firmas se vinculan al borrador y a esta versión.</p>
+            <div class="row g-3"><div class="col-md-6"><section class="border rounded p-3" data-mmc-block="signer"><h3 class="fs-6">Firma del paciente o representante</h3><p class="small" data-mmc-signature-status="signer">Pendiente</p><img class="d-none mw-100" data-mmc-signature-image="signer" alt="Firma recibida del firmante"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-draw="signer">Firmar aquí</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-qr="signer">Firmar con celular</button></div></section></div>
+            <div class="col-md-6"><section class="border rounded p-3" data-mmc-block="doctor"><h3 class="fs-6">Firma del médico responsable</h3><p class="small" data-mmc-signature-status="doctor">Pendiente</p><img class="d-none mw-100" data-mmc-signature-image="doctor" alt="Firma médica recibida"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-draw="doctor">Firmar aquí</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-registered>Usar firma registrada</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-qr="doctor">Firmar con celular</button></div></section></div></div>
+            <div class="border rounded p-3 mt-3 d-none" data-mmc-draw-panel><h3 class="fs-6" data-mmc-draw-title></h3><canvas data-mmc-canvas width="600" height="180" style="width:100%;max-width:600px;border:1px solid #b8d1dc;background:white;touch-action:none"></canvas><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-outline-secondary btn-sm" data-mmc-clear>Limpiar</button><button type="button" class="btn btn-primary btn-sm" data-mmc-apply>Aplicar firma</button></div></div>
+          </div>
+          <div data-mmc-final class="d-none"><p class="alert alert-info" data-mmc-final-status>Revisa el documento y las dos firmas antes de emitir.</p><div data-mmc-final-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
+          <div data-mmc-post class="d-none"><p class="alert alert-success">Consentimiento multimedia emitido correctamente.</p><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary" data-mmc-view>VER DOCUMENTO</button><button type="button" class="btn btn-outline-primary" data-mmc-print>IMPRIMIR</button><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CERRAR</button></div></div>
+        </div><div class="modal-footer"><span class="small text-muted me-auto" data-mmc-status></span><button type="button" class="btn btn-outline-secondary d-none" data-mmc-back>Volver a editar</button><button type="button" class="btn btn-outline-primary d-none" data-mmc-save>Guardar borrador</button><button type="button" class="btn btn-primary d-none" data-mmc-preview>Vista previa</button><button type="button" class="btn btn-primary d-none" data-mmc-continue>Continuar a firmas</button><button type="button" class="btn btn-primary d-none" data-mmc-final-review>Revisión final</button><button type="button" class="btn btn-success d-none" data-mmc-emit>Emitir consentimiento</button></div>
       </div></div>`;
       pane.append(modal);
       const get = selector=> modal.querySelector(selector);
+      const qrModal=document.getElementById('modalMultimediaSignatureQr');
+      const qrGet=selector=>qrModal?.querySelector(selector);
+      const qrHandoff=qrModal && documentUi.handoff({
+        modal:qrModal, waiting:qrGet('[data-mmc-qr-waiting]'), received:qrGet('[data-mmc-qr-received]'),
+        status:qrGet('[data-mmc-qr-status]'), receivedHeading:qrGet('[data-mmc-qr-received-heading]'),
+        preview:qrGet('[data-mmc-qr-preview]'), adapter:{
+          createSession:async ({document_uuid,document_version,role})=>{
+            const response=await fetch('/api/clinical/index.php/multimedia-qr-sessions',{
+              method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json'},
+              body:JSON.stringify({document_uuid,document_version,role})});
+            const json=await response.json().catch(()=>null);
+            if(!response.ok || json?.ok!==true) throw new Error(json?.message || 'No se pudo crear el QR.');
+            return json.data||{};
+          },
+          getStatus:async token=>{
+            const response=await fetch(`/api/clinical/index.php/multimedia-qr-sessions/${encodeURIComponent(token)}/status`,
+              {credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+            const json=await response.json().catch(()=>null);
+            if(!response.ok || json?.ok!==true) throw new Error('No se pudo consultar la firma.');
+            return json.data||{};
+          },
+          receive:async(data,token,generation,role)=>{
+            const body=await collect();
+            if(data.signature.binding?.document_uuid!==multimediaState.ref
+              || Number(data.signature.binding?.document_version)!==multimediaState.version
+              || data.signature.binding?.role!==role
+              || data.signature.binding?.authority!==binding.authority(body,role,resolveCanonicalDocumentsDoctorId())
+              || data.signature.binding?.content_fingerprint!==await binding.hash(body)
+              || data.signature.binding?.artifact_digest!==await binding.imageDigest(data.signature.image_data))
+              throw new Error('El consentimiento cambió. Genera un QR nuevo.');
+            await applySignature(role,data.signature.image_data,'remote_qr',token,data.signature.binding);
+            if(token!==multimediaState.qr.token || generation!==multimediaState.qr.generation) return;
+            multimediaState.qr.status='consumed';
+            qrHandoff.phase('received',{message:'Firma recibida correctamente',
+              imageData:data.signature.image_data,
+              signer:`Firmante: ${signatureName(body,role)}`});
+          },
+          mapTerminal:status=>status==='expired' ? 'El QR expiró. Genera uno nuevo.'
+            : 'El consentimiento cambió o el QR ya no es válido.'
+        }
+      });
+      const helpSections=[
+        {key:'purposes',label:'Usos clínicos autorizados',
+          explanation:'Selecciona únicamente los usos que la persona realmente autoriza. La captura no autoriza otros usos.',
+          text:'Para este caso ficticio, la persona autoriza integrar el material al expediente y usarlo para seguimiento clínico. No autoriza docencia ni difusión pública.'},
+        {key:'identification',label:'Identificación del material',
+          explanation:'Elige si el material será identificable o tendrá identificación reducida. Reducirla no garantiza que la persona no pueda ser reconocida.',
+          text:'La identificación reducida limita los datos visibles, pero la voz, la imagen u otros rasgos aún podrían permitir reconocer a la persona.'},
+        {key:'scope',label:'Alcance de la autorización',
+          explanation:'Limita la autorización al evento, episodio o seguimiento realmente previsto.',
+          text:'Un evento concreto no autoriza automáticamente el uso del material para otras consultas o finalidades.'},
+        {key:'validity',label:'Vigencia',
+          explanation:'Selecciona un solo evento o un periodo con fechas explícitas. No uses plazos indefinidos.',
+          text:'Caso ficticio: la autorización comprende únicamente la atención descrita; si abarca varios días, registra ambas fechas.'},
+        {key:'representative',label:'Autoridad del representante',
+          explanation:'Registra la relación y la autoridad reales del representante. La ayuda no sustituye la verificación clínica.',
+          text:'Caso ficticio: el representante acredita su relación con la persona y su capacidad para decidir en esta atención.'},
+        {key:'context',label:'Nota de contexto clínico',
+          explanation:'Describe el contexto concreto sin ampliar los usos autorizados.',
+          text:'Caso ficticio: se documentará la evolución de una lesión superficial durante la atención actual.'},
+        {key:'custom',label:'Alcance específico',
+          explanation:'Especifica el límite exacto de la autorización personalizada.',
+          text:'Caso ficticio: únicamente fotografías clínicas de la lesión durante la consulta de seguimiento indicada.'}
+      ];
+      const multimediaHelp=window.mxmedExampleFieldHelp?.mount({modal,id:'mmc-example',
+        contextLabel:'Caso ficticio',contextText:'Consentimiento multimedia para documentación clínica limitada.',
+        note:'Orientación de ejemplo. Adapta el texto a la decisión real antes de utilizarlo.',
+        sections:helpSections,
+        fieldMap:{mmc_identification:'identification',mmc_scope:'scope',mmc_validity:'validity',
+          mmc_rep_authority:'representative',mmc_note:'context',mmc_custom_scope:'custom'},
+        canUseExample:({section})=>['context','custom'].includes(section.key),
+        onUseExample:({section,destination})=>{
+          destination.value=section.text;
+          destination.dispatchEvent(new Event('input',{bubbles:true}));
+        }});
+      get('[data-mmc-help="purposes"]').addEventListener('click',event=>
+        multimediaHelp?.open('purposes',event.currentTarget,'mmc_identification'));
       const syncConditional = ()=>{
         get('[data-mmc-custom-wrap]').classList.toggle('d-none', get('#mmc_scope').value !== 'custom_limited_scope');
         get('[data-mmc-dates-wrap]').classList.toggle('d-none', get('#mmc_validity').value !== 'explicit_date_range');
@@ -55849,11 +55934,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       const renderPhase = phase=>{
         multimediaState.phase = phase;
-        for(const value of ['choices','capture','review','final']) get(`[data-mmc-${value}]`).classList.toggle('d-none', value !== phase);
-        get('[data-mmc-back]').classList.toggle('d-none', !['review','final'].includes(phase));
-        get('[data-mmc-save]').classList.toggle('d-none', !['capture','review','final'].includes(phase));
+        for(const value of ['choices','capture','review','signatures','final','post']) get(`[data-mmc-${value}]`).classList.toggle('d-none', value !== phase);
+        get('[data-mmc-back]').classList.toggle('d-none', !['review','signatures','final'].includes(phase));
+        get('[data-mmc-save]').classList.toggle('d-none', !['capture','review','signatures'].includes(phase));
         get('[data-mmc-preview]').classList.toggle('d-none', phase !== 'capture');
         get('[data-mmc-continue]').classList.toggle('d-none', phase !== 'review');
+        get('[data-mmc-final-review]').classList.toggle('d-none', phase !== 'signatures');
+        get('[data-mmc-emit]').classList.toggle('d-none', phase !== 'final');
       };
       const error = message=>{
           const target = get('[data-mmc-error]');
@@ -55891,7 +55978,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             actor_snapshot:{user_id:userId, full_name:actorName, specialty:doctor.specialty || '',
               license:doctor.license || '', facility:doctor.facility || '', place:doctor.place || ''},
             presentation:{version:1, professional_header:checked('mmc_header')[0] || 'shown'},
-            document_date:multimediaState.date, signatures:{}}
+            document_date:multimediaState.date, signatures:{...multimediaState.signatures}}
         };
       };
       const preview = async ()=>{
@@ -55905,6 +55992,171 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(!response.ok || json?.ok !== true || !json?.data?.html) throw new Error('Revisa las selecciones obligatorias antes de continuar.');
         return json.data.html;
       };
+      const binding = window.mxmedMultimediaConsentBinding;
+      const stopQr = ()=>{
+        if(multimediaState.qr.timer) clearInterval(multimediaState.qr.timer);
+        multimediaState.qr.timer=0;
+        multimediaState.qr.generation++;
+      };
+      const invalidateQr = async ()=>{
+        const {token,status}=multimediaState.qr;
+        stopQr();
+        if(token && ['pending','uploaded','saving'].includes(status))
+          await fetch(`/api/clinical/index.php/multimedia-qr-sessions/${encodeURIComponent(token)}/invalidate`,
+            {method:'POST',credentials:'same-origin',headers:{Accept:'application/json'}}).catch(()=>{});
+        multimediaState.qr={token:'',role:'',status:'',timer:0,generation:multimediaState.qr.generation};
+        if(qrModal?.classList.contains('show')) window.bootstrap.Modal.getInstance(qrModal)?.hide();
+      };
+      const signatureName = (body, role)=>role==='doctor' ? body.payload.actor_snapshot.full_name
+        : body.payload.signer.mode==='patient' ? body.payload.patient_snapshot.full_name : body.payload.signer.name;
+      const refreshSignatures = ()=>{
+        for(const role of ['signer','doctor']){
+          const entry=multimediaState.signatures[role];
+          const status=get(`[data-mmc-signature-status="${role}"]`);
+          status.textContent=entry?.image_data ? 'Firma vinculada a esta versión' : 'Pendiente';
+          status.classList.toggle('text-success', !!entry?.image_data);
+          const image=get(`[data-mmc-signature-image="${role}"]`);
+          if(entry?.image_data) image.src=entry.image_data;
+          else image.removeAttribute('src');
+          image.classList.toggle('d-none', !entry?.image_data);
+        }
+      };
+      const persist = async (status='draft')=>{
+        if(multimediaState.saving) throw new Error('Espera a que termine el guardado.');
+        const body=await collect();
+        body.payload.status=status;
+        const url=buildScopedCanonicalDocumentCreateUrl(body.context.patient_id);
+        if(!url) throw new Error('No se pudo resolver el médico.');
+        multimediaState.saving=true; get('[data-mmc-save]').disabled=true; error('');
+        try{
+          const response=await fetch(url,{method:'POST',credentials:'same-origin',
+            headers:{'Content-Type':'application/json',Accept:'application/json',
+              'Idempotency-Key':`multimedia:${crypto.randomUUID()}`},body:JSON.stringify(body)});
+          const json=await response.json().catch(()=>null);
+          if(!response.ok || json?.ok!==true) throw new Error(json?.message || json?.error?.message || 'No se pudo guardar el documento.');
+          const doc=json.data.document || {};
+          multimediaState.ref=String(doc.document_uuid || json.data.document_id || '');
+          multimediaState.version=Number(doc.version || multimediaState.version+1);
+          get('[data-mmc-status]').textContent=status==='draft'
+            ? `Borrador guardado · versión ${multimediaState.version}` : 'Documento emitido';
+          await listCanonicalConsents();
+          return doc;
+        }finally{multimediaState.saving=false; get('[data-mmc-save]').disabled=false;}
+      };
+      get('[data-mmc-capture]').addEventListener('input', ()=>{
+        if(multimediaState.signatures.signer || multimediaState.signatures.doctor){
+          multimediaState.signatures={signer:null,doctor:null}; refreshSignatures();
+        }
+        if(multimediaState.qr.token) void invalidateQr();
+        multimediaState.finalHtml='';
+      });
+      get('[data-mmc-capture]').addEventListener('change', ()=>{
+        if(multimediaState.signatures.signer || multimediaState.signatures.doctor){
+          multimediaState.signatures={signer:null,doctor:null}; refreshSignatures();
+        }
+        if(multimediaState.qr.token) void invalidateQr();
+        multimediaState.finalHtml='';
+      });
+      const canvas=get('[data-mmc-canvas]');
+      const pen=canvas.getContext('2d');
+      const clearCanvas=()=>{
+        pen.fillStyle='#fff';pen.fillRect(0,0,canvas.width,canvas.height);
+        pen.lineWidth=3;pen.strokeStyle='#102c45';pen.lineCap='round';pen.lineJoin='round';
+        multimediaState.ink=false;
+      };
+      clearCanvas();
+      let drawing=false;
+      const canvasPoint=e=>{const rect=canvas.getBoundingClientRect();return {
+        x:(e.clientX-rect.left)*canvas.width/rect.width,y:(e.clientY-rect.top)*canvas.height/rect.height};};
+      canvas.addEventListener('pointerdown',e=>{drawing=true;canvas.setPointerCapture(e.pointerId);
+        const p=canvasPoint(e);pen.beginPath();pen.moveTo(p.x,p.y);e.preventDefault();});
+      canvas.addEventListener('pointermove',e=>{if(!drawing)return;const p=canvasPoint(e);
+        pen.lineTo(p.x,p.y);pen.stroke();multimediaState.ink=true;e.preventDefault();});
+      canvas.addEventListener('pointerup',e=>{drawing=false;pen.closePath();e.preventDefault();});
+      canvas.addEventListener('pointercancel',()=>{drawing=false;pen.closePath();});
+      get('[data-mmc-clear]').addEventListener('click',clearCanvas);
+      get('[data-mmc-signatures]').addEventListener('click',async event=>{
+        const draw=event.target.closest('[data-mmc-draw]');
+        if(draw){multimediaState.drawnRole=draw.dataset.mmcDraw;clearCanvas();
+          get('[data-mmc-draw-title]').textContent=multimediaState.drawnRole==='doctor'
+            ? 'Firma del médico responsable' : 'Firma del paciente o representante';
+          get('[data-mmc-draw-panel]').classList.remove('d-none');return;}
+        const qr=event.target.closest('[data-mmc-qr]');
+        if(qr){try{await startQr(qr.dataset.mmcQr);}catch(e){error(e.message);}return;}
+      });
+      const applySignature = async (role,imageData,source,token='',remoteBinding=null)=>{
+        const body=await collect();
+        if(!body.draft_ref || !body.expected_version) throw new Error('Guarda el borrador antes de firmar.');
+        const entry={type:'drawn',role,image_data:imageData,signer_name:signatureName(body,role),
+          source,signed_at:new Date().toISOString(),...(token?{token}:{})};
+        const bound=remoteBinding ? {...entry,binding:remoteBinding}
+          : await binding.bind(body,role,resolveCanonicalDocumentsDoctorId(),entry);
+        if(!bound) throw new Error('La firma debe contener trazos visibles.');
+        const prior=multimediaState.signatures[role];
+        multimediaState.signatures[role]=bound;
+        try{await persist('draft');}
+        catch(e){multimediaState.signatures[role]=prior;throw e;}
+        refreshSignatures();multimediaState.finalHtml='';
+      };
+      get('[data-mmc-apply]').addEventListener('click',async()=>{
+        try{error('');if(!multimediaState.ink) throw new Error('Dibuja la firma antes de aplicarla.');
+          await applySignature(multimediaState.drawnRole,canvas.toDataURL('image/png'),'local_canvas');
+          get('[data-mmc-draw-panel]').classList.add('d-none');clearCanvas();}
+        catch(e){error(e.message);}
+      });
+      get('[data-mmc-registered]').addEventListener('click',async()=>{
+        try{error('');const image=readRegisteredDoctorSignature();
+          if(!image) throw new Error('No hay firma médica registrada para este perfil.');
+          await applySignature('doctor',image,'registered_profile');}
+        catch(e){error(e.message);}
+      });
+      const pollQr = async()=>{
+        const {token,role,generation}=multimediaState.qr;
+        if(!token || multimediaState.qr.status!=='pending' || !qrModal?.classList.contains('show')) return;
+        try{
+          const data=await qrHandoff.adapter.getStatus(token);
+          if(token!==multimediaState.qr.token || generation!==multimediaState.qr.generation
+            || multimediaState.qr.status!=='pending') return;
+          if(data.status==='uploaded' && data.signature){
+            multimediaState.qr.status='saving';stopQr();
+            await qrHandoff.adapter.receive(data,token,multimediaState.qr.generation,role);
+            return;
+          }
+          if(['expired','stale','cancelled','consumed'].includes(data.status)){
+            multimediaState.qr.status=data.status;stopQr();
+            qrHandoff.phase('error',{message:qrHandoff.adapter.mapTerminal(data.status)});
+          }
+        }catch(e){qrHandoff.phase('error',{message:e.message || 'No se pudo recibir la firma.'});}
+      };
+      const startQr = async role=>{
+        if(!qrModal || !qrHandoff || !window.bootstrap?.Modal)
+          throw new Error('No se pudo abrir la firma con celular.');
+        if(!window.isSecureContext || !window.crypto?.subtle?.digest)
+          throw new Error('La firma móvil requiere HTTPS seguro.');
+        if(!multimediaState.ref || multimediaState.version<1)
+          throw new Error('Guarda el borrador antes de generar el QR.');
+        await invalidateQr();
+        const data=await qrHandoff.adapter.createSession({document_uuid:multimediaState.ref,
+          document_version:multimediaState.version,role});
+        const url=new URL(data.mobile_url,window.location.origin);
+        if(url.protocol!=='https:' || !data.token || typeof QRCode!=='function')
+          throw new Error('No se pudo presentar un QR HTTPS seguro.');
+        multimediaState.qr={token:data.token,role,status:'pending',timer:0,generation:multimediaState.qr.generation+1};
+        const image=qrGet('[data-mmc-qr-image]');image.replaceChildren();
+        new QRCode(image,{text:url.href,width:216,height:216,colorDark:'#000000',colorLight:'#ffffff',
+          correctLevel:QRCode.CorrectLevel.M});
+        qrGet('[data-mmc-qr-link]').href=url.href;
+        qrGet('[data-mmc-qr-expiry]').textContent=`Código de un solo uso · vence ${new Date(data.expires_at).toLocaleString('es-MX')}`;
+        qrGet('[data-mmc-qr-context]').textContent=role==='doctor' ? 'Médico responsable'
+          : (get('#mmc_signer_mode').value==='representative' ? 'Representante' : 'Paciente');
+        qrHandoff.phase('waiting',{message:'Esperando firma…'});
+        ensureModalAttachedToBody(qrModal);
+        window.bootstrap.Modal.getOrCreateInstance(qrModal,{backdrop:false,focus:true}).show();
+        window.setTimeout(()=>{qrModal.style.zIndex='1240';},0);
+        multimediaState.qr.timer=setInterval(()=>void pollQr(),2000);
+      };
+      qrModal?.addEventListener('hidden.bs.modal',()=>void invalidateQr());
+      modal.addEventListener('hidden.bs.modal',()=>void invalidateQr());
       get('#mmc_scope').addEventListener('change', syncConditional);
       get('#mmc_validity').addEventListener('change', syncConditional);
       get('#mmc_signer_mode').addEventListener('change', syncConditional);
@@ -55913,6 +56165,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         else input.value = '';
       }); modal.querySelectorAll('select').forEach(select=>select.selectedIndex=0);
         get('#mmc_signer_mode').value='patient'; multimediaState.ref=''; multimediaState.version=0;
+        multimediaState.signatures={signer:null,doctor:null};
         multimediaState.date=new Date().toISOString().slice(0,10); error(''); syncConditional(); renderPhase('capture'); });
       get('[data-mmc-drafts]').addEventListener('click', async event=>{
         const ref = event.target.closest('[data-mmc-ref]')?.dataset.mmcRef;
@@ -55943,37 +56196,48 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           set('rep_authority',payload.signer?.authority);
           modal.querySelectorAll('input[name="mmc_header"]').forEach(input=>input.checked=input.value === (payload.presentation?.professional_header || 'shown'));
           multimediaState.ref=ref; multimediaState.version=Number(doc.version || 1);
+          multimediaState.signatures={signer:payload.signatures?.signer || null,doctor:payload.signatures?.doctor || null};
           multimediaState.date=String(payload.document_date || new Date().toISOString().slice(0,10));
           error(''); syncConditional(); renderPhase('capture');
         }catch(e){error(e.message || 'No se pudo abrir el borrador.');}
       });
       get('[data-mmc-preview]').addEventListener('click', async ()=>{
-        try{error(''); get('[data-mmc-review-html]').innerHTML=await preview(); renderPhase('review');}
+        try{error('');multimediaState.reviewedHtml=await preview();
+          get('[data-mmc-review-html]').innerHTML=multimediaState.reviewedHtml;renderPhase('review');}
         catch(e){error(e.message || 'No se pudo preparar la vista previa.');}
       });
       get('[data-mmc-continue]').addEventListener('click', async ()=>{
-        try{error(''); get('[data-mmc-final-html]').innerHTML=await preview(); renderPhase('final');}
-        catch(e){error(e.message || 'No se pudo preparar la revisión final.');}
+        try{error('');await persist('draft');refreshSignatures();renderPhase('signatures');}
+        catch(e){error(e.message || 'No se pudo preparar el borrador para firmas.');}
       });
       get('[data-mmc-back]').addEventListener('click', ()=>{error(''); renderPhase('capture');});
       get('[data-mmc-save]').addEventListener('click', async ()=>{
-        if(multimediaState.saving) return;
+        try{await persist('draft');}catch(e){error(e.message || 'No se pudo guardar el borrador.');}
+      });
+      get('[data-mmc-final-review]').addEventListener('click',async()=>{
         try{
-          const body=await collect(); const url=buildScopedCanonicalDocumentCreateUrl(body.context.patient_id);
-          if(!url) throw new Error('No se pudo resolver el médico.');
-          multimediaState.saving=true; get('[data-mmc-save]').disabled=true; error('');
-          const response=await fetch(url,{method:'POST',credentials:'same-origin',
-            headers:{'Content-Type':'application/json',Accept:'application/json',
-              'Idempotency-Key':`multimedia:${crypto.randomUUID()}`},body:JSON.stringify(body)});
-          const json=await response.json();
-          if(!response.ok || json?.ok !== true) throw new Error(json?.message || 'No se pudo guardar el borrador.');
-          const doc=json.data.document || {};
-          multimediaState.ref=String(doc.document_uuid || json.data.document_id || '');
-          multimediaState.version=Number(doc.version || multimediaState.version + 1);
-          get('[data-mmc-status]').textContent=`Borrador guardado · versión ${multimediaState.version}`;
-          await listCanonicalConsents();
-        }catch(e){error(e.message || 'No se pudo guardar el borrador.');}
-        finally{multimediaState.saving=false; get('[data-mmc-save]').disabled=false;}
+          error('');const body=await collect();const doctorId=resolveCanonicalDocumentsDoctorId();
+          for(const role of ['signer','doctor']){
+            const state=await binding.classify(body,role,doctorId,
+              role==='doctor'?readRegisteredDoctorSignature():'');
+            if(state!=='valid_bound_signature')
+              throw new Error(`La firma ${role==='doctor'?'médica':'del paciente o representante'} falta o no corresponde a esta versión.`);
+          }
+          multimediaState.finalHtml=await preview();
+          get('[data-mmc-final-html]').innerHTML=multimediaState.finalHtml;
+          renderPhase('final');
+        }catch(e){error(e.message || 'No se pudo preparar la revisión final.');}
+      });
+      get('[data-mmc-emit]').addEventListener('click',async()=>{
+        try{
+          error('');if(!multimediaState.finalHtml || await preview()!==multimediaState.finalHtml)
+            throw new Error('El consentimiento cambió desde la revisión final. Revísalo de nuevo.');
+          const doc=await persist('generated');
+          if(doc.status!=='generated' || doc.content?.payload?.frozen_snapshot?.html!==multimediaState.finalHtml)
+            throw new Error('El documento se guardó, pero no coincide con la revisión final. Ábrelo desde Documentos.');
+          const presented=await presentEmittedDocument({data:{document:doc}},'consentimiento_multimedia',modal);
+          if(presented) window.bootstrap.Modal.getInstance(modal)?.hide();
+        }catch(e){error(e.message || 'No se pudo emitir el consentimiento.');}
       });
       modal.__mxmedOpen = async ({draftRef=''}={})=>{
         error(''); get('[data-mmc-status]').textContent='';
@@ -57666,6 +57930,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(openResponsivaBtn){
         event.preventDefault();
         openResponsivaModal();
+        return;
+      }
+      const openMultimediaBtn = event.target.closest('[data-action="documents-open-multimedia"]');
+      if(openMultimediaBtn){
+        event.preventDefault();
+        openMultimediaModal();
         return;
       }
       const openCertificadoBtn = event.target.closest('[data-action="documents-open-certificado"]');

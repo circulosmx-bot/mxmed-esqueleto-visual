@@ -196,10 +196,9 @@ with sync_playwright() as pw:
         print('BROWSER_PREVIEW_ERROR=' + page.locator('[data-mmc-error]').inner_text(), flush=True)
         expect(page.locator('[data-mmc-review-html]')).to_contain_text('Solo fotografía clínica', timeout=15000)
         if width == 1366:
-            reviewed = page.locator('[data-mmc-review-html]').inner_html()
             page.locator('[data-mmc-continue]').click()
-            expect(page.locator('[data-mmc-final-html]')).to_contain_text('Solo fotografía clínica', timeout=15000)
-            check('FINAL_REVIEW_SAME_COMPOSITION', reviewed == page.locator('[data-mmc-final-html]').inner_html())
+            expect(page.locator('[data-mmc-signatures]')).to_be_visible(timeout=15000)
+            check('CANONICAL_DRAFT_BEFORE_SIGNATURES', page.locator('[data-mmc-status]').inner_text().startswith('Borrador guardado'))
         page.screenshot(path=str(OUT / f'preview-{width}x{height}.png'), full_page=False)
         overflow = page.evaluate('''()=>{const el=document.querySelector('[data-mmc-review]');
           return el.scrollWidth > el.clientWidth + 1 || document.documentElement.scrollWidth > innerWidth + 1}''')

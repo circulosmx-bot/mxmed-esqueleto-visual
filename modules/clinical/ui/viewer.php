@@ -3453,7 +3453,7 @@ if (!$embed) {
         loader.classList.add('d-none');
       });
     }
-    <?php if ($uuid !== '' && $errorMessage === '' && ($isConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) && (string)($_GET['autoprint'] ?? '') === '1'): ?>
+    <?php if ($uuid !== '' && $errorMessage === '' && ($isConsentDoc || $isMultimediaConsentDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) && (string)($_GET['autoprint'] ?? '') === '1'): ?>
     window.addEventListener('load', function () {
       window.focus();
       document.querySelector('[data-role="viewer-print"]')?.click();

@@ -119,15 +119,29 @@ function clinical_multimedia_consent_render_html(array $payload): string
     foreach (['clinical_event_or_procedure'=>'Atención o procedimiento','anatomical_area'=>'Área anatómica',
         'clinical_purpose_note'=>'Nota de contexto clínico','event_date'=>'Fecha del evento'] as $key=>$label)
         if ($consent['context'][$key] !== '') $sections[$label] = $consent['context'][$key];
+    if (($signer['mode'] ?? '') === 'representative') {
+        $sections['Firmante previsto'] = 'Representante: ' . (string)($signer['name'] ?? '');
+        $sections['Carácter y relación'] = trim((string)($signer['character'] ?? '')) . '; '
+            . trim((string)($signer['relationship'] ?? ''));
+        $sections['Autoridad del representante'] = (string)($signer['authority'] ?? '');
+    } else $sections['Firmante previsto'] = 'Paciente';
     $sections['Declaración'] = $declaration;
     foreach ($sections as $label=>$value)
         $html .= '<section class="informe-doc-body-section doc-base-section"><div class="informe-doc-section-title doc-base-section-title">'
             . $h($label) . '</div><div class="informe-doc-text doc-base-text">' . nl2br($h($value)) . '</div></section>';
-    $html .= '<section class="informe-doc-sign doc-base-signature"><div class="informe-doc-section-title doc-base-section-title">Firmante</div>'
-        . '<div class="informe-doc-sign-line"></div><div class="informe-doc-sign-meta doc-base-signature-meta">'
-        . $h($signer['mode'] === 'patient' ? ($patient['full_name'] ?? '') : ($signer['name'] ?? '')) . '</div></section>'
-        . '<section class="informe-doc-sign doc-base-signature"><div class="informe-doc-section-title doc-base-section-title">Médico responsable</div>'
-        . '<div class="informe-doc-sign-line"></div><div class="informe-doc-sign-meta doc-base-signature-meta">'
-        . $h($actor['full_name'] ?? '') . '</div></section></div></div></article>';
+    foreach (['signer' => 'Firmante', 'doctor' => 'Médico responsable'] as $role => $label) {
+        $entry = (array)($payload['signatures'][$role] ?? []);
+        $image = (string)($entry['image_data'] ?? '');
+        $name = $role === 'doctor' ? ($actor['full_name'] ?? '')
+            : (($signer['mode'] ?? '') === 'patient' ? ($patient['full_name'] ?? '') : ($signer['name'] ?? ''));
+        $html .= '<section class="informe-doc-sign doc-base-signature"><div class="informe-doc-section-title doc-base-section-title">'
+            . $label . '</div>';
+        if (preg_match('#^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$#D', $image) === 1)
+            $html .= '<img class="informe-doc-sign-image" src="' . $h($image) . '" alt="Firma de ' . $h($name) . '">';
+        else $html .= '<div class="informe-doc-sign-line"></div>';
+        $html .= '<div class="informe-doc-sign-meta doc-base-signature-meta">' . $h($name)
+            . '</div></section>';
+    }
+    $html .= '</div></div></article>';
     return $html;
 }

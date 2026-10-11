@@ -6012,6 +6012,53 @@
                       </div>
                     </div>
                   </div>
+                  <!-- Multimedia keeps its own QR authority and uses the shared document handoff presentation. -->
+                  <div class="modal fade" id="modalMultimediaSignatureQr" tabindex="-1" aria-labelledby="mmc-qr-title" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered ci-signature-handoff-dialog">
+                      <div class="modal-content docux-action-modal ci-signature-handoff plan02b-modal">
+                        <header class="modal-header">
+                          <span class="material-symbols-rounded docux-action-icon" aria-hidden="true">smartphone</span>
+                          <div>
+                            <h4 class="modal-title" id="mmc-qr-title">Firmar Consentimiento multimedia con celular</h4>
+                            <p>Revisa y firma esta versión del consentimiento desde tu teléfono.</p>
+                          </div>
+                          <button type="button" class="btn btn-link" data-bs-dismiss="modal" aria-label="Cerrar">×</button>
+                        </header>
+                        <div class="modal-body plan02b-modal-content">
+                          <p class="ci-signature-context">Firmando como: <strong data-mmc-qr-context>Paciente</strong></p>
+                          <div data-mmc-qr-waiting>
+                            <div class="docux-capture-guide">
+                              <ol class="docux-capture-steps">
+                                <li><span aria-hidden="true">1</span>Escanea el código<br>o abre el enlace</li>
+                                <li><span aria-hidden="true">2</span>Revisa el consentimiento</li>
+                                <li><span aria-hidden="true">3</span>Firma y confirma</li>
+                              </ol>
+                              <div class="docux-capture-columns">
+                                <div class="docux-qr-panel">
+                                  <div class="docux-qr" data-mmc-qr-image role="img" aria-label="Código QR para firmar el consentimiento multimedia"></div>
+                                  <p>Escanea con la cámara de tu teléfono</p>
+                                  <div class="docux-links"><a href="#" target="_blank" rel="noopener noreferrer" data-mmc-qr-link><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace</a></div>
+                                  <p class="docux-capture-expiry" data-mmc-qr-expiry></p>
+                                </div>
+                                <div class="docux-phone-panel">
+                                  <span class="material-symbols-rounded docux-phone" aria-hidden="true">smartphone</span>
+                                  <p class="docux-phone-help">Mantén esta ventana abierta mientras firmas. La firma aparecerá aquí cuando sea recibida.</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="d-none text-center" data-mmc-qr-received>
+                            <div class="fs-4 fw-bold text-success" data-mmc-qr-received-heading tabindex="-1">✓ Firma recibida correctamente</div>
+                            <p class="mb-1" data-document-handoff-signer></p>
+                            <p class="text-success fw-semibold">Firma vinculada a esta versión</p>
+                            <img data-mmc-qr-preview alt="Firma recibida" class="img-fluid rounded border bg-white" style="max-height:110px;object-fit:contain">
+                          </div>
+                          <p class="docux-capture-status" data-mmc-qr-status role="status" aria-live="polite">Esperando firma…</p>
+                        </div>
+                        <footer class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></footer>
+                      </div>
+                    </div>
+                  </div>
                 <div class="modal fade" id="modalConsentDoctorSignatureSavePrompt" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -8662,13 +8709,12 @@
                             <span class="docs-launcher-row-desc">Deslinde y aceptación de responsabilidad.</span>
                           </span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="consentimiento_multimedia" data-doc-title="Consentimiento multimedia" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Consentimiento para uso de imagen, audio o video en contexto clínico y documental.">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-multimedia" data-doc-code="consentimiento_multimedia" data-doc-title="Consentimiento multimedia" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Consentimiento para uso de imagen, audio o video en contexto clínico y documental.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">videocam</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Consentimiento multimedia</span>
                             <span class="docs-launcher-row-desc">Uso de imagen, audio y video clínico.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Próximamente</span>
                         </button>
                       </div>
                     </div>
@@ -11303,6 +11349,7 @@
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
 <script src="assets/js/clinical/patient-workspace-navigation-guard.js?v=vis24"></script>
 <script src="assets/js/clinical/consent-signature-binding.js?v=doc-present02"></script>
+<script src="assets/js/clinical/multimedia-consent-signature-binding.js?v=multi-cons02b"></script>
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/certificado-signature-binding.js?v=cert-ext02b"></script>

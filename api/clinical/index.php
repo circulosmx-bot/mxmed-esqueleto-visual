@@ -7914,6 +7914,11 @@ try {
         clinical_responsiva_qr_route(clinical_documents_pdo(), $method, $segments);
         return;
     }
+    if (($segments[0] ?? '') === 'multimedia-qr-sessions') {
+        require_once __DIR__ . '/../_lib/clinical_multimedia_qr.php';
+        clinical_multimedia_qr_route(clinical_documents_pdo(), $method, $segments);
+        return;
+    }
     if (($segments[0] ?? '') === 'certificado-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_certificado_qr.php';
         clinical_certificado_qr_route(clinical_documents_pdo(), $method, $segments);

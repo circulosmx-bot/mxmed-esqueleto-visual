@@ -2,8 +2,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_multimedia_consent_render.php';
+require_once __DIR__ . '/clinical_multimedia_consent_binding.php';
+require_once __DIR__ . '/clinical_multimedia_qr.php';
 
-/** MULTI-CONS02A: draft-only canonical authority; emission opens with signature binding in 02B. */
+/** Multimedia V1 keeps the content version stable while signatures are applied. */
 function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $patientId,
     array $body, string $idempotencyKey): array
 {
@@ -13,8 +15,9 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
         || ($body['payload']['contract_version'] ?? null) !== 1)
         throw new InvalidArgumentException('MULTIMEDIA_DOCUMENT_INVALID');
     $payload = $body['payload'];
-    if (($payload['status'] ?? '') !== 'draft')
-        throw new InvalidArgumentException('MULTIMEDIA_EMISSION_NOT_AVAILABLE');
+    $intent = (string)($payload['status'] ?? '');
+    if (!in_array($intent, ['draft', 'generated'], true))
+        throw new InvalidArgumentException('MULTIMEDIA_STATUS_INVALID');
     if (!clinical_legal_document_presentation_valid($payload))
         throw new InvalidArgumentException('MULTIMEDIA_PRESENTATION_INVALID');
     if (!is_array($payload['consent'] ?? null))
@@ -26,7 +29,11 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
     foreach (['rendered_text', 'frozen_snapshot', 'html', 'media_files', 'media_attachments'] as $forbidden)
         if (array_key_exists($forbidden, $body) || array_key_exists($forbidden, $payload))
             throw new InvalidArgumentException('MULTIMEDIA_SECOND_AUTHORITY_FORBIDDEN');
-    if (!empty($payload['signatures'])) throw new InvalidArgumentException('MULTIMEDIA_SIGNATURES_NOT_AVAILABLE');
+    if (!is_array($payload['signatures'] ?? null))
+        throw new InvalidArgumentException('MULTIMEDIA_SIGNATURES_INVALID');
+    foreach (array_keys($payload['signatures']) as $role)
+        if (!in_array($role, ['signer', 'doctor'], true))
+            throw new InvalidArgumentException('MULTIMEDIA_SIGNATURE_ROLE_INVALID');
     $signer = is_array($payload['signer'] ?? null) ? $payload['signer'] : [];
     $mode = (string)($signer['mode'] ?? '');
     if (!in_array($mode, ['patient', 'representative'], true))
@@ -55,23 +62,26 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
     $expectedVersion = (int)($body['expected_version'] ?? 0);
     if ($draftRef !== '' && (preg_match('/^[0-9a-f-]{36}$/i', $draftRef) !== 1 || $expectedVersion < 1))
         throw new InvalidArgumentException('MULTIMEDIA_DRAFT_IDENTITY_INVALID');
+    if ($draftRef === '' && ($intent === 'generated' || array_filter($payload['signatures'])))
+        throw new InvalidArgumentException('MULTIMEDIA_CANONICAL_DRAFT_REQUIRED');
     $key = clinical_idempotency_key_validate($idempotencyKey);
     clinical_encounter_integrity_assert_schema_ready($pdo);
+    clinical_multimedia_qr_ensure_schema($pdo);
     $semantic = clinical_document_semantic_request($body, null) + [
         'patient_id'=>$patientId, 'operation'=>'CREATE_ENCOUNTER_DOCUMENT',
-        'multimedia_intent'=>'draft', 'draft_ref'=>$draftRef ?: null,
+        'multimedia_intent'=>$intent, 'draft_ref'=>$draftRef ?: null,
         'expected_version'=>$draftRef !== '' ? $expectedVersion : null,
     ];
     $service = new ClinicalEncounterIntegrityService($pdo);
     return $service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT', (string)$doctor['doctor_id'],
         'PATIENT', $patientId, $key, $semantic, 'document_id', (string)$doctor['user_id'],
         function () use ($pdo, $doctor, $patientId, $body, $payload, $consent,
-            $safeSigner, $patientSnapshot, $actor, $draftRef, $expectedVersion): int {
+            $safeSigner, $patientSnapshot, $actor, $draftRef, $expectedVersion, $intent): int {
             if (!clinical_has_active_doctor_patient_link($pdo, (string)$doctor['doctor_id'], $patientId))
                 throw new InvalidArgumentException('MULTIMEDIA_PATIENT_SCOPE_INVALID');
             $existing = null;
             if ($draftRef !== '') {
-                $stmt = $pdo->prepare('SELECT id,patient_id,document_type,status,version,created_by_user_id
+                $stmt = $pdo->prepare('SELECT id,document_uuid,patient_id,document_type,status,version,created_by_user_id,payload_json
                     FROM clinical_documents WHERE document_uuid=? LIMIT 1 FOR UPDATE');
                 $stmt->execute([$draftRef]);
                 $existing = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -92,7 +102,7 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
                 'context'=>['patient_id'=>$patientId, 'care_setting'=>'consulta'],
                 'actor'=>['user_id'=>(string)$doctor['user_id']],
                 'payload'=>[
-                    'contract_version'=>1, 'status'=>'draft',
+                    'contract_version'=>1, 'status'=>$intent,
                     'consent'=>$consent + ['declaration'=>clinical_multimedia_consent_declaration($consent)],
                     'signer'=>$safeSigner,
                     'patient_snapshot'=>[
@@ -111,9 +121,41 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
                     'presentation'=>['version'=>1,
                         'professional_header'=>clinical_legal_document_professional_header_mode($payload)],
                     'document_date'=>trim((string)($payload['document_date'] ?? gmdate('Y-m-d'))),
-                    'signatures'=>[],
+                    'signatures'=>[
+                        'signer'=>is_array($payload['signatures']['signer'] ?? null) ? $payload['signatures']['signer'] : null,
+                        'doctor'=>is_array($payload['signatures']['doctor'] ?? null) ? $payload['signatures']['doctor'] : null,
+                    ],
                 ],
             ];
+            $bindingBody = ['draft_ref'=>$draftRef, 'expected_version'=>$expectedVersion,
+                'context'=>['patient_id'=>$patientId], 'payload'=>$canonical['payload']];
+            $previousPayload = $existing !== null ? json_decode((string)$existing['payload_json'], true) : null;
+            $materialChanged = $existing !== null && is_array($previousPayload)
+                && !hash_equals(clinical_multimedia_binding_fingerprint([
+                    'draft_ref'=>$draftRef, 'expected_version'=>$expectedVersion,
+                    'context'=>['patient_id'=>$patientId], 'payload'=>$previousPayload,
+                ]), clinical_multimedia_binding_fingerprint($bindingBody));
+            if ($materialChanged && array_filter($canonical['payload']['signatures']))
+                throw new InvalidArgumentException('MULTIMEDIA_SIGNATURES_STALE_AFTER_EDIT');
+            $uploadedQrRoles = [];
+            foreach (['signer', 'doctor'] as $role) {
+                $entry = (array)($canonical['payload']['signatures'][$role] ?? []);
+                $state = clinical_multimedia_binding_classify($bindingBody, $role,
+                    (string)$doctor['doctor_id'], $pdo);
+                $canonical['payload']['signature_binding_status'][$role] = $state;
+                if ($entry && $state !== 'valid_bound_signature')
+                    throw new InvalidArgumentException('MULTIMEDIA_' . strtoupper($role) . '_SIGNATURE_INVALID');
+                if (($entry['source'] ?? '') !== 'remote_qr') continue;
+                $qr = clinical_multimedia_qr_row($pdo, (string)($entry['token'] ?? ''));
+                if ($qr === null) throw new InvalidArgumentException('MULTIMEDIA_QR_UNVERIFIED');
+                if ((string)$qr['status'] === 'uploaded') $uploadedQrRoles[] = $role;
+            }
+            if ($intent === 'generated') {
+                if ($existing === null) throw new InvalidArgumentException('MULTIMEDIA_CANONICAL_DRAFT_REQUIRED');
+                foreach (['signer', 'doctor'] as $role)
+                    if ($canonical['payload']['signature_binding_status'][$role] !== 'valid_bound_signature')
+                        throw new InvalidArgumentException('MULTIMEDIA_' . strtoupper($role) . '_SIGNATURE_REQUIRED');
+            }
             $html = clinical_multimedia_consent_render_html($canonical['payload']);
             $canonical['payload']['frozen_snapshot'] = ['version'=>1, 'html'=>$html];
             $canonical['payload']['rendered_text'] = trim(preg_replace('/\s+/u', ' ',
@@ -125,15 +167,33 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
                 if ($mark->rowCount() !== 1) throw new RuntimeException('MULTIMEDIA_DRAFT_CREATE_FAILED');
                 return $id;
             }
+            $nextVersion = $materialChanged ? $expectedVersion + 1 : $expectedVersion;
             $update = $pdo->prepare("UPDATE clinical_documents SET title=?,summary=?,payload_json=?,rendered_text=?,
-                event_datetime=?,version=version+1,updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,edited_flag=1
+                event_datetime=?,version=?,status=?,generated_at=CASE WHEN ?='generated' THEN UTC_TIMESTAMP() ELSE NULL END,
+                updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,edited_flag=1
                 WHERE id=? AND version=? AND status='draft'");
             $update->execute([$canonical['title'], $canonical['summary'],
                 json_encode($canonical['payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
                 $canonical['payload']['rendered_text'], $canonical['event_datetime'],
-                (string)$doctor['user_id'], (int)$existing['id'], $expectedVersion]);
-            if ($update->rowCount() !== 1)
-                throw new ClinicalIdempotencyException('MULTIMEDIA_DRAFT_VERSION_CONFLICT', 'El borrador cambió.', 409);
+                $nextVersion, $intent, $intent, (string)$doctor['user_id'], (int)$existing['id'], $expectedVersion]);
+            if ($update->rowCount() !== 1) {
+                $check = $pdo->prepare('SELECT version,status FROM clinical_documents WHERE id=? LIMIT 1');
+                $check->execute([(int)$existing['id']]);
+                $after = $check->fetch(PDO::FETCH_ASSOC);
+                if (!is_array($after) || (int)$after['version'] !== $nextVersion
+                    || (string)$after['status'] !== $intent)
+                    throw new ClinicalIdempotencyException('MULTIMEDIA_DRAFT_VERSION_CONFLICT', 'El borrador cambió.', 409);
+            }
+            foreach ($uploadedQrRoles as $role)
+                clinical_multimedia_qr_claim($pdo, $bindingBody,
+                    (array)$canonical['payload']['signatures'][$role], $role,
+                    (string)$doctor['doctor_id'], $draftRef, $expectedVersion);
+            if ($materialChanged) {
+                $invalidate = $pdo->prepare("UPDATE clinical_multimedia_qr_sessions
+                    SET status='stale',invalidated_at=UTC_TIMESTAMP()
+                    WHERE document_uuid=? AND status IN ('pending','uploaded')");
+                $invalidate->execute([$draftRef]);
+            }
             return (int)$existing['id'];
         }, static fn(int $id): array => clinical_v1_document_fetch($pdo, $id));
 }
