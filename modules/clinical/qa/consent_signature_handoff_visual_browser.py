@@ -65,7 +65,7 @@ with sync_playwright() as playwright:
         page.locator('[data-action="ci-signature-open-qr"]').click()
         modal = page.locator('#modalConsentSignatureQr')
         expect(modal.locator('[data-role="ci-signature-qr-link"]')).to_have_attribute('href', __import__('re').compile('token='))
-        expect(modal.locator('[data-role="ci-signature-qr-title"]')).to_have_text('Firmar con celular')
+        expect(modal.locator('[data-role="ci-signature-qr-title"]')).to_have_text('FIRMAR EN OTRO DISPOSITIVO')
         check(f'STEPS_{width}', modal.locator('.docux-capture-steps li').count() == 3)
         check(f'QR_RENDERED_{width}', modal.locator('.docux-qr img, .docux-qr canvas').count() >= 1)
         check(f'CONTEXT_{width}', 'Paciente' in modal.locator('[data-role="ci-signature-qr-context"]').inner_text())
