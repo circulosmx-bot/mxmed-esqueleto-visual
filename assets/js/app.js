@@ -42678,6 +42678,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoRestStartDate: root.querySelector('#cm_rest_start_date'),
       certificadoRestEndDate: root.querySelector('#cm_rest_end_date'),
       certificadoGeneralCondition: root.querySelector('#cm_general_condition'),
+      certificadoAssessment: root.querySelector('#cm_assessment'),
+      certificadoAssessmentActivityLabel: root.querySelector('#cm_assessment_activity_label'),
+      certificadoAssessmentActivity: root.querySelector('#cm_assessment_activity'),
+      certificadoAssessmentIntensityWrap: root.querySelector('#cm_assessment_intensity_wrap'),
+      certificadoAssessmentIntensity: root.querySelector('#cm_assessment_intensity'),
+      certificadoAssessmentPurposeWrap: root.querySelector('#cm_assessment_purpose_wrap'),
+      certificadoAssessmentPurpose: root.querySelector('#cm_assessment_purpose'),
+      certificadoAssessmentFindings: root.querySelector('#cm_assessment_findings'),
+      certificadoAssessmentConclusion: root.querySelector('#cm_assessment_conclusion'),
+      certificadoAssessmentRestrictionMode: root.querySelector('#cm_assessment_restriction_mode'),
+      certificadoAssessmentRestrictionDetailWrap: root.querySelector('#cm_assessment_restriction_detail_wrap'),
+      certificadoAssessmentRestrictionDetail: root.querySelector('#cm_assessment_restriction_detail'),
+      certificadoAssessmentGeneralConditionWrap: root.querySelector('#cm_assessment_general_condition_wrap'),
+      certificadoAssessmentGeneralCondition: root.querySelector('#cm_assessment_general_condition'),
+      certificadoAssessmentRecommendations: root.querySelector('#cm_assessment_recommendations'),
+      certificadoAssessmentConsiderationsWrap: root.querySelector('#cm_assessment_considerations_wrap'),
+      certificadoAssessmentConsiderations: root.querySelector('#cm_assessment_considerations'),
       certificadoReturnNote: root.querySelector('#cm_return_note'),
       certificadoDeclarationText: root.querySelector('#cm_declaration_text'),
       certificadoObservationsModeOptions: Array.from(root.querySelectorAll('input[name="cm_observations_mode"]')),
@@ -43214,7 +43231,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const certificateTypeLabels = Object.freeze({
       constancia_atencion: 'Constancia de atención médica',
       reposo_medico: 'Constancia de incapacidad temporal',
-      certificado_general: 'Certificado médico general'
+      certificado_general: 'Certificado médico general',
+      aptitud_fisica: 'Certificado de aptitud física',
+      actividad_deportiva: 'Certificado para actividad deportiva'
+    });
+    const CERTIFICATE_ASSESSMENT_TYPES = Object.freeze(['aptitud_fisica','actividad_deportiva']);
+    const CERTIFICATE_ASSESSMENT_CONCLUSIONS = Object.freeze({
+      apto_para_actividad_indicada: 'Apto para la actividad indicada',
+      apto_con_restricciones: 'Apto con restricciones',
+      no_apto_temporalmente: 'No apto temporalmente para la actividad indicada',
+      valoracion_no_concluyente: 'Valoración no concluyente'
+    });
+    const newCertificateAssessment = ()=>({
+      activity:'', intensity:'', participation_purpose:'', current_findings:'', conclusion:'',
+      restriction_mode:'', restriction_detail:'', general_condition:'', recommendations:'',
+      additional_considerations:''
     });
     const certificateGeneralConditionLabels = Object.freeze({
       estable: 'Estable',
@@ -43288,6 +43319,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       signaturePreferredSource: '',
       registeredSignatureData: '',
       remoteSignature: null,
+      subtypeForms: {},
       form: {
         type: 'certificado_general',
         emission_date: '',
@@ -43308,7 +43340,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note_custom: '',
         usage_note: '',
         validity_note: '',
-        closing_statement: CERTIFICATE_STANDARD_CLOSING
+        closing_statement: CERTIFICATE_STANDARD_CLOSING,
+        assessment: newCertificateAssessment()
       },
       usageNoteUserSelected: false
     };
@@ -52978,6 +53011,20 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     };
     const getCertificateTypeLabel = (type = '')=> sanitizeText(certificateTypeLabels[sanitizeText(type || '')] || '');
+    const certificateAssessmentDeclaration = (type, assessment = {})=>{
+      if(!CERTIFICATE_ASSESSMENT_TYPES.includes(type)) return '';
+      const activity = normalizeConsentInputRaw(assessment.activity || '');
+      const findings = normalizeConsentInputRaw(assessment.current_findings || '');
+      const conclusion = sanitizeText(CERTIFICATE_ASSESSMENT_CONCLUSIONS[assessment.conclusion] || '');
+      if(!activity || !findings || !conclusion) return '';
+      const scope = type === 'actividad_deportiva' ? 'la participación en la actividad deportiva' : 'la actividad evaluada';
+      const restrictions = assessment.restriction_mode === 'con_restricciones'
+        ? ` Restricciones documentadas: ${normalizeConsentInputRaw(assessment.restriction_detail || '')}.`
+        : (assessment.restriction_mode === 'no_evaluado' ? ' Las restricciones no fueron evaluadas.'
+          : (assessment.restriction_mode === 'sin_restricciones_documentadas'
+            ? ' No se documentaron restricciones en esta valoración.' : ''));
+      return `Con base en la valoración actual para ${scope} «${activity}», se documentan los siguientes hallazgos: ${findings}. Conclusión: ${conclusion}.${restrictions}`;
+    };
     const getCertificateGeneralConditionLabel = (condition = '')=> sanitizeText(certificateGeneralConditionLabels[sanitizeText(condition || '')] || '');
     const setCertificadoNotice = (message = '')=>{
       if(!els.certificadoNotice) return;
@@ -52995,6 +53042,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.certificadoSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
     };
     const buildCertificateDeclarationBase = (type = '')=>{
+      if(CERTIFICATE_ASSESSMENT_TYPES.includes(type))
+        return certificateAssessmentDeclaration(type, certificadoState.form.assessment || {});
       const patientName = sanitizeText(els.certificadoPatientName?.value || 'el paciente');
       const patientSex = sanitizeText(els.certificadoPatientSex?.value || '');
       const sexNorm = patientSex.toLowerCase();
@@ -53118,6 +53167,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const syncCertificadoUsageUiFromState = ()=>{
       const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      if(CERTIFICATE_ASSESSMENT_TYPES.includes(currentType)){
+        certificadoState.form.usage_note_type = '';
+        certificadoState.form.usage_note_custom = '';
+        certificadoState.form.usage_note = '';
+        if(els.certificadoUsageNoteSelect) els.certificadoUsageNoteSelect.value = '';
+        if(els.certificadoUsageNoteOther) els.certificadoUsageNoteOther.value = '';
+        els.certificadoWrapUsageNoteOther?.classList.add('d-none');
+        return;
+      }
       const allowedUsage = new Set(resolveAllowedUsageByContext(currentType, certificadoState.form.purpose_selection));
       let type = sanitizeText(certificadoState.form.usage_note_type || '');
       let custom = normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
@@ -53191,6 +53249,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const alignCertificadoUsageWithContext = ()=>{
       const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      if(CERTIFICATE_ASSESSMENT_TYPES.includes(currentType)){
+        syncCertificadoUsageUiFromState();
+        return;
+      }
       const allowedUsageList = resolveAllowedUsageByContext(currentType, certificadoState.form.purpose_selection);
       const allowedUsage = new Set(allowedUsageList);
       const currentUsageType = sanitizeText(certificadoState.form.usage_note_type || '');
@@ -53267,16 +53329,32 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const isConstancia = type === 'constancia_atencion';
       const isReposo = type === 'reposo_medico';
       const isGeneral = type === 'certificado_general';
+      const isAssessment = CERTIFICATE_ASSESSMENT_TYPES.includes(type);
+      const isSport = type === 'actividad_deportiva';
       els.certificadoWrapCareDate?.classList.toggle('d-none', !isConstancia);
       els.certificadoWrapRestDays?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapRestStartDate?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapRestEndDate?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapReturnNote?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapGeneralCondition?.classList.toggle('d-none', !isGeneral);
+      els.certificadoAssessment?.classList.toggle('d-none', !isAssessment);
+      els.certificadoAssessmentIntensityWrap?.classList.toggle('d-none', !isSport);
+      els.certificadoAssessmentPurposeWrap?.classList.toggle('d-none', !isSport);
+      els.certificadoAssessmentConsiderationsWrap?.classList.toggle('d-none', !isSport);
+      els.certificadoAssessmentGeneralConditionWrap?.classList.toggle('d-none', isSport);
+      els.certificadoAssessmentRestrictionDetailWrap?.classList.toggle('d-none',
+        !isAssessment || certificadoState.form.assessment?.restriction_mode !== 'con_restricciones');
+      if(els.certificadoAssessmentActivityLabel){
+        els.certificadoAssessmentActivityLabel.textContent = isSport ? 'Deporte o actividad' : 'Finalidad o actividad evaluada';
+      }
+      if(els.certificadoAssessmentConclusion){
+        const option = els.certificadoAssessmentConclusion.querySelector('option[value="apto_para_actividad_indicada"]');
+        if(option) option.textContent = isSport ? 'Apto para la actividad deportiva indicada' : 'Apto para la actividad evaluada';
+      }
       els.certificadoWrapObservationsMode?.classList.toggle('d-none', !isGeneral);
       els.certificadoWrapObservations?.classList.toggle('d-none', !isGeneral || certificadoState.form.observations_mode !== 'present');
-      els.certificadoWrapValidityNote?.classList.toggle('d-none', !isGeneral);
-      els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo);
+      els.certificadoWrapValidityNote?.classList.toggle('d-none', !isGeneral && !isAssessment);
+      els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo || isAssessment);
       if(isReposo){
         els.certificadoWrapUsageNoteOther?.classList.add('d-none');
       }
@@ -54230,6 +54308,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(els.certificadoRestEndDate) els.certificadoRestEndDate.value = sanitizeText(certificadoState.form.rest_end_date || '');
       if(els.certificadoReturnNote) els.certificadoReturnNote.value = sanitizeText(certificadoState.form.return_note || '');
       if(els.certificadoGeneralCondition) els.certificadoGeneralCondition.value = sanitizeText(certificadoState.form.general_condition || '');
+      const assessment = { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}) };
+      for(const [key, element] of Object.entries({
+        activity: els.certificadoAssessmentActivity, intensity: els.certificadoAssessmentIntensity,
+        participation_purpose: els.certificadoAssessmentPurpose, current_findings: els.certificadoAssessmentFindings,
+        conclusion: els.certificadoAssessmentConclusion, restriction_mode: els.certificadoAssessmentRestrictionMode,
+        restriction_detail: els.certificadoAssessmentRestrictionDetail,
+        general_condition: els.certificadoAssessmentGeneralCondition,
+        recommendations: els.certificadoAssessmentRecommendations,
+        additional_considerations: els.certificadoAssessmentConsiderations
+      })){
+        if(element) element.value = sanitizeText(assessment[key] || '');
+      }
       if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = sanitizeText(certificadoState.form.declaration_text || '');
       if(els.certificadoObservations) els.certificadoObservations.value = sanitizeText(certificadoState.form.observations || '');
       syncCertificadoObservationsUiFromState();
@@ -54528,6 +54618,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       capture_ui_version: 2,
       step: Number(certificadoState.step || 1) || 1,
       additional_info_open: !!els.certificadoAdditionalInfo?.open,
+      subtype_forms: certificadoState.subtypeForms,
       form: {
         type: sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general',
         professional_header: certificadoState.professionalHeader,
@@ -54549,7 +54640,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note_custom: normalizeConsentInputRaw(certificadoState.form.usage_note_custom || ''),
         usage_note: normalizeConsentInputRaw(certificadoState.form.usage_note || ''),
         validity_note: normalizeConsentInputRaw(certificadoState.form.validity_note || ''),
-        usage_note_user_selected: certificadoState.usageNoteUserSelected ? '1' : ''
+        usage_note_user_selected: certificadoState.usageNoteUserSelected ? '1' : '',
+        assessment: { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}) }
       }
     });
     const hasCertificadoTempContent = (snapshot = null)=>{
@@ -54571,7 +54663,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         form.usage_note_custom,
         form.usage_note,
         form.validity_note,
-        form.usage_note_user_selected
+        form.usage_note_user_selected,
+        ...Object.values(form.assessment || {})
       ].some((value)=> trimConsentInputValue(value || '') !== '');
     };
     const certificadoHasMeaningfulAdditionalInfo = (form = {})=>{
@@ -54607,8 +54700,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note_type: sanitizeText(form.usage_note_type ?? certificadoState.form.usage_note_type ?? ''),
         usage_note_custom: normalizeConsentInputRaw(form.usage_note_custom ?? certificadoState.form.usage_note_custom ?? ''),
         usage_note: normalizeConsentInputRaw(form.usage_note ?? certificadoState.form.usage_note ?? ''),
-        validity_note: normalizeConsentInputRaw(form.validity_note ?? certificadoState.form.validity_note ?? '')
+        validity_note: normalizeConsentInputRaw(form.validity_note ?? certificadoState.form.validity_note ?? ''),
+        assessment: { ...newCertificateAssessment(), ...(form.assessment || {}) }
       };
+      certificadoState.subtypeForms = (safe.subtype_forms && typeof safe.subtype_forms === 'object')
+        ? safe.subtype_forms : {};
       certificadoState.professionalHeader = form.professional_header === 'hidden' ? 'hidden' : 'shown';
       els.certificadoHeaderOptions?.forEach(option=>{ option.checked = option.value === certificadoState.professionalHeader; });
       certificadoState.usageNoteUserSelected = trimConsentInputValue(form.usage_note_user_selected || '') === '1'
@@ -54648,6 +54744,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoState.finalEditing = false;
       certificadoState.declarationEdited = false;
       certificadoState.usageNoteUserSelected = false;
+      certificadoState.subtypeForms = {};
       if(els.certificadoAdditionalInfo) els.certificadoAdditionalInfo.open = false;
       certificadoState.form = {
         type: 'certificado_general',
@@ -54669,7 +54766,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note_custom: '',
         usage_note: '',
         validity_note: '',
-        closing_statement: CERTIFICATE_STANDARD_CLOSING
+        closing_statement: CERTIFICATE_STANDARD_CLOSING,
+        assessment: newCertificateAssessment()
       };
       certificadoState.signatureHasStroke = false;
       certificadoState.signaturePreferredSource = '';
@@ -54724,6 +54822,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       certificadoState.finalEditing = false;
       certificadoState.declarationEdited = false;
       certificadoState.usageNoteUserSelected = false;
+      certificadoState.subtypeForms = {};
       if(els.certificadoAdditionalInfo) els.certificadoAdditionalInfo.open = false;
       certificadoState.form = {
         type: 'certificado_general',
@@ -54745,7 +54844,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         usage_note_custom: '',
         usage_note: '',
         validity_note: '',
-        closing_statement: CERTIFICATE_STANDARD_CLOSING
+        closing_statement: CERTIFICATE_STANDARD_CLOSING,
+        assessment: newCertificateAssessment()
       };
       certificadoState.signatureHasStroke = false;
       certificadoState.signaturePreferredSource = '';
@@ -54874,6 +54974,30 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const buildCertificadoRenderedText = (payload = {})=>{
       const certType = sanitizeText(payload?.certificate?.type || '');
       const certTypeLabel = sanitizeText(getCertificateTypeLabel(certType) || payload?.certificate?.type_label || 'CERTIFICADO MÉDICO');
+      if(CERTIFICATE_ASSESSMENT_TYPES.includes(certType)){
+        const assessment = payload?.content?.assessment || {};
+        const lines = [certTypeLabel.toUpperCase(), `Paciente: ${sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente')}`];
+        const add = (label, value)=>{ const clean = normalizeConsentInputRaw(value || ''); if(clean) lines.push(`${label}: ${clean}`); };
+        add(certType === 'actividad_deportiva' ? 'Deporte o actividad' : 'Finalidad o actividad evaluada', assessment.activity);
+        if(certType === 'actividad_deportiva'){
+          add('Nivel o intensidad previstos', assessment.intensity);
+          add('Finalidad de la participación', assessment.participation_purpose);
+        }
+        const declaration = normalizeConsentInputRaw(payload?.content?.declaration_text || '');
+        if(declaration) lines.push(declaration);
+        add('Hallazgos actuales', assessment.current_findings);
+        if(certType === 'aptitud_fisica') add('Condición clínica general', assessment.general_condition);
+        add('Conclusión', CERTIFICATE_ASSESSMENT_CONCLUSIONS[assessment.conclusion] || '');
+        if(assessment.restriction_mode === 'con_restricciones') add('Restricciones', assessment.restriction_detail);
+        if(assessment.restriction_mode === 'sin_restricciones_documentadas') lines.push('Restricciones: sin restricciones documentadas en esta valoración.');
+        if(assessment.restriction_mode === 'no_evaluado') lines.push('Restricciones: no evaluadas.');
+        add('Vigencia', payload?.content?.validity_term);
+        add('Recomendaciones', assessment.recommendations);
+        if(certType === 'actividad_deportiva') add('Consideraciones adicionales', assessment.additional_considerations);
+        const closing = normalizeConsentInputRaw(payload?.content?.closing_statement || '');
+        if(closing) lines.push(closing);
+        return lines.join('\n\n');
+      }
       const certValidity = certType === 'certificado_general'
         ? composeCertificateValidityUsageText({
           validityTerm: sanitizeText(payload?.content?.validity_term || ''),
@@ -54929,6 +55053,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       const normalizedStatus = targetStatus === 'issued' ? 'issued' : 'draft';
       const type = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      const isAssessment = CERTIFICATE_ASSESSMENT_TYPES.includes(type);
+      const assessment = { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}) };
+      if(type === 'aptitud_fisica'){
+        assessment.intensity = '';
+        assessment.participation_purpose = '';
+        assessment.additional_considerations = '';
+      }else if(type === 'actividad_deportiva') assessment.general_condition = '';
+      if(assessment.restriction_mode !== 'con_restricciones') assessment.restriction_detail = '';
       const typeLabel = getCertificateTypeLabel(type) || 'Certificado médico';
       const declaration = normalizeConsentInputRaw(certificadoState.form.declaration_text || '');
       const signature = getActiveCertificadoDoctorSignature(formatNowSql());
@@ -54938,9 +55070,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         observations: certificadoState.form.observations
       }));
       const validityTerm = normalizeConsentInputRaw(certificadoState.form.validity_term || '');
-      const usageNoteType = sanitizeText(certificadoState.form.usage_note_type || '');
-      const usageNoteCustom = normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
-      const usageNote = normalizeConsentInputRaw(resolveCertificateUsageText({
+      const usageNoteType = isAssessment ? '' : sanitizeText(certificadoState.form.usage_note_type || '');
+      const usageNoteCustom = isAssessment ? '' : normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
+      const usageNote = isAssessment ? '' : normalizeConsentInputRaw(resolveCertificateUsageText({
         type: usageNoteType,
         custom: usageNoteCustom,
         legacy: certificadoState.form.usage_note || ''
@@ -54957,7 +55089,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           legacy: normalizeConsentInputRaw(certificadoState.form.validity_note || '')
         })
         : '';
-      const purposeSentence = composeCertificatePurposeSentence({
+      const purposeSentence = isAssessment ? '' : composeCertificatePurposeSentence({
         hasRecipientHeader: !!recipientHeaderText,
         usageText: usageNote,
         type
@@ -54967,26 +55099,35 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         : '';
       const content = {
         declaration_text: declaration,
-        care_date: sanitizeText(certificadoState.form.care_date || ''),
-        rest_days: sanitizeText(certificadoState.form.rest_days || ''),
-        rest_start_date: sanitizeText(certificadoState.form.rest_start_date || ''),
-        rest_end_date: sanitizeText(certificadoState.form.rest_end_date || ''),
-        return_note: normalizeConsentInputRaw(certificadoState.form.return_note || ''),
-        general_condition: sanitizeText(certificadoState.form.general_condition || ''),
-        general_condition_label: getCertificateGeneralConditionLabel(certificadoState.form.general_condition),
-        observations_mode: observationsMode,
+        care_date: isAssessment ? '' : sanitizeText(certificadoState.form.care_date || ''),
+        rest_days: isAssessment ? '' : sanitizeText(certificadoState.form.rest_days || ''),
+        rest_start_date: isAssessment ? '' : sanitizeText(certificadoState.form.rest_start_date || ''),
+        rest_end_date: isAssessment ? '' : sanitizeText(certificadoState.form.rest_end_date || ''),
+        return_note: isAssessment ? '' : normalizeConsentInputRaw(certificadoState.form.return_note || ''),
+        general_condition: isAssessment ? '' : sanitizeText(certificadoState.form.general_condition || ''),
+        general_condition_label: isAssessment ? '' : getCertificateGeneralConditionLabel(certificadoState.form.general_condition),
+        observations_mode: isAssessment ? '' : observationsMode,
         observations: observationsForDoc,
         validity_term: validityTerm,
         usage_note_type: usageNoteType,
         usage_note_custom: usageNoteCustom,
         usage_note: usageNote,
         recipient_header: recipientHeaderText,
-        validity_note: validityLegacy,
+        validity_note: isAssessment ? '' : validityLegacy,
         closing_statement: purposeSentence
       };
+      if(isAssessment) content.assessment = assessment;
       if(normalizedStatus === 'issued'){
         if(!type) return { error: 'Tipo de certificado es obligatorio para emitir.' };
         if(!declaration) return { error: 'Declaración principal es obligatoria para emitir.' };
+        if(isAssessment){
+          if(!normalizeConsentInputRaw(assessment.activity)) return { error: 'Indica la actividad evaluada.' };
+          if(!normalizeConsentInputRaw(assessment.current_findings)) return { error: 'Captura los hallazgos actuales.' };
+          if(!assessment.conclusion) return { error: 'Selecciona la conclusión de la valoración.' };
+          if(!assessment.restriction_mode) return { error: 'Selecciona el estado de restricciones.' };
+          if(assessment.restriction_mode === 'con_restricciones' && !normalizeConsentInputRaw(assessment.restriction_detail))
+            return { error: 'Describe las restricciones documentadas.' };
+        }
         if(type === 'constancia_atencion' && !sanitizeText(content.care_date || '')){
           return { error: 'Fecha de atención es obligatoria para emitir este certificado.' };
         }
@@ -54996,7 +55137,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(type === 'certificado_general' && !sanitizeText(content.general_condition || '') && !declaration){
           return { error: 'Selecciona condición general o captura declaración válida para emitir.' };
         }
-        if(observationsMode === 'present' && !observationsOutput){
+        if(!isAssessment && observationsMode === 'present' && !observationsOutput){
           return { error: 'Captura los hallazgos clínicos adicionales o selecciona “Sin hallazgos clínicos relevantes”.' };
         }
         if(usageNoteType === 'otro' && !usageNote){
@@ -55100,7 +55241,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           purpose: normalizeConsentInputRaw(certificadoState.form.purpose || ''),
           purpose_selection: sanitizeText(certificadoState.form.purpose_selection || ''),
           purpose_detail: normalizeConsentInputRaw(certificadoState.form.purpose_detail || ''),
-          ...content
+          ...content,
+          assessment: isAssessment ? { ...assessment } : newCertificateAssessment()
         }
       };
       payload.rendered_text = buildCertificadoRenderedText(payload);
@@ -58629,15 +58771,37 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     bindCertificadoField(els.certificadoType, (el)=>{
       const nextType = sanitizeText(el.value || 'certificado_general') || 'certificado_general';
-      certificadoState.form.type = nextType;
-      alignCertificadoUsageWithContext();
+      const previousType = sanitizeText(certificadoState.form.type || 'certificado_general');
+      if(nextType !== previousType && (CERTIFICATE_ASSESSMENT_TYPES.includes(previousType)
+        || CERTIFICATE_ASSESSMENT_TYPES.includes(nextType))){
+        certificadoState.subtypeForms[previousType] = {
+          form: { ...certificadoState.form, assessment: { ...(certificadoState.form.assessment || {}) } },
+          declarationEdited: certificadoState.declarationEdited
+        };
+        const saved = certificadoState.subtypeForms[nextType];
+        if(saved?.form){
+          certificadoState.form = { ...saved.form, type: nextType,
+            assessment: { ...newCertificateAssessment(), ...(saved.form.assessment || {}) } };
+          certificadoState.declarationEdited = !!saved.declarationEdited;
+        }else if(CERTIFICATE_ASSESSMENT_TYPES.includes(nextType)){
+          certificadoState.form = { ...certificadoState.form, type: nextType,
+            care_date:'', rest_days:'', rest_start_date:'', rest_end_date:'', return_note:'',
+            general_condition:'', observations_mode:'', observations:'', usage_note_type:'',
+            usage_note_custom:'', usage_note:'', validity_note:'', validity_term:'',
+            declaration_text:'', assessment:newCertificateAssessment() };
+          certificadoState.declarationEdited = false;
+        }else{
+          certificadoState.form = { ...certificadoState.form, type: nextType,
+            assessment:newCertificateAssessment(), validity_term:'7 días',
+            general_condition:'apto_general' };
+          certificadoState.declarationEdited = false;
+        }
+      }else certificadoState.form.type = nextType;
+      if(!CERTIFICATE_ASSESSMENT_TYPES.includes(nextType)) alignCertificadoUsageWithContext();
       if(!certificadoState.declarationEdited){
         certificadoState.form.declaration_text = buildCertificateDeclarationBase(nextType);
-        if(els.certificadoDeclarationText){
-          els.certificadoDeclarationText.value = certificadoState.form.declaration_text;
-        }
       }
-      syncCertificadoTypeUi();
+      syncCertificadoInputsFromState();
       renderCertificadoStep();
     }, 'change');
     bindCertificadoField(els.certificadoPurposeSelect, ()=>{
@@ -58680,6 +58844,34 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       renderCertificadoStep();
     }, 'change');
+    for(const [key, element] of Object.entries({
+      activity: els.certificadoAssessmentActivity,
+      intensity: els.certificadoAssessmentIntensity,
+      participation_purpose: els.certificadoAssessmentPurpose,
+      current_findings: els.certificadoAssessmentFindings,
+      conclusion: els.certificadoAssessmentConclusion,
+      restriction_mode: els.certificadoAssessmentRestrictionMode,
+      restriction_detail: els.certificadoAssessmentRestrictionDetail,
+      general_condition: els.certificadoAssessmentGeneralCondition,
+      recommendations: els.certificadoAssessmentRecommendations,
+      additional_considerations: els.certificadoAssessmentConsiderations
+    })){
+      bindCertificadoField(element, (el)=>{
+        certificadoState.form.assessment = { ...newCertificateAssessment(), ...(certificadoState.form.assessment || {}),
+          [key]: normalizeConsentInputRaw(el.value || '') };
+        if(key === 'restriction_mode'){
+          if(certificadoState.form.assessment.restriction_mode !== 'con_restricciones'){
+            certificadoState.form.assessment.restriction_detail = '';
+            if(els.certificadoAssessmentRestrictionDetail) els.certificadoAssessmentRestrictionDetail.value = '';
+          }
+          syncCertificadoTypeUi();
+        }
+        if(!certificadoState.declarationEdited){
+          certificadoState.form.declaration_text = buildCertificateDeclarationBase(certificadoState.form.type);
+          if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = certificadoState.form.declaration_text;
+        }
+      });
+    }
     bindCertificadoField(els.certificadoReturnNote, (el)=>{
       certificadoState.form.return_note = normalizeConsentInputRaw(el.value || '');
     });

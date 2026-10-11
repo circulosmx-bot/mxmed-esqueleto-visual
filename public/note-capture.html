@@ -286,7 +286,7 @@
           : (isResponsivaSignature ? 'Revisar responsiva' : 'Revisa el consentimiento');
         consentReviewFrame.title = isAltaSignature ? 'Alta médica que se firmará' : isNotaSignature ? 'Nota médica que se firmará' : isInformeSignature ? 'Informe médico que se firmará' : isInterconsultaSignature ? 'Interconsulta que se firmará' : isCertificadoSignature ? 'Certificado que se firmará'
           : (isResponsivaSignature ? 'Responsiva que se firmará' : 'Consentimiento que se firmará');
-        consentReviewFrame.classList.toggle('interconsulta-review-frame', isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature);
+        consentReviewFrame.classList.toggle('interconsulta-review-frame', isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature);
         form.classList.add('d-none');
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
@@ -301,7 +301,7 @@
             })
             .then(data=>{
               if(data.status!=='pending') throw new Error('Este QR ya fue utilizado o expiró. Solicita uno nuevo.');
-              const interconsultaMobileStyle = (isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature)
+              const interconsultaMobileStyle = (isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature)
                 ? `<meta name="viewport" content="width=device-width, initial-scale=1"><style>
                     html,body{margin:0;max-width:100%;overflow-x:hidden}
                     .interconsulta-doc-sheet,.informe-doc-sheet{width:100% !important;min-height:0 !important;padding:16px !important;box-shadow:none !important}

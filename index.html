@@ -10271,9 +10271,15 @@
                         <div class="col-12">
                           <label class="form-label" for="cm_type">Tipo de certificado</label>
                           <select class="form-select" id="cm_type">
-                            <option value="certificado_general">Certificado médico general</option>
-                            <option value="constancia_atencion">Constancia de atención médica</option>
-                            <option value="reposo_medico">Constancia de incapacidad temporal</option>
+                            <optgroup label="Certificados y constancias actuales">
+                              <option value="certificado_general">Certificado médico general</option>
+                              <option value="constancia_atencion">Constancia de atención médica</option>
+                              <option value="reposo_medico">Constancia de incapacidad temporal</option>
+                            </optgroup>
+                            <optgroup label="Valoraciones específicas">
+                              <option value="aptitud_fisica">Certificado de aptitud física</option>
+                              <option value="actividad_deportiva">Certificado para actividad deportiva</option>
+                            </optgroup>
                           </select>
                         </div>
                         <div class="col-12">
@@ -10316,6 +10322,61 @@
                             <option value="en_control">En control médico</option>
                             <option value="apto_general">Apto en evaluación general</option>
                           </select>
+                        </div>
+                        <div class="col-12 d-none" id="cm_assessment">
+                          <div class="row g-3 border rounded p-2">
+                            <div class="col-12">
+                              <label class="form-label fw-semibold" for="cm_assessment_activity" id="cm_assessment_activity_label">Finalidad o actividad evaluada</label>
+                              <input class="form-control" id="cm_assessment_activity" type="text" autocomplete="off" maxlength="240">
+                            </div>
+                            <div class="col-md-6 d-none" id="cm_assessment_intensity_wrap">
+                              <label class="form-label" for="cm_assessment_intensity">Nivel o intensidad previstos (opcional)</label>
+                              <input class="form-control" id="cm_assessment_intensity" type="text" maxlength="160" placeholder="Ej. Recreativa, intensidad moderada">
+                            </div>
+                            <div class="col-md-6 d-none" id="cm_assessment_purpose_wrap">
+                              <label class="form-label" for="cm_assessment_purpose">Finalidad de la participación (opcional)</label>
+                              <input class="form-control" id="cm_assessment_purpose" type="text" maxlength="200">
+                            </div>
+                            <div class="col-12">
+                              <label class="form-label fw-semibold" for="cm_assessment_findings">Hallazgos actuales de la valoración</label>
+                              <textarea class="form-control" id="cm_assessment_findings" rows="3" maxlength="4000"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label fw-semibold" for="cm_assessment_conclusion">Conclusión para la actividad indicada</label>
+                              <select class="form-select" id="cm_assessment_conclusion">
+                                <option value="">Seleccionar conclusión</option>
+                                <option value="apto_para_actividad_indicada">Apto para la actividad indicada</option>
+                                <option value="apto_con_restricciones">Apto con restricciones</option>
+                                <option value="no_apto_temporalmente">No apto temporalmente para la actividad indicada</option>
+                                <option value="valoracion_no_concluyente">Valoración no concluyente</option>
+                              </select>
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label fw-semibold" for="cm_assessment_restriction_mode">Restricciones evaluadas</label>
+                              <select class="form-select" id="cm_assessment_restriction_mode">
+                                <option value="">Seleccionar estado</option>
+                                <option value="no_evaluado">No evaluado</option>
+                                <option value="sin_restricciones_documentadas">Sin restricciones documentadas</option>
+                                <option value="con_restricciones">Con restricciones</option>
+                              </select>
+                            </div>
+                            <div class="col-12 d-none" id="cm_assessment_restriction_detail_wrap">
+                              <label class="form-label" for="cm_assessment_restriction_detail">Detalle de restricciones</label>
+                              <textarea class="form-control" id="cm_assessment_restriction_detail" rows="2" maxlength="2000"></textarea>
+                            </div>
+                            <div class="col-12" id="cm_assessment_general_condition_wrap">
+                              <label class="form-label" for="cm_assessment_general_condition">Condición clínica general (opcional)</label>
+                              <input class="form-control" id="cm_assessment_general_condition" type="text" maxlength="500">
+                            </div>
+                            <div class="col-12">
+                              <label class="form-label" for="cm_assessment_recommendations">Recomendaciones (opcional)</label>
+                              <textarea class="form-control" id="cm_assessment_recommendations" rows="2" maxlength="2000"></textarea>
+                            </div>
+                            <div class="col-12 d-none" id="cm_assessment_considerations_wrap">
+                              <label class="form-label" for="cm_assessment_considerations">Consideraciones adicionales (opcional)</label>
+                              <textarea class="form-control" id="cm_assessment_considerations" rows="2" maxlength="2000"></textarea>
+                            </div>
+                          </div>
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold" for="cm_declaration_text">Declaración principal</label>
@@ -11222,17 +11283,17 @@
 <script src="assets/js/clinical/consent-signature-binding.js?v=doc-present02"></script>
 <script src="assets/js/clinical/legal-document-presentation.js?v=resp-adj01"></script>
 <script src="assets/js/clinical/responsiva-signature-binding.js?v=resp-adj01"></script>
-<script src="assets/js/clinical/certificado-signature-binding.js?v=cert-imp01"></script>
+<script src="assets/js/clinical/certificado-signature-binding.js?v=cert-ext02a"></script>
 <script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
 <script src="assets/js/clinical/nota-signature-binding.js?v=nm-imp01"></script>
 <script src="assets/js/clinical/alta-signature-binding.js?v=doc-close02c"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/app.js?v=cert-form01"></script>
+<script src="assets/js/app.js?v=cert-ext02a"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>
-<script src="assets/js/clinical/certificado-field-help.js?v=cert-help01"></script>
+<script src="assets/js/clinical/certificado-field-help.js?v=cert-ext02a"></script>
 <script src="assets/js/clinical/interconsulta-field-help.js?v=ix-help01"></script>
 <script src="assets/js/clinical/informe-field-help.js?v=inf-help01"></script>
 <script src="assets/js/clinical/nota-field-help.js?v=nm-help01"></script>

@@ -34,8 +34,70 @@ function clinical_certificado_write(PDO $pdo, array $doctor, string $patientId, 
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('CERTIFICADO_INTENT_INVALID');
     $certificateType = (string)($payload['certificate']['type'] ?? '');
-    if (!in_array($certificateType, ['certificado_general', 'constancia_atencion', 'reposo_medico'], true))
+    if (!in_array($certificateType, ['certificado_general', 'constancia_atencion', 'reposo_medico',
+        'aptitud_fisica', 'actividad_deportiva'], true))
         throw new InvalidArgumentException('CERTIFICADO_TYPE_INVALID');
+    if (in_array($certificateType, ['aptitud_fisica', 'actividad_deportiva'], true)) {
+        $labels = ['aptitud_fisica' => 'Certificado de aptitud física',
+            'actividad_deportiva' => 'Certificado para actividad deportiva'];
+        if (($payload['certificate']['type_label'] ?? '') !== $labels[$certificateType])
+            throw new InvalidArgumentException('CERTIFICADO_TYPE_LABEL_INVALID');
+        $content = (array)($payload['content'] ?? []);
+        $assessment = (array)($content['assessment'] ?? []);
+        $assessmentKeys = ['activity','intensity','participation_purpose','current_findings','conclusion',
+            'restriction_mode','restriction_detail','general_condition','recommendations','additional_considerations'];
+        foreach ($assessment as $key => $value) {
+            if (!in_array($key, $assessmentKeys, true) || !is_string($value)
+                || mb_strlen($value) > 4000) throw new InvalidArgumentException('CERTIFICADO_ASSESSMENT_FIELD_INVALID');
+        }
+        foreach (['care_date','rest_days','rest_start_date','rest_end_date','return_note',
+            'general_condition','general_condition_label','observations_mode','observations',
+            'usage_note_type','usage_note_custom','usage_note','validity_note'] as $legacyKey) {
+            if (trim((string)($content[$legacyKey] ?? '')) !== '')
+                throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        }
+        if (trim((string)($payload['certificate']['usage_type'] ?? '')) !== ''
+            || trim((string)($payload['certificate']['usage_custom'] ?? '')) !== '')
+            throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        if ($certificateType === 'aptitud_fisica'
+            && (trim((string)($assessment['intensity'] ?? '')) !== ''
+                || trim((string)($assessment['participation_purpose'] ?? '')) !== ''
+                || trim((string)($assessment['additional_considerations'] ?? '')) !== ''))
+            throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        if ($certificateType === 'actividad_deportiva'
+            && trim((string)($assessment['general_condition'] ?? '')) !== '')
+            throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        $conclusion = (string)($assessment['conclusion'] ?? '');
+        $restrictionMode = (string)($assessment['restriction_mode'] ?? '');
+        if ($conclusion !== '' && !in_array($conclusion, ['apto_para_actividad_indicada',
+            'apto_con_restricciones','no_apto_temporalmente','valoracion_no_concluyente'], true))
+            throw new InvalidArgumentException('CERTIFICADO_CONCLUSION_INVALID');
+        if ($restrictionMode !== '' && !in_array($restrictionMode, ['no_evaluado',
+            'sin_restricciones_documentadas','con_restricciones'], true))
+            throw new InvalidArgumentException('CERTIFICADO_RESTRICTION_MODE_INVALID');
+        if ($restrictionMode !== 'con_restricciones'
+            && trim((string)($assessment['restriction_detail'] ?? '')) !== '')
+            throw new InvalidArgumentException('CERTIFICADO_RESTRICTION_DETAIL_INVALID');
+        if ($conclusion === 'apto_con_restricciones' && $restrictionMode !== 'con_restricciones')
+            throw new InvalidArgumentException('CERTIFICADO_RESTRICTION_MODE_REQUIRED');
+        if ($conclusion === 'apto_para_actividad_indicada' && $restrictionMode === 'con_restricciones')
+            throw new InvalidArgumentException('CERTIFICADO_CONCLUSION_RESTRICTION_CONFLICT');
+        if ($intent === 'issued') {
+            foreach (['activity','current_findings','conclusion','restriction_mode'] as $requiredKey) {
+                if (trim((string)($assessment[$requiredKey] ?? '')) === '')
+                    throw new InvalidArgumentException('CERTIFICADO_ASSESSMENT_' . strtoupper($requiredKey) . '_REQUIRED');
+            }
+            if ($restrictionMode === 'con_restricciones'
+                && trim((string)($assessment['restriction_detail'] ?? '')) === '')
+                throw new InvalidArgumentException('CERTIFICADO_RESTRICTION_DETAIL_REQUIRED');
+        }
+    }
+    if (!in_array($certificateType, ['aptitud_fisica', 'actividad_deportiva'], true)) {
+        foreach ((array)($payload['content']['assessment'] ?? []) as $value) {
+            if (trim((string)$value) !== '')
+                throw new InvalidArgumentException('CERTIFICADO_HIDDEN_FIELD_CONTAMINATION');
+        }
+    }
     if ($intent === 'issued') {
         $content = (array)($payload['content'] ?? []);
         if (trim((string)($content['declaration_text'] ?? '')) === '')

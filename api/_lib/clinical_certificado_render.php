@@ -2,9 +2,55 @@
 declare(strict_types=1);
 require_once __DIR__.'/clinical_legal_document_presentation.php';
 
+/** Shared text order for the two specific-assessment certificate subtypes. */
+function clinical_certificado_assessment_parts(array $payload): array {
+    $type=(string)($payload['certificate']['type']??'');
+    if(!in_array($type,['aptitud_fisica','actividad_deportiva'],true)) return [];
+    $content=(array)($payload['content']??[]);
+    $a=(array)($content['assessment']??[]);
+    $conclusions=[
+        'apto_para_actividad_indicada'=>$type==='actividad_deportiva'
+            ? 'Apto para la actividad deportiva indicada' : 'Apto para la actividad evaluada',
+        'apto_con_restricciones'=>'Apto con restricciones para la actividad indicada',
+        'no_apto_temporalmente'=>'No apto temporalmente para la actividad indicada',
+        'valoracion_no_concluyente'=>'Valoración no concluyente'
+    ];
+    $parts=[];
+    $add=static function(string $label,mixed $value) use (&$parts):void {
+        $text=trim((string)($value??''));
+        if($text!=='') $parts[]=$label.': '.$text;
+    };
+    $add($type==='actividad_deportiva'?'Deporte o actividad':'Finalidad o actividad evaluada',$a['activity']??'');
+    if($type==='actividad_deportiva') {
+        $add('Nivel o intensidad previstos',$a['intensity']??'');
+        $add('Finalidad de la participación',$a['participation_purpose']??'');
+    }
+    $declaration=trim((string)($content['declaration_text']??''));
+    if($declaration!=='') $parts[]=$declaration;
+    $add('Hallazgos actuales',$a['current_findings']??'');
+    if($type==='aptitud_fisica') $add('Condición clínica general',$a['general_condition']??'');
+    $conclusion=(string)($a['conclusion']??'');
+    if(isset($conclusions[$conclusion])) $add('Conclusión',$conclusions[$conclusion]);
+    $mode=(string)($a['restriction_mode']??'');
+    if($mode==='con_restricciones') $add('Restricciones',$a['restriction_detail']??'');
+    elseif($mode==='sin_restricciones_documentadas') $parts[]='Restricciones: sin restricciones documentadas en esta valoración.';
+    elseif($mode==='no_evaluado') $parts[]='Restricciones: no evaluadas.';
+    $term=trim((string)($content['validity_term']??''));
+    if($term!=='') $add('Vigencia',$term);
+    $add('Recomendaciones',$a['recommendations']??'');
+    if($type==='actividad_deportiva') $add('Consideraciones adicionales',$a['additional_considerations']??'');
+    $closing=trim((string)($content['closing_statement']??''));
+    if($closing!=='') $parts[]=$closing;
+    return $parts;
+}
+
 function clinical_certificado_canonical_text(array $payload): string {
     $certificate=(array)($payload['certificate']??[]);
     $content=(array)($payload['content']??[]);
+    if(in_array((string)($certificate['type']??''),['aptitud_fisica','actividad_deportiva'],true))
+        return implode("\n\n",array_merge([(string)($certificate['type_label']??'Certificado médico'),
+            (string)($payload['patient_snapshot']['full_name']??'')],
+            clinical_certificado_assessment_parts($payload)));
     $lines=[(string)($certificate['type_label']??'Certificado médico'),
         (string)($payload['patient_snapshot']['full_name']??''),
         (string)($content['declaration_text']??'')];
@@ -44,7 +90,9 @@ function clinical_certificado_render_html(array $payload): string {
     $append=static function(mixed $value) use(&$parts):void {
         $text=trim((string)($value??'')); if($text!==''&&!in_array($text,$parts,true)) $parts[]=$text;
     };
-    $append($content['declaration_text']??'');
+    if(in_array($type,['aptitud_fisica','actividad_deportiva'],true)) {
+        foreach(clinical_certificado_assessment_parts($payload) as $part) $append($part);
+    } else $append($content['declaration_text']??'');
     if($type==='certificado_general' && trim((string)($content['general_condition_label']??''))!=='')
         $append('Condición general: '.(string)$content['general_condition_label']);
     if($type==='constancia_atencion') $append('Fecha de atención: '.(string)($content['care_date']??''));

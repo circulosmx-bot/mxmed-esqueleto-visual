@@ -12,7 +12,7 @@ function clinical_certificado_binding_projection(array $body): array {
     $pick=static function(array $source,array $keys) use($c):array {
         $out=[]; foreach($keys as $key) $out[$key]=$c($source[$key]??''); return $out;
     };
-    return [
+    $projection = [
         'version'=>1,'document_type'=>'certificado_medico',
         'document_uuid'=>$c($body['draft_ref']??''),
         'document_date'=>$c($p['report']['emission_date']??''),
@@ -31,6 +31,15 @@ function clinical_certificado_binding_projection(array $body): array {
             'recipient_header','closing_statement']),
         'rendered_text_contract'=>'structured_v1'
     ];
+    // Keep the V1 serialization byte-for-byte for existing and untyped documents.
+    if (!in_array((string)($cert['type']??''), ['aptitud_fisica','actividad_deportiva'], true))
+        return $projection;
+    $projection['version'] = 2;
+    $projection['assessment'] = $pick((array)($content['assessment']??[]), [
+        'activity','intensity','participation_purpose','current_findings','conclusion',
+        'restriction_mode','restriction_detail','general_condition','recommendations','additional_considerations'
+    ]);
+    return $projection;
 }
 function clinical_certificado_binding_fingerprint(array $body): string {
     return hash('sha256',json_encode(clinical_certificado_binding_projection($body),
@@ -70,6 +79,7 @@ function clinical_certificado_binding_classify(array $body,string $doctorId,?PDO
         if($pdo===null || ($entry['token']??'')==='') return 'stale_or_unverified_signature';
         $qr=clinical_certificado_qr_row($pdo,(string)$entry['token']);
         if($qr===null || !in_array((string)$qr['status'],['uploaded','consumed'],true)
+            || (int)$qr['fingerprint_version'] !== (int)clinical_certificado_binding_projection($body)['version']
             || $qr['invalidated_at']!==null || (string)$qr['document_uuid']!==$uuid
             || (int)$qr['document_version']!==(int)($b['document_version']??0)
             || (string)$qr['doctor_id']!==$doctorId

@@ -6,7 +6,7 @@
   const projection = body => {
     const p=body?.payload||{}, a=p.actor_snapshot||{}, patient=p.patient_snapshot||{};
     const brand=p.branding||{}, cert=p.certificate||{}, content=p.content||{};
-    return {
+    const result = {
       version:1, document_type:'certificado_medico', document_uuid:clean(body?.draft_ref),
       document_date:clean(p.report?.emission_date),
       patient:{id:clean(body?.context?.patient_id),...pick(patient,['full_name','age','sex','identifier'])},
@@ -22,6 +22,14 @@
         'recipient_header','closing_statement']),
       rendered_text_contract:'structured_v1'
     };
+    // Historical V1 object and key order must remain unchanged.
+    if(!['aptitud_fisica','actividad_deportiva'].includes(cert.type)) return result;
+    result.version=2;
+    result.assessment=pick(content.assessment||{},[
+      'activity','intensity','participation_purpose','current_findings','conclusion',
+      'restriction_mode','restriction_detail','general_condition','recommendations','additional_considerations'
+    ]);
+    return result;
   };
   const hash=async body=>{
     const bytes=new TextEncoder().encode(JSON.stringify(projection(body)));

@@ -65,7 +65,8 @@ function clinical_certificado_qr_current(PDO $pdo, array $session): bool
         || (string)($payload['actor_snapshot']['user_id'] ?? '') !== (string)$session['actor_user_id']) return false;
     $body = ['draft_ref' => (string)$document['document_uuid'],
         'context' => ['patient_id' => $document['patient_id']], 'payload' => $payload];
-    return hash_equals((string)$session['content_fingerprint'], clinical_certificado_binding_fingerprint($body))
+    return (int)$session['fingerprint_version'] === (int)clinical_certificado_binding_projection($body)['version']
+        && hash_equals((string)$session['content_fingerprint'], clinical_certificado_binding_fingerprint($body))
         && hash_equals((string)$session['signer_authority'],
             clinical_certificado_binding_authority($body, (string)$session['doctor_id']))
         && hash_equals((string)$session['review_html_sha256'], hash('sha256', (string)$session['review_html']))
@@ -182,7 +183,8 @@ function clinical_certificado_qr_route(PDO $pdo, string $method, array $segments
                 signer_name,signer_role_label,fingerprint_version,content_fingerprint,review_html,review_html_sha256,
                 status,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 900 SECOND))");
             $stmt->execute([$token, $uuid, $version, $document['patient_id'], $doctor['doctor_id'],
-                $doctor['user_id'], $role, $authority, $name, $label, 1,
+                $doctor['user_id'], $role, $authority, $name, $label,
+                clinical_certificado_binding_projection($documentBody)['version'],
                 clinical_certificado_binding_fingerprint($documentBody), $html, hash('sha256', $html)]);
             $pdo->commit();
         } catch (Throwable $error) {
