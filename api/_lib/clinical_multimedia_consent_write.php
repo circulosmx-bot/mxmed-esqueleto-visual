@@ -23,6 +23,7 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
     if (!is_array($payload['consent'] ?? null))
         throw new InvalidArgumentException('MULTIMEDIA_CONTENT_INVALID');
     $consent = clinical_multimedia_consent_normalize($payload['consent']);
+    if ($intent === 'generated') clinical_multimedia_consent_require_sensitive_confirmation($consent);
     if (array_key_exists('declaration', $payload['consent'])
         && trim((string)$payload['consent']['declaration']) !== clinical_multimedia_consent_declaration($consent))
         throw new InvalidArgumentException('MULTIMEDIA_DECLARATION_MISMATCH');

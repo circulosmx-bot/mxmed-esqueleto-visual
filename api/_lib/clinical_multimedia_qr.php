@@ -97,7 +97,7 @@ function clinical_multimedia_qr_status(PDO $pdo, array $session, bool $includeSi
 
 function clinical_multimedia_qr_binding(array $session): array
 {
-    return ['version' => 1, 'document_type' => 'consentimiento_multimedia',
+    return ['version' => (int)$session['fingerprint_version'], 'document_type' => 'consentimiento_multimedia',
         'source' => 'remote_qr', 'role' => $session['role'],
         'authority' => $session['signer_authority'], 'content_fingerprint' => $session['content_fingerprint'],
         'artifact_digest' => $session['artifact_digest'], 'document_uuid' => $session['document_uuid'],
@@ -158,6 +158,8 @@ function clinical_multimedia_qr_route(PDO $pdo, string $method, array $segments)
         }
         $documentBody = ['draft_ref' => $uuid, 'expected_version' => $version,
             'context' => ['patient_id' => $document['patient_id']], 'payload' => $payload];
+        clinical_multimedia_consent_require_sensitive_confirmation(
+            clinical_multimedia_consent_normalize((array)($payload['consent'] ?? [])));
         $authority = clinical_multimedia_binding_authority($documentBody, $role, (string)$doctor['doctor_id']);
         $signerMode = (string)($payload['signer']['mode'] ?? '');
         $name = trim((string)($role === 'doctor' ? ($payload['actor_snapshot']['full_name'] ?? '')
@@ -188,7 +190,7 @@ function clinical_multimedia_qr_route(PDO $pdo, string $method, array $segments)
                 signer_name,signer_role_label,fingerprint_version,content_fingerprint,review_html,review_html_sha256,
                 status,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 900 SECOND))");
             $stmt->execute([$token, $uuid, $version, $document['patient_id'], $doctor['doctor_id'],
-                $doctor['user_id'], $role, $authority, $name, $label, 1,
+                $doctor['user_id'], $role, $authority, $name, $label, clinical_multimedia_binding_version($documentBody),
                 clinical_multimedia_binding_fingerprint($documentBody), $html, hash('sha256', $html)]);
             $pdo->commit();
         } catch (Throwable $error) {

@@ -5,6 +5,8 @@ require_once __DIR__ . '/clinical_legal_document_presentation.php';
 
 function clinical_multimedia_consent_normalize(array $input): array
 {
+    $modelVersion = (int)($input['model_version'] ?? 1);
+    if (!in_array($modelVersion, [1, 2], true)) throw new InvalidArgumentException('MULTIMEDIA_MODEL_VERSION_INVALID');
     $choices = static function (mixed $value, array $allowed): array {
         if (!is_array($value)) throw new InvalidArgumentException('MULTIMEDIA_SELECTION_INVALID');
         $result = [];
@@ -17,7 +19,11 @@ function clinical_multimedia_consent_normalize(array $input): array
         return $result;
     };
     $media = $choices($input['media_types'] ?? [], ['photo', 'video', 'audio']);
-    $purposes = $choices($input['use_purposes'] ?? [], ['clinical_record', 'clinical_followup']);
+    $additional = ['teaching', 'clinical_research', 'clinical_trial', 'scientific_publication',
+        'institutional_communication', 'public_dissemination', 'other_specific_use'];
+    $purposes = $choices($input['use_purposes'] ?? [], $modelVersion === 2
+        ? array_merge(['clinical_record', 'clinical_followup'], $additional)
+        : ['clinical_record', 'clinical_followup']);
     if (!$media || !$purposes) throw new InvalidArgumentException('MULTIMEDIA_SELECTION_REQUIRED');
     if (($input['capture_allowed'] ?? null) !== true)
         throw new InvalidArgumentException('MULTIMEDIA_CAPTURE_AUTHORIZATION_REQUIRED');
@@ -32,7 +38,8 @@ function clinical_multimedia_consent_normalize(array $input): array
         throw new InvalidArgumentException('MULTIMEDIA_CUSTOM_SCOPE_REQUIRED');
     $validity = is_array($input['validity'] ?? null) ? $input['validity'] : [];
     $mode = (string)($validity['mode'] ?? '');
-    if (!in_array($mode, ['single_event', 'explicit_date_range'], true))
+    if (!in_array($mode, $modelVersion === 2
+        ? ['single_event', 'explicit_date_range', 'until_revoked'] : ['single_event', 'explicit_date_range'], true))
         throw new InvalidArgumentException('MULTIMEDIA_VALIDITY_INVALID');
     $from = $mode === 'explicit_date_range' ? (string)($validity['valid_from'] ?? '') : '';
     $to = $mode === 'explicit_date_range' ? (string)($validity['valid_to'] ?? '') : '';
@@ -50,17 +57,41 @@ function clinical_multimedia_consent_normalize(array $input): array
     $safeContext['event_date'] = $eventDate;
     foreach ([$custom, ...array_values($safeContext)] as $value)
         if (mb_strlen($value, 'UTF-8') > 2000) throw new InvalidArgumentException('MULTIMEDIA_TEXT_TOO_LONG');
-    return [
+    $result = [
         'media_types' => $media, 'capture_allowed' => true, 'use_purposes' => $purposes,
         'identification_scope' => $identification, 'authorization_scope' => $scope,
         'custom_scope_description' => $custom,
         'validity' => ['mode' => $mode, 'valid_from' => $from, 'valid_to' => $to],
         'context' => $safeContext,
     ];
+    if ($modelVersion === 2) {
+        $sensitive = array_intersect($purposes, $additional) !== [];
+        $confirmed = ($input['sensitive_purposes_confirmed'] ?? null) === true;
+        $other = in_array('other_specific_use', $purposes, true)
+            ? trim((string)($input['other_specific_use_description'] ?? '')) : '';
+        if (in_array('other_specific_use', $purposes, true) && $other === '')
+            throw new InvalidArgumentException('MULTIMEDIA_OTHER_USE_DESCRIPTION_REQUIRED');
+        if (mb_strlen($other, 'UTF-8') > 2000) throw new InvalidArgumentException('MULTIMEDIA_TEXT_TOO_LONG');
+        $result = ['model_version' => 2] + $result + [
+            'sensitive_purposes_confirmed' => $sensitive && $confirmed,
+            'other_specific_use_description' => $other,
+        ];
+    }
+    return $result;
+}
+
+function clinical_multimedia_consent_require_sensitive_confirmation(array $consent): void
+{
+    if (($consent['model_version'] ?? 1) === 2
+        && array_intersect($consent['use_purposes'], ['teaching', 'clinical_research', 'clinical_trial',
+            'scientific_publication', 'institutional_communication', 'public_dissemination', 'other_specific_use'])
+        && !$consent['sensitive_purposes_confirmed'])
+        throw new InvalidArgumentException('MULTIMEDIA_SENSITIVE_PURPOSE_CONFIRMATION_REQUIRED');
 }
 
 function clinical_multimedia_consent_declaration(array $consent): string
 {
+    if (($consent['model_version'] ?? 1) === 2) return clinical_multimedia_consent_declaration_v2($consent);
     $media = ['photo' => 'fotografías', 'video' => 'video', 'audio' => 'audio'];
     $purpose = ['clinical_record' => 'integración al expediente clínico',
         'clinical_followup' => 'seguimiento de la evolución clínica'];
@@ -86,6 +117,43 @@ function clinical_multimedia_consent_declaration(array $consent): string
     return $statement . ' Recibí información sobre este alcance y tuve oportunidad de hacer preguntas antes de decidir.';
 }
 
+function clinical_multimedia_consent_declaration_v2(array $consent): string
+{
+    $media = ['photo' => 'fotografías', 'video' => 'registros de video', 'audio' => 'registros de audio'];
+    $purposes = ['clinical_record' => 'integrar el expediente clínico',
+        'clinical_followup' => 'documentar la evolución clínica', 'teaching' => 'docencia médica',
+        'clinical_research' => 'investigación clínica', 'clinical_trial' => 'ensayo clínico',
+        'scientific_publication' => 'presentaciones o publicaciones científicas',
+        'institutional_communication' => 'comunicación institucional',
+        'public_dissemination' => 'difusión pública',
+        'other_specific_use' => 'otro uso específico: ' . $consent['other_specific_use_description']];
+    $scope = ['specific_event' => 'solo este evento o atención', 'current_episode' => 'este episodio de atención',
+        'current_condition_followup' => 'el seguimiento del padecimiento actual',
+        'custom_limited_scope' => $consent['custom_scope_description']];
+    $validity = match ($consent['validity']['mode']) {
+        'single_event' => 'solo este evento o atención',
+        'explicit_date_range' => 'el periodo del ' . $consent['validity']['valid_from'] . ' al ' . $consent['validity']['valid_to'],
+        'until_revoked' => 'hasta que el paciente o su representante solicite su revocación para usos futuros',
+    };
+    $statement = 'Autorizo de manera libre y expresa la captura de '
+        . implode(' y ', array_map(static fn(string $key): string => $media[$key], $consent['media_types']))
+        . ' relacionados con mi atención médica, así como su uso únicamente para '
+        . implode(', ', array_map(static fn(string $key): string => $purposes[$key], $consent['use_purposes'])) . '.';
+    if ($consent['sensitive_purposes_confirmed'])
+        $statement .= ' Confirmo que autoricé expresamente los usos adicionales seleccionados.';
+    $statement .= $consent['identification_scope'] === 'identifiable'
+        ? ' Comprendo que el rostro, la voz, características físicas u otros elementos pueden permitir reconocerme.'
+        : ' Se procurará limitar los elementos que permitan identificarme cuando sea posible, sin garantía de que no pueda ser reconocido.';
+    $statement .= ' Esta autorización cubre ' . $scope[$consent['authorization_scope']]
+        . ' y permanecerá vigente ' . $validity . '.';
+    $parts = [];
+    foreach (['clinical_event_or_procedure' => 'Atención o procedimiento', 'anatomical_area' => 'Área anatómica',
+        'clinical_purpose_note' => 'Nota de contexto clínico', 'event_date' => 'Fecha del evento'] as $key => $label)
+        if ($consent['context'][$key] !== '') $parts[] = $label . ': ' . $consent['context'][$key];
+    if ($parts) $statement .= ' Contexto: ' . implode('; ', $parts) . '.';
+    return $statement . ' He recibido información sobre el propósito de la captura y uso del material, tuve oportunidad de realizar preguntas y manifiesto mi conformidad con las opciones seleccionadas.';
+}
+
 function clinical_multimedia_consent_render_html(array $payload): string
 {
     $h = static fn(mixed $value): string => htmlspecialchars(trim((string)($value ?? '')), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -109,13 +177,43 @@ function clinical_multimedia_consent_render_html(array $payload): string
     $sections = [
         'Material autorizado' => implode(', ', array_map(static fn(string $x): string => ['photo'=>'Fotografías','video'=>'Video','audio'=>'Audio'][$x], $consent['media_types'])),
         'Autorización de captura' => 'Sí, autorizo la captura del material seleccionado.',
-        'Usos clínicos autorizados' => implode('; ', array_map(static fn(string $x): string => ['clinical_record'=>'Integración al expediente clínico','clinical_followup'=>'Seguimiento de la evolución clínica'][$x], $consent['use_purposes'])),
+        'Usos clínicos autorizados' => implode('; ', array_map(static fn(string $x): string => [
+            'clinical_record'=>'Integración al expediente clínico','clinical_followup'=>'Seguimiento de la evolución clínica',
+            'teaching'=>'Docencia médica','clinical_research'=>'Investigación clínica','clinical_trial'=>'Ensayo clínico',
+            'scientific_publication'=>'Presentaciones o publicaciones científicas',
+            'institutional_communication'=>'Comunicación institucional','public_dissemination'=>'Difusión pública',
+            'other_specific_use'=>'Otro uso específico'][$x], $consent['use_purposes'])),
         'Identificación del material' => $consent['identification_scope'] === 'identifiable' ? 'Identificable' : 'Identificación reducida (no garantiza anonimato)',
         'Alcance' => ['specific_event'=>'Este evento o atención','current_episode'=>'Este episodio de atención',
             'current_condition_followup'=>'Seguimiento del padecimiento actual','custom_limited_scope'=>$consent['custom_scope_description']][$consent['authorization_scope']],
         'Vigencia' => $consent['validity']['mode'] === 'single_event' ? 'Este evento únicamente'
             : $consent['validity']['valid_from'] . ' al ' . $consent['validity']['valid_to'],
     ];
+    if (($consent['model_version'] ?? 1) === 2) {
+        $purposeLabels = ['clinical_record'=>'Expediente clínico',
+            'clinical_followup'=>'Seguimiento de la evolución clínica', 'teaching'=>'Docencia médica',
+            'clinical_research'=>'Investigación clínica', 'clinical_trial'=>'Ensayo clínico',
+            'scientific_publication'=>'Presentaciones o publicaciones científicas',
+            'institutional_communication'=>'Comunicación institucional', 'public_dissemination'=>'Difusión pública',
+            'other_specific_use'=>'Otro uso específico: ' . $consent['other_specific_use_description']];
+        $sections['¿Para qué se autoriza el uso del material?'] = implode('; ', array_map(
+            static fn(string $x): string => $purposeLabels[$x], $consent['use_purposes']));
+        unset($sections['Usos clínicos autorizados']);
+        if ($consent['sensitive_purposes_confirmed'])
+            $sections['Confirmación de usos adicionales'] = 'El paciente autorizó expresamente los usos adicionales seleccionados.';
+        $sections['¿La persona puede ser reconocida en el material?'] = $consent['identification_scope'] === 'identifiable'
+            ? 'Sí, puede ser identificada. El rostro, la voz, características físicas u otros elementos pueden permitir reconocer al paciente.'
+            : 'Se reducirán los elementos que permitan identificarla. Se procurará limitar datos o elementos identificadores cuando sea posible, aunque esto no garantiza que la persona no pueda ser reconocida.';
+        unset($sections['Identificación del material']);
+        $sections['¿Qué atención cubre esta autorización?'] = $sections['Alcance'];
+        unset($sections['Alcance']);
+        $sections['¿Hasta cuándo aplica esta autorización?'] = match ($consent['validity']['mode']) {
+            'single_event' => 'Sólo para este evento o atención',
+            'explicit_date_range' => $consent['validity']['valid_from'] . ' al ' . $consent['validity']['valid_to'],
+            'until_revoked' => 'Hasta que solicite su revocación. Esta autorización permanecerá vigente para los usos seleccionados hasta que el paciente o su representante solicite su revocación para usos futuros.',
+        };
+        unset($sections['Vigencia']);
+    }
     foreach (['clinical_event_or_procedure'=>'Atención o procedimiento','anatomical_area'=>'Área anatómica',
         'clinical_purpose_note'=>'Nota de contexto clínico','event_date'=>'Fecha del evento'] as $key=>$label)
         if ($consent['context'][$key] !== '') $sections[$label] = $consent['context'][$key];

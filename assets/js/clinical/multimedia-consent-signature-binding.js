@@ -17,11 +17,35 @@
     const optional = [['clinical_event_or_procedure','Atención o procedimiento'], ['anatomical_area','Área anatómica'],
       ['clinical_purpose_note','Nota de contexto clínico'], ['event_date','Fecha del evento']]
       .filter(([key])=>clean(context[key]).trim()).map(([key,label])=>`${label}: ${clean(context[key]).trim()}`);
-    let declaration = `De manera voluntaria autorizo la captura de ${media.map(key=>labels[key]).join(', ')} en relación con mi atención clínica. Autorizo su uso únicamente para ${purposes.map(key=>uses[key]).join(' y ')}. El material se utilizará de forma ${consent.identification_scope==='identifiable'?'identificable':'con identificación reducida, sin garantía de anonimato'}, en el ámbito de ${scopes[consent.authorization_scope]}, durante ${ranged?`el periodo del ${validity.valid_from} al ${validity.valid_to}`:'este evento únicamente'}.`;
-    if(optional.length) declaration += ` Contexto: ${optional.join('; ')}.`;
-    declaration += ' Recibí información sobre este alcance y tuve oportunidad de hacer preguntas antes de decidir.';
-    return {
-      version:1, document_type:'consentimiento_multimedia', document_uuid:clean(body?.draft_ref),
+    const v2 = consent.model_version === 2;
+    let declaration;
+    if(v2){
+      const mediaV2={photo:'fotografías',video:'registros de video',audio:'registros de audio'};
+      const purposesV2={clinical_record:'integrar el expediente clínico',clinical_followup:'documentar la evolución clínica',
+        teaching:'docencia médica',clinical_research:'investigación clínica',clinical_trial:'ensayo clínico',
+        scientific_publication:'presentaciones o publicaciones científicas',
+        institutional_communication:'comunicación institucional',public_dissemination:'difusión pública',
+        other_specific_use:`otro uso específico: ${clean(consent.other_specific_use_description).trim()}`};
+      const scopesV2={specific_event:'solo este evento o atención',current_episode:'este episodio de atención',
+        current_condition_followup:'el seguimiento del padecimiento actual',custom_limited_scope:custom};
+      const validityV2=validity.mode==='until_revoked'
+        ? 'hasta que el paciente o su representante solicite su revocación para usos futuros'
+        : ranged ? `el periodo del ${validity.valid_from} al ${validity.valid_to}` : 'solo este evento o atención';
+      declaration=`Autorizo de manera libre y expresa la captura de ${media.map(key=>mediaV2[key]).join(' y ')} relacionados con mi atención médica, así como su uso únicamente para ${purposes.map(key=>purposesV2[key]).join(', ')}.`;
+      if(consent.sensitive_purposes_confirmed===true) declaration+=' Confirmo que autoricé expresamente los usos adicionales seleccionados.';
+      declaration+=consent.identification_scope==='identifiable'
+        ? ' Comprendo que el rostro, la voz, características físicas u otros elementos pueden permitir reconocerme.'
+        : ' Se procurará limitar los elementos que permitan identificarme cuando sea posible, sin garantía de que no pueda ser reconocido.';
+      declaration+=` Esta autorización cubre ${scopesV2[consent.authorization_scope]} y permanecerá vigente ${validityV2}.`;
+      if(optional.length) declaration+=` Contexto: ${optional.join('; ')}.`;
+      declaration+=' He recibido información sobre el propósito de la captura y uso del material, tuve oportunidad de realizar preguntas y manifiesto mi conformidad con las opciones seleccionadas.';
+    }else{
+      declaration = `De manera voluntaria autorizo la captura de ${media.map(key=>labels[key]).join(', ')} en relación con mi atención clínica. Autorizo su uso únicamente para ${purposes.map(key=>uses[key]).join(' y ')}. El material se utilizará de forma ${consent.identification_scope==='identifiable'?'identificable':'con identificación reducida, sin garantía de anonimato'}, en el ámbito de ${scopes[consent.authorization_scope]}, durante ${ranged?`el periodo del ${validity.valid_from} al ${validity.valid_to}`:'este evento únicamente'}.`;
+      if(optional.length) declaration += ` Contexto: ${optional.join('; ')}.`;
+      declaration += ' Recibí información sobre este alcance y tuve oportunidad de hacer preguntas antes de decidir.';
+    }
+    const result = {
+      version:v2?2:1, document_type:'consentimiento_multimedia', document_uuid:clean(body?.draft_ref),
       document_version:Number(body?.expected_version || 0), document_date:clean(p.document_date),
       patient:{id:clean(body?.context?.patient_id),name:clean(patient.full_name),age:clean(patient.age),sex:clean(patient.sex)},
       physician:{user_id:clean(actor.user_id),name:clean(actor.full_name),license:clean(actor.license),
@@ -37,6 +61,13 @@
           event_date:clean(context.event_date).trim()},declaration:clean(declaration)},
       presentation:{professional_header:p.presentation?.professional_header==='hidden'?'hidden':'shown'}
     };
+    if(v2){
+      result.consent.model_version=2;
+      result.consent.sensitive_purposes_confirmed=consent.sensitive_purposes_confirmed===true;
+      result.consent.other_specific_use_description=purposes.includes('other_specific_use')
+        ? clean(consent.other_specific_use_description).trim() : '';
+    }
+    return result;
   };
   const hash = async body => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',
     new TextEncoder().encode(JSON.stringify(projection(body))))), byte=>byte.toString(16).padStart(2,'0')).join('');
@@ -53,14 +84,14 @@
       || !entry.image_data || !window.mxmedConsentSignatureBinding.imageHasInk(entry.image_data)) return null;
     const digest=await imageDigest(entry.image_data);
     if(!digest)return null;
-    return {...entry,binding:{version:1,document_type:'consentimiento_multimedia',document_uuid:clean(body.draft_ref),
+    return {...entry,binding:{version:projection(body).version,document_type:'consentimiento_multimedia',document_uuid:clean(body.draft_ref),
       document_version:Number(body.expected_version),role,source:entry.source,authority:authority(body,role,doctorId),
       content_fingerprint:await hash(body),artifact_digest:digest,applied_at:new Date().toISOString()}};
   };
   const classify = async (body,role,doctorId,registeredImage='')=>{
     const entry=body?.payload?.signatures?.[role], b=entry?.binding;
     if(!entry?.image_data)return 'absent';
-    if(b?.version!==1)return 'legacy_unverified_binding';
+    if(b?.version!==projection(body).version)return 'legacy_unverified_binding';
     const name=role==='doctor'?body?.payload?.actor_snapshot?.full_name:
       body?.payload?.signer?.mode==='patient'?body?.payload?.patient_snapshot?.full_name:body?.payload?.signer?.name;
     if(b.document_type!=='consentimiento_multimedia'||b.document_uuid!==body?.draft_ref

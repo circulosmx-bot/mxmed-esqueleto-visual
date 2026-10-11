@@ -56218,7 +56218,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
     // MULTI-CONS02A foundation: 02B will connect the catalog card and signatures.
     // The server remains the only renderer and writer for this document.
-    const multimediaState = { ref: '', version: 0, date: '', phase: 'capture', saving: false,
+    const multimediaState = { ref: '', version: 0, modelVersion:2, date: '', phase: 'capture', saving: false,
       signatures: {signer:null, doctor:null}, qr: {token:'',role:'',status:'',timer:0,generation:0},
       ink:false, drawnRole:'', reviewedHtml:'', finalHtml:'' };
     const ensureMultimediaModal = ()=>{
@@ -56242,13 +56242,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
               <label class="me-3"><input type="checkbox" name="mmc_media" value="video"> Video</label>
               <label><input type="checkbox" name="mmc_media" value="audio"> Audio</label></fieldset>
             <label class="form-check mb-3"><input class="form-check-input" type="checkbox" data-mmc-capture-allowed><span class="form-check-label">Autorizo expresamente la captura del material seleccionado</span></label>
-            <fieldset class="mb-3"><legend class="fs-6">Usos clínicos autorizados <button type="button" class="btn btn-link btn-sm p-0" data-mmc-help="purposes">ⓘ Ver ejemplo</button></legend>
-              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_record"> Integración al expediente clínico</label>
-              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_followup"> Seguimiento de la evolución clínica</label></fieldset>
-            <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_identification">Identificación del material</label><select class="form-select" id="mmc_identification"><option value="">Selecciona</option><option value="identifiable">Identificable</option><option value="reduced_identification">Identificación reducida</option></select></div>
-              <div class="col-md-6"><label class="form-label" for="mmc_scope">Alcance</label><select class="form-select" id="mmc_scope"><option value="">Selecciona</option><option value="specific_event">Este evento o atención</option><option value="current_episode">Este episodio de atención</option><option value="current_condition_followup">Seguimiento del padecimiento actual</option><option value="custom_limited_scope">Otro alcance específico</option></select></div></div>
+            <fieldset class="mb-3"><legend class="fs-6">¿Para qué se autoriza el uso del material? <button type="button" class="btn btn-link btn-sm p-0" data-mmc-help="purposes">ⓘ Ver ejemplo</button></legend>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_record"> Expediente clínico</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_followup"> Seguimiento de la evolución clínica</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="teaching"> Docencia médica</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_research"> Investigación clínica</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="clinical_trial"> Ensayo clínico</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="scientific_publication"> Presentaciones o publicaciones científicas</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="institutional_communication"> Comunicación institucional</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="public_dissemination"> Difusión pública</label>
+              <label class="d-block"><input type="checkbox" name="mmc_purpose" value="other_specific_use"> Otro uso específico</label>
+              <div class="mt-2 d-none" data-mmc-other-wrap><label class="form-label" for="mmc_other_use">Describe el otro uso específico</label><textarea class="form-control" id="mmc_other_use" rows="2" maxlength="2000"></textarea></div>
+              <label class="form-check mt-2 d-none" data-mmc-sensitive-wrap><input class="form-check-input" type="checkbox" data-mmc-sensitive-confirm><span class="form-check-label">Confirmo que el paciente autorizó expresamente los usos adicionales seleccionados.</span></label></fieldset>
+            <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_identification">¿La persona puede ser reconocida en el material?</label><select class="form-select" id="mmc_identification"><option value="">Selecciona</option><option value="identifiable">Sí, puede ser identificada</option><option value="reduced_identification">Se reducirán los elementos que permitan identificarla</option></select><p class="form-text" data-mmc-recognition-copy></p></div>
+              <div class="col-md-6"><label class="form-label" for="mmc_scope">¿Qué atención cubre esta autorización?</label><select class="form-select" id="mmc_scope"><option value="">Selecciona</option><option value="specific_event">Sólo este evento o atención</option><option value="current_episode">Este episodio de atención</option><option value="current_condition_followup">Seguimiento del padecimiento actual</option><option value="custom_limited_scope">Otro alcance específico</option></select></div></div>
             <div class="mb-3 d-none" data-mmc-custom-wrap><label class="form-label" for="mmc_custom_scope">Describe el alcance específico</label><textarea id="mmc_custom_scope" class="form-control" rows="2" maxlength="2000"></textarea></div>
-            <div class="row g-3 mb-3"><div class="col-md-4"><label class="form-label" for="mmc_validity">Vigencia</label><select class="form-select" id="mmc_validity"><option value="">Selecciona</option><option value="single_event">Solo este evento</option><option value="explicit_date_range">Periodo con fechas</option></select></div>
+            <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_validity">¿Hasta cuándo aplica esta autorización?</label><select class="form-select" id="mmc_validity"><option value="">Selecciona</option><option value="single_event">Sólo para este evento o atención</option><option value="explicit_date_range">Durante un periodo definido</option><option value="until_revoked">Hasta que solicite su revocación</option></select><p class="form-text d-none" data-mmc-revocation-copy>Esta autorización permanecerá vigente para los usos seleccionados hasta que el paciente o su representante solicite su revocación para usos futuros.</p></div>
               <div class="col-md-8 d-none" data-mmc-dates-wrap><div class="row g-2"><div class="col-6"><label class="form-label" for="mmc_valid_from">Desde</label><input class="form-control" type="date" id="mmc_valid_from"></div><div class="col-6"><label class="form-label" for="mmc_valid_to">Hasta</label><input class="form-control" type="date" id="mmc_valid_to"></div></div></div></div>
             <details class="mb-3"><summary>Contexto clínico opcional</summary><div class="row g-3 mt-1">
               <div class="col-md-6"><label class="form-label" for="mmc_event">Atención o procedimiento</label><input class="form-control" id="mmc_event" maxlength="2000"></div><div class="col-md-6"><label class="form-label" for="mmc_area">Área anatómica</label><input class="form-control" id="mmc_area" maxlength="2000"></div>
@@ -56256,6 +56265,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label" for="mmc_signer_mode">Firmante previsto</label><select class="form-select" id="mmc_signer_mode"><option value="patient">Paciente</option><option value="representative">Representante</option></select></div></div>
             <div class="row g-3 mb-3 d-none" data-mmc-representative-wrap><div class="col-md-6"><label class="form-label" for="mmc_rep_name">Nombre del representante</label><input class="form-control" id="mmc_rep_name"></div><div class="col-md-6"><label class="form-label" for="mmc_rep_character">Carácter</label><input class="form-control" id="mmc_rep_character"></div><div class="col-md-6"><label class="form-label" for="mmc_rep_relationship">Relación o parentesco</label><input class="form-control" id="mmc_rep_relationship"></div><div class="col-md-6"><label class="form-label" for="mmc_rep_authority">Motivo o autoridad</label><input class="form-control" id="mmc_rep_authority"></div></div>
             <fieldset class="mb-3"><legend class="fs-6">Encabezado profesional</legend><label class="me-3"><input type="radio" name="mmc_header" value="shown" checked> Mostrar</label><label><input type="radio" name="mmc_header" value="hidden"> Ocultar</label></fieldset>
+            <button type="button" class="btn btn-outline-primary mb-2" data-mmc-full-example>Ver ejemplo completo</button>
+            <p class="small text-muted d-none" data-mmc-example-warning>Este contenido es un ejemplo ficticio. Revisa las opciones y adáptalas al consentimiento real otorgado por el paciente antes de emitir el documento.</p>
+            <section class="border rounded p-3 mb-3 d-none" data-mmc-example-panel aria-label="Ejemplo completo de consentimiento multimedia">
+              <h3 class="fs-6">Ejemplo completo · documentación y seguimiento clínico</h3>
+              <p class="small">Fotografías y video; captura autorizada; expediente clínico y seguimiento de la evolución; material reconocible; seguimiento del padecimiento actual; vigente hasta solicitar revocación para usos futuros.</p>
+              <p class="small">Autorización para obtener fotografías y, cuando resulte clínicamente útil, registros de video de la zona en tratamiento, con el propósito de documentar su estado actual y comparar objetivamente su evolución durante las consultas posteriores.</p>
+              <p class="small text-muted">Ejemplo de alcance específico: La autorización se limita al material obtenido durante la atención y seguimiento del padecimiento descrito, exclusivamente para su incorporación al expediente clínico y evaluación de la evolución.</p>
+              <p class="small">Este contenido es un ejemplo ficticio. Revisa las opciones y adáptalas al consentimiento real otorgado por el paciente antes de emitir el documento.</p>
+              <button type="button" class="btn btn-primary btn-sm" data-mmc-use-example>USAR ESTE CONSENTIMIENTO COMO BASE</button>
+              <div class="border rounded p-3 mt-2 d-none" data-mmc-replace-confirm role="dialog" aria-label="Usar este consentimiento como base"><h4 class="fs-6">Usar este consentimiento como base</h4><p class="small">Se sustituirán las opciones y textos actuales por un ejemplo editable. Revisa cada autorización y adáptala al consentimiento real otorgado por el paciente antes de emitir el documento.</p><button type="button" class="btn btn-outline-secondary btn-sm me-2" data-mmc-replace-cancel>Cancelar</button><button type="button" class="btn btn-primary btn-sm" data-mmc-replace-apply>Usar como base</button></div>
+            </section>
           </div>
           <div data-mmc-review class="d-none"><p class="text-muted small">Revisa el documento completo antes de continuar.</p><div data-mmc-review-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
           <div data-mmc-signatures class="d-none"><p class="text-muted">Las dos firmas se vinculan al borrador y a esta versión.</p>
@@ -56311,35 +56331,38 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
       });
       const helpSections=[
-        {key:'purposes',label:'Usos clínicos autorizados',
-          explanation:'Selecciona únicamente los usos que la persona realmente autoriza. La captura no autoriza otros usos.',
-          text:'Para este caso ficticio, la persona autoriza integrar el material al expediente y usarlo para seguimiento clínico. No autoriza docencia ni difusión pública.'},
-        {key:'identification',label:'Identificación del material',
-          explanation:'Elige si el material será identificable o tendrá identificación reducida. Reducirla no garantiza que la persona no pueda ser reconocida.',
-          text:'La identificación reducida limita los datos visibles, pero la voz, la imagen u otros rasgos aún podrían permitir reconocer a la persona.'},
-        {key:'scope',label:'Alcance de la autorización',
-          explanation:'Limita la autorización al evento, episodio o seguimiento realmente previsto.',
+        {key:'purposes',label:'¿Para qué se autoriza el uso del material?',
+          explanation:'Selecciona sólo los usos autorizados expresamente. Docencia, investigación, ensayos, publicación y difusión requieren confirmación adicional. La captura no autoriza usos por sí sola.',
+          text:'En el caso ficticio, se autoriza integrar el material al expediente y usarlo para seguimiento clínico. No se autoriza docencia, investigación ni difusión pública.'},
+        {key:'identification',label:'¿La persona puede ser reconocida en el material?',
+          explanation:'El rostro, la voz y otros rasgos pueden identificar a la persona. Reducir identificadores no garantiza que no pueda ser reconocida.',
+          text:'Caso ficticio: las fotografías clínicas podrían permitir reconocer al paciente.'},
+        {key:'scope',label:'¿Qué atención cubre esta autorización?',
+          explanation:'Elige el evento, episodio o seguimiento cubierto; los fines como investigación o docencia se seleccionan aparte.',
           text:'Un evento concreto no autoriza automáticamente el uso del material para otras consultas o finalidades.'},
-        {key:'validity',label:'Vigencia',
-          explanation:'Selecciona un solo evento o un periodo con fechas explícitas. No uses plazos indefinidos.',
-          text:'Caso ficticio: la autorización comprende únicamente la atención descrita; si abarca varios días, registra ambas fechas.'},
+        {key:'validity',label:'¿Hasta cuándo aplica esta autorización?',
+          explanation:'Puedes limitarla a un evento, a fechas concretas o mantenerla vigente hasta que se solicite revocación para usos futuros.',
+          text:'Caso ficticio: el seguimiento clínico continúa hasta que el paciente solicite revocación para usos futuros.'},
         {key:'representative',label:'Autoridad del representante',
           explanation:'Registra la relación y la autoridad reales del representante. La ayuda no sustituye la verificación clínica.',
           text:'Caso ficticio: el representante acredita su relación con la persona y su capacidad para decidir en esta atención.'},
         {key:'context',label:'Nota de contexto clínico',
           explanation:'Describe el contexto concreto sin ampliar los usos autorizados.',
-          text:'Caso ficticio: se documentará la evolución de una lesión superficial durante la atención actual.'},
+          text:'Autorización para obtener fotografías y, cuando resulte clínicamente útil, registros de video de la zona en tratamiento, con el propósito de documentar su estado actual y comparar objetivamente su evolución durante las consultas posteriores.'},
         {key:'custom',label:'Alcance específico',
           explanation:'Especifica el límite exacto de la autorización personalizada.',
-          text:'Caso ficticio: únicamente fotografías clínicas de la lesión durante la consulta de seguimiento indicada.'}
+          text:'La autorización se limita al material obtenido durante la atención y seguimiento del padecimiento descrito, exclusivamente para su incorporación al expediente clínico y evaluación de la evolución.'},
+        {key:'other',label:'Otro uso específico',
+          explanation:'Describe con precisión el destino adicional autorizado. Esta opción requiere confirmación expresa del paciente.',
+          text:'Ejemplo ficticio: presentación del material en una sesión clínica interna sobre el tratamiento descrito.'}
       ];
       const multimediaHelp=window.mxmedExampleFieldHelp?.mount({modal,id:'mmc-example',
         contextLabel:'Caso ficticio',contextText:'Consentimiento multimedia para documentación clínica limitada.',
         note:'Orientación de ejemplo. Adapta el texto a la decisión real antes de utilizarlo.',
         sections:helpSections,
         fieldMap:{mmc_identification:'identification',mmc_scope:'scope',mmc_validity:'validity',
-          mmc_rep_authority:'representative',mmc_note:'context',mmc_custom_scope:'custom'},
-        canUseExample:({section})=>['context','custom'].includes(section.key),
+          mmc_rep_authority:'representative',mmc_note:'context',mmc_custom_scope:'custom',mmc_other_use:'other'},
+        canUseExample:({section})=>['context','custom','other'].includes(section.key),
         onUseExample:({section,destination})=>{
           destination.value=section.text;
           destination.dispatchEvent(new Event('input',{bubbles:true}));
@@ -56349,8 +56372,53 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const syncConditional = ()=>{
         get('[data-mmc-custom-wrap]').classList.toggle('d-none', get('#mmc_scope').value !== 'custom_limited_scope');
         get('[data-mmc-dates-wrap]').classList.toggle('d-none', get('#mmc_validity').value !== 'explicit_date_range');
+        get('[data-mmc-revocation-copy]').classList.toggle('d-none',get('#mmc_validity').value !== 'until_revoked');
+        const sensitive=checked('mmc_purpose').some(value=>!['clinical_record','clinical_followup'].includes(value));
+        get('[data-mmc-sensitive-wrap]').classList.toggle('d-none',!sensitive);
+        if(!sensitive) get('[data-mmc-sensitive-confirm]').checked=false;
+        get('[data-mmc-other-wrap]').classList.toggle('d-none',!checked('mmc_purpose').includes('other_specific_use'));
+        const recognition=get('#mmc_identification').value;
+        get('[data-mmc-recognition-copy]').textContent=recognition==='identifiable'
+          ? 'El rostro, la voz, características físicas u otros elementos pueden permitir reconocer al paciente.'
+          : recognition==='reduced_identification'
+            ? 'Se procurará limitar datos o elementos identificadores cuando sea posible, aunque esto no garantiza que la persona no pueda ser reconocida.' : '';
         get('[data-mmc-representative-wrap]').classList.toggle('d-none', get('#mmc_signer_mode').value !== 'representative');
       };
+      const applyFullExample=()=>{
+        multimediaState.modelVersion=2;
+        modal.querySelectorAll('input[name="mmc_media"]').forEach(input=>input.checked=['photo','video'].includes(input.value));
+        modal.querySelectorAll('input[name="mmc_purpose"]').forEach(input=>input.checked=['clinical_record','clinical_followup'].includes(input.value));
+        get('[data-mmc-capture-allowed]').checked=true;
+        get('[data-mmc-sensitive-confirm]').checked=false;
+        get('#mmc_other_use').value='';
+        get('#mmc_identification').value='identifiable';
+        get('#mmc_scope').value='current_condition_followup';
+        get('#mmc_custom_scope').value='';
+        get('#mmc_validity').value='until_revoked';
+        get('#mmc_valid_from').value='';get('#mmc_valid_to').value='';
+        get('#mmc_event').value='';get('#mmc_area').value='';get('#mmc_event_date').value='';
+        get('#mmc_note').value='Autorización para obtener fotografías y, cuando resulte clínicamente útil, registros de video de la zona en tratamiento, con el propósito de documentar su estado actual y comparar objetivamente su evolución durante las consultas posteriores.';
+        get('[data-mmc-example-warning]').classList.remove('d-none');
+        get('[data-mmc-replace-confirm]').classList.add('d-none');
+        syncConditional();
+        get('#mmc_note').dispatchEvent(new Event('input',{bubbles:true}));
+      };
+      get('[data-mmc-full-example]').addEventListener('click',()=>{
+        const panel=get('[data-mmc-example-panel]');panel.classList.toggle('d-none');
+        if(!panel.classList.contains('d-none')) get('[data-mmc-use-example]').focus();
+      });
+      get('[data-mmc-use-example]').addEventListener('click',()=>{
+        const meaningful=!!modal.querySelector('input[name="mmc_media"]:checked,input[name="mmc_purpose"]:checked')
+          || !!get('[data-mmc-capture-allowed]').checked
+          || ['identification','scope','validity','custom_scope','other_use','event','area','note','event_date']
+            .some(id=>!!get(`#mmc_${id}`)?.value);
+        if(meaningful){get('[data-mmc-replace-confirm]').classList.remove('d-none');get('[data-mmc-replace-cancel]').focus();}
+        else applyFullExample();
+      });
+      get('[data-mmc-replace-cancel]').addEventListener('click',()=>{
+        get('[data-mmc-replace-confirm]').classList.add('d-none');get('[data-mmc-use-example]').focus();
+      });
+      get('[data-mmc-replace-apply]').addEventListener('click',applyFullExample);
       const renderPhase = phase=>{
         multimediaState.phase = phase;
         for(const value of ['choices','capture','review','signatures','final','post']) get(`[data-mmc-${value}]`).classList.toggle('d-none', value !== phase);
@@ -56378,9 +56446,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const isCustom = value('scope') === 'custom_limited_scope';
         const isRange = value('validity') === 'explicit_date_range';
         const isRep = value('signer_mode') === 'representative';
+        const purposes=checked('mmc_purpose');
+        const sensitive=purposes.some(entry=>!['clinical_record','clinical_followup'].includes(entry));
         const consent = {
+          ...(multimediaState.modelVersion===2?{model_version:2}:{}),
           media_types: checked('mmc_media'), capture_allowed: !!get('[data-mmc-capture-allowed]').checked,
-          use_purposes: checked('mmc_purpose'), identification_scope: value('identification'),
+          use_purposes: purposes, sensitive_purposes_confirmed:sensitive && !!get('[data-mmc-sensitive-confirm]').checked,
+          other_specific_use_description:purposes.includes('other_specific_use')?value('other_use'):'',
+          identification_scope: value('identification'),
           authorization_scope: value('scope'), custom_scope_description: isCustom ? value('custom_scope') : '',
           validity: {mode:value('validity'), valid_from:isRange ? value('valid_from') : '', valid_to:isRange ? value('valid_to') : ''},
           context: {clinical_event_or_procedure:value('event'), anatomical_area:value('area'),
@@ -56399,6 +56472,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             presentation:{version:1, professional_header:checked('mmc_header')[0] || 'shown'},
             document_date:multimediaState.date, signatures:{...multimediaState.signatures}}
         };
+      };
+      const requireSensitiveConfirmation=()=>{
+        const purposes=checked('mmc_purpose');
+        if(purposes.some(entry=>!['clinical_record','clinical_followup'].includes(entry))
+          && !get('[data-mmc-sensitive-confirm]').checked)
+          throw new Error('Confirma que el paciente autorizó expresamente los usos adicionales seleccionados.');
       };
       const preview = async ()=>{
         const body = await collect();
@@ -56463,6 +56542,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }finally{multimediaState.saving=false; get('[data-mmc-save]').disabled=false;}
       };
       get('[data-mmc-capture]').addEventListener('input', ()=>{
+        multimediaState.modelVersion=2;
         if(multimediaState.signatures.signer || multimediaState.signatures.doctor){
           multimediaState.signatures={signer:null,doctor:null}; refreshSignatures();
         }
@@ -56470,6 +56550,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         multimediaState.finalHtml='';
       });
       get('[data-mmc-capture]').addEventListener('change', ()=>{
+        multimediaState.modelVersion=2;
         if(multimediaState.signatures.signer || multimediaState.signatures.doctor){
           multimediaState.signatures={signer:null,doctor:null}; refreshSignatures();
         }
@@ -56578,12 +56659,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       modal.addEventListener('hidden.bs.modal',()=>void invalidateQr());
       get('#mmc_scope').addEventListener('change', syncConditional);
       get('#mmc_validity').addEventListener('change', syncConditional);
+      get('#mmc_identification').addEventListener('change', syncConditional);
+      modal.querySelectorAll('input[name="mmc_purpose"]').forEach(input=>input.addEventListener('change',()=>{
+        get('[data-mmc-sensitive-confirm]').checked=false;
+        syncConditional();
+      }));
       get('#mmc_signer_mode').addEventListener('change', syncConditional);
       get('[data-mmc-new]').addEventListener('click', ()=>{ modal.querySelectorAll('input').forEach(input=>{
         if(input.type === 'checkbox' || input.type === 'radio') input.checked = input.type === 'radio' && input.value === 'shown';
         else input.value = '';
       }); modal.querySelectorAll('select').forEach(select=>select.selectedIndex=0);
-        get('#mmc_signer_mode').value='patient'; multimediaState.ref=''; multimediaState.version=0;
+        get('#mmc_signer_mode').value='patient'; get('[data-mmc-example-warning]').classList.add('d-none');
+        get('[data-mmc-example-panel]').classList.add('d-none');get('[data-mmc-replace-confirm]').classList.add('d-none');
+        multimediaState.ref=''; multimediaState.version=0;multimediaState.modelVersion=2;
         multimediaState.signatures={signer:null,doctor:null};
         multimediaState.date=new Date().toISOString().slice(0,10); error(''); syncConditional(); renderPhase('capture'); });
       get('[data-mmc-drafts]').addEventListener('click', async event=>{
@@ -56600,11 +56688,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             || doc.status !== 'draft' || doc.audit?.created_by_user_id !== currentUser
             || doc.context?.patient_id !== resolveActivePatientIdForConsent()) throw new Error('Borrador no disponible.');
           const consent = payload.consent || {};
+          multimediaState.modelVersion=consent.model_version===2?2:1;
           modal.querySelectorAll('input[name="mmc_media"],input[name="mmc_purpose"]').forEach(input=>{
             input.checked=(input.name === 'mmc_media' ? consent.media_types : consent.use_purposes)?.includes(input.value) || false;
           });
           get('[data-mmc-capture-allowed]').checked=consent.capture_allowed === true;
+          get('[data-mmc-sensitive-confirm]').checked=consent.sensitive_purposes_confirmed === true;
           const set=(id, value)=>{ const input=get(`#mmc_${id}`); if(input) input.value=String(value || ''); };
+          set('other_use',consent.other_specific_use_description);
           set('identification',consent.identification_scope); set('scope',consent.authorization_scope);
           set('custom_scope',consent.custom_scope_description); set('validity',consent.validity?.mode);
           set('valid_from',consent.validity?.valid_from); set('valid_to',consent.validity?.valid_to);
@@ -56626,7 +56717,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         catch(e){error(e.message || 'No se pudo preparar la vista previa.');}
       });
       get('[data-mmc-continue]').addEventListener('click', async ()=>{
-        try{error('');await persist('draft');refreshSignatures();renderPhase('signatures');}
+        try{error('');requireSensitiveConfirmation();await persist('draft');refreshSignatures();renderPhase('signatures');}
         catch(e){error(e.message || 'No se pudo preparar el borrador para firmas.');}
       });
       get('[data-mmc-back]').addEventListener('click', ()=>{error(''); renderPhase('capture');});
@@ -56635,7 +56726,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       });
       get('[data-mmc-final-review]').addEventListener('click',async()=>{
         try{
-          error('');const body=await collect();const doctorId=resolveCanonicalDocumentsDoctorId();
+          error('');requireSensitiveConfirmation();const body=await collect();const doctorId=resolveCanonicalDocumentsDoctorId();
           for(const role of ['signer','doctor']){
             const state=await binding.classify(body,role,doctorId,
               role==='doctor'?readRegisteredDoctorSignature():'');
@@ -56649,7 +56740,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       });
       get('[data-mmc-emit]').addEventListener('click',async()=>{
         try{
-          error('');if(!multimediaState.finalHtml || await preview()!==multimediaState.finalHtml)
+          error('');requireSensitiveConfirmation();if(!multimediaState.finalHtml || await preview()!==multimediaState.finalHtml)
             throw new Error('El consentimiento cambió desde la revisión final. Revísalo de nuevo.');
           const doc=await persist('generated');
           if(doc.status!=='generated' || doc.content?.payload?.frozen_snapshot?.html!==multimediaState.finalHtml)

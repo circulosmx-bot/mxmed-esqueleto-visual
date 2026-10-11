@@ -14,7 +14,7 @@ function clinical_multimedia_binding_projection(array $body): array
     $signer = (array)($p['signer'] ?? []);
     $context = (array)($body['context'] ?? []);
     $c = 'clinical_consent_binding_clean';
-    return [
+    $projection = [
         'version' => 1,
         'document_type' => 'consentimiento_multimedia',
         'document_uuid' => $c($body['draft_ref'] ?? ''),
@@ -45,6 +45,19 @@ function clinical_multimedia_binding_projection(array $body): array
         ],
         'presentation' => ['professional_header' => clinical_legal_document_professional_header_mode($p)],
     ];
+    if (($consent['model_version'] ?? 1) === 2) {
+        $projection['version'] = 2;
+        $projection['consent']['model_version'] = 2;
+        $projection['consent']['sensitive_purposes_confirmed'] = $consent['sensitive_purposes_confirmed'];
+        $projection['consent']['other_specific_use_description'] = $c($consent['other_specific_use_description']);
+    }
+    return $projection;
+}
+
+function clinical_multimedia_binding_version(array $body): int
+{
+    $consent = (array)($body['payload']['consent'] ?? []);
+    return (int)($consent['model_version'] ?? 1) === 2 ? 2 : 1;
 }
 
 function clinical_multimedia_binding_fingerprint(array $body): string
@@ -78,7 +91,8 @@ function clinical_multimedia_binding_classify(array $body, string $role, string 
     $name = $role === 'doctor' ? (string)($p['actor_snapshot']['full_name'] ?? '')
         : (($p['signer']['mode'] ?? '') === 'patient' ? (string)($p['patient_snapshot']['full_name'] ?? '')
             : (string)($p['signer']['name'] ?? ''));
-    if (($b['version'] ?? null) !== 1 || !in_array($source, ['local_canvas', 'remote_qr', 'registered_profile'], true)
+    if (($b['version'] ?? null) !== clinical_multimedia_binding_version($body)
+        || !in_array($source, ['local_canvas', 'remote_qr', 'registered_profile'], true)
         || ($role === 'signer' && $source === 'registered_profile')
         || ($b['document_type'] ?? '') !== 'consentimiento_multimedia'
         || ($b['document_uuid'] ?? '') !== $uuid || (int)($b['document_version'] ?? 0) !== $version
