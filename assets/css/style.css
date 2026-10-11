@@ -20263,7 +20263,36 @@ body{margin:0;background:var(--mm-fondo-base);}
   border:1px solid #c9d8e5;
   border-radius:.52rem;
   background:#fff;
+  touch-action:none;
 }
+.mx-signature-direct-label{display:block;margin:0 0 .25rem;color:#12344e;font-size:.88rem;letter-spacing:.015em}
+.mx-signature-instruction{margin:0 0 .45rem;color:#456073;font-size:.82rem;line-height:1.35}
+.mx-signature-pad:has(> canvas.d-none) .mx-signature-direct-label,
+.mx-signature-pad:has(> canvas.d-none) .mx-signature-instruction{display:none}
+.mx-signature-pad:focus-within{border-color:#008fa4}
+.mx-signature-remote{min-height:44px;white-space:normal;text-align:center}
+.mx-signature-direct,.mx-signature-registered{min-height:44px;white-space:normal;text-align:center}
+.mx-signature-direct:focus-visible,.mx-signature-remote:focus-visible,.mx-signature-registered:focus-visible,
+.mx-signature-pad__canvas:focus-visible{outline:3px solid #007c96;outline-offset:2px}
+[data-signature-input="direct-touch"] .mx-signature-pad,
+[data-signature-input="hybrid"] .mx-signature-pad{max-width:760px}
+[data-signature-input="direct-touch"] .mx-signature-pad__canvas,
+[data-signature-input="hybrid"] .mx-signature-pad__canvas{height:clamp(220px,32vh,340px)}
+[data-signature-input="direct-touch"] .mx-signature-direct,
+[data-signature-input="hybrid"] .mx-signature-direct{background:#008fa4;border-color:#008fa4;color:#fff}
+[data-signature-input="desktop-pointer"] .mx-signature-registered{background:#008fa4;border-color:#008fa4;color:#fff}
+.form-check:has(input[id$="_signature_source_registered"]:not(:disabled)) .form-check-label,
+#ci_doctor_signature_apply_registered{font-weight:700;color:#07536e}
+#ci_doctor_signature_apply_registered{min-height:44px}
+[data-signature-compact="true"] .mx-signature-pad{max-width:100%;width:100%}
+[data-signature-compact="true"] .mx-signature-pad__canvas{height:clamp(240px,38vh,350px)}
+[data-signature-compact="true"] #fd_signature_canvas,
+[data-signature-compact="true"] [data-mmc-canvas]{width:100%!important;max-width:100%!important;height:clamp(240px,38vh,350px)!important}
+#fd_signature_canvas,[data-mmc-canvas]{box-sizing:border-box;display:block;height:220px;touch-action:none}
+[data-signature-input="direct-touch"] #fd_signature_canvas,
+[data-signature-input="direct-touch"] [data-mmc-canvas],
+[data-signature-input="hybrid"] #fd_signature_canvas,
+[data-signature-input="hybrid"] [data-mmc-canvas]{height:clamp(240px,34vh,350px)}
 @media (max-width: 1199.98px){
   .mx-signature-pad{max-width:560px;}
 }
@@ -23171,3 +23200,24 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 .docux-links { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem 1rem; }
 .docux-modal footer .btn { min-height:42px; }
 @media(max-width:600px) { .docux-actions .btn { flex:1 1 145px; } .docux-modal { padding:.85rem; } }
+
+/* SIGN-UX02: final signature action priority across the document modals. */
+[data-signature-input="direct-touch"] button.mx-signature-direct,
+[data-signature-input="hybrid"] button.mx-signature-direct{
+  background:#008fa4!important;
+  border-color:#008fa4!important;
+  color:#fff!important;
+  font-weight:700;
+}
+button.mx-signature-remote{
+  background:#fff!important;
+  border-color:#b7d2de!important;
+  color:#27566c!important;
+  font-weight:600;
+}
+[data-signature-input="desktop-pointer"] button.mx-signature-registered{
+  background:#008fa4!important;
+  border-color:#008fa4!important;
+  color:#fff!important;
+  font-weight:700;
+}

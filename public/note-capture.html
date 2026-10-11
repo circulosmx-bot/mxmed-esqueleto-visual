@@ -30,7 +30,10 @@
     .pickers button{min-height:48px;color:#07536e;border-color:#00b8c9;background:#fff}
     .wrap{color:#07536e;border-color:#bdd8e4}
     [hidden]{display:none!important}
-    .sig-pad{border:1px solid #c7d2e5;border-radius:10px;background:#fff;touch-action:none;width:100%;height:190px}
+    .sig-pad{display:block;box-sizing:border-box;border:1px solid #c7d2e5;border-radius:10px;background:#fff;touch-action:none;width:100%;height:clamp(220px,34vh,360px)}
+    @media (min-width:650px){.wrap{max-width:760px}.sig-pad{height:300px}}
+    @media (max-width:480px){body{padding:8px}.wrap{padding:12px}.sig-pad{height:clamp(240px,38vh,330px)}}
+    button:focus-visible,.sig-pad:focus-visible{outline:3px solid #07536e;outline-offset:3px}
     .sig-actions{display:flex;gap:10px;margin-top:10px}
     .sig-actions button{width:auto;flex:1}
     .consent-review-frame{width:100%;height:min(58vh,560px);border:1px solid #c7d2e5;border-radius:10px;background:#fff}
@@ -74,11 +77,12 @@
     <form id="signatureForm" class="d-none">
       <p id="signatureRole" class="consent-signer"></p>
 
-      <label for="signatureCanvas">Firma en pantalla</label>
-      <canvas id="signatureCanvas" class="sig-pad" width="520" height="190" aria-label="Firma del paciente o representante"></canvas>
+      <label for="signatureCanvas">FIRMAR AQUÍ</label>
+      <p id="signatureInstructions">Dibuja tu firma en el recuadro con el dedo, lápiz o mouse.</p>
+      <canvas id="signatureCanvas" class="sig-pad" width="520" height="190" aria-label="Área para dibujar la firma" aria-describedby="signatureInstructions"></canvas>
 
       <div class="sig-actions">
-        <button type="button" class="btn-secondary" id="signatureClear">Limpiar firma</button>
+        <button type="button" class="btn-secondary" id="signatureClear">LIMPIAR DIBUJO</button>
         <button type="submit" id="signatureSubmit">Enviar firma</button>
       </div>
     </form>
@@ -92,6 +96,7 @@
 
   <script src="/public/mobile-capture-session.js?v=r43a"></script>
   <script src="/assets/js/clinical/consent-signature-binding.js"></script>
+  <script src="/assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
   <script>
     (function(){
       const params = new URLSearchParams(window.location.search || '');
@@ -217,56 +222,26 @@
 
       const setupSignatureCanvas = ()=>{
         if(!signatureCanvas) return;
+        const experience = window.mxmedSignatureExperience;
         const ctx = signatureCanvas.getContext('2d');
         if(!ctx) return;
         const reset = ()=>{
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = '#0f172a';
-          signatureHasStroke = false;
+          experience.resizeCanvas(signatureCanvas, { preserve:false });
+          const rect=signatureCanvas.getBoundingClientRect();
+          ctx.fillStyle='#fff';ctx.fillRect(0,0,rect.width,rect.height);
+          ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=2;ctx.strokeStyle='#0f172a';
+          signatureHasStroke=false;
         };
         reset();
-        let drawing = false;
-        const point = (event)=>{
-          const rect = signatureCanvas.getBoundingClientRect();
-          return {
-            x: (event.clientX - rect.left) * (signatureCanvas.width / Math.max(1, rect.width)),
-            y: (event.clientY - rect.top) * (signatureCanvas.height / Math.max(1, rect.height))
-          };
-        };
-        const start = (event)=>{
-          drawing = true;
-          const p = point(event);
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          signatureHasStroke = true;
-          event.preventDefault();
-        };
-        const move = (event)=>{
-          if(!drawing) return;
-          const p = point(event);
-          ctx.lineTo(p.x, p.y);
-          ctx.stroke();
-          event.preventDefault();
-        };
-        const end = (event)=>{
-          if(!drawing) return;
-          drawing = false;
-          ctx.closePath();
-          event.preventDefault();
-        };
-        signatureCanvas.addEventListener('pointerdown', start);
-        signatureCanvas.addEventListener('pointermove', move);
-        signatureCanvas.addEventListener('pointerup', end);
-        signatureCanvas.addEventListener('pointercancel', end);
-        signatureCanvas.addEventListener('pointerleave', end);
-        signatureClear?.addEventListener('click', (event)=>{
-          event.preventDefault();
-          reset();
-          setMsg('Firma limpiada. Dibuja nuevamente para enviar.', 'muted');
+        experience.bindPointer(signatureCanvas, {
+          start(event){const p=experience.point(signatureCanvas,event);ctx.beginPath();ctx.moveTo(p.x,p.y);event.preventDefault();},
+          move(event){const p=experience.point(signatureCanvas,event);ctx.lineTo(p.x,p.y);ctx.stroke();signatureHasStroke=true;event.preventDefault();},
+          end(event){ctx.closePath();event.preventDefault();}
+        });
+        experience.observeResize(signatureCanvas,{preserve:true});
+        signatureClear?.addEventListener('click', event=>{
+          event.preventDefault();reset();
+          setMsg('Firma limpiada. Dibuja nuevamente para enviar.','muted');
         });
       };
 
@@ -344,6 +319,7 @@
           if(!response.ok || !json?.ok) throw new Error(json?.message || 'No se pudo confirmar la revisión.');
           consentReview.classList.add('d-none');
           signatureForm.classList.remove('d-none');
+          window.mxmedSignatureExperience.resizeCanvas(signatureCanvas, { preserve:true });
           setMsg(`Firma ${signatureDocument} ${isResponsivaSignature || isInterconsultaSignature || isNotaSignature || isAltaSignature ? 'mostrada' : 'mostrado'} y confirma.`, 'muted');
         }catch(error){
           consentContinue.disabled=false;

@@ -42105,6 +42105,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const root = pane.querySelector('#t-consent');
     if(!root) return;
     const documentUi = window.mxmedDocumentUiPrimitives;
+    const signatureExperience = window.mxmedSignatureExperience;
+    signatureExperience?.decorate(document);
     const els = {
       list: root.querySelector('#ci_list'),
       empty: root.querySelector('#ci_empty_state'),
@@ -44580,11 +44582,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         updateDoctorSignatureStatus();
         event.preventDefault();
       };
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', end);
-      canvas.addEventListener('pointerleave', end);
-      canvas.addEventListener('pointercancel', end);
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       canvas.dataset.bound = '1';
       state.doctorSignaturePad = { canvas, ctx };
       updateDoctorSignatureStatus();
@@ -44640,33 +44638,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.informeNotice.classList.toggle('d-none', !text);
     };
     const syncInformeSignatureCanvasSize = ()=>{
-      const canvas = els.informeSignatureCanvas;
-      if(!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const width = Math.max(300, Math.floor(rect.width || 0));
-      const height = Math.max(160, Math.floor(rect.height || 180));
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const targetW = Math.floor(width * dpr);
-      const targetH = Math.floor(height * dpr);
-      if(canvas.width === targetW && canvas.height === targetH){
-        return;
-      }
-      canvas.width = targetW;
-      canvas.height = targetH;
-      const ctx = canvas.getContext('2d');
-      if(!ctx) return;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#0f172a';
-      informeState.signatureHasStroke = false;
-      if(informeState.signaturePreferredSource === 'local'){
-        informeState.signaturePreferredSource = '';
-      }
+      if(!els.informeSignatureCanvas) return;
+      signatureExperience.resizeCanvas(els.informeSignatureCanvas, {
+        preserve: informeState.signatureHasStroke, minWidth: 300, minHeight: 160
+      });
     };
     const updateInformeSignatureStatus = ()=>{
       if(!els.informeSignatureStatus) return;
@@ -44778,11 +44753,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         ctx.closePath();
         event.preventDefault();
       };
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', end);
-      canvas.addEventListener('pointerleave', end);
-      canvas.addEventListener('pointercancel', end);
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       canvas.dataset.bound = '1';
       informeState.signaturePad = { canvas, ctx };
       updateInformeSignatureStatus();
@@ -44966,11 +44937,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         updateSignatureStatus();
         event.preventDefault();
       };
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', end);
-      canvas.addEventListener('pointerleave', end);
-      canvas.addEventListener('pointercancel', end);
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       canvas.dataset.bound = '1';
       state.signaturePad = { canvas, ctx };
       updateSignatureStatus();
@@ -45476,8 +45443,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(normalized === 'doctor'){
         return {
           role: 'doctor',
-          title: 'Firmar con celular',
-          hint: 'Revisa y firma este consentimiento desde tu teléfono.',
+          title: 'FIRMAR EN OTRO DISPOSITIVO',
+          hint: 'Abre el enlace o escanea el código en el otro dispositivo. Revisa el documento y firma allí.',
           pendingStatus: 'Esperando firma…',
           receivedStatus: 'Firma recibida correctamente.',
           verifyPendingStatus: 'Aún no se recibe firma del médico. Sigue pendiente.',
@@ -45488,8 +45455,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       return {
         role: 'patient',
-        title: 'Firmar con celular',
-        hint: 'Revisa y firma este consentimiento desde tu teléfono.',
+        title: 'FIRMAR EN OTRO DISPOSITIVO',
+        hint: 'Abre el enlace o escanea el código en el otro dispositivo. Revisa el documento y firma allí.',
         pendingStatus: 'Esperando firma…',
         receivedStatus: 'Firma recibida correctamente.',
         verifyPendingStatus: 'Aún no se recibe firma. Sigue pendiente.',
@@ -45549,7 +45516,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         'Expirado': 'El código expiró. Genera uno nuevo.',
         'Cancelado': 'La firma fue cancelada.',
         'Versión modificada': 'El consentimiento cambió. Genera un nuevo código para firmar la versión actual.',
-        'Error': 'No fue posible recibir la firma desde el celular.'
+        'Error': 'No fue posible recibir la firma desde otro dispositivo.'
       };
       qrEls.qrState.textContent = messages[label] || sanitizeText(label || 'Esperando firma…');
       qrEls.qrState.dataset.tone = tone;
@@ -45916,7 +45883,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       ()=> syncConsentSignatureTokenStatus(), CONSENT_SIGNATURE_QR_POLL_INTERVAL_MS);
     const openConsentSignatureQrModal = async (role = 'patient')=>{
       const roleConfig = setConsentSignatureQrRoleUi(role);
-      pushCiDebug(`[CI] click firmar con celular (${roleConfig.role})`);
+      pushCiDebug(`[CI] click firmar en otro dispositivo (${roleConfig.role})`);
       if(!els.signatureQrModal){
         pushCiDebug('[CI] modal QR de firma no encontrado', 'error');
         setConsentRoleRemoteStatus(roleConfig.role, 'No se encontró el modal QR de firma remota.', 'error');
@@ -45944,7 +45911,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           if(qrDialog) qrDialog.style.zIndex = String(modalZ + 1);
         }catch(_){}
       }, 0);
-      setConsentRoleRemoteStatus(roleConfig.role, 'Generando QR para firma desde celular…', 'muted');
+      setConsentRoleRemoteStatus(roleConfig.role, 'Generando QR para firma en otro dispositivo…', 'muted');
       setConsentSignatureQrModalState('Generando…');
       stopConsentSignatureQrPolling();
       pushCiDebug('[CI] cancelando token previo de firma (si existe)');
@@ -49104,14 +49071,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       let drawing = false;
       let last = null;
-      canvas.addEventListener('mousedown', start);
-      canvas.addEventListener('mousemove', move);
-      window.addEventListener('mouseup', end);
-      canvas.addEventListener('mouseleave', end);
-      canvas.addEventListener('touchstart', start, { passive: false });
-      canvas.addEventListener('touchmove', move, { passive: false });
-      canvas.addEventListener('touchend', end, { passive: false });
-      canvas.addEventListener('touchcancel', end, { passive: false });
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       notaState.signaturePad = { canvas, ctx };
       syncNotaSignatureCanvasSize({ preserveDrawing: false });
     };
@@ -49954,14 +49914,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       let drawing = false;
       let last = null;
-      canvas.addEventListener('mousedown', start);
-      canvas.addEventListener('mousemove', move);
-      window.addEventListener('mouseup', end);
-      canvas.addEventListener('mouseleave', end);
-      canvas.addEventListener('touchstart', start, { passive: false });
-      canvas.addEventListener('touchmove', move, { passive: false });
-      canvas.addEventListener('touchend', end, { passive: false });
-      canvas.addEventListener('touchcancel', end, { passive: false });
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       altaState.signaturePad = { canvas, ctx };
       syncAltaSignatureCanvasSize({ preserveDrawing: false });
     };
@@ -50908,11 +50861,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         void bindCurrentInterconsultaPhysicianSignature();
         event.preventDefault();
       };
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', end);
-      canvas.addEventListener('pointerleave', end);
-      canvas.addEventListener('pointercancel', end);
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       canvas.dataset.bound = '1';
       interconsultaState.signaturePad = { canvas, ctx };
       updateInterconsultaSignatureStatus();
@@ -51981,7 +51930,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         }
       }catch(error){
         if(generation !== responsivaState.qr.generation) return;
-        setResponsivaQrStatus(sanitizeText(error?.message || 'No fue posible completar la firma desde el celular.'), 'error');
+        setResponsivaQrStatus(sanitizeText(error?.message || 'No fue posible completar la firma desde otro dispositivo.'), 'error');
         if(responsivaState.qr.status === 'saving') stopResponsivaQrPolling();
       }finally{
         if(generation === responsivaState.qr.generation) responsivaState.qr.inFlight = false;
@@ -51998,11 +51947,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const intro = responsivaQrModal.querySelector('.modal-header p');
       const reviewStep = responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
       const image = responsivaQrEl('image');
-      if(title) title.textContent = alta ? 'Firmar Alta médica con celular' : nota ? 'Firmar Nota médica con celular' : informe ? 'Firmar Informe médico con celular' : interconsulta ? 'Firmar Interconsulta con celular'
-        : certificate ? 'Firmar Certificado médico con celular' : 'Firmar Responsiva con celular';
-      if(intro) intro.textContent = alta ? 'Revisa y firma esta versión del alta desde tu teléfono.' : nota ? 'Revisa y firma esta versión de la nota desde tu teléfono.' : informe ? 'Revisa y firma esta versión del informe desde tu teléfono.' : interconsulta ? 'Revisa y firma esta versión de la interconsulta desde tu teléfono.' : certificate
-        ? 'Revisa y firma esta versión del certificado desde tu teléfono.'
-        : 'Revisa y firma esta versión de la responsiva desde tu teléfono.';
+      if(title) title.textContent = signatureExperience.copy.remote;
+      if(intro) intro.textContent = signatureExperience.copy.remoteIntro;
       if(reviewStep) reviewStep.innerHTML = '<span aria-hidden="true">2</span>'
         + (alta ? 'Revisa el alta' : nota ? 'Revisa la nota' : informe ? 'Revisa el informe' : interconsulta ? 'Revisa la interconsulta' : certificate ? 'Revisa el certificado' : 'Revisa la responsiva');
       if(image) image.setAttribute('aria-label', alta ? 'Código QR para firmar el alta médica' : nota ? 'Código QR para firmar la nota médica' : informe ? 'Código QR para firmar el informe médico' : interconsulta ? 'Código QR para firmar la interconsulta' : certificate
@@ -52010,11 +51956,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const openResponsivaSignatureQr = async (role = 'signer')=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
-        setResponsivaNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.');
+        setResponsivaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.');
         return;
       }
       if(!responsivaQrModal || !window.bootstrap?.Modal){
-        setResponsivaNotice('No se pudo abrir la firma con celular.');
+        setResponsivaNotice('No se pudo abrir la firma en otro dispositivo.');
         return;
       }
       setResponsivaReplacementActive(role, true);
@@ -52060,7 +52006,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }catch(error){
         if(generation !== responsivaState.qr.generation) return;
         responsivaState.qr.status = 'error';
-        setResponsivaQrStatus(sanitizeText(error?.message || 'No fue posible iniciar la firma con celular.'), 'error');
+        setResponsivaQrStatus(sanitizeText(error?.message || 'No fue posible iniciar la firma en otro dispositivo.'), 'error');
       }
     };
     let responsivaRepresentativeCache = null;
@@ -52161,11 +52107,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         stateBag.onComplete?.();
         event.preventDefault();
       };
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', end);
-      canvas.addEventListener('pointerleave', end);
-      canvas.addEventListener('pointercancel', end);
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       canvas.dataset.bound = '1';
     };
     const clearResponsivaSignatureCanvas = (canvas, stateBag)=>{
@@ -53554,11 +53496,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         void bindCurrentCertificadoPhysicianSignature();
         event.preventDefault();
       };
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', end);
-      canvas.addEventListener('pointerleave', end);
-      canvas.addEventListener('pointercancel', end);
+      signatureExperience.bindPointer(canvas, { start, move, end, cancel: end });
       canvas.dataset.bound = '1';
       certificadoState.signaturePad = { canvas, ctx };
     };
@@ -53646,7 +53584,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const openInformeDoctorSignatureQr = async ()=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
-        setInformeNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        setInformeNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
       if(!responsivaQrModal || !window.bootstrap?.Modal) return;
@@ -53776,7 +53714,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const openNotaDoctorSignatureQr = async ()=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
-        setNotaNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        setNotaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
       if(!responsivaQrModal || !window.bootstrap?.Modal) return;
@@ -53906,7 +53844,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const openAltaDoctorSignatureQr = async ()=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
-        setAltaNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        setAltaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
       if(!responsivaQrModal || !window.bootstrap?.Modal) return;
@@ -54036,7 +53974,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const openCertificadoDoctorSignatureQr = async ()=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
-        setCertificadoRemoteStatus('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        setCertificadoRemoteStatus('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
       if(!responsivaQrModal || !window.bootstrap?.Modal) return;
@@ -54165,7 +54103,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const openInterconsultaDoctorSignatureQr = async ()=>{
       if(!window.isSecureContext || !window.crypto?.subtle?.digest){
-        setInterconsultaNotice('Abre MXMED por HTTPS seguro para firmar desde el celular.', 'error');
+        setInterconsultaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
       if(!responsivaQrModal || !window.bootstrap?.Modal) return;
@@ -55833,10 +55771,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           <section data-fd-sign class="d-none"><h3 class="h6">Firma del médico responsable</h3><p data-fd-sign-status class="small text-muted">Aún no hay firma aplicada a esta versión.</p>
             <img data-fd-sign-image class="d-none" alt="Firma médica aplicada" style="max-width:280px;max-height:110px;object-fit:contain">
             <div class="d-flex flex-wrap gap-2 my-3"><button type="button" class="btn btn-outline-primary" data-fd-use-registered>Aplicar firma registrada</button>
-              <button type="button" class="btn btn-outline-primary" data-fd-open-qr>Firmar con celular</button></div>
-            <label class="form-label" for="fd_signature_canvas">O dibuja tu firma aquí</label>
-            <canvas id="fd_signature_canvas" width="520" height="190" aria-label="Firma del médico responsable" style="display:block;width:min(100%,520px);height:190px;touch-action:none;border:1px solid #b9d4de;border-radius:8px;background:white"></canvas>
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-fd-clear-sign>Limpiar dibujo</button>
+              <button type="button" class="btn btn-outline-primary" data-fd-open-qr>FIRMAR EN OTRO DISPOSITIVO</button></div>
+            <label class="form-label" for="fd_signature_canvas">FIRMAR AQUÍ</label>
+            <canvas id="fd_signature_canvas" width="520" height="190" aria-label="Firma del médico responsable" style="display:block;width:min(100%,620px);touch-action:none;border:1px solid #b9d4de;border-radius:8px;background:white"></canvas>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-fd-clear-sign>LIMPIAR DIBUJO</button>
             <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-fd-apply-local>Aplicar firma dibujada</button></section>
           <section data-fd-final class="d-none"><p class="small text-muted">Revisión final de esta versión firmada.</p><div data-fd-final-preview class="mx-auto" style="max-width:900px;overflow-wrap:anywhere"></div></section>
         </div><div class="modal-footer"><span class="small text-muted me-auto" data-fd-status></span>
@@ -55848,6 +55786,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           <button type="button" class="btn btn-primary d-none" data-fd-emit>Emitir documento</button>
         </div></div></div>`;
       pane.appendChild(modal);
+      signatureExperience.decorate(modal);
       const one = selector=>modal.querySelector(selector);
       const error = message=>{one('[data-fd-error]').textContent=String(message || '');one('[data-fd-error]').classList.toggle('d-none',!message);};
       const sectionId = ()=>`sec_${crypto.randomUUID()}`;
@@ -55995,17 +55934,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(state.qr.status==='pending'||state.qr.status==='uploaded')void invalidateQr();
       };
       const canvas=one('#fd_signature_canvas'),ctx=canvas.getContext('2d');
-      let drawing=false,hasStroke=false;
-      const clearCanvas=()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.strokeStyle='#102a43';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';hasStroke=false;};
+      let hasStroke=false;
+      const clearCanvas=()=>{
+        signatureExperience.resizeCanvas(canvas,{preserve:false,strokeStyle:'#102a43',lineWidth:2.5});
+        const rect=canvas.getBoundingClientRect();
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,rect.width,rect.height);
+        ctx.strokeStyle='#102a43';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+        hasStroke=false;
+      };
       clearCanvas();
-      const point=event=>{const rect=canvas.getBoundingClientRect();return {
-        x:(event.clientX-rect.left)*canvas.width/Math.max(1,rect.width),
-        y:(event.clientY-rect.top)*canvas.height/Math.max(1,rect.height)};};
-      canvas.addEventListener('pointerdown',event=>{drawing=true;hasStroke=true;canvas.setPointerCapture(event.pointerId);
-        const p=point(event);ctx.beginPath();ctx.moveTo(p.x,p.y);event.preventDefault();});
-      canvas.addEventListener('pointermove',event=>{if(!drawing)return;const p=point(event);ctx.lineTo(p.x,p.y);ctx.stroke();event.preventDefault();});
-      for(const name of ['pointerup','pointercancel'])canvas.addEventListener(name,()=>{drawing=false;ctx.closePath();});
+      signatureExperience.bindPointer(canvas,{
+        start(event){const p=signatureExperience.point(canvas,event);ctx.beginPath();ctx.moveTo(p.x,p.y);event.preventDefault();},
+        move(event){const p=signatureExperience.point(canvas,event);ctx.lineTo(p.x,p.y);ctx.stroke();hasStroke=true;event.preventDefault();},
+        end(event){ctx.closePath();event.preventDefault();}
+      });
+      signatureExperience.observeResize(canvas,{preserve:true,strokeStyle:'#102a43',lineWidth:2.5});
       const qrStatus=async(token)=>{
         const response=await fetch(`/api/clinical/index.php/free-document-qr-sessions/${encodeURIComponent(token)}/status`,{
           credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});
@@ -56047,13 +55990,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           const status=responsivaQrEl('status');if(status)status.textContent=e.message;error(e.message);}
       };
       const openQr=async()=>{
-        if(!window.isSecureContext||!window.crypto?.subtle?.digest)throw new Error('Abre MXMED por HTTPS seguro para firmar desde el celular.');
+        if(!window.isSecureContext||!window.crypto?.subtle?.digest)throw new Error('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.');
         await ensureDraft();await invalidateQr('new_session');
         const generation=++state.qr.generation;state.qr.status='preparing';state.qr.token='';
         ensureModalAttachedToBody(responsivaQrModal);setSharedDocumentQrCopy('nota');
-        const title=responsivaQrModal.querySelector('#rm-qr-title');if(title)title.textContent='Firmar Documento libre con celular';
+        const title=responsivaQrModal.querySelector('#rm-qr-title');if(title)title.textContent=signatureExperience.copy.remote;
         const intro=responsivaQrModal.querySelector('.modal-header p');
-        if(intro)intro.textContent='Revisa y firma esta versión del documento libre desde tu teléfono.';
+        if(intro)intro.textContent='Abre el enlace o escanea el código en el otro dispositivo. Revisa el documento y firma allí.';
         const reviewStep=responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
         if(reviewStep)reviewStep.innerHTML='<span aria-hidden="true">2</span>Revisa el documento';
         responsivaQrEl('image')?.setAttribute('aria-label','Código QR para firmar el documento libre');
@@ -56279,8 +56222,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           </div>
           <div data-mmc-review class="d-none"><p class="text-muted small">Revisa el documento completo antes de continuar.</p><div data-mmc-review-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
           <div data-mmc-signatures class="d-none"><p class="text-muted">Las dos firmas se vinculan al borrador y a esta versión.</p>
-            <div class="row g-3"><div class="col-md-6"><section class="border rounded p-3" data-mmc-block="signer"><h3 class="fs-6">Firma del paciente o representante</h3><p class="small" data-mmc-signature-status="signer">Pendiente</p><img class="d-none mw-100" data-mmc-signature-image="signer" alt="Firma recibida del firmante"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-draw="signer">Firmar aquí</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-qr="signer">Firmar con celular</button></div></section></div>
-            <div class="col-md-6"><section class="border rounded p-3" data-mmc-block="doctor"><h3 class="fs-6">Firma del médico responsable</h3><p class="small" data-mmc-signature-status="doctor">Pendiente</p><img class="d-none mw-100" data-mmc-signature-image="doctor" alt="Firma médica recibida"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-draw="doctor">Firmar aquí</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-registered>Usar firma registrada</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-qr="doctor">Firmar con celular</button></div></section></div></div>
+            <div class="row g-3"><div class="col-md-6"><section class="border rounded p-3" data-mmc-block="signer"><h3 class="fs-6">Firma del paciente o representante</h3><p class="small" data-mmc-signature-status="signer">Pendiente</p><img class="d-none mw-100" data-mmc-signature-image="signer" alt="Firma recibida del firmante"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-draw="signer">FIRMAR AQUÍ</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-qr="signer">FIRMAR EN OTRO DISPOSITIVO</button></div></section></div>
+            <div class="col-md-6"><section class="border rounded p-3" data-mmc-block="doctor"><h3 class="fs-6">Firma del médico responsable</h3><p class="small" data-mmc-signature-status="doctor">Pendiente</p><img class="d-none mw-100" data-mmc-signature-image="doctor" alt="Firma médica recibida"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-draw="doctor">FIRMAR AQUÍ</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-registered>USAR FIRMA REGISTRADA</button><button type="button" class="btn btn-outline-primary btn-sm" data-mmc-qr="doctor">FIRMAR EN OTRO DISPOSITIVO</button></div></section></div></div>
             <div class="border rounded p-3 mt-3 d-none" data-mmc-draw-panel><h3 class="fs-6" data-mmc-draw-title></h3><canvas data-mmc-canvas width="600" height="180" style="width:100%;max-width:600px;border:1px solid #b8d1dc;background:white;touch-action:none"></canvas><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-outline-secondary btn-sm" data-mmc-clear>Limpiar</button><button type="button" class="btn btn-primary btn-sm" data-mmc-apply>Aplicar firma</button></div></div>
           </div>
           <div data-mmc-final class="d-none"><p class="alert alert-info" data-mmc-final-status>Revisa el documento y las dos firmas antes de emitir.</p><div data-mmc-final-html class="document-sheet-frame doc-base-sheet-frame"></div></div>
@@ -56288,6 +56231,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         </div><div class="modal-footer"><span class="small text-muted me-auto" data-mmc-status></span><button type="button" class="btn btn-outline-secondary d-none" data-mmc-back>Volver a editar</button><button type="button" class="btn btn-outline-primary d-none" data-mmc-save>Guardar borrador</button><button type="button" class="btn btn-primary d-none" data-mmc-preview>Vista previa</button><button type="button" class="btn btn-primary d-none" data-mmc-continue>Continuar a firmas</button><button type="button" class="btn btn-primary d-none" data-mmc-final-review>Revisión final</button><button type="button" class="btn btn-success d-none" data-mmc-emit>Emitir consentimiento</button></div>
       </div></div>`;
       pane.append(modal);
+      signatureExperience.decorate(modal);
       const get = selector=> modal.querySelector(selector);
       const qrModal=document.getElementById('modalMultimediaSignatureQr');
       const qrGet=selector=>qrModal?.querySelector(selector);
@@ -56560,20 +56504,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const canvas=get('[data-mmc-canvas]');
       const pen=canvas.getContext('2d');
       const clearCanvas=()=>{
-        pen.fillStyle='#fff';pen.fillRect(0,0,canvas.width,canvas.height);
+        signatureExperience.resizeCanvas(canvas,{preserve:false,strokeStyle:'#102c45',lineWidth:3});
+        const rect=canvas.getBoundingClientRect();
+        pen.fillStyle='#fff';pen.fillRect(0,0,rect.width,rect.height);
         pen.lineWidth=3;pen.strokeStyle='#102c45';pen.lineCap='round';pen.lineJoin='round';
         multimediaState.ink=false;
       };
       clearCanvas();
-      let drawing=false;
-      const canvasPoint=e=>{const rect=canvas.getBoundingClientRect();return {
-        x:(e.clientX-rect.left)*canvas.width/rect.width,y:(e.clientY-rect.top)*canvas.height/rect.height};};
-      canvas.addEventListener('pointerdown',e=>{drawing=true;canvas.setPointerCapture(e.pointerId);
-        const p=canvasPoint(e);pen.beginPath();pen.moveTo(p.x,p.y);e.preventDefault();});
-      canvas.addEventListener('pointermove',e=>{if(!drawing)return;const p=canvasPoint(e);
-        pen.lineTo(p.x,p.y);pen.stroke();multimediaState.ink=true;e.preventDefault();});
-      canvas.addEventListener('pointerup',e=>{drawing=false;pen.closePath();e.preventDefault();});
-      canvas.addEventListener('pointercancel',()=>{drawing=false;pen.closePath();});
+      signatureExperience.bindPointer(canvas,{
+        start(e){const p=signatureExperience.point(canvas,e);pen.beginPath();pen.moveTo(p.x,p.y);e.preventDefault();},
+        move(e){const p=signatureExperience.point(canvas,e);pen.lineTo(p.x,p.y);pen.stroke();multimediaState.ink=true;e.preventDefault();},
+        end(e){pen.closePath();e.preventDefault();}
+      });
+      signatureExperience.observeResize(canvas,{preserve:true,strokeStyle:'#102c45',lineWidth:3});
       get('[data-mmc-clear]').addEventListener('click',clearCanvas);
       get('[data-mmc-signatures]').addEventListener('click',async event=>{
         const draw=event.target.closest('[data-mmc-draw]');
@@ -56630,7 +56573,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       const startQr = async role=>{
         if(!qrModal || !qrHandoff || !window.bootstrap?.Modal)
-          throw new Error('No se pudo abrir la firma con celular.');
+          throw new Error('No se pudo abrir la firma en otro dispositivo.');
         if(!window.isSecureContext || !window.crypto?.subtle?.digest)
           throw new Error('La firma móvil requiere HTTPS seguro.');
         if(!multimediaState.ref || multimediaState.version<1)
