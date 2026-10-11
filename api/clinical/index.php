@@ -7935,6 +7935,11 @@ try {
         clinical_nota_qr_route(clinical_documents_pdo(), $method, $segments);
         return;
     }
+    if (($segments[0] ?? '') === 'free-document-qr-sessions') {
+        require_once __DIR__ . '/../_lib/clinical_free_document_qr.php';
+        clinical_free_document_qr_route(clinical_documents_pdo(), $method, $segments);
+        return;
+    }
     if (($segments[0] ?? '') === 'alta-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_alta_qr.php';
         clinical_alta_qr_route(clinical_documents_pdo(), $method, $segments);
@@ -9444,6 +9449,23 @@ try {
                 require_once __DIR__ . '/../_lib/clinical_free_document.php';
                 $payload = clinical_free_document_normalize(is_array($request) ? $request : [],
                     $pdo, $scopedDoctorContext, $patientId);
+                $signature = $payload['signatures']['doctor'] ?? null;
+                if (is_array($signature)) {
+                    require_once __DIR__ . '/../_lib/clinical_free_document_binding.php';
+                    $ref = (string)($request['draft_ref'] ?? '');
+                    $version = (int)($request['expected_version'] ?? 0);
+                    $current = $ref !== '' ? clinical_documents_get_by_uuid_fetch($pdo, $ref) : null;
+                    if (!$current || (string)($current['document_type'] ?? '') !== 'documento_libre'
+                        || (string)($current['context']['patient_id'] ?? '') !== $patientId
+                        || (int)($current['version'] ?? 0) !== $version)
+                        throw new InvalidArgumentException('FREE_DOCUMENT_PREVIEW_VERSION_INVALID');
+                    $bindingBody = ['draft_ref'=>$ref, 'expected_version'=>$version,
+                        'context'=>['patient_id'=>$patientId], 'payload'=>$payload];
+                    if (clinical_free_document_binding_classify($bindingBody,
+                            (string)$scopedDoctorContext['doctor_id'], $pdo) !== 'valid_bound_signature')
+                        throw new InvalidArgumentException('FREE_DOCUMENT_PREVIEW_SIGNATURE_INVALID');
+                    $payload['signature_binding_status'] = ['doctor'=>'valid_bound_signature'];
+                } else $payload['signature_binding_status'] = ['doctor'=>'absent'];
                 clinical_send_response(['ok'=>true,'data'=>['html'=>clinical_free_document_render_html($payload),
                     'payload'=>$payload],'meta'=>$meta], 200);
                 return;

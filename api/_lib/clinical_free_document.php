@@ -90,6 +90,8 @@ function clinical_free_document_normalize(array $body, PDO $pdo, array $doctor, 
         'branding'=>['logo_url_resolved'=>$logo],
         'presentation'=>['version'=>1,'professional_header'=>
             ($source['presentation']['professional_header'] ?? 'shown') === 'hidden' ? 'hidden' : 'shown'],
+        'signatures'=>['doctor'=>is_array($source['signatures']['doctor'] ?? null)
+            ? $source['signatures']['doctor'] : null],
     ];
 }
 
@@ -119,6 +121,12 @@ function clinical_free_document_render_html(array $payload): string
         $html .= '<section class="informe-doc-body-section doc-base-section"><div class="informe-doc-section-title doc-base-section-title">'.$h($section['section_title'] ?? '').'</div><div class="informe-doc-text doc-base-text">'.nl2br($h($section['section_body'] ?? '')).'</div></section>';
     }
     if (!empty($doc['closing_note'])) $html .= '<section class="informe-doc-body-section doc-base-section"><div class="informe-doc-section-title doc-base-section-title">Nota de cierre</div><div class="informe-doc-text doc-base-text">'.nl2br($h($doc['closing_note'])).'</div></section>';
-    $html .= '<section class="informe-doc-sign doc-base-signature doc-base-print-safe"><div class="informe-doc-section-title doc-base-section-title">Médico responsable</div><div class="informe-doc-sign-line"></div><div class="informe-doc-sign-meta doc-base-signature-meta">'.$h($actor['full_name'] ?? '').'</div></section></div><div class="doc-base-flex-spacer" aria-hidden="true"></div><footer class="doc-base-footer-block doc-base-print-safe">Documento libre · Borrador</footer></div></article>';
+    $html .= '<section class="informe-doc-sign doc-base-signature doc-base-print-safe"><div class="informe-doc-section-title doc-base-section-title">Médico responsable</div>';
+    $signature = (array)($payload['signatures']['doctor'] ?? []);
+    if (($payload['signature_binding_status']['doctor'] ?? '') === 'valid_bound_signature'
+        && preg_match('#^data:image/png;base64,[A-Za-z0-9+/]+=*$#D', (string)($signature['image_data'] ?? '')))
+        $html .= '<img class="doc-base-signature-image" src="'.$h($signature['image_data']).'" alt="Firma del médico responsable">';
+    else $html .= '<div class="informe-doc-sign-line"></div>';
+    $html .= '<div class="informe-doc-sign-meta doc-base-signature-meta">'.$h($actor['full_name'] ?? '').'</div></section></div><div class="doc-base-flex-spacer" aria-hidden="true"></div><footer class="doc-base-footer-block doc-base-print-safe">Documento libre</footer></div></article>';
     return $html;
 }

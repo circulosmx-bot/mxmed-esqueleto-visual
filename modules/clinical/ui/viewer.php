@@ -872,7 +872,7 @@ $altaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQue
 $interconsultaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 $responsivaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 $certificadoPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
-$freePrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$freePrintableHref = ($uuid !== '') ? build_document_print_href($uuid, '1', $doctorId) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -2014,7 +2014,15 @@ if (!$embed) {
 
     <?php if ($isFreeDoc): ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
-        <?php require_once __DIR__ . '/../../../api/_lib/clinical_free_document.php'; echo clinical_free_document_render_html($payload); ?>
+        <?php
+          if ((int)($payload['free_snapshot']['version'] ?? 0) === 1
+              && trim((string)($payload['free_snapshot']['html'] ?? '')) !== '') {
+              echo (string)$payload['free_snapshot']['html'];
+          } else {
+              require_once __DIR__ . '/../../../api/_lib/clinical_free_document.php';
+              echo clinical_free_document_render_html($payload);
+          }
+        ?>
       </div>
     <?php endif; ?>
 

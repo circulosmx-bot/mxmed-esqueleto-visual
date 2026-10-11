@@ -993,6 +993,24 @@ if (!$embed) {
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=inf-imp01">
 <?php endif; ?>
+<?php if ($isFreeDoc): ?>
+<style>
+  @media print {
+    @page { size: Letter portrait; margin: 0; }
+    .no-print { display: none !important; }
+    .clinical-embed, .clinical-panel, .py-1, .container.py-4 {
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      max-width: none !important;
+    }
+    .free-doc-sheet { margin: 0 auto !important; min-height: 0 !important; }
+    .free-doc-sheet .doc-base-sheet-inner { min-height: 0 !important; flex: none !important; }
+    .free-doc-sheet .doc-base-flex-spacer { display: none !important; }
+  }
+</style>
+<?php endif; ?>
 <?php if ($isInformeDoc): ?>
 <style>
   .informe-print-sheet{
@@ -1428,7 +1446,15 @@ if (!$embed) {
       </article>
       <?php endif; ?>
     <?php elseif ($isFreeDoc): ?>
-      <?php require_once __DIR__ . '/../../../api/_lib/clinical_free_document.php'; echo clinical_free_document_render_html($payload); ?>
+      <?php
+        if ((int)($payload['free_snapshot']['version'] ?? 0) === 1
+            && trim((string)($payload['free_snapshot']['html'] ?? '')) !== '') {
+            echo (string)$payload['free_snapshot']['html'];
+        } else {
+            require_once __DIR__ . '/../../../api/_lib/clinical_free_document.php';
+            echo clinical_free_document_render_html($payload);
+        }
+      ?>
     <?php elseif ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1
         && trim((string)($payload['informe_snapshot']['html'] ?? '')) !== ''): ?>
       <?php echo (string)$payload['informe_snapshot']['html']; ?>
