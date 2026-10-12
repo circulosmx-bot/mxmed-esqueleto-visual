@@ -1,6 +1,10 @@
 // CLASSIFICATION-SIM01: local Director review only. Never alters physician data or clinical commands.
-(function () {
+(function initializeClassificationReview() {
   'use strict';
+  if (location.origin === 'https://localhost:8443' && !document.getElementById('mxmed_dev_role_switcher')) {
+    window.addEventListener('mxmed:qa-widget-ready', initializeClassificationReview, {once:true});
+    return;
+  }
   if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname) ||
       new URLSearchParams(location.search).get('qa_tools') === 'hide' ||
       typeof window.mxmedGetQaPlan !== 'function') return;

@@ -3422,9 +3422,33 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedUpdateActiveProfessionalConsultorios = updateConsultorios;
 })();
 
-// Dev-only RBAC role switcher.
-(function(){
-  if(window.location.origin === 'https://localhost:8443') return;
+// Historical floating QA shell, authorized by the normal-local server boundary.
+(async function(){
+  if(window.location.origin !== 'https://localhost:8443' || !['/', '/index.html'].includes(location.pathname)
+      || new URLSearchParams(location.search).get('qa_tools') === 'hide') return;
+  const scenarioEndpoint = '/api/local-review/index.php';
+  let scenarioResponse;
+  const scenarioRequest = async (method = 'GET', plan)=>{
+    const response = await fetch(scenarioEndpoint, {method, credentials:'same-origin', cache:'no-store',
+      headers:{'Content-Type':'application/json', ...(scenarioResponse ? {'X-CSRF-Token':scenarioResponse.csrf_token} : {})},
+      ...(method === 'GET' ? {} : {body:JSON.stringify({plan, canonical_fingerprint:scenarioResponse.current.local_review.canonical_fingerprint})})});
+    const payload = await response.json();
+    if(!response.ok) throw new Error(payload.error || 'local_review_unavailable');
+    return payload;
+  };
+  try { scenarioResponse = await scenarioRequest(); } catch (_) { return; }
+  const reflectScenario = ()=>{
+    const select = document.getElementById('mxmed_qa_plan_select');
+    if(select) select.value = scenarioResponse.current.local_review.scenario;
+    if(qaRealEntityStatus){
+      const current = scenarioResponse.current;
+      const capabilities = [['patients','Pacientes'],['clinical_record','Expediente'],['prescriptions','Recetas']]
+        .map(([key,label])=>`${label}: ${current.feature_access[key].available ? 'Sí' : 'No'}`).join(' · ');
+      qaRealEntityStatus.textContent = `Plan real: ${current.local_review.real_plan} · ${capabilities}. Administrado: ${scenarioResponse.administration.is_administered ? 'Sí' : 'No'}.`
+        + (current.local_review.conflict ? ' La suscripción real cambió; selecciona Real. Escenario sin aplicar.' : '');
+      qaRealEntityStatus.dataset.scenario = current.local_review.scenario;
+    }
+  };
   if(window.__mxmedDevRbacRoleSwitcherApplied) return;
   window.__mxmedDevRbacRoleSwitcherApplied = true;
 
@@ -3436,7 +3460,6 @@ console.info('app.js loaded :: 20251123a');
   if(!isLocalDev) return;
 
   const STORAGE_KEY = 'mxmed.dev.rbac.role';
-  const PLAN_QA_STORAGE_KEY = 'mxmed.qa.plan';
   const QA_REAL_ENTITY_STORAGE_KEY = 'mxmed.qa.realEntity';
   const ROLE_OPTIONS = {
     doctor: {
@@ -3508,26 +3531,6 @@ console.info('app.js loaded :: 20251123a');
     const value = clean(raw.value || raw.plan || raw.plan_code || raw.planCode || '').toLowerCase();
     const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'none' || value === 'null' ? 'free' : value;
     return PLAN_QA_OPTIONS[normalized] || PLAN_QA_OPTIONS.real;
-  };
-
-  const readStoredPlanQaState = ()=>{
-    try{
-      const raw = window.sessionStorage?.getItem(PLAN_QA_STORAGE_KEY)
-        || window.localStorage?.getItem(PLAN_QA_STORAGE_KEY)
-        || '';
-      return raw ? normalizePlanQaState(JSON.parse(raw)) : PLAN_QA_OPTIONS.real;
-    }catch(_){
-      return PLAN_QA_OPTIONS.real;
-    }
-  };
-
-  const persistPlanQaState = (state)=>{
-    try{
-      window.sessionStorage?.setItem(PLAN_QA_STORAGE_KEY, JSON.stringify({
-        value: state.value,
-        plan: state.plan
-      }));
-    }catch(_){}
   };
 
   const normalizeQaRealEntityState = (raw = {})=>{
@@ -3669,20 +3672,22 @@ console.info('app.js loaded :: 20251123a');
     return state;
   };
 
-  const applyPlanQaState = (nextState, options = {})=>{
+  const applyPlanQaState = async (nextState)=>{
     const state = normalizePlanQaState(nextState);
-    if(options.persist !== false){
-      persistPlanQaState(state);
-    }
-    window.dispatchEvent(new CustomEvent('mxmed:qa-plan-changed', {
-      detail: {
-        value: state.value,
-        plan: state.plan,
-        label: state.label,
-        source: options.source || 'qa_plan_switcher'
-      }
-    }));
-    return state;
+    const select = document.getElementById('mxmed_qa_plan_select');
+    if(select) select.disabled = true;
+    try {
+      await scenarioRequest(state.value === 'real' ? 'DELETE' : 'POST', state.value);
+      scenarioResponse = await scenarioRequest();
+      reflectScenario();
+      window.dispatchEvent(new CustomEvent('mxmed:local-review-changed', {detail:scenarioResponse.current}));
+    } catch(error) {
+      // Recover server truth after a write whose response may have been interrupted.
+      try { scenarioResponse = await scenarioRequest(); } catch(_) {}
+      reflectScenario();
+      if(qaRealEntityStatus) qaRealEntityStatus.textContent += ` No se pudo confirmar el cambio: ${error.message}`;
+    } finally { if(select) select.disabled = false; }
+    return normalizePlanQaState({value:scenarioResponse.current.local_review.scenario});
   };
 
   let qaRealEntityStatus = null;
@@ -3712,96 +3717,7 @@ console.info('app.js loaded :: 20251123a');
     return status ? `No se pudo activar la entidad QA real. HTTP ${status}.` : 'Servidor no disponible.';
   };
 
-  const applyQaRealEntity = async (nextState, options = {})=>{
-    const state = normalizeQaRealEntityState(nextState);
-    const requestSeq = ++qaRealEntityRequestSeq;
-    const isCurrentRequest = ()=> requestSeq === qaRealEntityRequestSeq
-      && (!qaRealEntitySelect || qaRealEntitySelect.value === state.doctor_id);
-    if(!state.doctor_id){
-      persistQaRealEntityState(state);
-      setQaRealEntityStatus('Sin entidad QA real seleccionada.', 'muted');
-      return false;
-    }
-
-    window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-hydration-start', {
-      detail: {
-        doctor_id: state.doctor_id,
-        entity_type: 'doctor',
-        entity_id: state.doctor_id,
-        request_seq: requestSeq,
-        source: options.source || 'qa_real_entity_session_fixture_start'
-      }
-    }));
-    setQaRealEntityStatus(`Activando doctor/${state.doctor_id}...`, 'muted');
-    if(qaRealEntitySelect) qaRealEntitySelect.disabled = true;
-
-    try{
-      const response = await fetch(qaRealEntityFixtureEndpoint(), {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({ doctor_id: Number(state.doctor_id) })
-      });
-      const payload = await response.json().catch(()=> null);
-      if(!isCurrentRequest()) return false;
-      if(!response.ok || !payload || payload.ok !== true || !payload.data){
-        setQaRealEntityStatus(qaRealEntityErrorMessage(payload, response.status), 'error');
-        window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-hydration-error', {
-          detail: {
-            doctor_id: state.doctor_id,
-            entity_type: 'doctor',
-            entity_id: state.doctor_id,
-            request_seq: requestSeq,
-            http_status: Number(response.status || 0),
-            message: qaRealEntityErrorMessage(payload, response.status)
-          }
-        }));
-        return false;
-      }
-
-      persistQaRealEntityState(state);
-      applyPlanQaState(PLAN_QA_OPTIONS.real, { source: 'qa_real_entity_session_fixture' });
-      const planSelect = document.getElementById('mxmed_qa_plan_select');
-      if(planSelect) planSelect.value = 'real';
-      const data = payload.data || {};
-      const planLabel = clean(data.plan_label) || state.planLabel;
-      setQaRealEntityStatus(`Entidad QA real activa: doctor/${state.doctor_id} · ${planLabel}`, 'success');
-      window.mxmedStore = window.mxmedStore || {};
-      window.mxmedStore.subscriptionQaRealEntity = {
-        doctor_id: state.doctor_id,
-        entity_type: 'doctor',
-        entity_id: state.doctor_id,
-        plan_code: clean(data.plan_code || state.plan),
-        plan_label: planLabel,
-        source: 'stripe_e2e_plan_doctor_session_fixture',
-        request_seq: requestSeq
-      };
-      window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-selected', {
-        detail: window.mxmedStore.subscriptionQaRealEntity
-      }));
-      return true;
-    }catch(_){
-      if(isCurrentRequest()){
-        setQaRealEntityStatus('Servidor no disponible para activar la entidad QA real.', 'error');
-        window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-hydration-error', {
-          detail: {
-            doctor_id: state.doctor_id,
-            entity_type: 'doctor',
-            entity_id: state.doctor_id,
-            request_seq: requestSeq,
-            http_status: 0,
-            message: 'Servidor no disponible para activar la entidad QA real.'
-          }
-        }));
-      }
-      return false;
-    }finally{
-      if(isCurrentRequest() && qaRealEntitySelect) qaRealEntitySelect.disabled = false;
-    }
-  };
+  const applyQaRealEntity = async ()=> false; // Fixed director target; never create QA fixture sessions.
 
   const buildSwitcherField = (labelText, control)=>{
     const field = document.createElement('div');
@@ -3847,7 +3763,7 @@ console.info('app.js loaded :: 20251123a');
     planSelect.id = 'mxmed_qa_plan_select';
     planSelect.className = 'form-select form-select-sm';
     planSelect.style.width = '136px';
-    Object.values(PLAN_QA_OPTIONS).forEach((optionState)=>{
+    Object.values(PLAN_QA_OPTIONS).filter(option=>['real','standard','optimum','professional'].includes(option.value)).forEach((optionState)=>{
       const option = document.createElement('option');
       option.value = optionState.value;
       option.textContent = optionState.label;
@@ -3863,33 +3779,39 @@ console.info('app.js loaded :: 20251123a');
     qaRealEntitySelect.id = 'mxmed_qa_real_entity_select';
     qaRealEntitySelect.className = 'form-select form-select-sm';
     qaRealEntitySelect.style.width = '190px';
-    QA_REAL_ENTITY_OPTION_ORDER
-      .map((doctorId)=> QA_REAL_ENTITY_OPTIONS[doctorId || 'none'])
-      .filter(Boolean)
-      .forEach((optionState)=>{
-        const option = document.createElement('option');
-        option.value = optionState.doctor_id || '';
-        option.textContent = optionState.label;
-        qaRealEntitySelect.appendChild(option);
-      });
-    qaRealEntitySelect.value = normalizeQaRealEntityState(readStoredQaRealEntityState()).doctor_id || '';
-    qaRealEntitySelect.addEventListener('change', ()=>{
-      const selected = normalizeQaRealEntityState({ doctor_id: qaRealEntitySelect.value });
-      applyQaRealEntity(selected);
-    });
+    const targetOption = document.createElement('option');
+    targetOption.value = '1';
+    targetOption.textContent = `1 — ${scenarioResponse.label}`;
+    qaRealEntitySelect.appendChild(targetOption);
+    qaRealEntitySelect.value = '1';
+    qaRealEntitySelect.disabled = true;
+    qaRealEntitySelect.title = 'Perfil aprobado para revisión normal-local. Sin sesiones fixture.';
 
     qaRealEntityStatus = document.createElement('span');
+    qaRealEntityStatus.setAttribute('role','status');
+    qaRealEntityStatus.setAttribute('aria-live','polite');
     qaRealEntityStatus.className = 'small text-muted';
     qaRealEntityStatus.style.flexBasis = '100%';
-    qaRealEntityStatus.textContent = qaRealEntitySelect.value
-      ? `Entidad QA real seleccionada: doctor/${qaRealEntitySelect.value}.`
-      : 'Stripe sandbox E2E: selecciona una entidad QA real para session_scope.';
-
     wrap.appendChild(buildSwitcherField('Rol QA', select));
     wrap.appendChild(buildSwitcherField('Plan QA', planSelect));
     wrap.appendChild(buildSwitcherField('Entidad QA real', qaRealEntitySelect));
     wrap.appendChild(qaRealEntityStatus);
+    wrap.dataset.normalLocalAuthorized = 'true';
+    const collapse = document.createElement('button');
+    collapse.type = 'button';
+    collapse.className = 'btn btn-outline-secondary btn-sm';
+    collapse.id = 'mxmed_qa_collapse';
+    collapse.textContent = 'Contraer QA';
+    collapse.setAttribute('aria-expanded','true');
+    collapse.addEventListener('click', ()=>{
+      const collapsed = wrap.classList.toggle('qa-collapsed');
+      collapse.textContent = collapsed ? 'Mostrar QA' : 'Contraer QA';
+      collapse.setAttribute('aria-expanded',String(!collapsed));
+    });
+    wrap.appendChild(collapse);
     document.body.appendChild(wrap);
+    reflectScenario();
+    window.dispatchEvent(new Event('mxmed:qa-widget-ready'));
   };
 
   const queryState = readQueryState();
@@ -3898,7 +3820,7 @@ console.info('app.js loaded :: 20251123a');
     persist: true,
     source: queryState ? 'dev_role_query' : 'dev_role_initial'
   });
-  const initialPlanQaState = readStoredPlanQaState();
+  const initialPlanQaState = normalizePlanQaState({value:scenarioResponse.current.local_review.scenario});
 
   window.mxmedApplyDevRole = applyDevRole;
   window.mxmedGetDevRole = ()=> normalizeState({
@@ -3906,9 +3828,9 @@ console.info('app.js loaded :: 20251123a');
     operator_slot: window.mxmedStore?.operator_slot
   });
   window.mxmedApplyQaPlan = applyPlanQaState;
-  window.mxmedGetQaPlan = ()=> readStoredPlanQaState();
+  window.mxmedGetQaPlan = ()=> normalizePlanQaState({value:scenarioResponse.current.local_review.scenario});
   window.mxmedApplyQaRealEntity = applyQaRealEntity;
-  window.mxmedGetQaRealEntity = ()=> readStoredQaRealEntityState();
+  window.mxmedGetQaRealEntity = ()=> null; // No legacy fixture hydration on the fixed normal-local target.
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', ()=> renderRoleSwitcher(appliedState, initialPlanQaState), { once: true });
@@ -67365,6 +67287,7 @@ function mxResetLogoPreview(){
   }
 
   function readSubscriptionQaRealEntityState(){
+    if(window.location.origin === 'https://localhost:8443') return null;
     try{
       if(typeof window.mxmedGetQaRealEntity === 'function'){
         const external = normalizeSubscriptionQaRealEntityState(window.mxmedGetQaRealEntity());

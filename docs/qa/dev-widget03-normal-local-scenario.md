@@ -1,5 +1,9 @@
 # DEV-WIDGET03 normal-local subscription scenarios
 
+UI superseded by DEV-WIDGET04: the historical floating QA widget now calls this
+unchanged backend. The right rail and its assets have been removed. See
+`dev-widget04-historical-floating-widget.md` for current controls and QA.
+
 The Director-approved target is doctor `1`. This is a local review entitlement
 scenario, not a purchase, payment, renewal, account or clinical authentication.
 

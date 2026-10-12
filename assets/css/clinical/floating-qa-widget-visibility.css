@@ -1,2 +1,3 @@
-/* QA-WIDGET01: remove this rule to restore the existing floating QA selector. */
-#mxmed_dev_role_switcher {display:none!important}
+/* DEV-WIDGET04: historical shell is visible only after server authorization. */
+#mxmed_dev_role_switcher:not([data-normal-local-authorized="true"]){display:none!important}
+#mxmed_dev_role_switcher.qa-collapsed>:not(#mxmed_qa_collapse){display:none!important}
