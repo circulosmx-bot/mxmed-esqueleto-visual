@@ -263,6 +263,10 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
                 (string)$doctor['user_id'],$status,(int)$existing['id'],$expected]);
             if ($stmt->rowCount() !== 1)
                 throw new ClinicalIdempotencyException('PRESCRIPTION_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
+            if ($intent === 'finalize') {
+                require_once __DIR__ . '/clinical_prescription_lifecycle.php';
+                clinical_prescription_lifecycle_complete_reissue($pdo,(int)$existing['id'],$doctor);
+            }
             return (int)$existing['id'];
         }, static fn(int $id): array => clinical_v1_document_fetch($pdo,$id));
 }
@@ -271,10 +275,14 @@ function clinical_prescription_v2_drafts(PDO $pdo, array $doctor, string $patien
 {
     $encounter = clinical_prescription_v2_encounter($pdo,$encounterKey,$patientId,(string)$doctor['doctor_id']);
     $encounterClause = $encounter === null ? 'encounter_ref_id IS NULL' : 'encounter_ref_id=?';
-    $stmt = $pdo->prepare("SELECT document_uuid,version,updated_at,payload_json FROM clinical_documents
-        WHERE patient_id=? AND created_by_user_id=? AND document_type='prescription' AND status='draft'
-        AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.contract_version'))='2' AND $encounterClause
-        ORDER BY COALESCE(updated_at,created_at) DESC,id DESC LIMIT 20");
+    $stmt = $pdo->prepare("SELECT d.document_uuid,d.version,d.updated_at,d.payload_json,
+        CASE WHEN l.replacement_document_id IS NULL THEN 0 ELSE 1 END AS is_reissue
+        FROM clinical_documents d
+        LEFT JOIN clinical_prescription_lifecycle l ON l.replacement_document_id=d.id AND l.lifecycle_state='pending'
+        WHERE d.patient_id=? AND d.created_by_user_id=? AND d.document_type='prescription' AND d.status='draft'
+        AND JSON_UNQUOTE(JSON_EXTRACT(d.payload_json,'$.contract_version'))='2'
+        AND (d.$encounterClause OR l.replacement_document_id IS NOT NULL)
+        ORDER BY is_reissue DESC,COALESCE(d.updated_at,d.created_at) DESC,d.id DESC LIMIT 20");
     $params = [$patientId,(string)$doctor['user_id']];
     if ($encounter !== null) $params[] = (int)$encounter['encounter_id'];
     $stmt->execute($params);
@@ -283,6 +291,7 @@ function clinical_prescription_v2_drafts(PDO $pdo, array $doctor, string $patien
         $payload = json_decode((string)$row['payload_json'],true);
         if (!is_array($payload)) continue;
         $rows[] = ['document_uuid'=>$row['document_uuid'],'version'=>(int)$row['version'],
+            'is_reissue'=>(int)$row['is_reissue'] === 1,
             'updated_at'=>$row['updated_at'],'payload'=>$payload];
     }
     return $rows;

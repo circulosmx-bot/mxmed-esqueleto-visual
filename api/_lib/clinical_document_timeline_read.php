@@ -26,6 +26,8 @@ function clinical_document_timeline_list_fetch(PDO $pdo, string $patientId, int 
     if (array_diff($required, $columns)) throw new RuntimeException('TIMELINE_READER_SCHEMA_NOT_READY');
     $hasRevisions = $pdo->query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' LIMIT 1")->fetchColumn();
     if (!$hasRevisions) throw new RuntimeException('TIMELINE_READER_SCHEMA_NOT_READY');
+    $hasPrescriptionLifecycle = $pdo->query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_prescription_lifecycle' LIMIT 1")->fetchColumn();
+    if (!$hasPrescriptionLifecycle) throw new RuntimeException('TIMELINE_READER_SCHEMA_NOT_READY');
 
     // These timestamps are written as UTC system times. event_datetime is intentionally excluded.
     $generatedValid = "d.generated_at IS NOT NULL AND d.generated_at > '1000-01-01 00:00:00'";
@@ -37,17 +39,27 @@ function clinical_document_timeline_list_fetch(PDO $pdo, string $patientId, int 
         SELECT d.id,d.document_uuid,d.document_type,d.status,d.patient_id,d.title,d.summary,d.event_datetime,
                d.encounter_ref_id,d.encounter_id,d.appointment_id,d.hospital_stay_id,d.created_at,d.generated_at,
                COALESCE(rev.original_document_id,d.id) AS lineage_root_id,
+               CASE WHEN d.document_type IN ('prescription','receta','rx') AND pl_out.lifecycle_state='completed'
+                    THEN CASE WHEN pl_out.relation_type='corrected_reissue' THEN 'replaced' ELSE 'voided' END
+                    WHEN d.document_type IN ('prescription','receta','rx') AND d.status='voided' THEN 'voided'
+                    ELSE d.status END AS prescription_lifecycle_state,
+               original_rx.document_uuid AS corrects_prescription_uuid,
+               replacement_rx.document_uuid AS replaced_by_prescription_uuid,
                {$at} AS timeline_at, {$source} AS timeline_at_source,
-               CASE WHEN d.document_type IN ('prescription','receta')
+               CASE WHEN d.document_type IN ('prescription','receta','rx')
                          AND JSON_TYPE(JSON_EXTRACT(d.payload_json,'$.prescription.items'))='ARRAY'
                     THEN JSON_LENGTH(JSON_EXTRACT(d.payload_json,'$.prescription.items')) ELSE NULL END AS prescription_item_count
         FROM clinical_documents d
         LEFT JOIN clinical_document_revisions rev ON rev.new_document_id=d.id
+        LEFT JOIN clinical_prescription_lifecycle pl_out ON pl_out.original_document_id=d.id
+        LEFT JOIN clinical_prescription_lifecycle pl_in ON pl_in.replacement_document_id=d.id
+        LEFT JOIN clinical_documents original_rx ON original_rx.id=pl_in.original_document_id
+        LEFT JOIN clinical_documents replacement_rx ON replacement_rx.id=pl_out.replacement_document_id
         WHERE d.patient_id=:patient_id
-          AND d.document_type IN ('prescription','receta','order','orders','lab_order','imaging_order','orden_estudio')
-          AND NOT EXISTS (SELECT 1 FROM clinical_document_revisions successor
+          AND d.document_type IN ('prescription','receta','rx','order','orders','lab_order','imaging_order','orden_estudio')
+          AND (d.document_type IN ('prescription','receta','rx') OR NOT EXISTS (SELECT 1 FROM clinical_document_revisions successor
                           WHERE successor.supersedes_document_id=d.id
-                             OR (successor.original_document_id=d.id AND successor.supersedes_document_id IS NULL))
+                             OR (successor.original_document_id=d.id AND successor.supersedes_document_id IS NULL)))
     ) t WHERE t.timeline_at IS NOT NULL{$cursorWhere}
     ORDER BY t.timeline_at DESC,t.id DESC LIMIT :fetch_limit";
     $stmt = $pdo->prepare($sql);

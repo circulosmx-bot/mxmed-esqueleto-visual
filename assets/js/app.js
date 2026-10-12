@@ -38708,7 +38708,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   };
   const rxCanonicalBody = (scope) => ({
     document_type: 'prescription',
-    context: { patient_id: scope.patientId, ...(scope.ctx.encounter_key ? { encounter_key: scope.ctx.encounter_key } : {}) },
+    context: { patient_id: scope.patientId, ...(!rxServerDraft?.is_reissue && scope.ctx.encounter_key ? { encounter_key: scope.ctx.encounter_key } : {}) },
     payload: {
       contract_version: 2,
       prescription: { items: collectRxModal().map((item, index) => ({
@@ -38766,7 +38766,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         ...(rxServerDraft ? { draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version } : {}) };
       const data = await rxRequest(scope.url, 'POST', body);
       const doc = data.document;
-      rxServerDraft = { document_uuid: doc.document_id, version: doc.version, payload: doc.content?.payload };
+      rxServerDraft = { document_uuid: doc.document_id, version: doc.version, payload: doc.content?.payload,
+        is_reissue: rxServerDraft?.is_reissue === true };
       if (rxDraftStatus) rxDraftStatus.textContent = `Borrador guardado · versión ${doc.version}`;
       setRxDraft(scope.ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
       rxGuardStored = rxGuardReadStored(scope.ctx.patient_id); rxGuardBaseline = rxGuardSnapshot();
@@ -39251,7 +39252,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         ...(rxServerDraft ? { draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version } : {}) };
       const draftData = await rxRequest(scope.url, 'POST', draftBody);
       const draft = draftData.document;
-      rxServerDraft = { document_uuid: draft.document_id, version: draft.version, payload: draft.content?.payload };
+      rxServerDraft = { document_uuid: draft.document_id, version: draft.version, payload: draft.content?.payload,
+        is_reissue: rxServerDraft?.is_reissue === true };
       rxSignature=rxServerDraft.payload?.signatures?.doctor||null;
       rxReview?.classList.add('d-none');rxShowSignature();rxResetCanvas();
       if(rxReviewStatus)rxReviewStatus.textContent='';

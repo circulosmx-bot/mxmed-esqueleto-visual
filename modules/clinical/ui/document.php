@@ -452,8 +452,20 @@ $isImageDoc = ($renderMode === 'image' || $docTypeNorm === 'image');
 $isPdfDoc = ($renderMode === 'pdf' || $docTypeNorm === 'pdf');
 $isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
 $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], true);
-$isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
+$isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'receta', 'rx'], true);
 $isPrescriptionV2 = $isPrescriptionDoc && (int)($payload['contract_version'] ?? 0) === 2;
+$rxCanReissue = $isPrescriptionDoc && is_array($payload['prescription']['items'] ?? null)
+  && count($payload['prescription']['items']) > 0;
+$rxLifecycle = $isPrescriptionDoc && is_array($document['prescription_lifecycle'] ?? null)
+  ? $document['prescription_lifecycle'] : [];
+$rxVoided = $isPrescriptionDoc && (string)($document['status'] ?? '') === 'voided';
+$rxOriginalUuid = (string)($rxLifecycle['original_document_uuid'] ?? '');
+$rxReplacementUuid = (string)($rxLifecycle['replacement_document_uuid'] ?? '');
+$rxIsReplacement = $rxOriginalUuid !== '' && $rxOriginalUuid !== $uuid;
+$rxLifecycleEndpoint = $isPrescriptionDoc && $doctorId !== '' && $uuid !== ''
+  ? '/api/clinical/index.php/doctors/' . rawurlencode($doctorId)
+    . '/patients/' . rawurlencode((string)($document['context']['patient_id'] ?? ''))
+    . '/prescriptions/' . rawurlencode($uuid) : '';
 $rxV2Html = $isPrescriptionV2 ? (string)($payload['prescription_snapshot']['html'] ?? '') : '';
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
@@ -729,6 +741,8 @@ if (!$embed) {
 ?>
 <?php if ($isPrescriptionDoc): ?>
 <style>
+  /* The standalone document shell leaves this SVG at its default 100% width. */
+  @media screen{.header-mid .user-id svg{width:20px;height:20px;vertical-align:middle}}
   .rx-doc-sheet:not(.doc-base-sheet){
     background:#fff;
     border:1px solid #d7eaf2;
@@ -1176,6 +1190,49 @@ if (!$embed) {
 
   <p class="text-secondary mb-3 no-print">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
 
+  <?php if ($isPrescriptionDoc && $errorMessage === ''): ?>
+    <style>
+      .rx-lifecycle-banner{border:3px solid #a32b2b;background:#fff0ed;color:#6f1111;padding:14px 18px;
+        font-weight:700;font-size:1.35rem;margin-bottom:18px;break-inside:avoid}
+      .rx-lifecycle-banner small{display:block;font-size:.85rem;font-weight:500;margin-top:4px}
+      @media print{.rx-lifecycle-banner{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+    </style>
+    <?php if ($rxVoided): ?>
+      <div class="rx-lifecycle-banner" role="status">RECETA ANULADA
+        <small>Fue emitida originalmente y posteriormente anulada<?php if (!empty($rxLifecycle['voided_at'])): ?> el <?php echo h(clinical_doc_format_date((string)$rxLifecycle['voided_at'],true)); ?><?php endif; ?>.</small>
+        <?php if (!empty($rxLifecycle['reason_code'])): ?><small>Motivo: <?php echo h(str_replace('_',' ',(string)$rxLifecycle['reason_code'])); ?><?php if (!empty($rxLifecycle['reason_detail'])): ?> — <?php echo h((string)$rxLifecycle['reason_detail']); ?><?php endif; ?></small><?php endif; ?>
+        <?php if ($rxReplacementUuid !== ''): ?><small>Reemplazada por <a href="<?php echo h(build_clinical_document_ui_href('/modules/clinical/ui/document.php',['uuid'=>$rxReplacementUuid,'doctor_id'=>$doctorId])); ?>">receta corregida</a>.</small><?php endif; ?>
+      </div>
+    <?php elseif ($rxIsReplacement): ?>
+      <div class="alert alert-info no-print">Esta receta corrige una <a href="<?php echo h(build_clinical_document_ui_href('/modules/clinical/ui/document.php',['uuid'=>$rxOriginalUuid,'doctor_id'=>$doctorId])); ?>">receta anterior</a>.</div>
+    <?php endif; ?>
+    <?php if (!$rxVoided && in_array((string)($document['status'] ?? ''), ['generated','signed'],true) && $rxLifecycleEndpoint !== ''): ?>
+      <?php if (($rxLifecycle['lifecycle_state'] ?? '') === 'pending'): ?>
+        <div class="alert alert-info no-print">Hay una receta corregida en preparación. La receta original permanece vigente hasta que se emita la nueva.</div>
+      <?php else: ?>
+        <div class="card mb-3 no-print"><div class="card-body">
+          <h2 class="h6">Corregir o anular esta receta</h2>
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4"><label class="form-label" for="rx_lifecycle_reason">Motivo obligatorio</label>
+              <select class="form-select" id="rx_lifecycle_reason"><option value="">Selecciona un motivo</option>
+                <option value="error_en_medicamento">Error en medicamento</option>
+                <option value="error_en_dosis_o_indicaciones">Error en dosis o indicaciones</option>
+                <option value="cambio_en_plan_terapeutico">Cambio en plan terapéutico</option>
+                <option value="duplicada">Duplicada</option><option value="emitida_por_error">Emitida por error</option>
+                <option value="otra">Otra</option></select></div>
+            <div class="col-md-4"><label class="form-label" for="rx_lifecycle_detail">Detalle si elegiste «Otra»</label><input id="rx_lifecycle_detail" class="form-control" maxlength="1000"></div>
+            <div class="col-md-4"><label class="form-label" for="rx_lifecycle_note">Nota opcional</label><input id="rx_lifecycle_note" class="form-control" maxlength="1000"></div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            <button type="button" class="btn btn-outline-danger" data-rx-lifecycle="void">Anular receta</button>
+            <?php if ($rxCanReissue): ?><button type="button" class="btn btn-primary" data-rx-lifecycle="reissue">Reemitir corregida</button><?php endif; ?>
+          </div>
+          <div id="rx_lifecycle_feedback" class="small mt-2" role="status" aria-live="polite"></div>
+        </div></div>
+      <?php endif; ?>
+    <?php endif; ?>
+  <?php endif; ?>
+
   <?php if ($uuid === ''): ?>
     <div class="alert alert-warning">uuid requerido.</div>
   <?php elseif ($errorMessage !== ''): ?>
@@ -1607,6 +1664,32 @@ if (!$embed) {
 </div>
 <script>
   (function () {
+    document.querySelectorAll('[data-rx-lifecycle]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var action = button.getAttribute('data-rx-lifecycle');
+        var reason = document.getElementById('rx_lifecycle_reason')?.value || '';
+        var detail = document.getElementById('rx_lifecycle_detail')?.value.trim() || '';
+        var note = document.getElementById('rx_lifecycle_note')?.value.trim() || '';
+        var feedback = document.getElementById('rx_lifecycle_feedback');
+        if (!reason || (reason === 'otra' && !detail)) { if (feedback) feedback.textContent = 'Selecciona el motivo y completa el detalle cuando sea «Otra».'; return; }
+        var question = action === 'void' ? '¿Anular esta receta emitida? La acción quedará registrada.'
+          : '¿Crear una nueva receta corregida? La original seguirá vigente hasta emitir la nueva.';
+        if (!window.confirm(question)) return;
+        button.disabled = true;
+        fetch(<?php echo json_encode($rxLifecycleEndpoint,JSON_UNESCAPED_SLASHES|JSON_HEX_TAG); ?> + '/' + action, {
+          method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','Accept':'application/json'},
+          body:JSON.stringify({reason_code:reason,reason_detail:detail,explanatory_note:note})
+        }).then(function (response) { return response.json().then(function (body) {
+          if (!response.ok || !body.ok) throw new Error(body.message || body.error || 'No se pudo completar la acción.');
+          return body.data;
+        }); }).then(function (data) {
+          if (action === 'void') { window.location.reload(); return; }
+          var newUuid = data?.document?.document_id || '';
+          if (feedback) feedback.textContent = 'Borrador corregido creado. Regresa a Recetas y pulsa «Continuar borrador» para revisarlo, firmarlo y emitirlo. UUID: ' + newUuid;
+          button.closest('.card')?.querySelectorAll('[data-rx-lifecycle]').forEach(function (item) { item.disabled = true; });
+        }).catch(function (error) { if (feedback) feedback.textContent = error.message; button.disabled = false; });
+      });
+    });
     <?php if ($isPrescriptionV2 && (string)($_GET['print'] ?? '') === '1'): ?>
     window.addEventListener('load', function () { window.print(); }, { once: true });
     <?php endif; ?>

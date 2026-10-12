@@ -9575,9 +9575,11 @@ try {
             }
         }
         if (($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'prescriptions'
-            && in_array(count($segments), [5,6], true)) {
+            && in_array(count($segments), [5,6,7], true)) {
             $patientId = trim(rawurldecode((string)$segments[3]));
             $action = count($segments) === 6 ? (string)$segments[5] : '';
+            $lifecycleUuid = count($segments) >= 7 ? trim(rawurldecode((string)$segments[5])) : '';
+            $lifecycleAction = count($segments) === 7 ? (string)$segments[6] : '';
             $routeName = 'doctors/{doctor_id}/patients/{patient_id}/prescriptions' . ($action !== '' ? '/'.$action : '');
             try {
                 $pdo = clinical_documents_pdo();
@@ -9585,6 +9587,17 @@ try {
                     || !clinical_has_active_doctor_patient_link($pdo,$scopedDoctorId,$patientId))
                     throw new InvalidArgumentException('PRESCRIPTION_PATIENT_SCOPE_INVALID');
                 require_once __DIR__ . '/../_lib/clinical_prescription_v2.php';
+                if ($lifecycleUuid !== '' && $method === 'POST'
+                    && in_array($lifecycleAction, ['void','reissue'], true)) {
+                    $read = clinical_read_json_body();
+                    if (($read['ok'] ?? false) !== true) throw new InvalidArgumentException('PRESCRIPTION_JSON_INVALID');
+                    require_once __DIR__ . '/../_lib/clinical_prescription_lifecycle.php';
+                    $body = (array)($read['data'] ?? []);
+                    $result = $lifecycleAction === 'void'
+                        ? clinical_prescription_lifecycle_void($pdo,$scopedDoctorContext,$patientId,$lifecycleUuid,$body)
+                        : clinical_prescription_lifecycle_reissue($pdo,$scopedDoctorContext,$patientId,$lifecycleUuid,$body);
+                    clinical_send_response(['ok'=>true,'data'=>$result,'meta'=>['route'=>$routeName]],200);return;
+                }
                 if ($method === 'GET' && $action === 'drafts') {
                     $draftEncounterKey = trim((string)($_GET['encounter_key'] ?? ''));
                     clinical_send_response(['ok'=>true,'data'=>['drafts'=>clinical_prescription_v2_drafts($pdo,$scopedDoctorContext,$patientId,$draftEncounterKey)],
@@ -10198,6 +10211,11 @@ try {
                         'meta' => $meta,
                     ], 403);
                     return;
+                }
+                if (in_array((string)$document['document_type'], ['prescription','receta','rx'], true)) {
+                    require_once __DIR__ . '/../_lib/clinical_prescription_lifecycle.php';
+                    $document['prescription_lifecycle'] = clinical_prescription_lifecycle_projection(
+                        $pdo,(int)$document['document_db_id']);
                 }
             } catch (Throwable $e) {
                 $msg = trim($e->getMessage());
