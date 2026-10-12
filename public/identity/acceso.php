@@ -1,10 +1,7 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../../modules/identity/http/CsrfTokenService.php';
-$csrf = (new Identity\Http\CsrfTokenService((string)getenv('MXMED_PREVIEW_PEPPER')))->issue();
-header('Cache-Control: no-store');
-header('Pragma: no-cache');
-header('X-Content-Type-Options: nosniff');
+require_once __DIR__ . '/../../modules/identity/http/IdentityUiBootstrap.php';
+$csrf = \Identity\Http\IdentityUiBootstrap::boot();
 ?>
 <!doctype html>
 <html lang="es">

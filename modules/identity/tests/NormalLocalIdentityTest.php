@@ -161,6 +161,13 @@ try {
     $exit=proc_close($proc);
     check('C02',$exit===0 && (json_decode($result,true)['ok']??false));
     check('GATE4D_PREVIEW_REGRESSION',$exit===0);
+    if (getenv('IDLOCAL_UI_QA') === '1') {
+        require __DIR__.'/IdentityUiCsrfTest.php';
+        identityUiCsrfCompositionChecks($composition);
+        $uiProcess=proc_open(['python3',__DIR__.'/identity_ui_https_fixture_test.py'],[0=>STDIN,1=>STDOUT,2=>STDERR],$uiPipes);
+        check('UI_HTTPS_FIXTURE',is_resource($uiProcess) && proc_close($uiProcess)===0);
+    }
+
     foreach(['staging','production'] as $index=>$environment) {
         check('C0'.($index+3),Selector::fromValues($environment,'')->select(fn()=>throw new RuntimeException(),fn($e)=>$e)===$environment);
     }
