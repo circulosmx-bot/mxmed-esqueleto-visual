@@ -20,6 +20,7 @@ function clinical_prescription_history_fetch(PDO $pdo, string $patientId, string
         l.relation_type,l.lifecycle_state,l.reason_code,l.voided_at,
         source.document_uuid AS corrects_prescription_uuid,source.event_datetime AS source_event_datetime,
         replacement.document_uuid AS replaced_by_prescription_uuid,
+        replacement.status AS replacement_status,
         replacement.event_datetime AS replacement_event_datetime
         FROM clinical_documents d
         LEFT JOIN clinical_prescription_lifecycle l ON l.original_document_id=d.id
@@ -46,6 +47,9 @@ function clinical_prescription_history_fetch(PDO $pdo, string $patientId, string
         $summary=$names === [] ? 'Medicamentos no detallados' : implode(' · ',array_slice($names,0,2));
         if (count($names)>2) $summary .= ' + '.(count($names)-2).' más';
         $isLegacy=(int)($payload['contract_version'] ?? 0) !== 2;
+        $replacementState = $row['replaced_by_prescription_uuid'] === null ? 'none'
+            : (($row['lifecycle_state'] ?? '') === 'pending' ? 'pending'
+                : (($row['lifecycle_state'] ?? '') === 'completed' ? 'completed' : 'none'));
         $items[]=[
             'document_uuid'=>(string)$row['document_uuid'],
             'version'=>(int)$row['version'],
@@ -63,6 +67,8 @@ function clinical_prescription_history_fetch(PDO $pdo, string $patientId, string
             'corrects_prescription_uuid'=>$row['corrects_prescription_uuid'],
             'source_event_datetime'=>$row['source_event_datetime'],
             'replaced_by_prescription_uuid'=>$row['replaced_by_prescription_uuid'],
+            'replacement_state'=>$replacementState,
+            'replacement_status'=>$row['replacement_status'],
             'replacement_event_datetime'=>$row['replacement_event_datetime'],
             'reason_code'=>$row['reason_code'],
             'voided_at'=>$row['voided_at'],

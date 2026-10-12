@@ -26,6 +26,7 @@ function clinical_v1_document_fetch(PDO $pdo, int $id): array {
 require_once __DIR__ . '/../../../api/_lib/clinical_prescription_lifecycle.php';
 require_once __DIR__ . '/../../../api/_lib/clinical_encounter_integrity.php';
 require_once __DIR__ . '/../../../api/_lib/clinical_document_timeline_read.php';
+require_once __DIR__ . '/../../../api/_lib/clinical_prescription_history.php';
 function qa(bool $condition, string $name): void {
     if (!$condition) throw new RuntimeException('FAIL '.$name);
     echo "PASS $name\n";
@@ -71,6 +72,13 @@ qa($row['document_uuid']===$source['uuid'] && $row['rendered_text']==='SYNTHETIC
     && str_contains($row['payload_json'],'DO_NOT_COPY'),'V08-V10 immutable content/signature/UUID');
 qa($voided['reason_code']===$base['reason_code'] && $voided['actor_user_id']===$doctor['user_id']
     && $voided['voided_at']!==null,'V12 audit metadata');
+$historyItem = static function (array $items, string $uuid): array {
+    foreach ($items as $item) if ($item['document_uuid'] === $uuid) return $item;
+    throw new RuntimeException('HISTORY_ITEM_NOT_FOUND '.$uuid);
+};
+$simpleVoidHistory=$historyItem(clinical_prescription_history_fetch($pdo,$patientId,$doctor['user_id'])['items'],$source['uuid']);
+qa($simpleVoidHistory['status']==='voided' && $simpleVoidHistory['replacement_state']==='none'
+    && $simpleVoidHistory['replaced_by_prescription_uuid']===null,'REC-CLOSE02 simple void has no replacement');
 $original=qa_source($pdo,$doctor,$patientId);
 $replacement=clinical_prescription_lifecycle_reissue($pdo,$doctor,$patientId,$original['uuid'],$base);
 $new=$replacement['document'];
@@ -88,6 +96,14 @@ qa(count(array_filter($drafts,fn(array $item):bool=>$item['document_uuid']===$ne
     && $item['is_reissue']===true))===1,'R02 replacement discoverable as resumable draft');
 $s=$pdo->prepare('SELECT status FROM clinical_documents WHERE id=?');$s->execute([$original['id']]);
 qa($s->fetchColumn()==='generated','R13 pending replacement preserves original');
+$pendingHistory=$historyItem(clinical_prescription_history_fetch($pdo,$patientId,$doctor['user_id'])['items'],$original['uuid']);
+qa($pendingHistory['status']==='generated' && $pendingHistory['replacement_state']==='pending'
+    && $pendingHistory['replacement_status']==='draft'
+    && $pendingHistory['replaced_by_prescription_uuid']===$new['document_id'],
+    'REC-CLOSE02 pending correction preserves emitted original and exact draft');
+$voidedFilter=clinical_prescription_history_fetch($pdo,$patientId,$doctor['user_id'],'voided');
+qa(!in_array($original['uuid'],array_column($voidedFilter['items'],'document_uuid'),true),
+    'REC-CLOSE02 pending original absent from voided filter');
 qa($replacement['lifecycle']['replacement_document_uuid']===$new['document_id']
     && clinical_prescription_lifecycle_projection($pdo,(int)$new['document_db_id'])['original_document_uuid']===$original['uuid'],
     'R11/R12 bidirectional lineage');
@@ -136,6 +152,14 @@ $issued=clinical_prescription_v2_write($pdo,$doctor,$patientId,$writeBody,
     'rec-imp03-final-'.bin2hex(random_bytes(6)));
 qa((string)$issued['document_uuid']===$draftRef,'R10 replacement issued');
 $s->execute([$original['id']]);qa($s->fetchColumn()==='voided','R11 original atomically voided');
+$completedHistory=$historyItem(clinical_prescription_history_fetch($pdo,$patientId,$doctor['user_id'])['items'],$original['uuid']);
+qa($completedHistory['status']==='voided' && $completedHistory['replacement_state']==='completed'
+    && $completedHistory['replacement_status']==='generated'
+    && $completedHistory['replaced_by_prescription_uuid']===$new['document_id'],
+    'REC-CLOSE02 completed replacement projected only after emission');
+$recent=clinical_prescription_recent_fetch($pdo,$patientId,$doctor['user_id']);
+qa(count($recent)<=5 && $historyItem($recent,$original['uuid'])['replacement_state']==='completed',
+    'REC-CLOSE02 recent projection shares completed lineage');
 $originalState=$pdo->query('SELECT document_uuid,payload_json,rendered_text FROM clinical_documents WHERE id='.(int)$original['id'])->fetch();
 qa($originalState['document_uuid']===$original['uuid']
     && $originalState['rendered_text']==='SYNTHETIC ORIGINAL SNAPSHOT'

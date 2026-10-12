@@ -50,7 +50,8 @@
     drafts.forEach(draft => {
       const row = node('div','','rx-ux-row-actions');
       row.append(node('span', draft.is_reissue
-        ? `Corrección de receta del ${date(draft.source_event_datetime)}` : `Borrador · ${date(draft.updated_at)}`));
+        ? `BORRADOR DE CORRECCIÓN · Corrige la receta emitida el ${date(draft.source_event_datetime)}.`
+        : `Borrador · ${date(draft.updated_at)}`));
       row.append(actionButton('Continuar borrador','draft',draft.document_uuid,'btn-primary'));
       block.append(row);
     });
@@ -69,12 +70,19 @@
       const row = node('article','','rx-ux-row');
       const head = node('div','','rx-ux-row-head');
       head.append(node('strong',item.medication_summary || 'Medicamentos no detallados'));
+      const replacementState = item.replacement_state || 'none';
       const label = item.status === 'voided'
-        ? (item.replaced_by_prescription_uuid ? 'ANULADA / REEMPLAZADA' : 'ANULADA') : 'EMITIDA';
+        ? (replacementState === 'completed' ? 'ANULADA / REEMPLAZADA' : 'ANULADA') : 'EMITIDA';
       head.append(node('span',label,`rx-ux-status ${item.status === 'voided' ? 'is-voided' : ''}`));
       row.append(head);
       row.append(node('small',`${date(item.event_datetime)}${item.physician_name ? ` · ${item.physician_name}` : ''}${item.is_legacy ? ' · Receta histórica; firma moderna no verificada' : ''}`));
-      if (item.replaced_by_prescription_uuid) {
+      if (replacementState === 'pending' && item.replaced_by_prescription_uuid) {
+        const relation = node('div','','small');
+        relation.append(node('span','CORRECCIÓN EN PREPARACIÓN · Existe un borrador de corrección para esta receta. '));
+        if (item.can_manage) relation.append(actionButton('Continuar corrección','draft',item.replaced_by_prescription_uuid));
+        row.append(relation);
+      }
+      if (replacementState === 'completed' && item.replaced_by_prescription_uuid) {
         const relation = node('div','','small');
         relation.append(node('span',`Reemplazada por una receta emitida el ${date(item.replacement_event_datetime)}. `));
         relation.append(actionButton('Ver reemplazo','view',item.replaced_by_prescription_uuid));
