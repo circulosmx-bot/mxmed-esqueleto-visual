@@ -95,19 +95,18 @@ final class IdentityHttpComposition
         $autoload = dirname(__DIR__, 3).'/vendor/autoload.php';
         if (is_file($autoload)) require_once $autoload;
         self::registerAutoloader();
-        $appEnvironment = (string)(getenv('APP_ENV') ?: '');
-        $selector = $appEnvironment === ''
-            ? IdentityHttpCompositionSelector::fromProcessEnvironment()
-            : IdentityHttpCompositionSelector::fromValues($appEnvironment, (string)(getenv('MXMED_PREVIEW_EXPLICIT') ?: ''));
+        $selector = IdentityHttpCompositionSelector::fromProcessEnvironment();
         return $selector->select(
             static fn(): self => self::preview(),
-            static fn(string $environment): self => self::productive(ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment))
+            static fn(string $environment): self => self::productive(ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment)),
+            static fn(): self => self::normalLocal(NormalLocalIdentityConfiguration::fromProcessEnvironment())
         );
     }
 
     public static function preview(): self
     {
         self::registerAutoloader();
+        if (!in_array((string)(getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') ?: ''), ['', '0'], true)) throw new \RuntimeException('preview_composition_required');
         $environment = strtolower((string)getenv('MXMED_ENVIRONMENT'));
         if (!in_array($environment, ['local', 'development'], true) || getenv('MXMED_PREVIEW_EXPLICIT') !== '1') throw new \RuntimeException('preview_composition_required');
         $pepper = (string)getenv('MXMED_PREVIEW_PEPPER');
@@ -135,6 +134,36 @@ final class IdentityHttpComposition
             $allowedOrigin,
             $clock
         );
+    }
+
+    public static function normalLocal(NormalLocalIdentityConfiguration $configuration): self
+    {
+        self::registerAutoloader();
+        try {
+            $pdo = new PDO($configuration->dsn(), $configuration->value('MXMED_DB_USER'),
+                $configuration->value('MXMED_DB_PASS'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]);
+        } catch (\Throwable) {
+            throw new \RuntimeException('normal_local_database_unavailable');
+        }
+        return self::assembleNormalLocal($configuration, $pdo);
+    }
+
+    /** Separate assembly seam permits isolated database tests without a runtime DB override. */
+    private static function assembleNormalLocal(NormalLocalIdentityConfiguration $configuration, PDO $pdo): self
+    {
+        NormalLocalIdentitySchema::assertReady($pdo);
+        $clock = new SystemClock();
+        $client = new \Identity\Adapters\NormalLocalValkeyClient(
+            $configuration->value('MXMED_NORMAL_LOCAL_VALKEY_HOST'),
+            (int)$configuration->value('MXMED_NORMAL_LOCAL_VALKEY_PORT'));
+        $store = SessionStoreFactory::create('local', ['driver'=>'valkey',
+            'prefix'=>$configuration->value('MXMED_NORMAL_LOCAL_SESSION_PREFIX'),
+            'explicit_normal_local_flag'=>true], $client, $clock);
+        if (!$store->healthCheck()->healthy()) throw new \RuntimeException('normal_local_session_store_unavailable');
+        return self::build($pdo, $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_PEPPER'),
+            new PreviewIdentityNotificationAdapter($configuration->value('MXMED_NORMAL_LOCAL_NOTIFICATION_FILE')),
+            $store, 'local', $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN'), $clock);
     }
 
     public static function productive(ProductiveIdentityHttpConfiguration $configuration): self

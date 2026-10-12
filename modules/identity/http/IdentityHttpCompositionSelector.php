@@ -5,6 +5,7 @@ namespace Identity\Http;
 
 final class IdentityHttpCompositionSelector
 {
+    public const MODE_NORMAL_LOCAL = 'normal_local';
     public const MODE_PREVIEW = 'preview';
     public const MODE_PRODUCTIVE = 'productive';
 
@@ -15,15 +16,27 @@ final class IdentityHttpCompositionSelector
 
     public static function fromProcessEnvironment(): self
     {
-        return self::fromValues(
-            (string)(getenv('MXMED_ENVIRONMENT') ?: ''),
-            (string)(getenv('MXMED_PREVIEW_EXPLICIT') ?: '')
-        );
+        $app = (string)(getenv('APP_ENV') ?: '');
+        $legacy = (string)(getenv('MXMED_ENVIRONMENT') ?: '');
+        $normal = (string)(getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') ?: '');
+        if ($normal !== '' && $normal !== '0'
+            && ($app !== 'local' || ($legacy !== '' && $legacy !== 'local'))) {
+            throw new \RuntimeException('identity_composition_unavailable');
+        }
+        return self::fromValues($app !== '' ? $app : $legacy,
+            (string)(getenv('MXMED_PREVIEW_EXPLICIT') ?: ''), $normal);
     }
 
-    public static function fromValues(string $environment, string $explicitPreviewFlag): self
+    public static function fromValues(string $environment, string $explicitPreviewFlag, string $explicitNormalLocalFlag = ''): self
     {
         $environment = strtolower(trim($environment));
+        if ($explicitNormalLocalFlag !== '' && $explicitNormalLocalFlag !== '0') {
+            if ($explicitNormalLocalFlag !== '1' || $environment !== 'local'
+                || !in_array($explicitPreviewFlag, ['', '0'], true)) {
+                throw new \RuntimeException('identity_composition_unavailable');
+            }
+            return new self($environment, self::MODE_NORMAL_LOCAL);
+        }
         if (in_array($environment, ['local', 'development'], true)) {
             if ($explicitPreviewFlag !== '1') {
                 throw new \RuntimeException('identity_composition_unavailable');
@@ -53,8 +66,12 @@ final class IdentityHttpCompositionSelector
         return $this->mode;
     }
 
-    public function select(callable $previewFactory, callable $productiveFactory): mixed
+    public function select(callable $previewFactory, callable $productiveFactory, ?callable $normalLocalFactory = null): mixed
     {
+        if ($this->mode === self::MODE_NORMAL_LOCAL) {
+            if ($normalLocalFactory === null) throw new \RuntimeException('identity_composition_unavailable');
+            return $normalLocalFactory();
+        }
         if ($this->mode === self::MODE_PREVIEW) {
             return $previewFactory();
         }

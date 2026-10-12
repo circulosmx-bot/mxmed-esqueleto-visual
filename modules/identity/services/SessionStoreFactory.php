@@ -19,6 +19,7 @@ final class SessionStoreFactory
     {
         $environment = strtolower(trim($environment));
         $driver = strtolower(trim((string)($config['driver'] ?? '')));
+        if (($config['explicit_normal_local_flag'] ?? false) === true && $environment !== 'local') throw new SessionStoreUnavailableException();
         if (in_array($environment, ['production', 'staging'], true)) {
             $expectedPrefix = $environment === 'production' ? 'mxmed:prd:session:' : 'mxmed:stg:session:';
             if (
@@ -36,10 +37,18 @@ final class SessionStoreFactory
             ) throw new SessionStoreUnavailableException();
             return new ValkeySessionStoreAdapter($client, $expectedPrefix, $clock ?? new SystemClock(), 100, 100000);
         }
+        if (($config['explicit_normal_local_flag'] ?? false) === true) {
+            if ($environment !== 'local' || $driver !== 'valkey'
+                || !$client instanceof \Identity\Adapters\NormalLocalValkeyClient
+                || ($config['explicit_preview_flag'] ?? false) === true
+                || ($config['prefix'] ?? '') !== 'mxmed:local:session:') throw new SessionStoreUnavailableException();
+            return new ValkeySessionStoreAdapter($client, 'mxmed:local:session:', $clock ?? new SystemClock());
+        }
         if ($environment === 'test' && $driver === 'in_memory') return new InMemorySessionStoreAdapter();
         if ($environment === 'local' && $driver === 'in_memory' && ($config['explicit_dev_flag'] ?? false) === true) return new InMemorySessionStoreAdapter();
         if ($environment === 'local' && $driver === 'valkey' && $client instanceof ValkeySessionClientPort && ($config['explicit_preview_flag'] ?? false) === true) {
-            return new ValkeySessionStoreAdapter($client, (string)($config['prefix'] ?? ''), $clock ?? new SystemClock());
+            if (($config['prefix'] ?? '') !== 'mxmed:gate4d:preview:session:') throw new SessionStoreUnavailableException();
+            return new ValkeySessionStoreAdapter($client, 'mxmed:gate4d:preview:session:', $clock ?? new SystemClock());
         }
         if ($driver === 'rejecting') return new RejectingSessionStoreAdapter();
         throw new SessionStoreUnavailableException();
