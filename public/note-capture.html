@@ -139,14 +139,15 @@
       const isNotaSignature = mode === 'nota-signature';
       const isAltaSignature = mode === 'alta-signature';
       const isFreeDocumentSignature = mode === 'free-document-signature';
-      const isSignatureMode = mode === 'signature' || isResponsivaSignature || isMultimediaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature;
-      const signatureRoute = isFreeDocumentSignature ? 'free-document-qr-sessions' : isAltaSignature ? 'alta-qr-sessions' : isNotaSignature ? 'nota-qr-sessions' : isInformeSignature ? 'informe-qr-sessions'
+      const isPrescriptionSignature = mode === 'prescription-signature';
+      const isSignatureMode = mode === 'signature' || isResponsivaSignature || isMultimediaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature || isPrescriptionSignature;
+      const signatureRoute = isPrescriptionSignature ? 'prescription-qr-sessions' : isFreeDocumentSignature ? 'free-document-qr-sessions' : isAltaSignature ? 'alta-qr-sessions' : isNotaSignature ? 'nota-qr-sessions' : isInformeSignature ? 'informe-qr-sessions'
         : isInterconsultaSignature ? 'interconsulta-qr-sessions'
         : isCertificadoSignature ? 'certificado-qr-sessions'
         : (isMultimediaSignature ? 'multimedia-qr-sessions' : isResponsivaSignature ? 'responsiva-qr-sessions' : 'note-capture-tokens');
-      const signatureDocument = isFreeDocumentSignature ? 'el documento libre' : isAltaSignature ? 'el alta médica' : isNotaSignature ? 'la nota' : isInformeSignature ? 'el informe' : isInterconsultaSignature ? 'la interconsulta' : isCertificadoSignature ? 'el certificado'
+      const signatureDocument = isPrescriptionSignature ? 'la receta médica' : isFreeDocumentSignature ? 'el documento libre' : isAltaSignature ? 'el alta médica' : isNotaSignature ? 'la nota' : isInformeSignature ? 'el informe' : isInterconsultaSignature ? 'la interconsulta' : isCertificadoSignature ? 'el certificado'
         : (isMultimediaSignature ? 'el consentimiento multimedia' : isResponsivaSignature ? 'la responsiva' : 'el consentimiento');
-      const signatureObjectPronoun = isResponsivaSignature || isInterconsultaSignature || isNotaSignature || isAltaSignature ? 'firmarla' : 'firmarlo';
+      const signatureObjectPronoun = isPrescriptionSignature || isResponsivaSignature || isInterconsultaSignature || isNotaSignature || isAltaSignature ? 'firmarla' : 'firmarlo';
       let signatureHasStroke = false;
 
       const setMsg = (text, tone='muted')=>{
@@ -252,18 +253,18 @@
       }
 
       if(isSignatureMode){
-        if ((isMultimediaSignature || isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature) && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
+        if ((isMultimediaSignature || isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature || isPrescriptionSignature) && (!window.isSecureContext || !window.crypto?.subtle?.digest)) {
           setMsg(`Abre el enlace HTTPS seguro para revisar y firmar ${signatureDocument}.`, 'err');
           return;
         }
-        titleEl.textContent = isFreeDocumentSignature ? 'Documento libre' : isAltaSignature ? 'Alta médica' : isNotaSignature ? 'Nota médica' : isInformeSignature ? 'Informe médico' : isInterconsultaSignature ? 'Interconsulta' : isCertificadoSignature ? 'Certificado médico'
+        titleEl.textContent = isPrescriptionSignature ? 'Receta médica' : isFreeDocumentSignature ? 'Documento libre' : isAltaSignature ? 'Alta médica' : isNotaSignature ? 'Nota médica' : isInformeSignature ? 'Informe médico' : isInterconsultaSignature ? 'Interconsulta' : isCertificadoSignature ? 'Certificado médico'
           : (isMultimediaSignature ? 'Consentimiento multimedia' : isResponsivaSignature ? 'Responsiva médica' : 'Consentimiento informado');
         introEl.textContent = 'Revisa el documento antes de firmar esta versión.';
-        consentReview.querySelector('h2').textContent = isFreeDocumentSignature ? 'Revisar Documento libre' : isAltaSignature ? 'Revisar Alta médica' : isNotaSignature ? 'Revisar Nota médica' : isInformeSignature ? 'Revisar informe médico' : isInterconsultaSignature ? 'Revisar interconsulta' : isCertificadoSignature ? 'Revisar certificado'
+        consentReview.querySelector('h2').textContent = isPrescriptionSignature ? 'Revisar receta médica' : isFreeDocumentSignature ? 'Revisar Documento libre' : isAltaSignature ? 'Revisar Alta médica' : isNotaSignature ? 'Revisar Nota médica' : isInformeSignature ? 'Revisar informe médico' : isInterconsultaSignature ? 'Revisar interconsulta' : isCertificadoSignature ? 'Revisar certificado'
           : (isMultimediaSignature ? 'Revisar consentimiento multimedia' : isResponsivaSignature ? 'Revisar responsiva' : 'Revisa el consentimiento');
-        consentReviewFrame.title = isFreeDocumentSignature ? 'Documento libre que se firmará' : isAltaSignature ? 'Alta médica que se firmará' : isNotaSignature ? 'Nota médica que se firmará' : isInformeSignature ? 'Informe médico que se firmará' : isInterconsultaSignature ? 'Interconsulta que se firmará' : isCertificadoSignature ? 'Certificado que se firmará'
+        consentReviewFrame.title = isPrescriptionSignature ? 'Receta médica que se firmará' : isFreeDocumentSignature ? 'Documento libre que se firmará' : isAltaSignature ? 'Alta médica que se firmará' : isNotaSignature ? 'Nota médica que se firmará' : isInformeSignature ? 'Informe médico que se firmará' : isInterconsultaSignature ? 'Interconsulta que se firmará' : isCertificadoSignature ? 'Certificado que se firmará'
           : (isMultimediaSignature ? 'Consentimiento multimedia que se firmará' : isResponsivaSignature ? 'Responsiva que se firmará' : 'Consentimiento que se firmará');
-        consentReviewFrame.classList.toggle('interconsulta-review-frame', isMultimediaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature);
+        consentReviewFrame.classList.toggle('interconsulta-review-frame', isMultimediaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature || isPrescriptionSignature);
         form.classList.add('d-none');
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
@@ -278,14 +279,14 @@
             })
             .then(data=>{
               if(data.status!=='pending') throw new Error('Este QR ya fue utilizado o expiró. Solicita uno nuevo.');
-              const interconsultaMobileStyle = (isMultimediaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature)
+              const interconsultaMobileStyle = (isMultimediaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature || isPrescriptionSignature)
                 ? `<meta name="viewport" content="width=device-width, initial-scale=1"><style>
                     html,body{margin:0;max-width:100%;overflow-x:hidden}
-                    .interconsulta-doc-sheet,.informe-doc-sheet{width:100% !important;min-height:0 !important;padding:16px !important;box-shadow:none !important}
-                    .interconsulta-doc-sheet *,.informe-doc-sheet *{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere}
+                    .interconsulta-doc-sheet,.informe-doc-sheet,.rx-doc-sheet{width:100% !important;min-height:0 !important;padding:16px !important;box-shadow:none !important}
+                    .interconsulta-doc-sheet *,.informe-doc-sheet *,.rx-doc-sheet *{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere}
                     .interconsulta-doc-sheet .doc-base-footer-block,.informe-doc-sheet .doc-base-footer-block{transform:none}
                   </style>` : '';
-              consentReviewFrame.srcdoc=(isMultimediaSignature || isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature)
+              consentReviewFrame.srcdoc=(isMultimediaSignature || isResponsivaSignature || isCertificadoSignature || isInterconsultaSignature || isInformeSignature || isNotaSignature || isAltaSignature || isFreeDocumentSignature || isPrescriptionSignature)
                 ? `<link rel="stylesheet" href="/assets/css/clinical-doc-base.css"><link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css">${interconsultaMobileStyle}${String(data.review_html || '')}`
                 : String(data.review_html || '');
               consentSigner.textContent=`${data.role_label}: ${data.signer_name || 'Médico responsable'}`;
@@ -320,7 +321,7 @@
           consentReview.classList.add('d-none');
           signatureForm.classList.remove('d-none');
           window.mxmedSignatureExperience.resizeCanvas(signatureCanvas, { preserve:true });
-          setMsg(`Firma ${signatureDocument} ${isResponsivaSignature || isInterconsultaSignature || isNotaSignature || isAltaSignature ? 'mostrada' : 'mostrado'} y confirma.`, 'muted');
+          setMsg(`Firma ${signatureDocument} ${isPrescriptionSignature || isResponsivaSignature || isInterconsultaSignature || isNotaSignature || isAltaSignature ? 'mostrada' : 'mostrado'} y confirma.`, 'muted');
         }catch(error){
           consentContinue.disabled=false;
           setMsg(safeError(error,'No se pudo continuar a la firma.'), 'err');

@@ -7945,6 +7945,11 @@ try {
         clinical_free_document_qr_route(clinical_documents_pdo(), $method, $segments);
         return;
     }
+    if (($segments[0] ?? '') === 'prescription-qr-sessions') {
+        require_once __DIR__ . '/../_lib/clinical_prescription_qr.php';
+        clinical_prescription_qr_route(clinical_documents_pdo(), $method, $segments);
+        return;
+    }
     if (($segments[0] ?? '') === 'alta-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_alta_qr.php';
         clinical_alta_qr_route(clinical_documents_pdo(), $method, $segments);
@@ -9593,6 +9598,29 @@ try {
                 if ($action === 'preview') {
                     $normalized = clinical_prescription_v2_normalize($pdo,$scopedDoctorContext,$patientId,$body,
                         ($body['final_review'] ?? false) === true);
+                    if (($body['include_signature'] ?? false) === true) {
+                        $ref = trim((string)($body['draft_ref'] ?? ''));
+                        $version = (int)($body['expected_version'] ?? 0);
+                        $stored = $ref !== '' ? clinical_documents_get_by_uuid_fetch($pdo,$ref) : null;
+                        if (!$stored || (string)($stored['document_type'] ?? '') !== 'prescription'
+                            || (int)($stored['version'] ?? 0) !== $version
+                            || (string)($stored['context']['patient_id'] ?? '') !== $patientId)
+                            throw new InvalidArgumentException('PRESCRIPTION_REVIEW_VERSION_INVALID');
+                        $old = (array)($stored['content']['payload'] ?? []);
+                        foreach (['patient_snapshot','physician_snapshot','professional_context','issue_date','encounter_reference'] as $key)
+                            $normalized[$key] = $old[$key] ?? $normalized[$key];
+                        $check = ['draft_ref'=>$ref,'expected_version'=>$version,
+                            'context'=>['patient_id'=>$patientId],'payload'=>$normalized];
+                        $original = $check; $original['payload'] = $old;
+                        if (!hash_equals(clinical_prescription_binding_fingerprint($original),
+                                clinical_prescription_binding_fingerprint($check)))
+                            throw new InvalidArgumentException('PRESCRIPTION_REVIEW_CONTENT_STALE');
+                        $normalized['signatures']['doctor'] = $old['signatures']['doctor'] ?? null;
+                        $check['payload'] = $normalized;
+                        if (clinical_prescription_binding_classify($check,(string)$scopedDoctorContext['doctor_id'],$pdo)
+                            !== 'valid_bound_signature')
+                            throw new InvalidArgumentException('PRESCRIPTION_REVIEW_SIGNATURE_INVALID');
+                    }
                     clinical_send_response(['ok'=>true,'data'=>['html'=>clinical_prescription_v2_render($normalized),
                         'payload'=>$normalized],'meta'=>['route'=>$routeName]],200);return;
                 }

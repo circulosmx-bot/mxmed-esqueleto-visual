@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_documents.php';
 require_once __DIR__ . '/clinical_portable_order.php';
 require_once __DIR__ . '/clinical_legal_document_presentation.php';
+require_once __DIR__ . '/clinical_prescription_binding.php';
 
 /** The V2 payload is the only authoring and rendering authority for new prescriptions. */
 function clinical_prescription_v2_text(mixed $value, int $limit = 4000): string
@@ -105,6 +106,7 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
         'encounter_reference'=>$encounter === null ? null : ['encounter_id'=>(int)$encounter['encounter_id'],
             'appointment_id'=>$appointmentId ?: null],
         'issue_date'=>(new DateTimeImmutable('now',new DateTimeZone('America/Mexico_City')))->format('Y-m-d'),
+        'signatures'=>['doctor'=>null],
     ];
 }
 
@@ -151,7 +153,11 @@ function clinical_prescription_v2_render(array $payload): string
     $html .= '</ol></section>';
     $observations = (string)($payload['prescription']['observaciones'] ?? '');
     if ($observations !== '') $html .= '<section class="doc-base-section"><div class="doc-base-section-title">Observaciones</div><div class="doc-base-text">'.nl2br($h($observations)).'</div></section>';
-    $html .= '<section class="doc-base-signature doc-base-print-safe"><div class="doc-base-section-title">Médico responsable</div><div class="rx-doc-sign-line"></div><div class="doc-base-signature-meta">'.$h($doctor['full_name'] ?? '').'</div>';
+    $html .= '<section class="doc-base-signature doc-base-print-safe"><div class="doc-base-section-title">Médico responsable</div>';
+    $signed = (array)($payload['signatures']['doctor'] ?? []);
+    if (!empty($signed['image_data'])) $html .= '<img class="doc-base-signature-image" src="'.$h($signed['image_data']).'" alt="Firma del médico responsable">';
+    else $html .= '<div class="rx-doc-sign-line"></div>';
+    $html .= '<div class="doc-base-signature-meta">'.$h($doctor['full_name'] ?? '').'</div>';
     if (!empty($doctor['license'])) $html .= '<div class="doc-base-signature-meta">Cédula profesional: '.$h($doctor['license']).'</div>';
     $html .= '</section></div></div></article>';
     return $html;
@@ -160,10 +166,10 @@ function clinical_prescription_v2_render(array $payload): string
 function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patientId, array $body, string $key): array
 {
     $intent = (string)($body['intent'] ?? '');
-    if (!in_array($intent, ['draft','finalize'], true)) throw new InvalidArgumentException('PRESCRIPTION_INTENT_INVALID');
+    if (!in_array($intent, ['draft','apply_signature','finalize'], true)) throw new InvalidArgumentException('PRESCRIPTION_INTENT_INVALID');
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
     $expected = (int)($body['expected_version'] ?? 0);
-    if ($intent === 'finalize' && $draftRef === '') throw new InvalidArgumentException('PRESCRIPTION_DRAFT_REQUIRED');
+    if ($intent !== 'draft' && $draftRef === '') throw new InvalidArgumentException('PRESCRIPTION_DRAFT_REQUIRED');
     if ($draftRef !== '' && (preg_match('/^[0-9a-f-]{36}$/iD', $draftRef) !== 1 || $expected < 1))
         throw new InvalidArgumentException('PRESCRIPTION_DRAFT_IDENTITY_INVALID');
     $idempotencyKey = clinical_idempotency_key_validate($key);
@@ -179,7 +185,7 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
             $existing = null;
             if ($draftRef !== '') {
                 $stmt = $pdo->prepare('SELECT id,document_uuid,document_type,patient_id,status,version,created_by_user_id,
-                    encounter_ref_id FROM clinical_documents WHERE document_uuid=? LIMIT 1 FOR UPDATE');
+                    encounter_ref_id,payload_json FROM clinical_documents WHERE document_uuid=? LIMIT 1 FOR UPDATE');
                 $stmt->execute([$draftRef]); $existing = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                 if (!is_array($existing) || (string)$existing['document_type'] !== 'prescription'
                     || (string)$existing['patient_id'] !== $patientId
@@ -189,13 +195,49 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
                 if ((int)$existing['version'] !== $expected)
                     throw new ClinicalIdempotencyException('PRESCRIPTION_VERSION_CONFLICT', 'El borrador cambió. Vuelve a abrirlo.', 409);
             }
-            $payload = clinical_prescription_v2_normalize($pdo,$doctor,$patientId,$body,$intent==='finalize');
+            $payload = clinical_prescription_v2_normalize($pdo,$doctor,$patientId,$body,$intent!=='draft');
+            $payload['status'] = $intent === 'finalize' ? 'generated' : 'draft';
             $encounterId = (int)($payload['encounter_reference']['encounter_id'] ?? 0);
             if ($existing !== null && (int)($existing['encounter_ref_id'] ?? 0) !== $encounterId)
                 throw new InvalidArgumentException('PRESCRIPTION_DRAFT_ENCOUNTER_IMMUTABLE');
+            $oldPayload = $existing === null ? null : json_decode((string)$existing['payload_json'],true);
+            if ($existing !== null && is_array($oldPayload)) {
+                foreach (['patient_snapshot','physician_snapshot','professional_context','issue_date','encounter_reference'] as $snapshotKey)
+                    $payload[$snapshotKey] = $oldPayload[$snapshotKey] ?? $payload[$snapshotKey];
+            }
+            $bindingBody = ['draft_ref'=>$draftRef,'expected_version'=>$expected,
+                'context'=>['patient_id'=>$patientId],'payload'=>$payload];
+            if ($intent === 'apply_signature') {
+                if ($existing === null) throw new InvalidArgumentException('PRESCRIPTION_DRAFT_REQUIRED');
+                $oldBody = ['draft_ref'=>$draftRef,'expected_version'=>$expected,
+                    'context'=>['patient_id'=>$patientId],'payload'=>$oldPayload];
+                if (!hash_equals(clinical_prescription_binding_fingerprint($oldBody),
+                        clinical_prescription_binding_fingerprint($bindingBody)))
+                    throw new InvalidArgumentException('PRESCRIPTION_SIGNATURE_CONTENT_STALE');
+                $payload['signatures']['doctor'] = $body['signature'] ?? null;
+                $bindingBody['payload'] = $payload;
+                if (clinical_prescription_binding_classify($bindingBody,(string)$doctor['doctor_id'],$pdo)
+                    !== 'valid_bound_signature') throw new InvalidArgumentException('PRESCRIPTION_SIGNATURE_INVALID');
+                if (($payload['signatures']['doctor']['source'] ?? '') === 'remote_qr') {
+                    require_once __DIR__ . '/clinical_prescription_qr.php';
+                    clinical_prescription_qr_claim($pdo,$bindingBody,$payload['signatures']['doctor'],
+                        'doctor',(string)$doctor['doctor_id'],$draftRef,$expected);
+                }
+            } elseif ($intent === 'finalize') {
+                $payload['signatures']['doctor'] = $oldPayload['signatures']['doctor'] ?? null;
+                $bindingBody['payload'] = $payload;
+                if (clinical_prescription_binding_classify($bindingBody,(string)$doctor['doctor_id'],$pdo)
+                    !== 'valid_bound_signature') throw new InvalidArgumentException('PRESCRIPTION_SIGNATURE_REQUIRED_OR_STALE');
+            } elseif ($existing !== null && !empty($oldPayload['signatures']['doctor'])) {
+                $oldBody = ['draft_ref'=>$draftRef,'expected_version'=>$expected,
+                    'context'=>['patient_id'=>$patientId],'payload'=>$oldPayload];
+                if (hash_equals(clinical_prescription_binding_fingerprint($oldBody),
+                        clinical_prescription_binding_fingerprint($bindingBody)))
+                    $payload['signatures']['doctor'] = $oldPayload['signatures']['doctor'];
+            }
             $html = clinical_prescription_v2_render($payload);
             $payload['prescription_snapshot'] = ['version'=>1,'html'=>$html];
-            $status = $intent === 'draft' ? 'draft' : 'generated';
+            $status = $intent === 'finalize' ? 'generated' : 'draft';
             if ($existing === null) {
                 $doc = mxmed_build_clinical_document(['type'=>'prescription','title'=>'Receta médica',
                     'context'=>['patient_id'=>$patientId,'encounter_id'=>$encounterId ?: null,
@@ -210,8 +252,10 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
                 return mxmed_persist_clinical_document_in_transaction($pdo,$doc,
                     $encounterId ? ['encounter_ref_id'=>$encounterId] : []);
             }
+            $versionUnchanged = $intent === 'apply_signature' || $intent === 'finalize' || ($intent === 'draft'
+                && !empty($payload['signatures']['doctor']));
             $stmt = $pdo->prepare('UPDATE clinical_documents SET payload_json=?,rendered_text=?,summary=?,
-                status=?,version=version+1,updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,edited_flag=1,
+                status=?,version=version+'.($versionUnchanged?'0':'1').',updated_at=UTC_TIMESTAMP(),updated_by_user_id=?,edited_flag=1,
                 generated_at=CASE WHEN ?=\'generated\' THEN UTC_TIMESTAMP() ELSE NULL END
                 WHERE id=? AND version=? AND status=\'draft\'');
             $stmt->execute([json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),
@@ -230,7 +274,7 @@ function clinical_prescription_v2_drafts(PDO $pdo, array $doctor, string $patien
     $stmt = $pdo->prepare("SELECT document_uuid,version,updated_at,payload_json FROM clinical_documents
         WHERE patient_id=? AND created_by_user_id=? AND document_type='prescription' AND status='draft'
         AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.contract_version'))='2' AND $encounterClause
-        ORDER BY updated_at DESC,id DESC LIMIT 20");
+        ORDER BY COALESCE(updated_at,created_at) DESC,id DESC LIMIT 20");
     $params = [$patientId,(string)$doctor['user_id']];
     if ($encounter !== null) $params[] = (int)$encounter['encounter_id'];
     $stmt->execute($params);

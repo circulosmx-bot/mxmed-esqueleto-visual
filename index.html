@@ -8577,6 +8577,10 @@
                           <!-- filas dinámicas -->
                         </div>
                         <div class="ne-rx-section-title ne-rx-list-title mt-3 mb-2">3. Receta (<span id="ne_rx_count">0</span> medicamentos)</div>
+                        <div class="mb-2">
+                          <label class="form-label mb-1" for="ne_rx_observations">Observaciones para el paciente</label>
+                          <textarea class="form-control form-control-sm" id="ne_rx_observations" rows="2"></textarea>
+                        </div>
                         <div class="d-flex align-items-center gap-2 mb-2">
                           <label class="small fw-semibold mb-0" for="ne_rx_professional_header">Encabezado profesional</label>
                           <select class="form-select form-select-sm w-auto" id="ne_rx_professional_header">
@@ -8611,15 +8615,47 @@
                         </div>
                         </div>
                         <div id="ne_rx_review" class="d-none">
-                          <h6>Revisión final de receta</h6>
-                          <div class="small text-muted mb-2">Revisa el documento completo antes de emitirlo.</div>
+                          <h6>Vista previa de receta</h6>
+                          <div class="small text-muted mb-2">Revisa el documento completo antes de firmarlo.</div>
                           <div id="ne_rx_preview_html" class="doc-base-sheet-frame"></div>
                           <div class="d-flex justify-content-end gap-2 mt-3">
                             <button type="button" class="btn btn-outline-secondary" id="ne_rx_back_to_capture">Volver a editar</button>
-                            <button type="button" class="btn btn-primary" id="ne_rx_save">Emitir receta</button>
+                            <button type="button" class="btn btn-primary" id="ne_rx_save">Continuar a firmas</button>
                           </div>
                           <div id="ne_rx_review_status" class="small mt-2" role="status" aria-live="polite"></div>
                           <button type="button" class="btn btn-link btn-sm d-none ne-rx-open-doc-inline" id="ne_rx_open_doc">Ver e imprimir</button>
+                        </div>
+                        <div id="ne_rx_sign" class="d-none">
+                          <h6>Firma del médico</h6>
+                          <div class="small text-muted mb-2">La firma quedará vinculada a esta versión exacta de la receta.</div>
+                          <div id="ne_rx_signature_status" class="small mb-2" role="status" aria-live="polite">Aún no hay firma aplicada.</div>
+                          <img id="ne_rx_signature_image" class="d-none" alt="Firma médica aplicada" style="display:block;max-width:240px;max-height:90px;object-fit:contain">
+                          <canvas id="ne_rx_signature_canvas" width="540" height="160" style="width:100%;max-width:540px;height:160px;background:#fff;border:1px solid #b9d4e0;touch-action:none" aria-label="Dibujar firma médica"></canvas>
+                          <div class="d-flex gap-2 flex-wrap mt-2">
+                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_clear_signature">Limpiar</button>
+                            <button type="button" class="btn btn-primary" id="ne_rx_apply_signature">Firmar aquí</button>
+                            <button type="button" class="btn btn-outline-primary" id="ne_rx_registered_signature">Usar firma registrada</button>
+                            <button type="button" class="btn btn-outline-primary" id="ne_rx_remote_signature">Firmar en otro dispositivo</button>
+                          </div>
+                          <div class="d-flex justify-content-between gap-2 mt-3">
+                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_sign_back">Volver a editar</button>
+                            <button type="button" class="btn btn-primary" id="ne_rx_final_review" disabled>Revisión final</button>
+                          </div>
+                          <div id="ne_rx_signature_feedback" class="small mt-2" role="status" aria-live="polite"></div>
+                        </div>
+                        <div id="ne_rx_final" class="d-none">
+                          <h6>Revisión final de receta firmada</h6>
+                          <div id="ne_rx_final_html" class="doc-base-sheet-frame"></div>
+                          <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_final_back">Volver a firma</button>
+                            <button type="button" class="btn btn-primary" id="ne_rx_emit_signed">Emitir receta</button>
+                          </div>
+                          <div id="ne_rx_final_status" class="small mt-2" role="status" aria-live="polite"></div>
+                          <div id="ne_rx_post_actions" class="d-none d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-outline-primary" id="ne_rx_post_print">IMPRIMIR</button>
+                            <button type="button" class="btn btn-outline-primary" id="ne_rx_post_view">VER RECETA</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">CERRAR</button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -11379,6 +11415,7 @@
 <script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
 <script src="assets/js/clinical/nota-signature-binding.js?v=nm-imp01"></script>
 <script src="assets/js/clinical/free-document-signature-binding.js?v=free-doc02b"></script>
+<script src="assets/js/clinical/prescription-signature-binding.js?v=rec-imp02"></script>
 <script src="assets/js/clinical/free-document-example-help.js?v=free-doc03"></script>
 <script src="assets/js/clinical/alta-signature-binding.js?v=doc-close02c"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>

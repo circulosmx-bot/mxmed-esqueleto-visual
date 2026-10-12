@@ -38678,6 +38678,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   const rxPreview = document.getElementById('ne_rx_preview');
   const rxBackToCapture = document.getElementById('ne_rx_back_to_capture');
   const rxProfessionalHeader = document.getElementById('ne_rx_professional_header');
+  const rxObservations = document.getElementById('ne_rx_observations');
   const rxCanonicalScope = async () => {
     const ctx = resolveRecetaRuntimeContext();
     const patientId = /^p_/i.test(String(ctx.patient_id || ''))
@@ -38715,13 +38716,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         name: item.name, presentation: item.presentation, dose: item.dose, route: item.route,
         frequency: item.frequency, duration: item.duration, quantity: item.quantity,
         instructions: item.instructions, private_notes: item.private_notes
-      })), observaciones: '' },
+      })), observaciones: rxObservations?.value || '' },
       diagnostic_context: collectRxDiagnosticContext(),
       presentation: { version: 1, professional_header: rxProfessionalHeader?.value === 'hidden' ? 'hidden' : 'shown' }
     }
   });
   const rxShowCapture = () => {
     rxReview?.classList.add('d-none');
+    document.getElementById('ne_rx_sign')?.classList.add('d-none');
+    document.getElementById('ne_rx_final')?.classList.add('d-none');
     rxCapture?.classList.remove('d-none');
     rxReviewedFingerprint = '';
     if (els.rxSave) els.rxSave.disabled = false;
@@ -38749,6 +38752,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       { diagnostic_context: payload.diagnostic_context || {} });
     renderRxModal();
     if (rxProfessionalHeader) rxProfessionalHeader.value = payload.presentation?.professional_header === 'hidden' ? 'hidden' : 'shown';
+    if (rxObservations) rxObservations.value = payload.prescription?.observaciones || '';
     if (rxDraftStatus) rxDraftStatus.textContent = `Borrador versión ${rxServerDraft.version}`;
     rxContinueDraft.classList.add('d-none');
     rxGuardBaseline = rxGuardSnapshot();
@@ -38786,8 +38790,146 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     finally { rxWriteBusy = false; rxPreview.disabled = false; }
   });
   rxBackToCapture?.addEventListener('click', rxShowCapture);
+  const rxSignPanel = document.getElementById('ne_rx_sign');
+  const rxFinalPanel = document.getElementById('ne_rx_final');
+  const rxSignatureImage = document.getElementById('ne_rx_signature_image');
+  const rxSignatureStatus = document.getElementById('ne_rx_signature_status');
+  const rxSignatureFeedback = document.getElementById('ne_rx_signature_feedback');
+  const rxFinalButton = document.getElementById('ne_rx_final_review');
+  const rxCanvas = document.getElementById('ne_rx_signature_canvas');
+  const rxCanvasCtx = rxCanvas?.getContext('2d');
+  const rxExperience = window.mxmedSignatureExperience;
+  const rxQrModal = document.getElementById('modalResponsivaSignatureQr');
+  const rxQrEl = role => rxQrModal?.querySelector(`[data-role="rm-qr-${role}"]`);
+  let rxSignature = null, rxHasStroke = false, rxEmittedToken = '';
+  const rxQr = { token:'', status:'', timer:0, generation:0 };
+  const rxFeedback = message => { if (rxSignatureFeedback) rxSignatureFeedback.textContent = message; };
+  const rxSignatureBody = scope => ({ ...rxCanonicalBody(scope), draft_ref:rxServerDraft?.document_uuid,
+    expected_version:rxServerDraft?.version, payload:rxServerDraft?.payload });
+  const rxShowSignature = () => {
+    rxCapture?.classList.add('d-none'); rxReview?.classList.add('d-none'); rxFinalPanel?.classList.add('d-none');
+    rxSignPanel?.classList.remove('d-none');
+    rxSignatureImage?.classList.toggle('d-none', !rxSignature?.image_data);
+    if (rxSignatureImage) { if (rxSignature?.image_data) rxSignatureImage.src=rxSignature.image_data;
+      else rxSignatureImage.removeAttribute('src'); }
+    if (rxSignatureStatus) {
+      rxSignatureStatus.textContent = rxSignature
+        ? '✓ Firma médica aplicada a esta versión. Sigue con «Revisión final».'
+        : 'Aún no hay firma aplicada.';
+      rxSignatureStatus.classList.toggle('small', !rxSignature);
+      for (const name of ['bg-success', 'text-white', 'fw-bold', 'fs-5', 'rounded-3', 'shadow-sm', 'py-3', 'px-3'])
+        rxSignatureStatus.classList.toggle(name, !!rxSignature);
+    }
+    if (rxFinalButton) rxFinalButton.disabled = !rxSignature;
+    rxGuardModal?.querySelector('.modal-body')?.scrollTo({top:0});
+  };
+  const rxResetCanvas = () => {
+    if (!rxCanvasCtx || !rxExperience) return;
+    rxExperience.resizeCanvas(rxCanvas,{preserve:false,strokeStyle:'#102a43',lineWidth:2.5});
+    const rect=rxCanvas.getBoundingClientRect();
+    rxCanvasCtx.fillStyle='#fff';rxCanvasCtx.fillRect(0,0,rect.width,rect.height);
+    rxCanvasCtx.strokeStyle='#102a43';rxCanvasCtx.lineWidth=2.5;
+    rxCanvasCtx.lineCap='round';rxCanvasCtx.lineJoin='round';rxHasStroke=false;
+  };
+  if (rxCanvas && rxExperience) {
+    rxExperience.bindPointer(rxCanvas,{
+      start(event){const p=rxExperience.point(rxCanvas,event);rxCanvasCtx.beginPath();rxCanvasCtx.moveTo(p.x,p.y);event.preventDefault();},
+      move(event){const p=rxExperience.point(rxCanvas,event);rxCanvasCtx.lineTo(p.x,p.y);rxCanvasCtx.stroke();rxHasStroke=true;event.preventDefault();},
+      end(event){rxCanvasCtx.closePath();event.preventDefault();}
+    });
+    rxExperience.observeResize(rxCanvas,{preserve:true,strokeStyle:'#102a43',lineWidth:2.5});
+  }
+  document.getElementById('ne_rx_clear_signature')?.addEventListener('click',rxResetCanvas);
+  const rxApplySignature = async signature => {
+    if (!rxServerDraft) throw new Error('Guarda el borrador antes de firmar.');
+    const scope=await rxCanonicalScope();
+    const body={...rxCanonicalBody(scope),intent:'apply_signature',draft_ref:rxServerDraft.document_uuid,
+      expected_version:rxServerDraft.version,signature};
+    const data=await rxRequest(scope.url,'POST',body);
+    const doc=data.document;
+    rxServerDraft={document_uuid:doc.document_id,version:doc.version,payload:doc.content?.payload};
+    rxSignature=rxServerDraft.payload?.signatures?.doctor||null;
+    rxShowSignature();rxFeedback('Firma médica aplicada a esta versión.');
+  };
+  const rxLocalSignature = async(source,image) => {
+    const scope=await rxCanonicalScope();
+    const bindBody=rxSignatureBody(scope);
+    const signature=await window.mxmedPrescriptionSignatureBinding.bind(bindBody,scope.doctorId,
+      {type:'drawn',role:'doctor',source,image_data:image,
+        signer_name:rxServerDraft.payload?.physician_snapshot?.full_name,signed_at:new Date().toISOString()});
+    if (!signature) throw new Error('Dibuja una firma con trazos visibles.');
+    await rxApplySignature(signature);
+  };
+  document.getElementById('ne_rx_apply_signature')?.addEventListener('click',()=>{
+    if(!rxHasStroke){rxFeedback('Dibuja una firma con trazos visibles.');return;}
+    rxLocalSignature('local_canvas',rxCanvas.toDataURL('image/png')).catch(e=>rxFeedback(e.message));
+  });
+  document.getElementById('ne_rx_registered_signature')?.addEventListener('click',()=>{
+    const image=window.mxmedPhysicianSignature?.read()||'';
+    if(!image){rxFeedback('No hay una firma médica registrada disponible.');return;}
+    rxLocalSignature('registered_profile',image).catch(e=>rxFeedback(e.message));
+  });
+  const rxInvalidateQr = async () => {
+    clearInterval(rxQr.timer);rxQr.timer=0;rxQr.generation++;
+    const token=rxQr.token, active=['pending','uploaded'].includes(rxQr.status);
+    rxQr.status='stale';rxQr.token='';
+    if(active&&token) await fetch(`/api/clinical/index.php/prescription-qr-sessions/${encodeURIComponent(token)}/invalidate`,
+      {method:'POST',credentials:'same-origin'}).catch(()=>{});
+  };
+  const rxPollQr = async () => {
+    const token=rxQr.token,generation=rxQr.generation;
+    if(!token||rxQr.status!=='pending')return;
+    try {
+      const data=await rxRequest(`/api/clinical/index.php/prescription-qr-sessions/${encodeURIComponent(token)}/status`);
+      if(generation!==rxQr.generation||token!==rxQr.token)return;
+      if(data.status==='uploaded'&&data.signature){
+        rxQr.status='saving';clearInterval(rxQr.timer);rxQr.timer=0;
+        await rxApplySignature(data.signature);
+        rxQr.status='consumed';
+        rxQrEl('waiting')?.classList.add('d-none');rxQrEl('received')?.classList.remove('d-none');
+        if(rxQrEl('status'))rxQrEl('status').textContent='Firma recibida correctamente';
+        if(rxQrEl('received-heading'))rxQrEl('received-heading').textContent='Firma recibida correctamente';
+        if(rxQrEl('preview')){rxQrEl('preview').src=data.signature.image_data;rxQrEl('preview').classList.remove('d-none');}
+      }else if(['expired','stale','cancelled','consumed'].includes(data.status)){
+        rxQr.status=data.status;clearInterval(rxQr.timer);rxQr.timer=0;
+        if(rxQrEl('status'))rxQrEl('status').textContent='El código dejó de ser válido. Genera uno nuevo.';
+      }
+    }catch(e){rxQr.status='error';clearInterval(rxQr.timer);rxQr.timer=0;rxFeedback(e.message);}
+  };
+  const rxOpenQr = async () => {
+    if(!window.isSecureContext||!window.crypto?.subtle?.digest)
+      throw new Error('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.');
+    if(!rxServerDraft)throw new Error('Guarda el borrador antes de crear el código.');
+    await rxInvalidateQr();
+    const generation=++rxQr.generation;
+    if(rxQrModal.parentElement!==document.body)document.body.appendChild(rxQrModal);
+    const reviewStep=rxQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
+    if(reviewStep)reviewStep.innerHTML='<span aria-hidden="true">2</span>Revisa la receta';
+    rxQrEl('image')?.setAttribute('aria-label','Código QR para firmar la receta médica');
+    rxQrEl('waiting')?.classList.remove('d-none');rxQrEl('received')?.classList.add('d-none');
+    rxQrEl('image')?.replaceChildren();
+    if(rxQrEl('context'))rxQrEl('context').textContent='Médico responsable · Receta médica';
+    if(rxQrEl('status'))rxQrEl('status').textContent='Preparando código…';
+    window.bootstrap.Modal.getOrCreateInstance(rxQrModal,{backdrop:false,focus:true}).show();
+    rxQrModal.style.zIndex='1240';
+    const data=await rxRequest('/api/clinical/index.php/prescription-qr-sessions','POST',
+      {document_uuid:rxServerDraft.document_uuid,document_version:rxServerDraft.version,role:'doctor'});
+    if(generation!==rxQr.generation)return;
+    const url=new URL(data.mobile_url,location.origin).href;
+    rxQr.token=data.token;rxQr.status='pending';
+    new QRCode(rxQrEl('image'),{text:url,width:216,height:216,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+    if(rxQrEl('link'))rxQrEl('link').href=url;
+    if(rxQrEl('status'))rxQrEl('status').textContent='Esperando firma…';
+    rxQr.timer=setInterval(()=>void rxPollQr(),2000);void rxPollQr();
+  };
+  document.getElementById('ne_rx_remote_signature')?.addEventListener('click',()=>rxOpenQr().catch(e=>rxFeedback(e.message)));
+  rxQrModal?.addEventListener('hidden.bs.modal',()=>{if(rxQr.status==='pending')void rxInvalidateQr();});
+  rxGuardModal?.addEventListener('hidden.bs.modal',()=>{if(rxQr.status==='pending')void rxInvalidateQr();});
+  document.getElementById('ne_rx_sign_back')?.addEventListener('click',()=>{
+    void rxInvalidateQr();rxShowCapture();
+  });
   const rxGuardSnapshot = ()=>JSON.stringify({items:collectRxModal(),diagnosis:collectRxDiagnosticContext(),
-    professional_header:rxProfessionalHeader?.value || 'shown'});
+    professional_header:rxProfessionalHeader?.value || 'shown',observaciones:rxObservations?.value || ''});
   const rxGuardKey = patientId=>storage.rxKeyForPatient(patientId);
   const rxGuardReadStored = patientId=>{try{return localStorage.getItem(rxGuardKey(patientId));}catch(_){return null;}};
   const rxGuardDirty = ()=>!!(rxGuardModal?.classList.contains('show') && rxGuardBaseline && rxGuardSnapshot() !== rxGuardBaseline);
@@ -38795,6 +38937,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxServerDraft = null; rxAvailableDraft = null;
     rxShowCapture();
     if (rxProfessionalHeader) rxProfessionalHeader.value = 'shown';
+    if (rxObservations) rxObservations.value = '';
     rxContinueDraft?.classList.add('d-none');
     renderRxModal();
     rxLoadAvailableDraft().catch((error) => setRxFeedback(`No se pudieron consultar los borradores (${error.message}).`, 'error'));
@@ -39109,12 +39252,43 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const draftData = await rxRequest(scope.url, 'POST', draftBody);
       const draft = draftData.document;
       rxServerDraft = { document_uuid: draft.document_id, version: draft.version, payload: draft.content?.payload };
+      rxSignature=rxServerDraft.payload?.signatures?.doctor||null;
+      rxReview?.classList.add('d-none');rxShowSignature();rxResetCanvas();
+      if(rxReviewStatus)rxReviewStatus.textContent='';
+    } catch(error){
+      if(rxReviewStatus)rxReviewStatus.textContent=`No se pudo preparar la firma (${error.message}).`;
+    } finally {rxWriteBusy=false;els.rxSave.disabled=false;}
+  });
+  document.getElementById('ne_rx_final_review')?.addEventListener('click',async()=>{
+    try{
+      if(!rxSignature||!rxServerDraft)throw new Error('Aplica la firma médica antes de continuar.');
+      const scope=await rxCanonicalScope();
+      const data=await rxRequest(`${scope.url}/preview`,'POST',{...rxCanonicalBody(scope),final_review:true,
+        include_signature:true,draft_ref:rxServerDraft.document_uuid,expected_version:rxServerDraft.version});
+      document.getElementById('ne_rx_final_html').innerHTML=data.html||'';
+      rxSignPanel?.classList.add('d-none');rxFinalPanel?.classList.remove('d-none');
+      rxGuardModal?.querySelector('.modal-body')?.scrollTo({top:0});
+    }catch(e){rxFeedback(e.message);}
+  });
+  document.getElementById('ne_rx_final_back')?.addEventListener('click',rxShowSignature);
+  document.getElementById('ne_rx_emit_signed')?.addEventListener('click', async () => {
+    if(rxWriteBusy||!rxSignature||!rxServerDraft)return;
+    rxWriteBusy=true;document.getElementById('ne_rx_emit_signed').disabled=true;
+    const status=document.getElementById('ne_rx_final_status');
+    try{
+      const scope=await rxCanonicalScope();
+      const body=rxCanonicalBody(scope);
+      if(JSON.stringify({...body,final_review:true})!==rxReviewedFingerprint)
+        throw new Error('La receta cambió después de la revisión. Vuelve a previsualizarla.');
       const finalData = await rxRequest(scope.url, 'POST', { ...body, intent: 'finalize',
         draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version });
-      const document = finalData.document;
-      const savedToken = resolveSavedPrescriptionToken(document);
+      const savedDocument = finalData.document;
+      const savedToken = resolveSavedPrescriptionToken(savedDocument);
       setRxFeedback('Receta emitida correctamente.', 'success');
-      if (rxReviewStatus) rxReviewStatus.textContent = 'Receta emitida correctamente.';
+      if (status) status.textContent = 'Receta emitida correctamente.';
+      rxEmittedToken=savedToken;
+      document.getElementById('ne_rx_post_actions')?.classList.remove('d-none');
+      document.getElementById('ne_rx_final_back').disabled=true;
       setRxOpenDocumentAction(savedToken);
       rxGuardStored = rxGuardReadStored(scope.ctx.patient_id); rxGuardBaseline = rxGuardSnapshot();
       collectRxModal().filter((item) => item.name).forEach((item) => registerMedicationUsageForDoctor(item));
@@ -39133,12 +39307,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       rxReviewedFingerprint = '';
       rxBackToCapture.disabled = true;
     } catch (error) {
-      setRxFeedback(`No se pudo emitir la receta (${error.message}).`, 'error');
-      if (rxReviewStatus) rxReviewStatus.textContent = `No se pudo emitir la receta (${error.message}).`;
+      if (status) status.textContent=`No se pudo emitir la receta (${error.message}).`;
     } finally {
-      rxWriteBusy = false; els.rxSave.disabled = !rxReviewedFingerprint;
+      rxWriteBusy=false;document.getElementById('ne_rx_emit_signed').disabled=!rxServerDraft;
     }
   });
+  for(const [id,print] of [['ne_rx_post_view',false],['ne_rx_post_print',true]])
+    document.getElementById(id)?.addEventListener('click',()=>{
+      if(!rxEmittedToken)return;
+      const doctorId=String(window.resolveDoctorId?.()||window.mxmedStore?.doctorId||'');
+      const params=new URLSearchParams({uuid:rxEmittedToken,doctor_id:doctorId});
+      if(print)params.set('print','1');
+      window.open(`/modules/clinical/ui/document.php?${params.toString()}`,'_blank','noopener');
+    });
   els.rxOpenDoc?.addEventListener('click', (event) => {
     event.preventDefault();
     const token = String(els.rxOpenDoc?.getAttribute('data-rx-document-token') || '').trim();
