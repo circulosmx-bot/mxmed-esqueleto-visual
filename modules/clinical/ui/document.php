@@ -1189,6 +1189,9 @@ if (!$embed) {
   </div>
 
   <p class="text-secondary mb-3 no-print">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
+  <?php if ($isPrescriptionDoc && (string)($_GET['from'] ?? '') === 'recetas'): ?>
+    <button type="button" class="btn btn-outline-primary mb-3 no-print" onclick="if(window.opener){window.opener.focus();window.close()}else{history.back()}">← Volver a Recetas</button>
+  <?php endif; ?>
 
   <?php if ($isPrescriptionDoc && $errorMessage === ''): ?>
     <style>

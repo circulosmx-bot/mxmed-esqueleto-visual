@@ -4380,8 +4380,8 @@
               <div class="mx-panel-subheader-main">
                 <span class="mx-panel-subheader-icon material-symbols-outlined" aria-hidden="true">prescriptions</span>
                 <div class="mx-panel-subheader-copy">
-                  <h2 class="mx-panel-subheader-title">Receta rápida</h2>
-                  <p class="mx-panel-subheader-text">Genera una receta seleccionando un paciente existente o creando una ficha mínima.</p>
+                  <h2 class="mx-panel-subheader-title">Recetas</h2>
+                  <p class="mx-panel-subheader-text">Selecciona al paciente para quien deseas emitir una receta.</p>
                 </div>
               </div>
             </header>
@@ -4401,10 +4401,10 @@
                 </div>
               </div>
 
-              <div class="mx-quick-rx-actions" aria-label="Acciones de receta rápida">
+              <div class="mx-quick-rx-actions" aria-label="Acciones de recetas">
                 <button type="button" class="btn btn-primary mx-quick-rx-primary d-none" data-quick-rx-action="emit-active">
                   <span class="material-symbols-outlined" aria-hidden="true">prescriptions</span>
-                  <span>Emitir receta para este paciente</span>
+                  <span>Emitir receta</span>
                 </button>
                 <button type="button" class="btn btn-outline-primary" data-quick-rx-action="search">
                   <span class="material-symbols-rounded" aria-hidden="true">person_search</span>
@@ -4414,6 +4414,13 @@
                   <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
                   <span>Crear paciente rápido</span>
                 </button>
+              </div>
+
+              <div class="rx-global-search" data-rx-global-search>
+                <label for="rx-global-patient-query">Buscar paciente</label>
+                <input id="rx-global-patient-query" type="search" class="form-control" autocomplete="off" placeholder="Nombre o apellido" data-rx-global-query>
+                <div class="rx-global-results" data-rx-global-results role="listbox" aria-label="Pacientes autorizados"></div>
+                <p class="small text-muted mb-0" data-rx-global-message role="status" aria-live="polite">Escribe al menos dos caracteres para buscar pacientes.</p>
               </div>
 
               <form class="mx-quick-rx-create d-none" data-quick-rx-create-form novalidate>
@@ -4472,7 +4479,7 @@
 
               <div class="mx-quick-rx-note">
                 <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
-                <span>No se puede emitir una receta sin paciente. El guardado usa el flujo clínico doctor-paciente existente.</span>
+                <span data-quick-rx-note>No se puede emitir una receta sin paciente. El guardado usa el flujo clínico doctor-paciente existente.</span>
               </div>
             </div>
 
@@ -8333,23 +8340,49 @@
                 </div>
               </div>
 
-              <div class="tab-pane fade" id="t-tratamiento">
-                <div class="exp-card exp-card--secondary trx-alias-card" data-role="trx-alias-panel">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Tratamiento y recetas</span>
-                  </div>
-                  <p class="text-muted mb-3">
-                    La receta se gestiona desde <strong>Actividad clínica</strong> para mantener el registro clínico unificado en el expediente del paciente.
-                  </p>
-                  <div class="trx-alias-actions d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-primary btn-sm" data-action="tratamiento-alias-open-receta">
-                      Emitir receta
+              <div class="tab-pane fade" id="t-tratamiento" data-rx-patient-root>
+                <section class="rx-ux-panel" data-rx-view="landing">
+                  <h2>Recetas</h2>
+                  <p>Emite una nueva receta o consulta las recetas registradas para este paciente.</p>
+                  <div class="rx-ux-choices">
+                    <button type="button" class="rx-ux-choice" data-rx-action="emit">
+                      <span class="material-symbols-outlined" aria-hidden="true">prescriptions</span>
+                      <strong>Emitir nueva receta</strong><small>Crea una nueva receta para este paciente.</small>
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="tratamiento-alias-open-actividad">
-                      Ir a Actividad clínica
+                    <button type="button" class="rx-ux-choice" data-rx-action="history">
+                      <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                      <strong>Consultar recetas</strong><small>Revisa las recetas emitidas anteriormente para este paciente.</small>
                     </button>
                   </div>
-                </div>
+                </section>
+                <section class="rx-ux-panel d-none" data-rx-view="history" aria-label="Historial de recetas">
+                  <div class="rx-ux-history-head"><button type="button" class="btn btn-outline-primary btn-sm" data-rx-action="back">← Volver a Recetas</button><h2>Consultar recetas</h2></div>
+                  <div class="rx-ux-filters" role="group" aria-label="Filtrar recetas">
+                    <button type="button" class="btn btn-primary btn-sm" data-rx-filter="all" aria-pressed="true">Todas</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-rx-filter="issued" aria-pressed="false">Emitidas</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-rx-filter="voided" aria-pressed="false">Anuladas</button>
+                  </div>
+                  <p data-rx-history-status role="status" aria-live="polite"></p>
+                  <div data-rx-drafts></div>
+                  <div class="rx-ux-list" data-rx-history-list></div>
+                  <div class="rx-ux-pages"><button type="button" class="btn btn-outline-primary btn-sm" data-rx-page="prev">Anterior</button><span data-rx-page-label></span><button type="button" class="btn btn-outline-primary btn-sm" data-rx-page="next">Siguiente</button></div>
+                </section>
+                <dialog class="rx-ux-dialog" data-rx-lifecycle-dialog aria-labelledby="rx-ux-dialog-title">
+                  <form method="dialog" data-rx-lifecycle-form>
+                    <h3 id="rx-ux-dialog-title" data-rx-dialog-title>Corregir receta</h3>
+                    <p data-rx-dialog-description></p>
+                    <label>Motivo obligatorio<select class="form-select" data-rx-reason required>
+                      <option value="">Selecciona un motivo</option><option value="error_en_medicamento">Error en medicamento</option>
+                      <option value="error_en_dosis_o_indicaciones">Error en dosis o indicaciones</option>
+                      <option value="cambio_en_plan_terapeutico">Cambio en plan terapéutico</option>
+                      <option value="duplicada">Duplicada</option><option value="emitida_por_error">Emitida por error</option>
+                      <option value="otra">Otra</option></select></label>
+                    <label>Detalle si elegiste «Otra»<input class="form-control" data-rx-reason-detail maxlength="1000"></label>
+                    <label>Nota opcional<input class="form-control" data-rx-note maxlength="1000"></label>
+                    <p role="alert" data-rx-dialog-error></p>
+                    <div class="d-flex gap-2 justify-content-end"><button type="button" class="btn btn-outline-secondary" data-rx-dialog-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-rx-dialog-submit>Confirmar</button></div>
+                  </form>
+                </dialog>
               </div>
 
               <div class="tab-pane fade" id="t-notas">
@@ -11422,6 +11455,7 @@
 <script src="assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/app.js?v=sign-ux02"></script>
+<script src="assets/js/clinical/rec-ux01.js?v=rec-ux01"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>

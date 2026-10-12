@@ -276,9 +276,11 @@ function clinical_prescription_v2_drafts(PDO $pdo, array $doctor, string $patien
     $encounter = clinical_prescription_v2_encounter($pdo,$encounterKey,$patientId,(string)$doctor['doctor_id']);
     $encounterClause = $encounter === null ? 'encounter_ref_id IS NULL' : 'encounter_ref_id=?';
     $stmt = $pdo->prepare("SELECT d.document_uuid,d.version,d.updated_at,d.payload_json,
+        source.document_uuid AS corrects_prescription_uuid,source.event_datetime AS source_event_datetime,
         CASE WHEN l.replacement_document_id IS NULL THEN 0 ELSE 1 END AS is_reissue
         FROM clinical_documents d
         LEFT JOIN clinical_prescription_lifecycle l ON l.replacement_document_id=d.id AND l.lifecycle_state='pending'
+        LEFT JOIN clinical_documents source ON source.id=l.original_document_id
         WHERE d.patient_id=? AND d.created_by_user_id=? AND d.document_type='prescription' AND d.status='draft'
         AND JSON_UNQUOTE(JSON_EXTRACT(d.payload_json,'$.contract_version'))='2'
         AND (d.$encounterClause OR l.replacement_document_id IS NOT NULL)
@@ -292,6 +294,8 @@ function clinical_prescription_v2_drafts(PDO $pdo, array $doctor, string $patien
         if (!is_array($payload)) continue;
         $rows[] = ['document_uuid'=>$row['document_uuid'],'version'=>(int)$row['version'],
             'is_reissue'=>(int)$row['is_reissue'] === 1,
+            'corrects_prescription_uuid'=>$row['corrects_prescription_uuid'],
+            'source_event_datetime'=>$row['source_event_datetime'],
             'updated_at'=>$row['updated_at'],'payload'=>$payload];
     }
     return $rows;

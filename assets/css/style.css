@@ -23221,3 +23221,23 @@ button.mx-signature-remote{
   color:#fff!important;
   font-weight:700;
 }
+#t-tratamiento .rx-ux-panel{border:1px solid #b9ddea;border-radius:16px;background:#f2fbfd;padding:24px;min-height:330px}
+#t-tratamiento .rx-ux-panel h2{color:#08385d;font-size:1.65rem;margin:0 0 6px}
+#t-tratamiento .rx-ux-panel>p{color:#4f6b82}
+.rx-ux-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:26px}
+.rx-ux-choice{display:grid;grid-template-columns:54px 1fr;grid-template-rows:auto auto;gap:2px 14px;text-align:left;align-items:center;min-height:145px;padding:22px;border:1px solid #a7d5e4;border-radius:14px;background:white;color:#07375c;cursor:pointer}
+.rx-ux-choice:hover,.rx-ux-choice:focus-visible{border-color:#009bb4;box-shadow:0 0 0 3px #b8edf2}
+.rx-ux-choice .material-symbols-outlined{grid-row:1/3;font-size:42px;color:#0098b0}
+.rx-ux-choice strong{font-size:1.2rem}.rx-ux-choice small{color:#506d82;font-size:.95rem}
+.rx-ux-history-head{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.rx-ux-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.rx-ux-list{display:grid;gap:10px}.rx-ux-row{border:1px solid #c6e3ec;border-radius:12px;background:white;padding:15px;display:grid;gap:8px}
+.rx-ux-row-head,.rx-ux-row-actions,.rx-ux-pages{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rx-ux-row strong{color:#07385b}.rx-ux-row small{color:#506b80}.rx-ux-status{font-weight:700;border-radius:30px;padding:4px 10px;background:#e0f7f3;color:#08725c}
+.rx-ux-status.is-voided{background:#fff0ed;color:#9a2323}.rx-ux-pages{justify-content:center;margin-top:16px}
+.rx-ux-drafts{border:1px solid #b6d6e7;border-radius:12px;background:#e9f5fb;padding:14px;margin-bottom:15px}
+.rx-ux-dialog{border:1px solid #b8d8e4;border-radius:14px;max-width:min(480px,calc(100vw - 28px));width:100%;padding:24px;box-shadow:0 20px 70px #002b4a55}
+.rx-ux-dialog::backdrop{background:#001b2c99}.rx-ux-dialog form{display:grid;gap:12px}.rx-ux-dialog label{display:grid;gap:5px}
+.rx-global-search{margin-top:14px;max-width:650px}.rx-global-search label{display:block;font-weight:700;margin-bottom:5px}.rx-global-results{display:grid;gap:6px;margin:8px 0}
+.rx-global-result{width:100%;text-align:left;border:1px solid #b9ddea;border-radius:8px;background:white;padding:9px 12px;color:#07385b}.rx-global-result:focus-visible{outline:3px solid #00a9bd}
+@media(max-width:700px){.rx-ux-choices{grid-template-columns:1fr}#t-tratamiento .rx-ux-panel{padding:15px}.rx-ux-choice{min-height:115px}}

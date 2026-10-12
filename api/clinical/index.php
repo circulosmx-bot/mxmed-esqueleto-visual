@@ -9587,6 +9587,18 @@ try {
                     || !clinical_has_active_doctor_patient_link($pdo,$scopedDoctorId,$patientId))
                     throw new InvalidArgumentException('PRESCRIPTION_PATIENT_SCOPE_INVALID');
                 require_once __DIR__ . '/../_lib/clinical_prescription_v2.php';
+                if ($method === 'GET' && $action === 'history') {
+                    $filter = (string)($_GET['filter'] ?? 'all');
+                    $pageRaw = (string)($_GET['page'] ?? '1');
+                    $limitRaw = (string)($_GET['limit'] ?? '20');
+                    if (!preg_match('/^[1-9][0-9]{0,3}$/D',$pageRaw)
+                        || !preg_match('/^[1-9][0-9]?$/D',$limitRaw))
+                        throw new InvalidArgumentException('PRESCRIPTION_HISTORY_PARAMS_INVALID');
+                    require_once __DIR__ . '/../_lib/clinical_prescription_history.php';
+                    $result = clinical_prescription_history_fetch($pdo,$patientId,
+                        (string)$scopedDoctorContext['user_id'],$filter,(int)$pageRaw,(int)$limitRaw);
+                    clinical_send_response(['ok'=>true,'data'=>$result,'meta'=>['route'=>$routeName]],200);return;
+                }
                 if ($lifecycleUuid !== '' && $method === 'POST'
                     && in_array($lifecycleAction, ['void','reissue'], true)) {
                     $read = clinical_read_json_body();

@@ -884,6 +884,8 @@
     } catch(e) {if(seen===generation)views.forEach(v=>{if(v.kind!=='orders')v.notice.textContent=e.message;});}
   }
   for(const [kind,settings] of Object.entries(config)) {
+    // REC-UX01 owns the patient Recetas landing and bounded history.
+    if(kind==='prescriptions')continue;
     const host=document.getElementById(settings.target);if(!host)continue;
     const module=node('section','','vis06-module');module.setAttribute('aria-label',settings.title);
     const head=node('header','','vis06-head'),copy=node('div');copy.append(node('h3',settings.title),node('p',settings.copy));
