@@ -11,6 +11,7 @@ use Subscriptions\Repositories\CurrentSubscriptionRepository;
 
 require_once __DIR__ . '/../contracts/ExistingCapabilityDecision.php';
 require_once __DIR__ . '/ExistingCapabilityAuthorityService.php';
+require_once __DIR__ . '/NormalLocalReviewScenario.php';
 
 final class CurrentSubscriptionReadModelService
 {
@@ -50,11 +51,23 @@ final class CurrentSubscriptionReadModelService
         }
 
         $subscription = $this->repository->findCurrentCandidateForEntity($entityType, $entityId);
-        if ($subscription === null) {
-            return $this->buildFreeDefault($entityType, $entityId, false);
+        $model = $subscription === null ? $this->buildFreeDefault($entityType, $entityId, false)
+            : $this->buildFromSubscription($entityType, $entityId, $subscription);
+        if ($entityType !== 'doctor' || $entityId !== '1' || !NormalLocalReviewScenario::environmentAllowed()
+            || !$this->repository->isNormalLocalDatabase()) return $model;
+        $fingerprint = hash('sha256', json_encode([$subscription,$model['effective_plan_code'],$model['is_active'],$model['is_in_grace']], JSON_THROW_ON_ERROR));
+        $record = NormalLocalReviewScenario::read();
+        $conflict = $record !== null && !hash_equals($fingerprint, $record['canonical_fingerprint']);
+        $model['local_review'] = ['canonical_fingerprint'=>$fingerprint, 'real_plan'=>$model['effective_plan_code'],
+            'scenario'=>$record['plan'] ?? 'real', 'conflict'=>$conflict, 'applied'=>false];
+        if ($record !== null && !$conflict) {
+            $model['effective_plan_code'] = $record['plan'];
+            $model['plan_label'] = ['standard'=>'Estándar','optimum'=>'Óptimo','professional'=>'Profesional'][$record['plan']];
+            $model['feature_access'] = $this->featureAccess($record['plan'], 'active', true, false);
+            $model['source'] = 'normal_local_review_scenario';
+            $model['local_review']['applied'] = true;
         }
-
-        return $this->buildFromSubscription($entityType, $entityId, $subscription);
+        return $model;
     }
 
     private function buildFromSubscription(string $entityType, string $entityId, array $subscription): array

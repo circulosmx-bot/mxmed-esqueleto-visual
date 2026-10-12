@@ -55,7 +55,7 @@ final class PublicProfileRepository
         ];
     }
 
-    private function resolveOwnershipSource(string $doctorId): array
+    public function resolveOwnershipSource(string $doctorId): array
     {
         $unavailable = [
             'source_ready' => false,

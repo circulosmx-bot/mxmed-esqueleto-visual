@@ -16,6 +16,12 @@ final class CurrentSubscriptionRepository
         $this->pdo = $pdo;
     }
 
+    public function isNormalLocalDatabase(): bool
+    {
+        return $this->pdo->query('SELECT DATABASE()')->fetchColumn() === 'mxmed'
+            && str_contains((string)$this->pdo->getAttribute(PDO::ATTR_CONNECTION_STATUS), '127.0.0.1');
+    }
+
     public function findPlanByCodeAndPeriod(string $planCode, string $billingPeriod): ?array
     {
         $planCode = trim($planCode);

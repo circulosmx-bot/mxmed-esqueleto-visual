@@ -3424,6 +3424,7 @@ console.info('app.js loaded :: 20251123a');
 
 // Dev-only RBAC role switcher.
 (function(){
+  if(window.location.origin === 'https://localhost:8443') return;
   if(window.__mxmedDevRbacRoleSwitcherApplied) return;
   window.__mxmedDevRbacRoleSwitcherApplied = true;
 
@@ -68528,6 +68529,7 @@ function mxResetLogoPreview(){
   }
 
   function readSubscriptionQaPlanState(){
+    if(window.location.origin === 'https://localhost:8443') return normalizeSubscriptionQaPlanState({value:'real'});
     try{
       if(typeof window.mxmedGetQaPlan === 'function'){
         return normalizeSubscriptionQaPlanState(window.mxmedGetQaPlan());
@@ -76061,7 +76063,9 @@ function mxResetLogoPreview(){
     resetSubscriptionPaymentFlowState({ invalidateRequests: true });
   }
 
+  window.addEventListener('mxmed:local-review-changed', ()=> loadCurrentSubscription());
   window.addEventListener('mxmed:qa-plan-changed', (event)=>{
+    if(window.location.origin === 'https://localhost:8443') return;
     const next = normalizeSubscriptionQaPlanState(event?.detail || {});
     if(data.qaPlan?.value === next.value && data.currentModel) return;
     data.qaPlan = next;
