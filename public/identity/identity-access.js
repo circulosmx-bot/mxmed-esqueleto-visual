@@ -10,7 +10,7 @@
     reset: { error: ['Revisa tu nueva contraseña', 'Las contraseñas deben coincidir y cumplir los requisitos indicados.'], success: ['Contraseña actualizada', 'Tu contraseña quedó actualizada.'], expired: ['El enlace ya no está disponible', 'Solicita nuevas instrucciones para establecer una contraseña.'] },
   };
 
-  function flowState(flow, state) {
+  function flowState(flow, state, detail) {
     const panel = document.querySelector('[data-state-panel]');
     const message = messages[flow] && messages[flow][state];
     if (!panel || !message) return;
@@ -18,7 +18,7 @@
     panel.classList.add(state === 'success' ? 'state-panel--success' : state === 'error' || state === 'expired' ? 'state-panel--error' : 'state-panel--loading');
     panel.dataset.visible = 'true';
     panel.querySelector('[data-state-title]').textContent = message[0];
-    panel.querySelector('[data-state-copy]').textContent = message[1];
+    panel.querySelector('[data-state-copy]').textContent = detail || message[1];
     panel.setAttribute('role', state === 'error' || state === 'expired' ? 'alert' : 'status');
   }
 
@@ -40,6 +40,21 @@
   function boolValue(form, name) {
     const field = form.elements.namedItem(name);
     return !!(field && field.checked);
+  }
+
+  function createValidationMessage(form) {
+    const invalidInput = 'Revisa el correo y la contraseña. El correo debe tener un formato válido y la contraseña debe tener entre 12 y 128 caracteres y ser distinta del correo.';
+    const consent = 'Debes aceptar los Términos y condiciones y el Aviso de privacidad para continuar.';
+    const email = form.elements.namedItem('email');
+    const password = value(form, 'password');
+    const confirmation = value(form, 'password_confirmation');
+    const minimum = Number(form.dataset.passwordMin);
+    const maximum = Number(form.dataset.passwordMax);
+    const passwordLength = Array.from(password).length;
+    if (!email || email.value.trim() === '' || email.validity.typeMismatch || passwordLength < minimum || passwordLength > maximum || password.toLowerCase() === email.value.trim().toLowerCase()) return invalidInput;
+    if (password !== confirmation) return 'Las contraseñas deben coincidir.';
+    if (!boolValue(form, 'terms') || !boolValue(form, 'privacy')) return consent;
+    return '';
   }
 
   function payloadFor(flow, form) {
@@ -83,6 +98,13 @@
     setInitialState(flow);
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      const validationMessage = flow === 'create' ? createValidationMessage(form) : '';
+      if (validationMessage) {
+        flowState(flow, 'error', validationMessage);
+        const note = form.querySelector('[data-form-note]');
+        if (note) note.textContent = validationMessage;
+        return;
+      }
       const submit = form.querySelector('[data-submit]');
       if (submit) { submit.disabled = true; submit.setAttribute('aria-busy', 'true'); }
       flowState(flow, 'loading');
@@ -91,9 +113,10 @@
         const response = await fetch(form.action, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify(payloadFor(flow, form)) });
         const result = await response.json().catch(() => ({}));
         const state = response.ok && result.ok === true ? 'success' : 'error';
-        flowState(flow, state);
+        const safeDetail = response.status === 422 && typeof result.message === 'string' ? result.message : '';
+        flowState(flow, state, safeDetail);
         const note = form.querySelector('[data-form-note]');
-        if (note) note.textContent = state === 'success' ? 'La acción se procesó correctamente.' : 'La acción no pudo completarse.';
+        if (note) note.textContent = state === 'success' ? 'La acción se procesó correctamente.' : (safeDetail || 'La acción no pudo completarse.');
         if (state === 'success' && flow === 'login' && new URLSearchParams(window.location.search).get('next') === '/provider/') {
           window.location.assign('/provider/');
           return;

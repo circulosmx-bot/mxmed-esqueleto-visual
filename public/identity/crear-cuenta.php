@@ -2,6 +2,8 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../modules/identity/http/IdentityUiBootstrap.php';
 $csrf = \Identity\Http\IdentityUiBootstrap::boot();
+$passwordMinimum = \Identity\Contracts\PasswordPolicy::MIN_LENGTH;
+$passwordMaximum = \Identity\Contracts\PasswordPolicy::MAX_LENGTH;
 ?>
 <!doctype html>
 <html lang="es">
@@ -21,10 +23,10 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
         <h1 id="create-title">Crea tu cuenta</h1>
         <p class="auth-card__intro">Comienza a administrar tu presencia en México Médico.</p>
         <div class="state-panel" data-state-panel aria-live="polite"><strong data-state-title></strong><span data-state-copy></span></div>
-        <form class="auth-form" method="post" action="/api/identity/index.php/registration-request" data-identity-form data-flow="create">
+        <form class="auth-form" method="post" action="/api/identity/index.php/registration-request" data-identity-form data-flow="create" data-password-min="<?= $passwordMinimum ?>" data-password-max="<?= $passwordMaximum ?>" novalidate>
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
           <div class="field"><label for="create-email">Correo electrónico</label><input id="create-email" name="email" type="email" autocomplete="email" required></div>
-          <div class="field"><label for="create-password">Contraseña</label><div class="password-wrap"><input id="create-password" name="password" type="password" autocomplete="new-password" required><button class="icon-button" type="button" data-password-toggle aria-controls="create-password" aria-label="Mostrar contraseña">Mostrar</button></div></div>
+          <div class="field"><label for="create-password">Contraseña</label><div class="password-wrap"><input id="create-password" name="password" type="password" autocomplete="new-password" required aria-describedby="create-password-help"><button class="icon-button" type="button" data-password-toggle aria-controls="create-password" aria-label="Mostrar contraseña">Mostrar</button></div><small id="create-password-help">Usa entre <?= $passwordMinimum ?> y <?= $passwordMaximum ?> caracteres y una contraseña distinta de tu correo.</small></div>
           <div class="field"><label for="create-confirm">Confirmar contraseña</label><div class="password-wrap"><input id="create-confirm" name="password_confirmation" type="password" autocomplete="new-password" required><button class="icon-button" type="button" data-password-toggle aria-controls="create-confirm" aria-label="Mostrar contraseña">Mostrar</button></div></div>
           <div class="consent-list">
             <div class="consent"><input id="terms" name="terms" type="checkbox" required><label for="terms">He leído y acepto los <a href="#terms">Términos y condiciones</a>.</label></div>

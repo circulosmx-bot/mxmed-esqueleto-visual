@@ -109,7 +109,8 @@ try {
         $db->exec('CREATE TABLE profiles_doctors (doctor_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
         $db->exec('CREATE TABLE medical_groups (group_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
         foreach (['2026_07_19_01_create_auth_accounts.sql','2026_07_19_03_create_auth_account_memberships.sql',
-            '2026_07_20_04_create_auth_account_credentials.sql','2026_07_20_06_create_auth_rate_limit_buckets.sql'] as $file) $db->exec(file_get_contents($migrations.$file));
+            '2026_07_19_02_create_auth_account_consents.sql','2026_07_20_04_create_auth_account_credentials.sql',
+            '2026_07_20_05_create_auth_account_one_time_tokens.sql','2026_07_20_06_create_auth_rate_limit_buckets.sql'] as $file) $db->exec(file_get_contents($migrations.$file));
     }
     $pdo->exec('DROP TABLE auth_account_memberships');
     check('missing_memberships_readiness',rejects(fn()=>$assemble->invoke(null,$config,$pdo),'normal_local_schema_missing:auth_account_memberships'));
@@ -155,7 +156,8 @@ try {
     envSet(['APP_ENV'=>'','MXMED_ENVIRONMENT'=>'local','MXMED_PREVIEW_EXPLICIT'=>'1','MXMED_DB_NAME'=>$gate,
         'MXMED_DB_HOST'=>'127.0.0.1','MXMED_DB_PORT'=>'3306','MXMED_DB_USER'=>'root','MXMED_DB_PASS'=>'',
         'MXMED_SESSION_STORE_PORT'=>(string)$port,'MXMED_PREVIEW_TEST_EMAIL'=>'qa@example.invalid',
-        'MXMED_PREVIEW_TEST_PASSWORD'=>'Isolated-QA-password-03A!','MXMED_PREVIEW_TEST_PROFILE_ID'=>'qa_doctor']);
+        'MXMED_PREVIEW_TEST_PASSWORD'=>'Isolated-QA-password-03A!','MXMED_PREVIEW_TEST_PROFILE_ID'=>'qa_doctor',
+        'MXMED_PREVIEW_NOTIFICATION_FILE'=>$dir.'/gate-notifications.json']);
     $proc=proc_open([PHP_BINARY,__DIR__.'/run_gate4d_http_test.php'],[1=>['pipe','w'],2=>['pipe','w']],$pipes);
     $result=stream_get_contents($pipes[1]); $error=stream_get_contents($pipes[2]); fclose($pipes[1]); fclose($pipes[2]);
     $exit=proc_close($proc);

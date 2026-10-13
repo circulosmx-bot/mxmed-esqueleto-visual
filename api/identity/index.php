@@ -207,10 +207,27 @@ try {
     switch ($operation) {
         case 'registration-request':
             $email = trim((string)($body['email'] ?? ''));
-            if (!is_string($body['password'] ?? null) || $body['password'] === '' || (($body['password_confirmation'] ?? $body['password']) !== $body['password'])) identityHttpJson(['ok'=>false,'error'=>'INVALID_REQUEST'], 422);
+            $invalidInputMessage = 'Revisa el correo y la contraseña. El correo debe tener un formato válido y la contraseña debe tener entre 12 y 128 caracteres y ser distinta del correo.';
+            $consentMessage = 'Debes aceptar los Términos y condiciones y el Aviso de privacidad para continuar.';
+            if (!is_string($body['password'] ?? null) || $body['password'] === '' || (($body['password_confirmation'] ?? $body['password']) !== $body['password'])) {
+                identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>$invalidInputMessage], 422);
+            }
             $decision = $composition->registration()->register(['email'=>$email,'password'=>$body['password'] ?? null,'terms_version'=>trim((string)($body['terms_version'] ?? 'v2')),'privacy_notice_version'=>trim((string)($body['privacy_notice_version'] ?? 'v2')),'terms_accepted'=>($body['terms_accepted'] ?? false) === true,'privacy_notice_accepted'=>($body['privacy_notice_accepted'] ?? false) === true], $clockDimensions);
-            if (in_array($decision->reasonCode(), [ReasonCode::STORAGE_UNAVAILABLE,ReasonCode::NOTIFICATION_UNAVAILABLE], true)) identityHttpJson(['ok'=>false,'error'=>'TEMPORARILY_UNAVAILABLE'], 503);
-            if ($decision->accepted() && $decision->accountId() !== null && $decision->reasonCode() === ReasonCode::ALLOWED) identityHttpAuditVerificationSent($composition,$decision->accountId());
+            if (!$decision->accepted()) {
+                match ($decision->reasonCode()) {
+                    ReasonCode::INVALID_INPUT => identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>$invalidInputMessage], 422),
+                    ReasonCode::CONSENT_MISSING => identityHttpJson(['ok'=>false,'error'=>'CONSENT_MISSING','message'=>$consentMessage], 422),
+                    ReasonCode::RATE_LIMITED => identityHttpJson(['ok'=>false,'error'=>'RATE_LIMITED'], 429),
+                    default => identityHttpJson(['ok'=>false,'error'=>'TEMPORARILY_UNAVAILABLE'], 503),
+                };
+            }
+            if ($decision->reasonCode() === ReasonCode::DUPLICATE_ACCOUNT) {
+                identityHttpJson(['ok'=>true,'status'=>'pending_verification']);
+            }
+            if ($decision->reasonCode() !== ReasonCode::ALLOWED || $decision->accountId() === null) {
+                identityHttpJson(['ok'=>false,'error'=>'TEMPORARILY_UNAVAILABLE'], 503);
+            }
+            identityHttpAuditVerificationSent($composition,$decision->accountId());
             identityHttpJson(['ok'=>true,'status'=>'pending_verification']);
 
         case 'email-verification':
