@@ -131,7 +131,10 @@ with open(os.devnull, 'w') as log:
 
         registration_path = '/api/identity/index.php/registration-request'
         token, registration_page = page_token()
-        assert 'data-password-min="12"' in registration_page and 'data-password-max="128"' in registration_page
+        assert 'data-password-min="12"' in registration_page and 'data-password-max="64"' in registration_page
+        _, reset_page = page_token('restablecer-acceso')
+        assert 'data-password-min="12"' in reset_page and 'data-password-max="64"' in reset_page
+        assert 'Vuelve a escribir la misma contraseña.' in reset_page and '128 caracteres' not in reset_page
         baseline = identity_counts()
         base_payload = {
             'email':'valid.synthetic@example.invalid', 'password':'A valid synthetic phrase 123!',
@@ -145,15 +148,15 @@ with open(os.devnull, 'w') as log:
             return status, json.loads(body)
 
         invalid_cases = [
-            ('V01', dict(base_payload, email='not-an-email')),
-            ('V02', dict(base_payload, email='short@example.invalid', password='too-short', password_confirmation='too-short')),
-            ('V03', dict(base_payload, email='long@example.invalid', password='x'*129, password_confirmation='x'*129)),
-            ('V04', dict(base_payload, email='same@example.invalid', password='same@example.invalid', password_confirmation='same@example.invalid')),
+            ('V01', dict(base_payload, email='not-an-email'), 'Revisa el correo electrónico'),
+            ('V02', dict(base_payload, email='short@example.invalid', password='too-short', password_confirmation='too-short'), 'al menos 12 caracteres'),
+            ('V03', dict(base_payload, email='long@example.invalid', password='x'*65, password_confirmation='x'*65), 'más de 64 caracteres'),
+            ('V04', dict(base_payload, email='same@example.invalid', password='same@example.invalid', password_confirmation='same@example.invalid'), 'distinta de tu correo electrónico'),
         ]
-        for name, payload in invalid_cases:
+        for name, payload, expected_message in invalid_cases:
             status, result = registration(payload)
             assert status == 422 and result['ok'] is False and result['error'] == 'INVALID_INPUT'
-            assert '12 y 128 caracteres' in result['message'] and identity_counts() == baseline
+            assert expected_message in result['message'] and identity_counts() == baseline
             print(name+'=PASS')
         print('F01=PASS')
         print('F02=PASS')
@@ -257,12 +260,16 @@ with open(os.devnull, 'w') as log:
                 page.locator('[name="privacy"]').check()
 
             page.goto(ORIGIN+'/public/identity/crear-cuenta.php', wait_until='domcontentloaded')
+            assert 'Usa entre 12 y 64 caracteres. Puedes combinar palabras, números y símbolos.' in page.locator('#create-password-help').inner_text()
+            assert page.locator('#create-confirm-help').inner_text() == 'Vuelve a escribir la misma contraseña.'
+            assert '128 caracteres' not in page.locator('body').inner_text()
+            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
             posts_before = browser_state['registration_posts']
             fill_registration('mismatch@example.invalid')
             page.locator('[name="password_confirmation"]').fill('A different synthetic phrase 456!')
             page.locator('[data-submit]').click()
             page.locator('[data-state-panel][data-visible="true"]').wait_for()
-            assert 'Las contraseñas deben coincidir.' in page.locator('[data-state-copy]').inner_text()
+            assert 'Las contraseñas no coinciden.' in page.locator('[data-state-copy]').inner_text()
             assert browser_state['registration_posts'] == posts_before
             print('V05=PASS')
 
@@ -271,18 +278,22 @@ with open(os.devnull, 'w') as log:
             browser_state['mutate_invalid'] = True
             page.locator('[data-submit]').click()
             page.locator('[data-state-panel][data-visible="true"]').wait_for()
-            assert '12 y 128 caracteres' in page.locator('[data-state-copy]').inner_text()
+            assert 'al menos 12 caracteres' in page.locator('[data-state-copy]').inner_text()
             assert 'Solicitud de cuenta enviada' not in page.locator('[data-state-panel]').inner_text()
             assert page.locator('[data-submit]').is_enabled()
             page.screenshot(path=str(evidence/'registration-invalid.png'), full_page=True)
+            print('1366X768_QA=PASS')
             print('BROWSER_INVALID_QA=PASS')
 
             page.goto(ORIGIN+'/public/identity/crear-cuenta.php', wait_until='domcontentloaded')
+            page.set_viewport_size({'width':1440,'height':900})
             fill_registration('browser-valid@example.invalid')
             page.locator('[data-submit]').click()
             page.locator('.state-panel--success[data-visible="true"]').wait_for()
             assert 'Solicitud de cuenta enviada' in page.locator('[data-state-title]').inner_text()
+            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
             page.screenshot(path=str(evidence/'registration-valid.png'), full_page=True)
+            print('1440X900_QA=PASS')
             print('BROWSER_VALID_QA=PASS')
 
             page.goto(ORIGIN+'/public/identity/crear-cuenta.php', wait_until='domcontentloaded')

@@ -42,8 +42,7 @@
     return !!(field && field.checked);
   }
 
-  function createValidationMessage(form) {
-    const invalidInput = 'Revisa el correo y la contraseña. El correo debe tener un formato válido y la contraseña debe tener entre 12 y 128 caracteres y ser distinta del correo.';
+  function passwordValidationMessage(form, compareEmail) {
     const consent = 'Debes aceptar los Términos y condiciones y el Aviso de privacidad para continuar.';
     const email = form.elements.namedItem('email');
     const password = value(form, 'password');
@@ -51,9 +50,12 @@
     const minimum = Number(form.dataset.passwordMin);
     const maximum = Number(form.dataset.passwordMax);
     const passwordLength = Array.from(password).length;
-    if (!email || email.value.trim() === '' || email.validity.typeMismatch || passwordLength < minimum || passwordLength > maximum || password.toLowerCase() === email.value.trim().toLowerCase()) return invalidInput;
-    if (password !== confirmation) return 'Las contraseñas deben coincidir.';
-    if (!boolValue(form, 'terms') || !boolValue(form, 'privacy')) return consent;
+    if (compareEmail && (!email || email.value.trim() === '' || email.validity.typeMismatch)) return 'Revisa el correo electrónico y la contraseña.';
+    if (passwordLength < minimum) return 'La contraseña debe tener al menos 12 caracteres.';
+    if (passwordLength > maximum) return 'La contraseña no puede tener más de 64 caracteres.';
+    if (compareEmail && password.toLowerCase() === email.value.trim().toLowerCase()) return 'La contraseña debe ser distinta de tu correo electrónico.';
+    if (password !== confirmation) return 'Las contraseñas no coinciden.';
+    if (compareEmail && (!boolValue(form, 'terms') || !boolValue(form, 'privacy'))) return consent;
     return '';
   }
 
@@ -98,7 +100,7 @@
     setInitialState(flow);
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const validationMessage = flow === 'create' ? createValidationMessage(form) : '';
+      const validationMessage = flow === 'create' ? passwordValidationMessage(form, true) : (flow === 'reset' ? passwordValidationMessage(form, false) : '');
       if (validationMessage) {
         flowState(flow, 'error', validationMessage);
         const note = form.querySelector('[data-form-note]');

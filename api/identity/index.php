@@ -6,6 +6,8 @@ if (is_file($composerAutoload)) require_once $composerAutoload;
 require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php';
 
 use Identity\Contracts\OneTimeTokenPurpose;
+use Identity\Contracts\IdentityAccount;
+use Identity\Contracts\PasswordPolicy;
 use Identity\Contracts\ReasonCode;
 use Identity\Contracts\SessionCookieDescriptor;
 use Identity\Contracts\SessionValidationDecision;
@@ -207,9 +209,24 @@ try {
     switch ($operation) {
         case 'registration-request':
             $email = trim((string)($body['email'] ?? ''));
-            $invalidInputMessage = 'Revisa el correo y la contraseña. El correo debe tener un formato válido y la contraseña debe tener entre 12 y 128 caracteres y ser distinta del correo.';
+            $invalidInputMessage = 'Revisa el correo electrónico y la contraseña.';
             $consentMessage = 'Debes aceptar los Términos y condiciones y el Aviso de privacidad para continuar.';
-            if (!is_string($body['password'] ?? null) || $body['password'] === '' || (($body['password_confirmation'] ?? $body['password']) !== $body['password'])) {
+            if (!is_string($body['password'] ?? null)) identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>$invalidInputMessage], 422);
+            if (($body['password_confirmation'] ?? $body['password']) !== $body['password']) identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'Las contraseñas no coinciden.'], 422);
+            $passwordLength = PasswordPolicy::length($body['password']);
+            if ($passwordLength < PasswordPolicy::MIN_LENGTH) {
+                identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'La contraseña debe tener al menos 12 caracteres.'], 422);
+            }
+            if ($passwordLength > PasswordPolicy::MAX_LENGTH) {
+                identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'La contraseña no puede tener más de 64 caracteres.'], 422);
+            }
+            try {
+                $normalizedEmail = IdentityAccount::normalizeEmail($email);
+                $normalizedPassword = function_exists('mb_strtolower') ? mb_strtolower($body['password'], 'UTF-8') : strtolower($body['password']);
+                if ($normalizedPassword === $normalizedEmail) {
+                    identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'La contraseña debe ser distinta de tu correo electrónico.'], 422);
+                }
+            } catch (\InvalidArgumentException) {
                 identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>$invalidInputMessage], 422);
             }
             $decision = $composition->registration()->register(['email'=>$email,'password'=>$body['password'] ?? null,'terms_version'=>trim((string)($body['terms_version'] ?? 'v2')),'privacy_notice_version'=>trim((string)($body['privacy_notice_version'] ?? 'v2')),'terms_accepted'=>($body['terms_accepted'] ?? false) === true,'privacy_notice_accepted'=>($body['privacy_notice_accepted'] ?? false) === true], $clockDimensions);
@@ -281,7 +298,11 @@ try {
 
         case 'password-reset':
             $rawToken = trim((string)($body['token'] ?? ''));
-            if (($body['password_confirmation'] ?? $body['password'] ?? null) !== ($body['password'] ?? null)) identityHttpJson(['ok'=>false,'error'=>'INVALID_REQUEST'], 422);
+            if (!is_string($body['password'] ?? null)) identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'La contraseña debe tener al menos 12 caracteres.'], 422);
+            if (($body['password_confirmation'] ?? $body['password'] ?? null) !== $body['password']) identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'Las contraseñas no coinciden.'], 422);
+            $passwordLength = PasswordPolicy::length($body['password']);
+            if ($passwordLength < PasswordPolicy::MIN_LENGTH) identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'La contraseña debe tener al menos 12 caracteres.'], 422);
+            if ($passwordLength > PasswordPolicy::MAX_LENGTH) identityHttpJson(['ok'=>false,'error'=>'INVALID_INPUT','message'=>'La contraseña no puede tener más de 64 caracteres.'], 422);
             $tokenRow = null;
             try { $tokenRow = $composition->tokens()->findByHashAndPurpose(OneTimeTokenCodec::hash($rawToken), OneTimeTokenPurpose::PASSWORD_RECOVERY); } catch (\Throwable) {}
             $decision = $composition->recovery()->reset($rawToken, (string)($body['password'] ?? ''), $clockDimensions);

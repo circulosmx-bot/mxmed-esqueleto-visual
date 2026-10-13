@@ -2,6 +2,8 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../modules/identity/http/IdentityUiBootstrap.php';
 $csrf = \Identity\Http\IdentityUiBootstrap::boot();
+$passwordMinimum = \Identity\Contracts\PasswordPolicy::MIN_LENGTH;
+$passwordMaximum = \Identity\Contracts\PasswordPolicy::MAX_LENGTH;
 ?>
 <!doctype html>
 <html lang="es">
@@ -21,10 +23,10 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
         <h1 id="reset-title">Establece una nueva contraseña</h1>
         <p class="auth-card__intro">Crea una contraseña segura para recuperar el acceso.</p>
         <div class="state-panel" data-state-panel aria-live="polite"><strong data-state-title></strong><span data-state-copy></span></div>
-        <form class="auth-form" method="post" action="/api/identity/index.php/password-reset" data-identity-form data-flow="reset">
+        <form class="auth-form" method="post" action="/api/identity/index.php/password-reset" data-identity-form data-flow="reset" data-password-min="<?= $passwordMinimum ?>" data-password-max="<?= $passwordMaximum ?>" novalidate>
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-          <div class="field"><label for="reset-password">Nueva contraseña</label><div class="password-wrap"><input id="reset-password" name="password" type="password" autocomplete="new-password" required aria-describedby="password-help"><button class="icon-button" type="button" data-password-toggle aria-controls="reset-password" aria-label="Mostrar contraseña">Mostrar</button></div><small id="password-help">Usa al menos 12 caracteres.</small></div>
-          <div class="field"><label for="reset-confirm">Confirmar contraseña</label><div class="password-wrap"><input id="reset-confirm" name="password_confirmation" type="password" autocomplete="new-password" required><button class="icon-button" type="button" data-password-toggle aria-controls="reset-confirm" aria-label="Mostrar contraseña">Mostrar</button></div></div>
+          <div class="field"><label for="reset-password">Nueva contraseña</label><div class="password-wrap"><input id="reset-password" name="password" type="password" autocomplete="new-password" required aria-describedby="password-help"><button class="icon-button" type="button" data-password-toggle aria-controls="reset-password" aria-label="Mostrar contraseña">Mostrar</button></div><small id="password-help">Usa entre <?= $passwordMinimum ?> y <?= $passwordMaximum ?> caracteres. Puedes combinar palabras, números y símbolos. Evita usar tu correo, nombre o información fácil de adivinar.</small></div>
+          <div class="field"><label for="reset-confirm">Confirmar contraseña</label><div class="password-wrap"><input id="reset-confirm" name="password_confirmation" type="password" autocomplete="new-password" required aria-describedby="reset-confirm-help"><button class="icon-button" type="button" data-password-toggle aria-controls="reset-confirm" aria-label="Mostrar contraseña">Mostrar</button></div><small id="reset-confirm-help">Vuelve a escribir la misma contraseña.</small></div>
           <div class="form-actions"><button class="button" type="submit" data-submit>Guardar nueva contraseña</button></div>
           <p class="auth-links" data-form-note aria-live="polite"><a href="login.html">Volver a iniciar sesión</a></p>
         </form>

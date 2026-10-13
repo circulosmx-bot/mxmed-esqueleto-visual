@@ -48,7 +48,7 @@ Se añadieron contratos para política de contraseña, Argon2id, versiones de cr
 
 La política de contraseña es:
 
-- mínimo 12 y máximo 128 caracteres;
+- mínimo 12 y máximo 64 puntos de código Unicode;
 - frases permitidas;
 - NUL y entradas inválidas rechazadas;
 - no se recorta silenciosamente;

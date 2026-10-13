@@ -6,11 +6,16 @@ namespace Identity\Contracts;
 final class PasswordPolicy
 {
     public const MIN_LENGTH = 12;
-    public const MAX_LENGTH = 128;
+    public const MAX_LENGTH = 64;
+
+    public static function length(string $password): int
+    {
+        return function_exists('mb_strlen') ? mb_strlen($password, 'UTF-8') : strlen($password);
+    }
 
     public static function assertValid(string $password, string $emailNormalized): void
     {
-        $length = function_exists('mb_strlen') ? mb_strlen($password, 'UTF-8') : strlen($password);
+        $length = self::length($password);
         if ($length < self::MIN_LENGTH || $length > self::MAX_LENGTH) {
             throw new \InvalidArgumentException('invalid_password_length');
         }

@@ -104,12 +104,29 @@ try {
     gate4bAssert($invalidRepositoryWriteRejected, 'R05 invalid data rejected');
 
     PasswordHash::assertAvailable();
+    $policyRejects = static function (string $password, string $email = 'policy@example.test'): bool {
+        try { PasswordPolicy::assertValid($password, $email); return false; } catch (InvalidArgumentException) { return true; }
+    };
+    gate4bAssert($policyRejects(str_repeat('a', 11)), 'P01 eleven code points rejected');
+    gate4bAssert(!$policyRejects(str_repeat('a', 12)), 'P02 twelve code points accepted');
+    gate4bAssert(!$policyRejects(str_repeat('a', 64)), 'P03 sixty-four code points accepted');
+    gate4bAssert($policyRejects(str_repeat('a', 65)), 'P04 sixty-five code points rejected');
+    gate4bAssert(!$policyRejects('words with spaces'), 'P05 spaces allowed');
+    gate4bAssert(!$policyRejects(str_repeat('🙂', 12)), 'P06 Unicode counted as code points');
+    gate4bAssert(!$policyRejects('lowercaseonly'), 'P07 uppercase not required');
+    gate4bAssert(!$policyRejects('letters only password'), 'P08 number not required');
+    gate4bAssert(!$policyRejects('onlyletterslong'), 'P09 symbol not required');
+    gate4bAssert($policyRejects('policy@example.test'), 'P10 password equal to normalized email rejected');
     PasswordPolicy::assertValid('A secure phrase 123!', 'user@example.test');
     $hash = PasswordHash::hash('A secure phrase 123!');
     gate4bAssert(str_starts_with($hash, '$argon2id$'), 'Argon2id hash expected');
     gate4bAssert(PasswordHash::verify('A secure phrase 123!', $hash), 'positive password verification expected');
     gate4bAssert(!PasswordHash::verify('wrong secure phrase', $hash), 'negative password verification expected');
     gate4bAssert(!PasswordHash::needsRehash($hash), 'new hash should not require rehash');
+    $legacyLongPassword = str_repeat('L', 65);
+    $accounts->create(new IdentityAccount('legacy_long_password', 'legacy-long@example.test', AccountStatus::ACTIVE, $clock->now()->format('Y-m-d H:i:s')));
+    $credentials->create('legacy_long_password', PasswordHash::hash($legacyLongPassword), $clock->now()->format('Y-m-d H:i:s'));
+    gate4bAssert($authentication->authenticate('legacy-long@example.test', $legacyLongPassword, ['ip'=>'198.51.100.251'])->isAllowed(), 'existing credential above new maximum remains valid');
     foreach (['short', 'A secure phrase 123!' . str_repeat('x', 120)] as $invalid) {
         try { PasswordPolicy::assertValid($invalid, 'user@example.test'); throw new RuntimeException('password policy accepted invalid length'); } catch (InvalidArgumentException) {}
     }
@@ -156,9 +173,11 @@ try {
     $recovery->request('USER@example.test', ['ip' => '198.51.100.61', 'device' => 'device-g']);
     $newRecoveryToken = (string)$notifications->lastMessage()?->token();
     gate4bAssert($oldRecoveryToken !== $newRecoveryToken, 'new recovery request rotates token');
+    $tooLongReset = $recovery->reset($newRecoveryToken, str_repeat('x', 65), ['ip' => '198.51.100.62']);
+    gate4bAssert(!$tooLongReset->reset() && $tooLongReset->reasonCode() === ReasonCode::INVALID_INPUT, 'password reset enforces canonical maximum');
     $oldReset = $recovery->reset($oldRecoveryToken, 'A newer secure phrase 456!', ['ip' => '198.51.100.62']);
     gate4bAssert(!$oldReset->reset() && $oldReset->reasonCode() === ReasonCode::TOKEN_INVALIDATED, 'previous recovery token invalidated');
-    $reset = $recovery->reset($newRecoveryToken, 'A newer secure phrase 456!', ['ip' => '198.51.100.63']);
+    $reset = $recovery->reset($newRecoveryToken, str_repeat('r', 64), ['ip' => '198.51.100.63']);
     gate4bAssert($reset->reset() && $reset->credentialVersion() === 2, 'password reset increments credential version');
     $reuse = $recovery->reset($newRecoveryToken, 'Another secure phrase 789!', ['ip' => '198.51.100.64']);
     gate4bAssert(!$reuse->reset() && $reuse->reasonCode() === ReasonCode::TOKEN_CONSUMED, 'recovery token single use');
