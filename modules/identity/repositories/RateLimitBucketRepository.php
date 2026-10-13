@@ -26,9 +26,9 @@ final class RateLimitBucketRepository
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO auth_rate_limit_buckets (bucket_id, operation_code, dimension_code, dimension_key_hash, window_started_at, attempts_count, created_at, updated_at)
-             VALUES (:bucket_id, :operation, :dimension, :key_hash, :window_start, 0, :created_at, :created_at)'
+             VALUES (:bucket_id, :operation, :dimension, :key_hash, :window_start, 0, :created_at_insert, :created_at_update)'
         );
-        $stmt->execute([':bucket_id' => $bucketId, ':operation' => $operation, ':dimension' => $dimension, ':key_hash' => $hash, ':window_start' => $windowStartedAt, ':created_at' => $createdAt]);
+        $stmt->execute([':bucket_id' => $bucketId, ':operation' => $operation, ':dimension' => $dimension, ':key_hash' => $hash, ':window_start' => $windowStartedAt, ':created_at_insert' => $createdAt, ':created_at_update' => $createdAt]);
     }
 
     public function update(string $operation, string $dimension, string $hash, string $windowStartedAt, int $attempts, ?string $blockedUntil): void

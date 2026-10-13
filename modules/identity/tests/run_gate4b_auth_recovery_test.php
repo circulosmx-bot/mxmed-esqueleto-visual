@@ -21,6 +21,7 @@ use Identity\Repositories\AccountConsentRepository;
 use Identity\Repositories\AccountCredentialRepository;
 use Identity\Repositories\IdentityAccountRepository;
 use Identity\Repositories\OneTimeTokenRepository;
+use Identity\Repositories\RateLimitBucketRepository;
 use Identity\Services\CredentialAuthenticationService;
 use Identity\Services\EmailVerificationService;
 use Identity\Services\RateLimitService;
@@ -57,7 +58,7 @@ $quotedDatabase = '`' . str_replace('`', '``', $database) . '`';
 $admin->exec("CREATE DATABASE {$quotedDatabase} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
 try {
-    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]);
     $pdo->exec("CREATE TABLE profiles_doctors (doctor_id VARCHAR(64) NOT NULL PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->exec("CREATE TABLE medical_groups (group_id VARCHAR(64) NOT NULL PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $identityDb = realpath(__DIR__ . '/../db/migrations');
@@ -81,6 +82,26 @@ try {
     $verification = new EmailVerificationService($pdo, $accounts, $consents, $tokens, $rateLimits, $notifications, $clock);
     $authentication = new CredentialAuthenticationService($accounts, $credentials, $rateLimits, $clock);
     $recovery = new RecoveryService($pdo, $accounts, $credentials, $tokens, $rateLimits, $notifications, $clock);
+
+    gate4bAssert($pdo->getAttribute(PDO::ATTR_EMULATE_PREPARES) === false, 'R06 native prepares required');
+    $repositoryDimensions = ['ip' => '198.51.100.250'];
+    gate4bAssert($rateLimits->consume(RateLimitOperation::REGISTRATION, $repositoryDimensions)->allowed(), 'R01 rate-limit bucket create succeeds');
+    gate4bAssert($rateLimits->consume(RateLimitOperation::REGISTRATION, $repositoryDimensions)->allowed(), 'R02 same bucket update succeeds');
+    $repositoryAttempts = (int)$pdo->query("SELECT attempts_count FROM auth_rate_limit_buckets WHERE operation_code = 'registration' AND dimension_code = 'ip'")->fetchColumn();
+    gate4bAssert($repositoryAttempts === 2, 'R03 repeated attempts increment correctly');
+    $rateLimits->clear(RateLimitOperation::REGISTRATION, $repositoryDimensions);
+    $resetAttempts = (int)$pdo->query("SELECT attempts_count FROM auth_rate_limit_buckets WHERE operation_code = 'registration' AND dimension_code = 'ip'")->fetchColumn();
+    $clock->advance('+1 hour');
+    $nextWindow = $rateLimits->consume(RateLimitOperation::REGISTRATION, $repositoryDimensions);
+    $repositoryWindows = (int)$pdo->query("SELECT COUNT(*) FROM auth_rate_limit_buckets WHERE operation_code = 'registration' AND dimension_code = 'ip'")->fetchColumn();
+    gate4bAssert($resetAttempts === 0 && $nextWindow->allowed() && $repositoryWindows === 2, 'R04 time-window and reset semantics unchanged');
+    $invalidRepositoryWriteRejected = false;
+    try {
+        (new RateLimitBucketRepository($pdo))->create('invalid_native_bucket', RateLimitOperation::REGISTRATION, 'ip', 'short', '2026-07-20 12:00:00', '2026-07-20 12:00:00');
+    } catch (Throwable) {
+        $invalidRepositoryWriteRejected = true;
+    }
+    gate4bAssert($invalidRepositoryWriteRejected, 'R05 invalid data rejected');
 
     PasswordHash::assertAvailable();
     PasswordPolicy::assertValid('A secure phrase 123!', 'user@example.test');

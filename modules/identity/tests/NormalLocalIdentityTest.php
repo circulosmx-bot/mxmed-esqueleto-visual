@@ -92,7 +92,7 @@ check('cross_namespace_key_denied',rejects(fn()=>$client->get('mxmed:stg:session
 $admin=new PDO('mysql:host=127.0.0.1;port=3306;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 $suffix=bin2hex(random_bytes(6)); $qa='mxmed_idlocal03a_'.$suffix; $gate='mxmed_gate4d_preview_idlocal03a_'.$suffix; $created=[];
 $pdoFor=static fn(string $name)=>new PDO('mysql:host=127.0.0.1;port=3306;dbname='.$name.';charset=utf8mb4','root','',
-    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
 $assemble=new ReflectionMethod(Composition::class,'assembleNormalLocal');
 $migrations=__DIR__.'/../db/migrations/';
 try {
@@ -117,8 +117,28 @@ try {
     $pdo->exec(file_get_contents($migrations.'2026_07_19_03_create_auth_account_memberships.sql'));
     $composition=$assemble->invoke(null,$config,$pdo);
     check('C01',$composition->environment()==='local' && $composition->allowedOrigin()==='https://localhost:8443');
+    check('R06_native_prepares',$pdo->getAttribute(PDO::ATTR_EMULATE_PREPARES)===false);
     check('C08',(int)$pdo->query('SELECT COUNT(*) FROM auth_accounts')->fetchColumn()===0);
     check('C09',(int)$pdo->query('SELECT COUNT(*) FROM auth_account_memberships')->fetchColumn()===0);
+    $nativeRegistration=$composition->registration()->register([
+        'email'=>'native-registration@example.invalid','password'=>'Native registration password 03K!',
+        'terms_accepted'=>true,'terms_version'=>'v2','privacy_notice_accepted'=>true,'privacy_notice_version'=>'v2',
+    ],['ip'=>'198.51.100.31','device'=>'idlocal03k-native']);
+    check('E01',$nativeRegistration->accepted() && $nativeRegistration->accountId()!==null);
+    $nativeAccountId=(string)$nativeRegistration->accountId();
+    check('E02',(int)$pdo->query("SELECT COUNT(*) FROM auth_rate_limit_buckets WHERE operation_code='registration'")->fetchColumn()===3);
+    check('E03',(int)$pdo->query("SELECT COUNT(*) FROM auth_accounts WHERE account_id=".$pdo->quote($nativeAccountId))->fetchColumn()===1);
+    check('E04',(int)$pdo->query("SELECT COUNT(*) FROM auth_account_credentials WHERE account_id=".$pdo->quote($nativeAccountId))->fetchColumn()===1);
+    check('E05',(int)$pdo->query("SELECT COUNT(*) FROM auth_account_consents WHERE account_id=".$pdo->quote($nativeAccountId))->fetchColumn()===2);
+    check('E06',(int)$pdo->query("SELECT COUNT(*) FROM auth_account_one_time_tokens WHERE account_id=".$pdo->quote($nativeAccountId))->fetchColumn()===1);
+    $nativeNotifications=json_decode((string)file_get_contents($dir.'/notifications.json'),true);
+    check('E07',is_array($nativeNotifications) && count($nativeNotifications)===1 && is_string($nativeNotifications[0]['token']??null));
+    check('E08',$composition->verification()->verify((string)$nativeNotifications[0]['token'],['ip'=>'198.51.100.32'])->verified());
+    $nativeAuth=$composition->authentication()->authenticate('native-registration@example.invalid','Native registration password 03K!',['ip'=>'198.51.100.33']);
+    check('E09',$nativeAuth->isAllowed() && $nativeAuth->candidate()!==null);
+    $nativeSession=$composition->sessions()->create($nativeAuth->candidate(),['ip'=>'198.51.100.33']);
+    check('E10',$nativeSession->allowed() && $composition->sessions()->validate($nativeSession->token()?->value())->allowed());
+    check('E11',$composition->sessions()->logout($nativeSession->token()?->value())->allowed() && !$composition->sessions()->validate($nativeSession->token()?->value())->allowed());
     $badConfig=Config::fromValues(array_replace($v,['MXMED_NORMAL_LOCAL_VALKEY_PORT'=>(string)$closedPort]));
     check('C06',rejects(fn()=>$assemble->invoke(null,$badConfig,$pdo),'normal_local_session_store_unavailable'));
     foreach ([$qa,$gate] as $name) {

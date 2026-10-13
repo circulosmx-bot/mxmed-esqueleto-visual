@@ -155,6 +155,8 @@ with open(os.devnull, 'w') as log:
             assert status == 422 and result['ok'] is False and result['error'] == 'INVALID_INPUT'
             assert '12 y 128 caracteres' in result['message'] and identity_counts() == baseline
             print(name+'=PASS')
+        print('F01=PASS')
+        print('F02=PASS')
         for name, payload in [
             ('V06', dict(base_payload, email='terms@example.invalid', terms_accepted=False)),
             ('V07', dict(base_payload, email='privacy@example.invalid', privacy_notice_accepted=False)),
@@ -163,6 +165,7 @@ with open(os.devnull, 'w') as log:
             assert status == 422 and result['error'] == 'CONSENT_MISSING'
             assert 'Términos y condiciones' in result['message'] and identity_counts() == baseline
             print(name+'=PASS')
+        print('F03=PASS')
 
         status, result = registration(base_payload)
         assert status == 200 and result == {'ok':True, 'status':'pending_verification'}
@@ -182,6 +185,7 @@ with open(os.devnull, 'w') as log:
         limited_status, limited_result = registration(base_payload)
         assert limited_status == 429 and limited_result == {'ok':False, 'error':'RATE_LIMITED'}
         print('RATE_LIMIT_MAPPING=PASS')
+        print('F05=PASS')
 
         verification_token = messages[0]['token']
         verify_csrf, _ = page_token('verificar-correo')
@@ -190,11 +194,19 @@ with open(os.devnull, 'w') as log:
         assert verify_status == 200 and json.loads(verify_body)['status'] == 'verified'
         print('S08=PASS')
         synthetic_login_csrf, _ = page_token('acceso')
-        synthetic_login_status, synthetic_login_body, _ = request(login_path, {
+        synthetic_login_status, synthetic_login_body, synthetic_login_headers = request(login_path, {
             'email':base_payload['email'], 'password':base_payload['password'], 'csrf_token':synthetic_login_csrf
         }, token=synthetic_login_csrf)
         assert synthetic_login_status == 200 and json.loads(synthetic_login_body)['authenticated'] is True
         print('S09=PASS')
+        synthetic_cookies = [value for key,value in synthetic_login_headers if key.lower() == 'set-cookie']
+        synthetic_session = next(value for value in synthetic_cookies if value.startswith('__Host-mxmed_session=')).split(';')[0]
+        current_status, current_body, _ = request('/api/identity/index.php/current-session', cookie=synthetic_session)
+        assert current_status == 200 and json.loads(current_body)['authenticated'] is True
+        print('E10=PASS')
+        logout_csrf = json.loads(current_body)['csrf_token']
+        assert request('/api/identity/index.php/logout', {'csrf_token':logout_csrf}, token=logout_csrf, cookie=synthetic_session)[0] == 200
+        print('E11=PASS')
 
         expired_timestamp = int(time.time()) - 901
         nonce = base64.urlsafe_b64encode(secrets.token_bytes(24)).decode().rstrip('=')
@@ -205,6 +217,7 @@ with open(os.devnull, 'w') as log:
         assert expired_status == 403 and expired_result['ok'] is False
         print('C02=PASS')
         print('C03=PASS')
+        print('F04=PASS')
 
         # Reset only the disposable rate-limit state before browser registration scenarios.
         sql('DELETE FROM auth_rate_limit_buckets')
@@ -282,6 +295,10 @@ with open(os.devnull, 'w') as log:
             print('BROWSER_EXPIRED_CSRF_QA=PASS')
             browser_context.close()
             browser.close()
+        sql('DROP TABLE auth_rate_limit_buckets')
+        infrastructure_status, infrastructure_result = registration(dict(base_payload, email='infrastructure-failure@example.invalid'))
+        assert infrastructure_status == 503 and infrastructure_result == {'ok':False, 'error':'TEMPORARILY_UNAVAILABLE'}
+        print('F06=PASS')
         print('SCREENSHOTS='+str(evidence))
     finally:
         if server:
