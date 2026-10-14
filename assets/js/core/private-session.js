@@ -27,6 +27,8 @@
   let locked = false;
   let expiryTimer = 0;
   let channel = null;
+  let confirmationFlight = null;
+  let sessionMarker = '';
 
   function readBootstrap() {
     try {
@@ -163,6 +165,17 @@
     }
   }
 
+  function lockUnavailable(message) {
+    if (locked) return;
+    locked = true;
+    manager.state = 'unavailable';
+    window.clearTimeout(expiryTimer);
+    abortPending();
+    clearSensitiveState();
+    document.documentElement.classList.add('mxmed-auth-checking');
+    showLock(message || 'No fue posible validar tu sesión. Inténtalo de nuevo.', true);
+  }
+
   function scheduleExpiry(context) {
     window.clearTimeout(expiryTimer);
     const expiries = [context?.session?.idle_expires_at, context?.session?.absolute_expires_at]
@@ -195,34 +208,26 @@
     if (sessionLabel) sessionLabel.textContent = 'Sesión iniciada';
   }
 
-  async function validate() {
-    if (locked) return false;
-    const response = await nativeFetch(SESSION_ENDPOINT, {
-      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
-    }).catch(() => null);
-    if (!response) {
-      manager.state = 'unavailable';
-      showLock('No fue posible validar tu sesión. Inténtalo de nuevo.', true);
-      return false;
-    }
-    const payload = await response.json().catch(() => ({}));
-    if (response.status === 401) {
-      lock('expired', { state: 'expired' });
-      return false;
-    }
-    if (!response.ok) {
-      manager.state = 'unavailable';
-      showLock('No fue posible validar tu sesión. Inténtalo de nuevo.', true);
-      return false;
-    }
-    if (payload.authenticated !== true || payload.application_access?.allowed !== true || !payload.application_access.context) {
-      lock('access-denied', {
-        message: 'Tu cuenta no tiene un perfil médico único y activo para abrir esta aplicación.',
-        redirect: false,
-        broadcast: false
-      });
-      return false;
-    }
+  function hasAuthenticatedEnvelope(payload) {
+    return payload?.authenticated === true
+      && payload?.state === 'AUTHENTICATED'
+      && payload?.account_status === 'active'
+      && String(payload?.csrf_token || '') !== '';
+  }
+
+  function isAuthenticatedPayload(payload) {
+    const context = payload?.application_access?.context;
+    return hasAuthenticatedEnvelope(payload)
+      && payload?.application_access?.allowed === true
+      && context && typeof context === 'object'
+      && context.account && typeof context.account === 'object'
+      && context.professional && typeof context.professional === 'object';
+  }
+
+  function applyAuthenticated(payload) {
+    const marker = String(payload.application_access.context.account.id || '') + ':' + String(payload.csrf_token || '');
+    if (sessionMarker && marker !== sessionMarker) generation += 1;
+    sessionMarker = marker;
     manager.context = payload.application_access.context;
     manager.csrfToken = String(payload.csrf_token || '');
     manager.state = 'authenticated';
@@ -232,6 +237,64 @@
     document.documentElement.classList.remove('mxmed-auth-checking');
     window.dispatchEvent(new CustomEvent('mxmed:session-authenticated', { detail: manager.context }));
     return true;
+  }
+
+  function confirmCanonicalSession() {
+    const requestGeneration = generation;
+    if (confirmationFlight?.generation === requestGeneration) return confirmationFlight.promise;
+    const promise = (async () => {
+      const response = await nativeFetch(SESSION_ENDPOINT, {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+      }).catch(() => null);
+      if (!response) return { kind: 'unavailable', generation: requestGeneration };
+      const payload = await response.json().catch(() => null);
+      if (response.status === 401) return { kind: 'expired', generation: requestGeneration };
+      if (response.status === 403) return { kind: 'forbidden', generation: requestGeneration };
+      if (!response.ok) return { kind: 'unavailable', generation: requestGeneration };
+      if (hasAuthenticatedEnvelope(payload) && payload?.application_access?.allowed !== true) {
+        return { kind: 'forbidden', generation: requestGeneration };
+      }
+      if (!isAuthenticatedPayload(payload)) return { kind: 'unavailable', generation: requestGeneration };
+      return { kind: 'authenticated', generation: requestGeneration, payload };
+    })();
+    confirmationFlight = { generation: requestGeneration, promise };
+    promise.finally(() => {
+      if (confirmationFlight?.promise === promise) confirmationFlight = null;
+    });
+    return promise;
+  }
+
+  async function reconcileCanonicalSession(reason, options) {
+    if (locked) return false;
+    const result = await confirmCanonicalSession();
+    if (result.generation !== generation || locked) return false;
+    if (result.kind === 'authenticated') return applyAuthenticated(result.payload);
+    if (result.kind === 'expired') {
+      lock(reason === 'logout' ? 'logout' : 'expired', {
+        state: reason === 'logout' ? 'logged-out' : 'expired',
+        broadcast: options?.broadcast !== false
+      });
+      return false;
+    }
+    if (result.kind === 'forbidden') {
+      lock('access-denied', {
+        message: 'Tu cuenta no tiene acceso vigente a esta aplicación.',
+        redirect: false,
+        broadcast: false
+      });
+      return false;
+    }
+    lockUnavailable();
+    return false;
+  }
+
+  async function validate(reason) {
+    return reconcileCanonicalSession(reason || 'validation', { broadcast: reason !== 'bootstrap' });
+  }
+
+  async function handleResourceUnauthorized(requestGeneration) {
+    if (locked || requestGeneration !== generation) return;
+    await reconcileCanonicalSession('expired', { broadcast: true });
   }
 
   function isPrivateApi(input) {
@@ -258,7 +321,7 @@
     try {
       const response = await nativeFetch(input, Object.assign({}, init || {}, { signal: controller.signal }));
       if (requestGeneration !== generation || locked) throw new DOMException('Stale private response', 'AbortError');
-      if (response.status === 401) lock('expired', { state: 'expired' });
+      if (response.status === 401) await handleResourceUnauthorized(requestGeneration);
       if (response.status === 403) window.dispatchEvent(new CustomEvent('mxmed:authorization-denied', { detail: { input } }));
       return response;
     } finally {
@@ -270,6 +333,7 @@
   const nativeXhrSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function guardedOpen(method, url) {
     this.__mxmedPrivateApi = isPrivateApi(url);
+    this.__mxmedGeneration = generation;
     return nativeXhrOpen.apply(this, arguments);
   };
   XMLHttpRequest.prototype.send = function guardedSend() {
@@ -279,7 +343,7 @@
     this.addEventListener('loadend', () => {
       xhrs.delete(this);
       if (locked) return;
-      if (this.status === 401) lock('expired', { state: 'expired' });
+      if (this.status === 401) void handleResourceUnauthorized(this.__mxmedGeneration);
       if (this.status === 403) window.dispatchEvent(new CustomEvent('mxmed:authorization-denied', { detail: { transport: 'xhr' } }));
     }, { once: true });
     return nativeXhrSend.apply(this, arguments);
@@ -311,17 +375,27 @@
     }
   }
 
+  async function reconcileSignal(signal) {
+    if (!signal || locked) return;
+    if (signal.type === 'authenticated') {
+      generation += 1;
+      await validate('authenticated-signal');
+      return;
+    }
+    if (signal.type === 'logout' || signal.type === 'expired') {
+      await reconcileCanonicalSession(signal.type, { broadcast: false });
+    }
+  }
+
   try {
     channel = new BroadcastChannel(CHANNEL_NAME);
-    channel.addEventListener('message', (event) => {
-      if (event.data?.type === 'logout' || event.data?.type === 'expired') lock(event.data.type, { broadcast: false });
-    });
+    channel.addEventListener('message', (event) => { void reconcileSignal(event.data); });
   } catch (_) {}
   window.addEventListener('storage', (event) => {
     if (event.key !== SIGNAL_KEY || !event.newValue) return;
     try {
       const signal = JSON.parse(event.newValue);
-      if (signal.type === 'logout' || signal.type === 'expired') lock(signal.type, { broadcast: false });
+      void reconcileSignal(signal);
     } catch (_) {}
   });
   window.addEventListener('focus', () => validate('focus'));

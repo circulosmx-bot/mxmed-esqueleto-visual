@@ -114,6 +114,13 @@
     if (destination !== '/provider/' && session.application_access?.allowed !== true) {
       throw new Error('professional_access_required');
     }
+    const signal = JSON.stringify({ type: 'authenticated', at: Date.now() });
+    try {
+      const channel = new BroadcastChannel('mxmed-session');
+      channel.postMessage(JSON.parse(signal));
+      channel.close();
+    } catch (_) {}
+    try { window.localStorage.setItem('mxmed.session.signal', signal); } catch (_) {}
     window.location.replace(destination === '/' || destination === '/index.html' ? '/private-app.php' : destination);
   }
 

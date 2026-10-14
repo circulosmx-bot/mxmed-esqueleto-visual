@@ -77,7 +77,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 .mxmed-session-lock__card { width: min(460px, 100%); padding: 28px; border: 1px solid #c9dce2; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px rgba(16, 61, 74, .14); text-align: center; }
 </style>
 <script id="mxmed-private-bootstrap" type="application/json"><?= $privateBootstrapJson ?></script>
-<script src="/assets/js/core/private-session.js?v=identity-session02"></script>
+<script src="/assets/js/core/private-session.js?v=identity-session02b"></script>
 
 
 

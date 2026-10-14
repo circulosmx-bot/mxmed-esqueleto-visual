@@ -78,7 +78,7 @@
       const error = Error(code === 'gallery_limit_reached' ? 'Límite máximo de fotografías: 16' : 'No se pudo completar la acción. Intenta nuevamente.');
       error.status = response.status;
       error.code = code;
-      error.kind = response.status === 401 ? 'session' : response.status === 403 ? 'permission' : 'service';
+      error.kind = response.status === 401 ? 'media-authorization' : response.status === 403 ? 'permission' : 'service';
       throw error;
     }
     return value.data;
@@ -119,8 +119,8 @@
   function feedback(area, error, actionFailure = false) {
     if (!area) return;
     area.root.querySelector('.mx-media-review-feedback')?.remove();
-    const message = actionFailure ? error.message : error?.kind === 'permission'
-      ? 'Tu sesión no tiene acceso a las imágenes pendientes.'
+    const message = actionFailure ? error.message : error?.kind === 'permission' || error?.kind === 'media-authorization'
+      ? 'El servicio de imágenes no autorizó esta operación.'
       : 'No pudimos consultar tus imágenes pendientes.';
     const row = owned(element('div', '', 'mx-media-review-feedback'));
     row.append(element('span', message));
@@ -145,8 +145,7 @@
     try {
       await action();
     } catch (error) {
-      if (error?.kind === 'session') clearAll();
-      else feedback(area, error, true);
+      feedback(area, error, true);
     } finally {
       busy = false;
       updateBusyButtons();
@@ -235,7 +234,7 @@
     } catch (error) {
       if (sequence !== refreshSequence) return;
       clearAll();
-      if (error?.kind !== 'session') areas.forEach(area => feedback(area, error));
+      areas.forEach(area => feedback(area, error));
     }
   }
 
