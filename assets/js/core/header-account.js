@@ -1,15 +1,15 @@
-// Header presentation only. Session termination remains owned by Identity HTTP.
+// Header presentation uses the canonical private-session context.
 (function () {
   'use strict';
   function initialize() {
     const header = document.querySelector('.mx-global-header');
     if (!header) return;
-    const store = window.mxmedStore || {};
-    const physician = store.doctorProfile || window.mxmedDoctor || {};
-    header.querySelector('.mx-gh-identity-name-text').textContent = physician.full_name || store.doctorName || '';
+    const context = window.mxmedPrivateSession?.context || {};
+    const professional = context.professional || {};
+    header.querySelector('.mx-gh-identity-name-text').textContent = professional.display_name || '';
     const specialtySummary = document.getElementById('fs-esp');
     const syncSpecialty = () => {
-      header.querySelector('.mx-gh-identity-role').textContent = physician.specialty || store.doctorSpecialty || specialtySummary?.textContent?.trim() || '';
+      header.querySelector('.mx-gh-identity-role').textContent = specialtySummary?.textContent?.trim() || professional.role || '';
     };
     syncSpecialty();
     if (specialtySummary) new MutationObserver(syncSpecialty).observe(specialtySummary, { childList: true, characterData: true, subtree: true });
@@ -41,25 +41,13 @@
       button.disabled = true;
       status.hidden = true;
       try {
-        const sessionResponse = await fetch('/api/identity/index.php/current-session', {
-          credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
-        });
-        const session = await sessionResponse.json();
-        if (!sessionResponse.ok || session.authenticated !== true || !session.csrf_token) throw new Error('session');
-        const response = await fetch('/api/identity/index.php/logout', {
-          method: 'POST', credentials: 'same-origin', cache: 'no-store',
-          headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrf_token },
-          body: JSON.stringify({ csrf_token: session.csrf_token })
-        });
-        const result = await response.json();
-        if (!response.ok || result.ok !== true || result.state !== 'LOGOUT_SUCCESS') throw new Error('logout');
-        window.location.assign('/public/identity/acceso.php');
+        if (!window.mxmedPrivateSession || typeof window.mxmedPrivateSession.logout !== 'function') throw new Error('session_manager');
+        const success = await window.mxmedPrivateSession.logout();
+        if (!success) throw new Error('logout');
       } catch (_) {
         status.textContent = 'No fue posible cerrar sesión. Inténtalo de nuevo.';
         status.hidden = false;
         window.bootstrap?.Dropdown.getOrCreateInstance(header.querySelector('#mxHeaderAccount')).show();
-      } finally {
-        button.disabled = false;
       }
     });
   }

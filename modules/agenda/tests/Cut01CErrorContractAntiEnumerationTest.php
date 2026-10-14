@@ -45,7 +45,7 @@ cut01cErrorAssert(!str_contains($appointmentsSource, '->homogeneousError(') && !
 $primaryOtpSource = file_get_contents($root . '/modules/agenda/controllers/PublicOtpController.php');
 cut01cErrorAssert(str_contains($primaryOtpSource, 'PublicAgendaOtpComposition'), 'primary OTP delivery uses productive composition');
 cut01cErrorAssert(!str_contains($primaryOtpSource, 'DevOtpSender'), 'primary OTP delivery has no development fallback');
-cut01cErrorAssert(hash_file('sha256', $root . '/api/agenda/index.php') === '7b8eecc5b8eb1ee677394702a70b5e9c126898f1b0e4840f3110b5b1f3a884bd', 'Agenda routes unchanged');
+cut01cErrorAssert(hash_file('sha256', $root . '/api/agenda/index.php') === '3aaf635fe62c588f3168948f347274be2684c2fa28eccc844a0d66430276e3b1', 'Agenda routes unchanged');
 cut01cErrorAssert(hash_file('sha256', $root . '/api/patients/index.php') === '4283afd8b138cd1abadcb7ff4024b6e501504f4de3b07a6cc7ecff300d130337', 'Patients routes unchanged');
 
 echo "Cut01CErrorContractAntiEnumerationTest PASS\n";

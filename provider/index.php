@@ -16,7 +16,7 @@ try {
     $identity = IdentityHttpComposition::fromProcessEnvironment();
     $actor = (new CanonicalHttpSessionResolver($identity->sessions()))->resolve($_COOKIE);
     if ($actor === null) {
-        header('Location: /acceso?next=%2Fprovider%2F', true, 302);
+        header('Location: /public/identity/acceso.php?next=%2Fprovider%2F', true, 302);
         exit;
     }
 } catch (Throwable $error) {

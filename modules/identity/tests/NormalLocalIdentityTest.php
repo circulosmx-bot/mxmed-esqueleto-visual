@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/../http/IdentityHttpComposition.php';
+require_once __DIR__.'/../http/PrivateApplicationAccessResolver.php';
 use Identity\Http\IdentityHttpComposition as Composition;
 use Identity\Http\IdentityHttpCompositionSelector as Selector;
 use Identity\Http\NormalLocalIdentityConfiguration as Config;
@@ -10,6 +11,7 @@ use Identity\Adapters\PreviewValkeyClient;
 use Identity\Adapters\ValkeySessionStoreAdapter;
 use Identity\Services\SessionStoreFactory as Factory;
 use Identity\Contracts\PasswordHash;
+use Identity\Http\PrivateApplicationAccessResolver;
 Composition::registerAutoloader();
 
 function check(string $name, bool $ok): void { if (!$ok) throw new RuntimeException('FAIL:'.$name); echo $name."=PASS\n"; }
@@ -106,7 +108,7 @@ try {
     check('C07',(int)$pdo->query('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()')->fetchColumn()===0);
     foreach ([$qa,$gate] as $name) {
         $db=$pdoFor($name);
-        $db->exec('CREATE TABLE profiles_doctors (doctor_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
+        $db->exec('CREATE TABLE profiles_doctors (doctor_id VARCHAR(64) PRIMARY KEY, display_name VARCHAR(160) NOT NULL) ENGINE=InnoDB');
         $db->exec('CREATE TABLE medical_groups (group_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
         foreach (['2026_07_19_01_create_auth_accounts.sql','2026_07_19_03_create_auth_account_memberships.sql',
             '2026_07_19_02_create_auth_account_consents.sql','2026_07_20_04_create_auth_account_credentials.sql',
@@ -146,7 +148,7 @@ try {
         $db->exec("INSERT INTO auth_accounts(account_id,email_address,email_normalized,status,email_verified_at) VALUES ('qa_account','qa@example.invalid','qa@example.invalid','active',UTC_TIMESTAMP())");
         $q=$db->prepare('INSERT INTO auth_account_credentials(account_id,password_hash,password_changed_at) VALUES (?,?,UTC_TIMESTAMP())');
         $q->execute(['qa_account',PasswordHash::hash('Isolated-QA-password-03A!')]);
-        $db->exec("INSERT INTO profiles_doctors VALUES ('qa_doctor')");
+        $db->exec("INSERT INTO profiles_doctors(doctor_id,display_name) VALUES ('qa_doctor','Dra. QA Canónica')");
         $db->exec("INSERT INTO auth_account_memberships(membership_id,account_id,profile_doctor_id,role_code,scope_code,status) VALUES ('qa_membership','qa_account','qa_doctor','owner','profile','active')");
     }
     $auth=$composition->authentication()->authenticate('qa@example.invalid','Isolated-QA-password-03A!',['ip'=>'127.0.0.1']);
@@ -156,6 +158,20 @@ try {
     $token=$session->token()->value();
     $fresh=$assemble->invoke(null,$config,$pdoFor($qa));
     check('session_survives_new_composition',$fresh->sessions()->validate($token)->allowed());
+    $private=(new PrivateApplicationAccessResolver($fresh))->resolve(['__Host-mxmed_session'=>$token]);
+    check('private_access_exact_membership',$private->allowed && ($private->context['professional']['doctor_id']??'')==='qa_doctor'
+        && ($private->context['professional']['display_name']??'')==='Dra. QA Canónica');
+    $privateCapabilities=$private->context['capabilities']??[];
+    check('private_access_capabilities_resolved',array_keys($privateCapabilities)===['patients','clinical_record','prescriptions']
+        && count(array_filter($privateCapabilities,'is_bool'))===3);
+    $pdo->exec("UPDATE auth_account_memberships SET status='revoked' WHERE membership_id='qa_membership'");
+    $missing=(new PrivateApplicationAccessResolver($fresh))->resolve(['__Host-mxmed_session'=>$token]);
+    check('private_access_missing_membership_denied',!$missing->allowed && $missing->httpStatus===403);
+    $pdo->exec("UPDATE auth_account_memberships SET status='active' WHERE membership_id='qa_membership'");
+    $pdo->exec("INSERT INTO auth_account_memberships(membership_id,account_id,profile_doctor_id,role_code,scope_code,status) VALUES ('qa_membership_2','qa_account','qa_doctor','collaborator','profile','active')");
+    $ambiguous=(new PrivateApplicationAccessResolver($fresh))->resolve(['__Host-mxmed_session'=>$token]);
+    check('private_access_ambiguous_membership_denied',!$ambiguous->allowed && $ambiguous->httpStatus===403);
+    $pdo->exec("DELETE FROM auth_account_memberships WHERE membership_id='qa_membership_2'");
     check('session_idle_ttl',$session->record()->expiresAt()->getTimestamp()-$session->record()->createdAt()->getTimestamp()===3600);
     check('session_absolute_ttl',$session->record()->absoluteExpiresAt()->getTimestamp()-$session->record()->createdAt()->getTimestamp()===43200);
     check('S09',$fresh->sessions()->logout($token)->allowed() && !$composition->sessions()->validate($token)->allowed());

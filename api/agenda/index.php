@@ -19,6 +19,8 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AmbiguousPatientReconc
 require_once __DIR__ . '/../../modules/agenda/repositories/OperatorsRepository.php';
 require_once __DIR__ . '/../../modules/agenda/composition/AgendaAuthorityCompositionRoot.php';
 require_once __DIR__ . '/../_lib/db.php';
+require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php';
+require_once __DIR__ . '/../../modules/identity/http/PrivateApplicationAccessResolver.php';
 
 use Agenda\Composition\AgendaAuthorityCompositionRoot;
 use Agenda\Controllers\AppointmentsController;
@@ -252,6 +254,35 @@ function resolveAgendaActorRole(array $query = [], array $body = []): array
 
 function resolveAgendaActorContext(array $segments, array $query = [], array $actorRoleContext = []): array
 {
+    if (getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') === '1') {
+        try {
+            \Identity\Http\IdentityHttpComposition::registerAutoloader();
+            $access=(new \Identity\Http\PrivateApplicationAccessResolver(
+                \Identity\Http\IdentityHttpComposition::fromProcessEnvironment()
+            ))->resolve($_COOKIE);
+        } catch (Throwable) {
+            return ['ok'=>false,'status'=>503,'response'=>[
+                'ok'=>false,'error'=>'unavailable','message'=>'authentication service unavailable','data'=>null,
+                'meta'=>(object)['auth_mode'=>'canonical_identity'],
+            ]];
+        }
+        if (!$access->allowed) {
+            $response=$access->httpStatus===401
+                ? unauthorized_response('authentication required',['auth_mode'=>'canonical_identity'])
+                : forbidden_response('professional membership required',['auth_mode'=>'canonical_identity']);
+            return ['ok'=>false,'status'=>$access->httpStatus,'response'=>$response];
+        }
+        $doctorId=(string)($access->context['professional']['doctor_id'] ?? '');
+        $requested=trim((string)($query['doctor_id'] ?? ''));
+        if ($requested !== '' && $requested !== $doctorId) {
+            return ['ok'=>false,'status'=>403,'response'=>forbidden_response('doctor scope mismatch',['auth_mode'=>'canonical_identity'])];
+        }
+        return ['ok'=>true,'context'=>[
+            'mode'=>'canonical_identity','strict'=>true,'compat'=>false,
+            'user_id'=>(string)$access->context['account']['id'],'doctor_id'=>$doctorId,
+            'actor_role'=>'doctor','actor_role_source'=>'canonical_identity','warnings'=>[],
+        ]];
+    }
     $modeRaw = strtolower(trim((string)(getenv('MXMED_AGENDA_AUTH_MODE') ?: '')));
     $strictMode = bool_env_flag(getenv('MXMED_AGENDA_AUTH_REQUIRED'))
         || in_array($modeRaw, ['strict', 'enforce'], true);
@@ -462,6 +493,7 @@ function resolveEffectiveAgendaActor(array $segments, string $method, array $que
     if (!(bool)($contextResult['ok'] ?? false)) {
         return [
             'ok' => false,
+            'status' => (int)($contextResult['status'] ?? 403),
             'response' => $contextResult['response'] ?? forbidden_response('forbidden'),
             'context' => [],
             'role_context' => $actorRoleContext,
@@ -934,6 +966,7 @@ try {
         $effectiveActorResult = resolveEffectiveAgendaActor($segments, (string)$method, $_GET, $payloadForRole);
         $contextResult = [
             'ok' => (bool)($effectiveActorResult['ok'] ?? false),
+            'status' => (int)($effectiveActorResult['status'] ?? 0),
             'response' => $effectiveActorResult['response'] ?? null,
             'context' => $effectiveActorResult['context'] ?? [],
         ];
@@ -941,7 +974,8 @@ try {
         if (!$contextResult['ok']) {
             $response = normalize_response($contextResult['response']);
             $errorCode = (string)($response['error'] ?? '');
-            $status = $errorCode === 'unauthorized' ? 401 : 403;
+            $status = (int)($contextResult['status'] ?? 0);
+            if ($status < 400 || $status > 599) $status = $errorCode === 'unauthorized' ? 401 : 403;
             http_response_code($status);
             $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             if ($json === false) {

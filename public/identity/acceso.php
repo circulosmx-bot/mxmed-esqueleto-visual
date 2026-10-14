@@ -29,7 +29,7 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
           <div class="field"><label for="login-email">Correo electrónico</label><input id="login-email" name="email" type="email" autocomplete="email" required></div>
           <div class="field"><label for="login-password">Contraseña</label><div class="password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" required><button class="icon-button" type="button" data-password-toggle aria-controls="login-password" aria-label="Mostrar contraseña">Mostrar</button></div></div>
           <div class="form-actions"><button class="button" type="submit" data-submit>Iniciar sesión</button></div>
-          <p class="auth-links" data-form-note aria-live="polite"><a href="recover-access.html">¿Olvidaste tu contraseña?</a><a href="create-account.html">Crear una cuenta</a></p>
+          <p class="auth-links" data-form-note aria-live="polite"><a href="recuperar-acceso.php">¿Olvidaste tu contraseña?</a><a href="crear-cuenta.php">Crear una cuenta</a></p>
         </form>
       </section>
     </main>

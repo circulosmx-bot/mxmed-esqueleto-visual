@@ -14,6 +14,8 @@ require_once __DIR__ . '/../../modules/profiles/repositories/DoctorContactPoints
 require_once __DIR__ . '/../../modules/profiles/controllers/DoctorContactPointsController.php';
 require_once __DIR__ . '/../../modules/media/bootstrap.php';
 require_once __DIR__ . '/../../modules/media/services/GallerySessionScope.php';
+require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php';
+require_once __DIR__ . '/../../modules/identity/http/PrivateApplicationAccessResolver.php';
 
 use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Controllers\PublicProfileController;
@@ -117,6 +119,32 @@ function profileBoolEnvFlag($value): bool
 
 function profileResolvePrivateContext(string $doctorId, bool $requireDoctorScope = false): array
 {
+    if (getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') === '1') {
+        try {
+            \Identity\Http\IdentityHttpComposition::registerAutoloader();
+            $access=(new \Identity\Http\PrivateApplicationAccessResolver(
+                \Identity\Http\IdentityHttpComposition::fromProcessEnvironment()
+            ))->resolve($_COOKIE);
+        } catch (Throwable) {
+            $access=null;
+        }
+        if ($access === null || !$access->allowed) {
+            $status=$access?->httpStatus ?? 503;
+            return ['ok'=>false,'status'=>$status,'response'=>[
+                'ok'=>false,'error'=>$status===401?'unauthorized':($status===403?'forbidden':'unavailable'),
+                'message'=>$status===401?'authentication required':'private profile access unavailable','data'=>null,
+                'meta'=>['contract'=>'profile_private_identity_mvp','version'=>'IDENTITY-SESSION02','generated_at'=>gmdate('c'),'auth_mode'=>'canonical_identity']
+            ]];
+        }
+        $canonicalDoctor=(string)($access->context['professional']['doctor_id'] ?? '');
+        if ($canonicalDoctor === '' || $canonicalDoctor !== $doctorId) {
+            return ['ok'=>false,'status'=>403,'response'=>[
+                'ok'=>false,'error'=>'forbidden','message'=>'doctor scope mismatch','data'=>null,
+                'meta'=>['contract'=>'profile_private_identity_mvp','version'=>'IDENTITY-SESSION02','generated_at'=>gmdate('c'),'auth_mode'=>'canonical_identity']
+            ]];
+        }
+        return ['ok'=>true,'auth_mode'=>'canonical_identity','actor_user_id'=>(string)$access->context['account']['id'],'actor_doctor_id'=>$canonicalDoctor];
+    }
     $strict = profileBoolEnvFlag(getenv('MXMED_PROFILES_PRIVATE_AUTH_REQUIRED'));
     $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
     $headerUserId = trim((string)($headers['X-User-Id'] ?? $headers['x-user-id'] ?? ''));

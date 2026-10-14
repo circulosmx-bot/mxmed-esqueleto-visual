@@ -1,9 +1,16 @@
 (function () {
   'use strict';
 
-  const allowedStates = new Set(['default', 'loading', 'error', 'success', 'expired']);
+  const allowedStates = new Set(['default', 'loading', 'error', 'success', 'expired', 'logged-out', 'logout-error']);
   const messages = {
-    login: { loading: ['Procesando acceso', 'Estado visual provisional de carga.'], error: ['No pudimos iniciar sesión', 'Revisa tu correo electrónico y contraseña e inténtalo de nuevo.'], success: ['Acceso listo para revisión', 'La sesión se inició correctamente.'] },
+    login: {
+      loading: ['Procesando acceso', 'Validando tu cuenta y perfil profesional.'],
+      error: ['No pudimos iniciar sesión', 'Revisa tu correo electrónico y contraseña e inténtalo de nuevo.'],
+      success: ['Acceso listo', 'La sesión se inició correctamente.'],
+      expired: ['Tu sesión ha finalizado', 'Inicia sesión nuevamente para continuar.'],
+      'logged-out': ['Sesión cerrada', 'Tu sesión se cerró correctamente.'],
+      'logout-error': ['No pudimos confirmar el cierre', 'Inicia sesión nuevamente o vuelve a intentarlo.']
+    },
     create: { error: ['Revisa los datos de tu cuenta', 'Completa los campos requeridos y los consentimientos para continuar.'], success: ['Solicitud de cuenta enviada', 'Revisa tu correo para continuar con la verificación.'] },
     verify: { loading: ['Verificando correo', 'Estado visual provisional de carga.'], error: ['No pudimos verificar tu correo', 'El enlace puede ser inválido o haber expirado.'], success: ['Correo verificado', 'Tu cuenta quedó lista para continuar.'], expired: ['El enlace ya no está disponible', 'Solicita un nuevo enlace para continuar.'] },
     recover: { error: ['Revisa tu correo electrónico', 'Ingresa un correo válido para continuar.'], success: ['Instrucciones enviadas', 'Si existe una cuenta asociada, recibirás instrucciones para recuperar el acceso.'] },
@@ -15,11 +22,11 @@
     const message = messages[flow] && messages[flow][state];
     if (!panel || !message) return;
     panel.className = 'state-panel';
-    panel.classList.add(state === 'success' ? 'state-panel--success' : state === 'error' || state === 'expired' ? 'state-panel--error' : 'state-panel--loading');
+    panel.classList.add(state === 'success' || state === 'logged-out' ? 'state-panel--success' : state === 'error' || state === 'expired' || state === 'logout-error' ? 'state-panel--error' : 'state-panel--loading');
     panel.dataset.visible = 'true';
     panel.querySelector('[data-state-title]').textContent = message[0];
     panel.querySelector('[data-state-copy]').textContent = detail || message[1];
-    panel.setAttribute('role', state === 'error' || state === 'expired' ? 'alert' : 'status');
+    panel.setAttribute('role', state === 'error' || state === 'expired' || state === 'logout-error' ? 'alert' : 'status');
   }
 
   function setInitialState(flow) {
@@ -84,6 +91,32 @@
     return payload;
   }
 
+  function safePrivateDestination() {
+    const raw = new URLSearchParams(window.location.search).get('next') || '/private-app.php';
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      if (parsed.origin !== window.location.origin) return '/private-app.php';
+      const allowed = parsed.pathname === '/' || parsed.pathname === '/index.html'
+        || parsed.pathname === '/private-app.php' || parsed.pathname === '/provider/';
+      return allowed ? parsed.pathname + parsed.search + parsed.hash : '/private-app.php';
+    } catch (_) {
+      return '/private-app.php';
+    }
+  }
+
+  async function routeAfterLogin() {
+    const response = await fetch('/api/identity/index.php/current-session', {
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+    });
+    const session = await response.json().catch(() => ({}));
+    if (!response.ok || session.authenticated !== true) throw new Error('session_validation_failed');
+    const destination = safePrivateDestination();
+    if (destination !== '/provider/' && session.application_access?.allowed !== true) {
+      throw new Error('professional_access_required');
+    }
+    window.location.replace(destination === '/' || destination === '/index.html' ? '/private-app.php' : destination);
+  }
+
   document.querySelectorAll('[data-password-toggle]').forEach((button) => {
     button.addEventListener('click', () => {
       const input = document.getElementById(button.getAttribute('aria-controls'));
@@ -119,8 +152,16 @@
         flowState(flow, state, safeDetail);
         const note = form.querySelector('[data-form-note]');
         if (note) note.textContent = state === 'success' ? 'La acción se procesó correctamente.' : (safeDetail || 'La acción no pudo completarse.');
-        if (state === 'success' && flow === 'login' && new URLSearchParams(window.location.search).get('next') === '/provider/') {
-          window.location.assign('/provider/');
+        if (state === 'success' && flow === 'login') {
+          try {
+            await routeAfterLogin();
+          } catch (error) {
+            const detail = error.message === 'professional_access_required'
+              ? 'Tu cuenta no tiene un perfil profesional único y activo para abrir esta aplicación.'
+              : 'La sesión inició, pero no fue posible validar el acceso a la aplicación.';
+            flowState(flow, 'error', detail);
+            if (note) note.textContent = detail;
+          }
           return;
         }
         if (state === 'success' && (flow === 'verify' || flow === 'reset')) window.history.replaceState({}, document.title, window.location.pathname);

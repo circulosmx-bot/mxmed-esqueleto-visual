@@ -4,6 +4,7 @@ declare(strict_types=1);
 $composerAutoload = __DIR__ . '/../../vendor/autoload.php';
 if (is_file($composerAutoload)) require_once $composerAutoload;
 require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php';
+require_once __DIR__ . '/../../modules/identity/http/PrivateApplicationAccessResolver.php';
 
 use Identity\Contracts\OneTimeTokenPurpose;
 use Identity\Contracts\IdentityAccount;
@@ -12,6 +13,7 @@ use Identity\Contracts\ReasonCode;
 use Identity\Contracts\SessionCookieDescriptor;
 use Identity\Contracts\SessionValidationDecision;
 use Identity\Http\IdentityHttpComposition;
+use Identity\Http\PrivateApplicationAccessResolver;
 use Identity\Services\OneTimeTokenCodec;
 use Identity\Audit\TrustedIdentityId;
 use Identity\Audit\VerifiedAccountId;
@@ -179,16 +181,18 @@ try {
         identityHttpSameOrigin($composition, false);
         $decision = $composition->sessions()->validate($rawCookie !== '' ? $rawCookie : null);
         if (!$decision->allowed() || $decision->context() === null || $decision->record() === null) identityHttpSessionFailure($decision);
-        $profile = null;
-        foreach ($composition->memberships()->activeForAccount($decision->context()->accountId()) as $membership) {
-            $profileId = trim((string)($membership['profile_doctor_id'] ?? ''));
-            if ($profileId !== '') { $profile = ['type'=>'profile_doctor','id'=>$profileId]; break; }
-        }
+        $application = (new PrivateApplicationAccessResolver($composition))->resolve($_COOKIE);
+        if (!$application->allowed && $application->httpStatus === 401) identityHttpSessionFailure(['reason_code'=>$application->reason]);
+        if (!$application->allowed && $application->httpStatus === 503) identityHttpJson(['authenticated'=>false,'state'=>'TEMPORARILY_UNAVAILABLE'],503);
         identityHttpJson([
             'authenticated'=>true,
             'state'=>'AUTHENTICATED',
             'account_status'=>'active',
-            'profile'=>$profile,
+            'application_access'=>[
+                'allowed'=>$application->allowed,
+                'reason'=>$application->reason,
+                'context'=>$application->allowed ? $application->context : null,
+            ],
             'idle_expires_at'=>$decision->record()->expiresAt()->format(DATE_ATOM),
             'absolute_expires_at'=>$decision->record()->absoluteExpiresAt()->format(DATE_ATOM),
             'csrf_token'=>$composition->csrf()->issueAuthenticated($decision->record()->tokenDigest()),
