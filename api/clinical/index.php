@@ -10200,6 +10200,26 @@ try {
                     ], 403);
                     return;
                 }
+                try {
+                    $identity = $pdo->prepare("SELECT p.display_name AS patient_display_name,
+                        d.display_name AS physician_display_name,d.prefix AS physician_prefix
+                        FROM patients_patients p
+                        JOIN patients_doctor_links l ON l.patient_id=p.patient_id AND l.status='active'
+                        JOIN profiles_doctors d ON d.doctor_id=l.doctor_id
+                        WHERE p.patient_id=:patient AND l.doctor_id=:doctor AND p.status='active' LIMIT 1");
+                    $identity->execute(['patient'=>$patientId,'doctor'=>$doctorId]);
+                    $currentIdentity = $identity->fetch(PDO::FETCH_ASSOC);
+                    if (is_array($currentIdentity)) {
+                        $document['current_canonical_identity'] = [
+                            'patient_display_name'=>(string)($currentIdentity['patient_display_name'] ?? ''),
+                            'physician_display_name'=>(string)($currentIdentity['physician_display_name'] ?? ''),
+                            'physician_prefix'=>(string)($currentIdentity['physician_prefix'] ?? ''),
+                            'source'=>'current_canonical_records',
+                        ];
+                    }
+                } catch (Throwable) {
+                    // Optional current-identity projection; the immutable document remains readable.
+                }
                 if (in_array((string)$document['document_type'], ['prescription','receta','rx'], true)) {
                     require_once __DIR__ . '/../_lib/clinical_prescription_lifecycle.php';
                     $document['prescription_lifecycle'] = clinical_prescription_lifecycle_projection(

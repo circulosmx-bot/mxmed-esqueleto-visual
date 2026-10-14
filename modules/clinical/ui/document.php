@@ -465,6 +465,7 @@ $isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
 $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], true);
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'receta', 'rx'], true);
 $isPrescriptionV2 = $isPrescriptionDoc && (int)($payload['contract_version'] ?? 0) === 2;
+$isHistoricalPrescription = $isPrescriptionDoc && !$isPrescriptionV2;
 $rxCanReissue = $isPrescriptionDoc && is_array($payload['prescription']['items'] ?? null)
   && count($payload['prescription']['items']) > 0;
 $rxLifecycle = $isPrescriptionDoc && is_array($document['prescription_lifecycle'] ?? null)
@@ -477,6 +478,9 @@ $rxLifecycleEndpoint = $isPrescriptionDoc && $doctorId !== '' && $uuid !== ''
   ? '/api/clinical/index.php/doctors/' . rawurlencode($doctorId)
     . '/patients/' . rawurlencode((string)($document['context']['patient_id'] ?? ''))
     . '/prescriptions/' . rawurlencode($uuid) : '';
+$showRxLifecycleControls = $isPrescriptionDoc && !$rxVoided
+  && in_array((string)($document['status'] ?? ''), ['generated','signed'], true)
+  && $rxLifecycleEndpoint !== '' && ($rxLifecycle['lifecycle_state'] ?? '') !== 'pending';
 $rxV2Html = $isPrescriptionV2 ? (string)($payload['prescription_snapshot']['html'] ?? '') : '';
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
@@ -487,13 +491,21 @@ $rxSnapshot = ($isPrescriptionDoc && is_array($payload['snapshot'] ?? null)) ? $
 $rxPrescription = ($isPrescriptionDoc && is_array($payload['prescription'] ?? null)) ? $payload['prescription'] : [];
 $rxPaciente = is_array($rxSnapshot['paciente'] ?? null) ? $rxSnapshot['paciente'] : [];
 $rxMedico = is_array($rxSnapshot['medico'] ?? null) ? $rxSnapshot['medico'] : [];
+$rxCurrentIdentity = ($isHistoricalPrescription && is_array($document['current_canonical_identity'] ?? null))
+  ? $document['current_canonical_identity'] : [];
 $rxBranding = is_array($rxSnapshot['branding'] ?? null) ? $rxSnapshot['branding'] : [];
 $rxItems = is_array($rxPrescription['items'] ?? null) ? $rxPrescription['items'] : [];
 $rxObservaciones = clinical_doc_clean_text($rxPrescription['observaciones'] ?? '');
 $rxDoctorName = clinical_doc_clean_text($rxMedico['nombre'] ?? $rxMedico['nombre_completo'] ?? '');
+$rxCurrentDoctorName = clinical_doc_clean_text($rxCurrentIdentity['physician_display_name'] ?? '');
+$rxCurrentDoctorPrefix = clinical_doc_clean_text($rxCurrentIdentity['physician_prefix'] ?? '');
+$rxDisplayDoctorName = $rxDoctorName !== '' ? $rxDoctorName
+  : trim(implode(' ', array_filter([$rxCurrentDoctorPrefix, $rxCurrentDoctorName])));
 $rxDoctorSpecialty = clinical_doc_clean_text($rxMedico['especialidad'] ?? '');
 $rxDoctorCedula = clinical_doc_clean_text($rxMedico['cedula'] ?? $rxMedico['cedula_profesional'] ?? '');
 $rxPatientName = clinical_doc_clean_text($rxPaciente['nombre'] ?? $rxPaciente['nombre_completo'] ?? '');
+$rxCurrentPatientName = clinical_doc_clean_text($rxCurrentIdentity['patient_display_name'] ?? '');
+$rxDisplayPatientName = $rxPatientName !== '' ? $rxPatientName : $rxCurrentPatientName;
 $rxPatientAge = clinical_doc_clean_text($rxPaciente['edad'] ?? '');
 $rxPatientSex = clinical_doc_clean_text($rxPaciente['sexo'] ?? '');
 $rxPatientMeta = array_values(array_filter([
@@ -813,6 +825,18 @@ if (!$embed) {
     break-inside:avoid;
   }
   .rx-doc-footer-item{font-size:0.8rem;color:#5d6b74;line-height:1.35;}
+  .rx-doc-current-source{font-size:.75rem;color:#73828c;font-weight:500;}
+  .rx-doc-legacy-notice{font-size:.8rem;color:#5d6b74;background:#f5f8fa;border-radius:8px;padding:8px 10px;}
+  .rx-lifecycle-controls{margin-top:16px;background:#fff;border:1px solid #d7e0e5;border-radius:10px;}
+  .rx-lifecycle-controls summary{cursor:pointer;padding:12px 14px;font-weight:700;color:#334b5a;}
+  .rx-lifecycle-controls-body{padding:0 14px 14px;}
+  <?php if ($isHistoricalPrescription): ?>
+  @media screen{
+    body > .header-top,body > .header-mid,body > .header-bottom{display:none!important;}
+    .mm-grid{min-height:100vh;padding:0 18px 24px;}
+    .mm-main>.container{max-width:1040px;}
+  }
+  <?php endif; ?>
   @media (max-width: 991.98px){
     .rx-doc-header{flex-direction:column;align-items:flex-start;}
     .rx-doc-doctor{text-align:left;margin-left:0;min-width:0;}
@@ -822,6 +846,8 @@ if (!$embed) {
     @page{size:letter portrait;margin:12mm 14mm;}
     .no-print{display:none !important;}
     html, body{background:#fff !important;}
+    body > .header-top,body > .header-mid,body > .header-bottom{display:none!important;}
+    .mm-wrap,.mm-grid,.mm-main{display:block!important;background:#fff!important;min-height:0!important;padding:0!important;}
     .container.py-4{padding:0 !important;max-width:none !important;}
     .rx-doc-sheet:not(.doc-base-sheet){
       border:0 !important;
@@ -1149,7 +1175,11 @@ if (!$embed) {
       <?php endif; ?>
     </div>
     <div class="d-flex flex-wrap justify-content-end gap-2">
-      <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
+      <?php if ($isPrescriptionDoc && (string)($_GET['from'] ?? '') === 'recetas'): ?>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.opener){window.opener.focus();window.close()}else{history.back()}">← Volver a Recetas</button>
+      <?php else: ?>
+        <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
+      <?php endif; ?>
       <div class="dropdown">
         <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Acciones</button>
         <ul class="dropdown-menu dropdown-menu-end">
@@ -1200,10 +1230,6 @@ if (!$embed) {
   </div>
 
   <p class="text-secondary mb-3 no-print">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
-  <?php if ($isPrescriptionDoc && (string)($_GET['from'] ?? '') === 'recetas'): ?>
-    <button type="button" class="btn btn-outline-primary mb-3 no-print" onclick="if(window.opener){window.opener.focus();window.close()}else{history.back()}">← Volver a Recetas</button>
-  <?php endif; ?>
-
   <?php if ($isPrescriptionDoc && $errorMessage === ''): ?>
     <style>
       .rx-lifecycle-banner{border:3px solid #a32b2b;background:#fff0ed;color:#6f1111;padding:14px 18px;
@@ -1223,24 +1249,20 @@ if (!$embed) {
     <?php if (!$rxVoided && in_array((string)($document['status'] ?? ''), ['generated','signed'],true) && $rxLifecycleEndpoint !== ''): ?>
       <?php if (($rxLifecycle['lifecycle_state'] ?? '') === 'pending'): ?>
         <div class="alert alert-info no-print">Hay una receta corregida en preparación. La receta original permanece vigente hasta que se emita la nueva.</div>
-      <?php else: ?>
+      <?php elseif ($isPrescriptionV2): ?>
         <div class="card mb-3 no-print"><div class="card-body">
           <h2 class="h6">Corregir o anular esta receta</h2>
           <div class="row g-2 align-items-end">
             <div class="col-md-4"><label class="form-label" for="rx_lifecycle_reason">Motivo obligatorio</label>
               <select class="form-select" id="rx_lifecycle_reason"><option value="">Selecciona un motivo</option>
-                <option value="error_en_medicamento">Error en medicamento</option>
-                <option value="error_en_dosis_o_indicaciones">Error en dosis o indicaciones</option>
-                <option value="cambio_en_plan_terapeutico">Cambio en plan terapéutico</option>
-                <option value="duplicada">Duplicada</option><option value="emitida_por_error">Emitida por error</option>
-                <option value="otra">Otra</option></select></div>
+                <option value="error_en_medicamento">Error en medicamento</option><option value="error_en_dosis_o_indicaciones">Error en dosis o indicaciones</option>
+                <option value="cambio_en_plan_terapeutico">Cambio en plan terapéutico</option><option value="duplicada">Duplicada</option>
+                <option value="emitida_por_error">Emitida por error</option><option value="otra">Otra</option></select></div>
             <div class="col-md-4"><label class="form-label" for="rx_lifecycle_detail">Detalle si elegiste «Otra»</label><input id="rx_lifecycle_detail" class="form-control" maxlength="1000"></div>
             <div class="col-md-4"><label class="form-label" for="rx_lifecycle_note">Nota opcional</label><input id="rx_lifecycle_note" class="form-control" maxlength="1000"></div>
           </div>
-          <div class="d-flex flex-wrap gap-2 mt-3">
-            <button type="button" class="btn btn-outline-danger" data-rx-lifecycle="void">Anular receta</button>
-            <?php if ($rxCanReissue): ?><button type="button" class="btn btn-primary" data-rx-lifecycle="reissue">Reemitir corregida</button><?php endif; ?>
-          </div>
+          <div class="d-flex flex-wrap gap-2 mt-3"><button type="button" class="btn btn-outline-danger" data-rx-lifecycle="void">Anular receta</button>
+            <?php if ($rxCanReissue): ?><button type="button" class="btn btn-primary" data-rx-lifecycle="reissue">Reemitir corregida</button><?php endif; ?></div>
           <div id="rx_lifecycle_feedback" class="small mt-2" role="status" aria-live="polite"></div>
         </div></div>
       <?php endif; ?>
@@ -1272,14 +1294,17 @@ if (!$embed) {
             </div>
           <?php endif; ?>
           <div class="rx-doc-doctor">
-            <?php if ($rxDoctorName !== ''): ?><div class="rx-doc-doctor-name"><?php echo h($rxDoctorName); ?></div><?php endif; ?>
+            <?php if ($rxDisplayDoctorName !== ''): ?><div class="rx-doc-doctor-name"><?php echo h($rxDisplayDoctorName); ?></div><?php endif; ?>
+            <?php if ($rxDoctorName === '' && $rxCurrentDoctorName !== ''): ?><div class="rx-doc-current-source">Perfil médico canónico actual</div><?php endif; ?>
             <?php if ($rxDoctorSpecialty !== ''): ?><div class="rx-doc-doctor-meta"><?php echo h($rxDoctorSpecialty); ?></div><?php endif; ?>
             <?php if ($rxDoctorCedula !== ''): ?><div class="rx-doc-doctor-meta">Cédula: <?php echo h($rxDoctorCedula); ?></div><?php endif; ?>
           </div>
         </header>
 
         <section class="rx-doc-patient">
-          <div class="rx-doc-patient-name"><?php echo h($rxPatientName !== '' ? $rxPatientName : 'Paciente'); ?></div>
+          <div class="rx-doc-current-source">Paciente</div>
+          <div class="rx-doc-patient-name"><?php echo h($rxDisplayPatientName !== '' ? $rxDisplayPatientName : 'Identidad no registrada'); ?></div>
+          <?php if ($rxPatientName === '' && $rxCurrentPatientName !== ''): ?><div class="rx-doc-current-source">Identidad canónica actual vinculada al documento</div><?php endif; ?>
           <div class="rx-doc-patient-meta">
             <?php
             $patientMetaText = implode(' · ', $rxPatientMeta);
@@ -1295,7 +1320,7 @@ if (!$embed) {
           <div class="rx-doc-rp">Rp.</div>
           <ol class="rx-doc-list">
             <?php if ($rxItems === []): ?>
-              <li class="rx-doc-item"><div class="rx-doc-item-note">Sin medicamentos registrados</div></li>
+              <li class="rx-doc-item"><div class="rx-doc-item-note">Medicamentos no detallados en este registro histórico.</div></li>
             <?php else: ?>
               <?php foreach ($rxItems as $idx => $item): ?>
                 <?php
@@ -1333,11 +1358,12 @@ if (!$embed) {
           <div class="rx-doc-sign-line"></div>
           <?php if ($rxDoctorName !== ''): ?><div class="rx-doc-sign-name"><?php echo h($rxDoctorName); ?></div><?php endif; ?>
           <?php if ($rxDoctorCedula !== ''): ?><div class="rx-doc-sign-meta">Cédula: <?php echo h($rxDoctorCedula); ?></div><?php endif; ?>
+          <?php if ($isHistoricalPrescription): ?><div class="rx-doc-current-source">Firma histórica no disponible</div><?php endif; ?>
         </section>
 
         <footer class="rx-doc-footer">
           <?php if ($rxConsultorios === []): ?>
-            <div class="rx-doc-footer-item">Información de consultorio no disponible.</div>
+            <div class="rx-doc-footer-item">Consultorio no registrado en este documento histórico.</div>
           <?php else: ?>
             <?php foreach ($rxConsultorios as $consultorio): ?>
               <?php
@@ -1350,8 +1376,32 @@ if (!$embed) {
               <div class="rx-doc-footer-item"><?php echo h(implode(' · ', $lines)); ?></div>
             <?php endforeach; ?>
           <?php endif; ?>
+          <?php if ($isHistoricalPrescription): ?><div class="rx-doc-legacy-notice">Documento histórico · Sin verificación de firma V2</div><?php endif; ?>
         </footer>
       </article>
+      <?php if ($showRxLifecycleControls && $isHistoricalPrescription): ?>
+        <details class="rx-lifecycle-controls no-print">
+          <summary>Corregir o anular esta receta</summary>
+          <div class="rx-lifecycle-controls-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4"><label class="form-label" for="rx_lifecycle_reason">Motivo obligatorio</label>
+                <select class="form-select" id="rx_lifecycle_reason"><option value="">Selecciona un motivo</option>
+                  <option value="error_en_medicamento">Error en medicamento</option>
+                  <option value="error_en_dosis_o_indicaciones">Error en dosis o indicaciones</option>
+                  <option value="cambio_en_plan_terapeutico">Cambio en plan terapéutico</option>
+                  <option value="duplicada">Duplicada</option><option value="emitida_por_error">Emitida por error</option>
+                  <option value="otra">Otra</option></select></div>
+              <div class="col-md-4"><label class="form-label" for="rx_lifecycle_detail">Detalle si elegiste «Otra»</label><input id="rx_lifecycle_detail" class="form-control" maxlength="1000"></div>
+              <div class="col-md-4"><label class="form-label" for="rx_lifecycle_note">Nota opcional</label><input id="rx_lifecycle_note" class="form-control" maxlength="1000"></div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <button type="button" class="btn btn-outline-danger" data-rx-lifecycle="void">Anular receta</button>
+              <?php if ($rxCanReissue): ?><button type="button" class="btn btn-primary" data-rx-lifecycle="reissue">Reemitir corregida</button><?php endif; ?>
+            </div>
+            <div id="rx_lifecycle_feedback" class="small mt-2" role="status" aria-live="polite"></div>
+          </div>
+        </details>
+      <?php endif; ?>
     <?php elseif ($isConsentDoc): ?>
       <?php if ($consentFrozenHtml !== '' && !$consentForceDynamicRender): ?>
         <div class="mb-3"><?php echo $consentFrozenHtml; ?></div>
