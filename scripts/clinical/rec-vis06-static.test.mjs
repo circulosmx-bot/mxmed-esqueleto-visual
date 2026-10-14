@@ -13,7 +13,7 @@ assert.match(html,/<h2 id="rx-editor-title" tabindex="-1">NUEVA RECETA<\/h2>/);
 assert.match(html,/MEDICAMENTOS AGREGADOS \(<span id="ne_rx_count">0<\/span>\)/);
 assert.equal((html.match(/id="ne_rx_add"/g)||[]).length,1);
 assert.match(css,/data-ne-rx-state="collapsed"/);
-assert.match(css,/has\(\.ne-rx-row\[data-ne-rx-state="expanded"\]\) \.ne-rx-add-row\{display:none!important\}/);
+assert.match(css,/has\(\.ne-rx-row\[data-ne-rx-state="expanded"\]\) \.ne-rx-added-head\{display:none!important\}/);
 assert.match(host,/stage === 2 \? 'Continuar a vista previa →'/);
 assert.match(app,/data-ne-rx-existing', '1'/);
 assert.match(writer,/new ClinicalIdempotentCreateExecutor\(\$pdo\)\)->execute/);

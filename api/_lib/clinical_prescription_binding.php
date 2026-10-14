@@ -21,7 +21,14 @@ function clinical_prescription_binding_projection(array $body): array
             $value[$key] = $c($item[$key] ?? '');
         $items[] = $value;
     }
-    $headerShown = ($p['presentation']['professional_header'] ?? 'shown') !== 'hidden';
+    $presentation = (array)($p['presentation'] ?? []);
+    $presentationV2 = ($presentation['version'] ?? null) === 2;
+    $headerMode = $presentationV2 && in_array($presentation['professional_header'] ?? null,
+        ['hidden','data_only','logo_and_data'], true)
+        ? $presentation['professional_header']
+        : (($presentation['professional_header'] ?? 'shown') === 'hidden' ? 'hidden' : 'shown');
+    $headerShown = $headerMode !== 'hidden';
+    $logoShown = $headerMode === 'shown' || $headerMode === 'logo_and_data';
     $projection = [
         'version'=>1, 'document_type'=>'prescription',
         'document_uuid'=>$c($body['draft_ref'] ?? ''),
@@ -39,8 +46,10 @@ function clinical_prescription_binding_projection(array $body): array
             'appointment_id'=>$c($p['encounter_reference']['appointment_id'] ?? '')],
         'medication_count'=>count($items), 'medications'=>$items,
         'observations'=>$c($p['prescription']['observaciones'] ?? ''),
-        'presentation'=>['professional_header'=>(($p['presentation']['professional_header'] ?? '') === 'hidden' ? 'hidden' : 'shown')],
-        'professional_context'=>['logo_url'=>$headerShown ? $c($professional['logo_url'] ?? '') : '',
+        'presentation'=>$presentationV2
+            ? ['version'=>2,'professional_header'=>$headerMode]
+            : ['professional_header'=>$headerMode],
+        'professional_context'=>['logo_url'=>$logoShown ? $c($professional['logo_url'] ?? '') : '',
             'consultorio'=>['name'=>$headerShown ? $c($consultorio['name'] ?? '') : '',
                 'address'=>$headerShown ? $c($consultorio['address'] ?? '') : '']],
     ];

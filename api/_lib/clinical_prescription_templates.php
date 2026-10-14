@@ -80,7 +80,7 @@ function clinical_prescription_template_validate(array $body): array
     }
     if (array_key_exists('professional_header', $content)) {
         $header = clinical_prescription_template_string($content['professional_header'], 20);
-        if (!in_array($header, ['shown','hidden'], true)) {
+        if (!in_array($header, ['shown','hidden','data_only','logo_and_data'], true)) {
             throw new ClinicalPrescriptionTemplateException('invalid_professional_header', 400);
         }
         $cleanContent['professional_header'] = $header;

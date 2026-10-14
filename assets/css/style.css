@@ -18301,18 +18301,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:#eef8f3;
   padding:14px 16px;
 }
-.ne-rx-add-row{
-  border:2px dashed #c7d7ef;
-  border-radius:12px;
-  min-height:56px;
-  padding:8px 12px;
-}
-.ne-rx-add-row #ne_rx_add{
-  min-width:280px;
-  border-radius:10px;
-  font-size:1rem;
-  font-weight:600;
-}
 .ne-rx-footer-grid{
   display:grid;
   grid-template-columns:1.05fr 1fr 1.05fr;
@@ -18478,10 +18466,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   .ne-rx-footer-grid{
     grid-template-columns:1fr;
-  }
-  .ne-rx-add-row #ne_rx_add{
-    min-width:unset;
-    width:100%;
   }
   .ne-rx-read-header{
     flex-direction:column;
@@ -23278,8 +23262,27 @@ button.mx-signature-remote{
 .rx-editor-embedded-body .rx-medication-composition{margin-top:10px}.rx-editor-embedded-body .rx-medication-composition.has-added{padding:13px;border:1px solid #55bdc7;border-radius:10px;background:#eaf8f9;box-shadow:inset 4px 0 0 var(--rx-primary)}.rx-editor-embedded-body .rx-medication-composition.has-added .ne-rx-list-title{margin:0 0 10px!important;color:#07536e;font-size:.78rem;font-weight:800;letter-spacing:.05em}.rx-editor-embedded-body .ne-rx-row[data-ne-rx-state="collapsed"]{border-color:#b6dce1;background:#fff;box-shadow:0 1px 2px #0131510b}.rx-editor-embedded-body .ne-rx-row[data-ne-rx-state="expanded"]{border-color:#9fc7d1;background:#fff}
 .rx-editor-embedded-body .ne-rx-editor>.ne-rx-name-wrap{grid-column:1/8}.rx-editor-embedded-body .ne-rx-editor>.ne-rx-presentation{grid-column:8/13}.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="dose"]{grid-column:1/4}.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="route"]{grid-column:4/7}.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="frequency"]{grid-column:7/10}.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="duration"]{grid-column:10/13}.rx-editor-embedded-body .ne-rx-editor>.ne-rx-quantity{grid-column:1/4}.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="instructions"]{grid-column:4/13}.rx-editor-embedded-body .ne-rx-editor>.ne-rx-private-notes{grid-column:1/13}
 .rx-editor-embedded-body .ne-rx-row .ne-rx-actions{margin-top:3px}.rx-editor-embedded-body .ne-rx-row .ne-rx-actions [data-ne-rx-collapse]{background:var(--rx-primary-action);border-color:var(--rx-primary-action);color:#fff;min-height:40px}.rx-editor-embedded-body .ne-rx-summary{padding:1px 2px}.rx-editor-embedded-body .ne-rx-summary::before{background:#e9f9fa;border-color:#8ed7dc;color:var(--rx-ink)}.rx-editor-embedded-body .ne-rx-summary-main{color:var(--rx-ink);font-size:1rem}.rx-editor-embedded-body .ne-rx-summary-meta{font-size:.86rem;color:#526976}.rx-editor-embedded-body .ne-rx-summary-actions .btn-link{color:var(--rx-ink);font-size:.84rem}
-.rx-editor-embedded-body [data-rx-engine-stage="2"]:has(.ne-rx-row[data-ne-rx-state="expanded"]) .ne-rx-add-row{display:none!important}.rx-editor-embedded-body .ne-rx-add-row{justify-content:flex-start!important;min-height:0;border:0;border-radius:0;padding:8px 0}.rx-editor-embedded-body .ne-rx-add-row #ne_rx_add{min-width:0;min-height:40px;border-color:var(--rx-primary);border-radius:9px;color:var(--rx-ink);font-size:.875rem}.rx-editor-embedded-body [data-rx-engine-stage="2"]:not(:has(.ne-rx-row[data-ne-rx-state="expanded"])) .rx-medication-composition.has-added~.ne-rx-add-row #ne_rx_add{background:var(--rx-primary);border-color:var(--rx-primary);color:#fff;font-weight:700;box-shadow:0 2px 5px #006b7b26}.rx-editor-embedded-body [data-rx-engine-stage="2"]:not(:has(.ne-rx-row[data-ne-rx-state="expanded"])) .rx-medication-composition.has-added~.ne-rx-add-row #ne_rx_add:hover,.rx-editor-embedded-body [data-rx-engine-stage="2"]:not(:has(.ne-rx-row[data-ne-rx-state="expanded"])) .rx-medication-composition.has-added~.ne-rx-add-row #ne_rx_add:active{background:var(--rx-primary-action);border-color:var(--rx-primary-action);color:#fff}.rx-editor-embedded-body [data-rx-engine-stage="2"]:not(:has(.ne-rx-row[data-ne-rx-state="expanded"])) .rx-medication-composition.has-added~.ne-rx-add-row #ne_rx_add:focus-visible{outline:3px solid #78d7df;outline-offset:2px;box-shadow:0 0 0 1px #fff}
-.rx-editor-embedded-body .ne-rx-list-title{color:var(--rx-ink);font-size:.95rem}.rx-editor-embedded-body #ne_rx_observations{min-height:64px;border-color:#9cbfcb;border-radius:9px}.rx-editor-embedded-body #ne_rx_professional_header{min-height:40px;border-color:#9cbfcb;border-radius:9px}.rx-editor-embedded-body .ne-rx-footer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;border-top:1px solid #d6e6ec;padding-top:12px}.rx-editor-embedded-body .ne-rx-analysis,.rx-editor-embedded-body .ne-rx-template-card{border:0;border-radius:0;background:transparent;padding:0 4px}.rx-editor-embedded-body .ne-rx-analysis-head,.rx-editor-embedded-body .ne-rx-template-title{color:var(--rx-ink);font-size:.9rem}
+.rx-editor-embedded-body .ne-rx-list-title{color:var(--rx-ink);font-size:.95rem}.rx-editor-embedded-body #ne_rx_observations{min-height:64px;border-color:#9cbfcb;border-radius:9px}.rx-editor-embedded-body .ne-rx-footer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;border-top:1px solid #d6e6ec;padding-top:12px}.rx-editor-embedded-body .ne-rx-analysis,.rx-editor-embedded-body .ne-rx-template-card{border:0;border-radius:0;background:transparent;padding:0 4px}.rx-editor-embedded-body .ne-rx-analysis-head,.rx-editor-embedded-body .ne-rx-template-title{color:var(--rx-ink);font-size:.9rem}
 .rx-editor-embedded-body #ne_rx_review,.rx-editor-embedded-body #ne_rx_sign,.rx-editor-embedded-body #ne_rx_final{padding:12px;border:1px solid var(--rx-border);border-radius:10px;background:#f8fcfd}.rx-editor-embedded-body .doc-base-sheet-frame{border:1px solid #d6e4ea;background:#eef4f6;padding:10px}.rx-clinical-prescription-active>:not([data-rx-clinical-workspace-mount]){display:none!important}[data-rx-clinical-workspace-mount],.rx-global-workspace-mount{min-width:0}
 @media(max-width:1100px){.rx-editor-workspace-head{gap:12px}.rx-editor-stepper li{flex-basis:82px}.rx-editor-stepper li strong{font-size:.58rem}}
 @media(max-width:850px){.rx-editor-workspace{padding:13px}.rx-editor-workspace-head{grid-template-columns:1fr auto;align-items:center;gap:9px 12px}.rx-editor-workspace-head .rx-editor-stepper{grid-column:1/-1;grid-row:2}.rx-editor-workspace-head>[data-rx-host-close]{grid-column:2;grid-row:1}.rx-editor-stepper{width:100%}.rx-editor-stepper::before{top:15px;left:24px;right:24px;height:3px}.rx-editor-stepper li{flex-basis:58px;gap:3px}.rx-editor-stepper li span{flex-basis:32px;width:32px;height:32px;border-width:4px}.rx-editor-stepper li strong{max-width:100%;font-size:.54rem;overflow-wrap:anywhere}.rx-safety-summary{align-items:flex-start;flex-direction:column;gap:5px}.rx-context-toggle{margin-left:-7px}.rx-context-card{grid-template-columns:1fr;gap:3px}.rx-editor-embedded-body .ne-rx-editor>*{grid-column:1/-1!important}.rx-editor-embedded-body .ne-rx-footer-grid{grid-template-columns:1fr}.rx-template-stage-tools{align-items:flex-start}.rx-editor-actions{grid-template-columns:1fr auto}.rx-editor-actions>[data-rx-host-prev]{grid-column:1}.rx-editor-progress{display:none}.rx-editor-actions-primary{grid-column:2}.rx-editor-actions .btn{min-width:auto;min-height:44px}.rx-host-patient-context{align-items:flex-start}}
+
+/* REC-VIS08: medication group action and preview-stage presentation choice. */
+.rx-editor-embedded-body .ne-rx-added-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.rx-editor-embedded-body .ne-rx-added-head.d-none{display:none!important}
+.rx-editor-embedded-body .ne-rx-added-head .ne-rx-list-title{margin:0!important}
+.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add{flex:0 0 auto;min-height:40px;border-radius:9px;background:var(--rx-primary)!important;border-color:var(--rx-primary)!important;color:#fff!important;font-size:.875rem;font-weight:700;box-shadow:0 2px 5px #006b7b26}
+.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add:hover,.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add:active{background:var(--rx-primary-action)!important;border-color:var(--rx-primary-action)!important;color:#fff!important}
+.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add:focus-visible{outline:3px solid #78d7df;outline-offset:2px;box-shadow:0 0 0 1px #fff}
+.rx-editor-embedded-body .rx-medication-composition:has(.ne-rx-row[data-ne-rx-state="expanded"]) .ne-rx-added-head{display:none!important}
+.ne-rx-presentation{margin:0 0 10px;padding:10px;border:1px solid #b9dce2;border-radius:9px;background:#f8fcfd}
+.ne-rx-presentation legend{float:none;width:auto;margin:0 0 7px;padding:0;color:#07536e;font-size:.78rem;font-weight:800;letter-spacing:.05em}
+.ne-rx-presentation-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.ne-rx-presentation-options label{position:relative;margin:0;cursor:pointer}
+.ne-rx-presentation-options input{position:absolute;inline-size:1px;block-size:1px;opacity:0}
+.ne-rx-presentation-options span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:7px 9px;border:1px solid #9cbfcb;border-radius:8px;background:#fff;color:#244b60;font-size:.72rem;font-weight:750;line-height:1.2;text-align:center}
+.ne-rx-presentation-options input:checked+span{border-color:#008fa4;background:#008fa4;color:#fff;box-shadow:0 1px 3px #006b7b2b}
+.ne-rx-presentation-options input:focus-visible+span{outline:3px solid #78d7df;outline-offset:2px}
+.ne-rx-presentation-status{min-height:1.2em;margin-top:6px;color:#526976}
+.ne-rx-preview-loading{padding:28px;text-align:center;color:#526976}
+@media(max-width:850px){.rx-editor-embedded-body .ne-rx-added-head{align-items:stretch;flex-direction:column}.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add{align-self:flex-start;white-space:normal}.ne-rx-presentation-options{grid-template-columns:1fr}.ne-rx-presentation-options span{justify-content:flex-start;text-align:left}}

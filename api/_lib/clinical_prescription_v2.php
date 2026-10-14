@@ -64,14 +64,35 @@ function clinical_prescription_v2_published_logo_url(string $url): bool
     return preg_match('#^/api/media/index\.php/public/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$#iD', trim($url)) === 1;
 }
 
+/** Prescription-only presentation v2. V1 shown/hidden remains byte-compatible for stored documents. */
+function clinical_prescription_v2_presentation(array $payload): array
+{
+    $presentation = is_array($payload['presentation'] ?? null) ? $payload['presentation'] : [];
+    if (($presentation['version'] ?? null) === 2
+        && in_array($presentation['professional_header'] ?? null, ['hidden','data_only','logo_and_data'], true)) {
+        return ['version'=>2,'professional_header'=>$presentation['professional_header']];
+    }
+    if (clinical_legal_document_presentation_valid($payload)) {
+        return ['version'=>1,'professional_header'=>(($presentation['professional_header'] ?? 'shown') === 'hidden' ? 'hidden' : 'shown')];
+    }
+    throw new InvalidArgumentException('PRESCRIPTION_V2_CONTRACT_INVALID');
+}
+
+function clinical_prescription_v2_presentation_mode(array $payload): string
+{
+    $presentation = clinical_prescription_v2_presentation($payload);
+    if ($presentation['version'] === 1) return $presentation['professional_header'] === 'hidden' ? 'hidden' : 'logo_and_data';
+    return $presentation['professional_header'];
+}
+
 function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $patientId, array $body,
     bool $final = false): array
 {
     $source = is_array($body['payload'] ?? null) ? $body['payload'] : [];
     if (($body['document_type'] ?? 'prescription') !== 'prescription'
-        || (int)($source['contract_version'] ?? 0) !== 2
-        || !clinical_legal_document_presentation_valid($source))
+        || (int)($source['contract_version'] ?? 0) !== 2)
         throw new InvalidArgumentException('PRESCRIPTION_V2_CONTRACT_INVALID');
+    $presentation = clinical_prescription_v2_presentation($source);
     $context = is_array($body['context'] ?? null) ? $body['context'] : [];
     if (isset($context['patient_id']) && (string)$context['patient_id'] !== $patientId)
         throw new InvalidArgumentException('PRESCRIPTION_PATIENT_SCOPE_INVALID');
@@ -138,8 +159,7 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
         // Location publication is governed exclusively by professional_presentation V2.
         'professional_context'=>['consultorio'=>null,'logo_url'=>$logo],
         'professional_presentation'=>$professionalPresentation,
-        'presentation'=>['version'=>1,'professional_header'=>
-            ($source['presentation']['professional_header'] ?? 'shown') === 'hidden' ? 'hidden' : 'shown'],
+        'presentation'=>$presentation,
         'encounter_reference'=>$encounter === null ? null : ['encounter_id'=>(int)$encounter['encounter_id'],
             'appointment_id'=>$appointmentId ?: null],
         'issue_date'=>(new DateTimeImmutable('now',new DateTimeZone('America/Mexico_City')))->format('Y-m-d'),
@@ -156,9 +176,10 @@ function clinical_prescription_v2_render(array $payload): string
     $professional = (array)($payload['professional_context'] ?? []);
     $logo = (string)($professional['logo_url'] ?? '');
     $html = '<article class="rx-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe"><div class="doc-base-sheet-inner doc-base-body">';
-    if (clinical_legal_document_professional_header_mode($payload) === 'shown') {
+    $presentationMode = clinical_prescription_v2_presentation_mode($payload);
+    if ($presentationMode !== 'hidden') {
         $html .= '<header class="clinical-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">';
-        if (clinical_prescription_v2_published_logo_url($logo))
+        if ($presentationMode === 'logo_and_data' && clinical_prescription_v2_published_logo_url($logo))
             $html .= '<div class="clinical-doc-head-logo-slot"><img src="'.$h($logo).'" alt="Logo médico"></div>';
         $html .= '<div class="clinical-doc-head-main"><div class="clinical-doc-doctor-name">'.$h($doctor['full_name'] ?? '').'</div>';
         foreach (['designation'=>'','specialty'=>'','license'=>'Cédula profesional: ',

@@ -207,7 +207,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=rec-vis07" />
+<link rel="stylesheet" href="assets/css/style.css?v=rec-vis08" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -8746,9 +8746,12 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                           <strong>Seguridad actual</strong><span>Consultando alergias, medicación y problemas activos…</span>
                         </div>
                         <div class="rx-medication-composition" id="ne_rx_medication_composition">
-                          <h4 class="ne-rx-section-title ne-rx-list-title d-none" id="ne_rx_added_heading" aria-live="polite">
-                            MEDICAMENTOS AGREGADOS (<span id="ne_rx_count">0</span>)
-                          </h4>
+                          <div class="ne-rx-added-head d-none" id="ne_rx_added_head">
+                            <h4 class="ne-rx-section-title ne-rx-list-title" id="ne_rx_added_heading" aria-live="polite">
+                              MEDICAMENTOS AGREGADOS (<span id="ne_rx_count">0</span>)
+                            </h4>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_add">Agregar otro medicamento</button>
+                          </div>
                           <div class="ne-rx-grid" id="ne_rx_grid">
                             <!-- filas dinámicas -->
                           </div>
@@ -8757,17 +8760,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                           <label class="form-label mb-1" for="ne_rx_observations">Observaciones para el paciente</label>
                           <textarea class="form-control form-control-sm" id="ne_rx_observations" rows="2"></textarea>
                         </div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                          <label class="small fw-semibold mb-0" for="ne_rx_professional_header">Encabezado profesional</label>
-                          <select class="form-select form-select-sm w-auto" id="ne_rx_professional_header">
-                            <option value="shown">Mostrar logotipo y datos profesionales</option>
-                            <option value="hidden">Generar sin encabezado profesional</option>
-                          </select>
-                        </div>
-                        <div class="d-flex justify-content-center align-items-center mt-2 gap-2 flex-wrap ne-rx-add-row">
-                          <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_add">Agregar otro medicamento</button>
-                          <div class="small d-none" id="ne_rx_feedback" role="status" aria-live="polite"></div>
-                        </div>
+                        <div class="small d-none" id="ne_rx_feedback" role="status" aria-live="polite"></div>
                         <div class="ne-rx-footer-grid mt-3">
                           <div class="ne-rx-analysis" id="ne_rx_analysis_block">
                             <div class="ne-rx-analysis-head d-flex align-items-center justify-content-between gap-2">
@@ -8793,6 +8786,15 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                         <div id="ne_rx_review" class="d-none">
                           <h6>Vista previa de receta</h6>
                           <div class="small text-muted mb-2">Revisa el documento completo antes de firmarlo.</div>
+                          <fieldset class="ne-rx-presentation" id="ne_rx_presentation">
+                            <legend>PRESENTACIÓN DEL DOCUMENTO</legend>
+                            <div class="ne-rx-presentation-options" role="radiogroup" aria-label="Presentación del encabezado profesional">
+                              <label><input type="radio" name="ne_rx_professional_header" value="hidden"><span>SIN ENCABEZADO</span></label>
+                              <label><input type="radio" name="ne_rx_professional_header" value="data_only"><span>SÓLO DATOS PROFESIONALES</span></label>
+                              <label><input type="radio" name="ne_rx_professional_header" value="logo_and_data" checked><span>LOGOTIPO Y DATOS PROFESIONALES</span></label>
+                            </div>
+                            <div class="small ne-rx-presentation-status" id="ne_rx_presentation_status" role="status" aria-live="polite"></div>
+                          </fieldset>
                           <div id="ne_rx_preview_html" class="doc-base-sheet-frame"></div>
                           <div class="d-flex justify-content-end gap-2 mt-3 rx-engine-actions">
                             <button type="button" class="btn btn-outline-secondary" id="ne_rx_back_to_capture">Volver a editar</button>
@@ -11606,14 +11608,14 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/clinical/informe-signature-binding.js?v=inf-imp01"></script>
 <script src="assets/js/clinical/nota-signature-binding.js?v=nm-imp01"></script>
 <script src="assets/js/clinical/free-document-signature-binding.js?v=free-doc02b"></script>
-<script src="assets/js/clinical/prescription-signature-binding.js?v=rec-imp02"></script>
+<script src="assets/js/clinical/prescription-signature-binding.js?v=rec-vis08"></script>
 <script src="assets/js/clinical/free-document-example-help.js?v=free-doc03"></script>
 <script src="assets/js/clinical/alta-signature-binding.js?v=doc-close02c"></script>
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/clinical/prescription-editor-host.js?v=rec-tpl02"></script>
-<script src="assets/js/app.js?v=rec-vis06"></script>
+<script src="assets/js/app.js?v=rec-vis08"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>

@@ -10,21 +10,25 @@
         result[key]=clean(item?.[key]);
       return result;
     });
-    const header=p.presentation?.professional_header==='hidden'?'hidden':'shown';
+    const presentationV2=p.presentation?.version===2;
+    const header=presentationV2&&['hidden','data_only','logo_and_data'].includes(p.presentation?.professional_header)
+      ?p.presentation.professional_header:(p.presentation?.professional_header==='hidden'?'hidden':'shown');
+    const headerShown=header!=='hidden',logoShown=header==='shown'||header==='logo_and_data';
     const result={version:1,document_type:'prescription',document_uuid:clean(body?.draft_ref),
       document_version:Number(body?.expected_version)||0,
       patient:{id:clean(patient.id),name:clean(patient.full_name),age:clean(patient.age),sex:clean(patient.sex)},
       physician:{user_id:clean(doctor.user_id),doctor_id:clean(doctor.doctor_id),name:clean(doctor.full_name),
-        prefix:header==='shown'?clean(doctor.prefix):'',designation:header==='shown'?clean(doctor.designation):'',
-        specialty:header==='shown'?clean(doctor.specialty):'',
+        prefix:headerShown?clean(doctor.prefix):'',designation:headerShown?clean(doctor.designation):'',
+        specialty:headerShown?clean(doctor.specialty):'',
         license:clean(doctor.license),specialty_license:clean(doctor.specialty_license)},
       issue_date:clean(p.issue_date),diagnostic_context:{mode:clean(diagnosis.mode),text:clean(diagnosis.text)},
       encounter_reference:{encounter_id:Number(p.encounter_reference?.encounter_id)||0,
         appointment_id:clean(p.encounter_reference?.appointment_id)},
       medication_count:items.length,medications:items,observations:clean(p.prescription?.observaciones),
-      presentation:{professional_header:header},professional_context:{logo_url:header==='hidden'?'':clean(professional.logo_url),
-        consultorio:{name:header==='shown'?clean(consultorio.name):'',
-          address:header==='shown'?clean(consultorio.address):''}}};
+      presentation:presentationV2?{version:2,professional_header:header}:{professional_header:header},
+      professional_context:{logo_url:logoShown?clean(professional.logo_url):'',
+        consultorio:{name:headerShown?clean(consultorio.name):'',
+          address:headerShown?clean(consultorio.address):''}}};
     const footer=p.professional_presentation||{};
     if(Number(footer.version)>=2){
       result.version=2;
