@@ -138,7 +138,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=rec-vis04" />
+<link rel="stylesheet" href="assets/css/style.css?v=rec-vis05" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -8370,21 +8370,20 @@
                 </section>
                 <section class="rx-editor-workspace d-none" data-rx-view="editor" data-rx-editor-workspace aria-labelledby="rx-editor-title">
                   <header class="rx-editor-workspace-head">
-                    <div><div class="rx-editor-eyebrow">RECETAS</div><h2 id="rx-editor-title" tabindex="-1">Nueva receta</h2>
-                      <p>Captura las indicaciones, revisa el documento y firma antes de emitir.</p></div>
+                    <h2 id="rx-editor-title" tabindex="-1">NUEVA RECETA</h2>
+                    <ol class="rx-editor-stepper" aria-label="Progreso de nueva receta">
+                      <li data-rx-host-step="1"><span>1</span><strong>Contexto</strong></li>
+                      <li data-rx-host-step="2"><span>2</span><strong>Medicamentos</strong></li>
+                      <li data-rx-host-step="3"><span>3</span><strong>Vista previa</strong></li>
+                      <li data-rx-host-step="4"><span>4</span><strong>Firma</strong></li>
+                      <li data-rx-host-step="5"><span>5</span><strong>Revisión</strong></li>
+                    </ol>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-rx-host-close>← Volver a Recetas</button>
                   </header>
                   <div class="rx-host-patient-context d-none" data-rx-host-patient-context>
                     <div><span>Paciente</span><strong data-rx-host-patient-name>Paciente activo</strong><small data-rx-host-patient-meta></small></div>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-rx-host-change-patient>Cambiar paciente</button>
                   </div>
-                  <ol class="rx-editor-stepper" aria-label="Progreso de nueva receta">
-                    <li data-rx-host-step="1"><span>1</span><strong>Contexto</strong></li>
-                    <li data-rx-host-step="2"><span>2</span><strong>Medicamentos</strong></li>
-                    <li data-rx-host-step="3"><span>3</span><strong>Vista previa</strong></li>
-                    <li data-rx-host-step="4"><span>4</span><strong>Firma</strong></li>
-                    <li data-rx-host-step="5"><span>5</span><strong>Revisión</strong></li>
-                  </ol>
                   <div class="rx-editor-mount" data-rx-editor-mount></div>
                   <nav class="rx-editor-actions" aria-label="Navegación de la receta">
                     <button type="button" class="btn btn-outline-secondary" data-rx-host-prev>Anterior</button>
@@ -8607,7 +8606,7 @@
                       <div class="modal-body ne-rx-modal-body">
                         <div id="ne_rx_capture">
                         <section data-rx-engine-stage="1" aria-labelledby="ne-rx-stage-context">
-                        <h3 class="ne-rx-stage-title" id="ne-rx-stage-context" tabindex="-1">Contexto clínico</h3>
+                        <h3 class="ne-rx-stage-title visually-hidden" id="ne-rx-stage-context" tabindex="-1">Contexto clínico</h3>
                         <div class="d-flex justify-content-end align-items-center gap-2 mb-2">
                           <span class="small text-muted" id="ne_rx_draft_status"></span>
                           <button type="button" class="btn btn-outline-primary btn-sm d-none" id="ne_rx_continue_draft">Continuar borrador</button>
@@ -8642,7 +8641,7 @@
                           </div>
                         </div></section>
                         <section data-rx-engine-stage="2" aria-labelledby="ne-rx-stage-medications">
-                        <h3 class="ne-rx-section-title mb-2" id="ne-rx-stage-medications" tabindex="-1">Medicamentos</h3>
+                        <h3 class="ne-rx-section-title visually-hidden" id="ne-rx-stage-medications" tabindex="-1">Medicamentos</h3>
                         <div class="ne-rx-grid" id="ne_rx_grid">
                           <!-- filas dinámicas -->
                         </div>
