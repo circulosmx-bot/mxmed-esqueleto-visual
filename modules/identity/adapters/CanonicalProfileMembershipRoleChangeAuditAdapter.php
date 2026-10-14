@@ -47,6 +47,7 @@ final class CanonicalProfileMembershipRoleChangeAuditAdapter implements ProfileM
             'approval_reference'=>$record->approvalReference,'case_reference'=>$record->caseReference,
             'approval_decision_reference'=>$record->approvalDecisionReference,
             'approval_authority_account_id'=>$record->approverAccountId,
+            'approval_authority_account_ids'=>$record->approverAccountIds,
             'step_up_reference'=>$record->stepUpReference,'approval_decision'=>$record->approvalDecision,
             'step_up_decision'=>$record->stepUpDecision,'transaction_outcome'=>$record->transactionOutcome];
         $this->writer->append(new CanonicalAuditEventInput('ROLE_REVOKED','SUCCESS','ADMIN_DECISION','account',

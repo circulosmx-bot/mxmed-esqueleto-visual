@@ -20,6 +20,8 @@ final readonly class ProfileMembershipRoleChangeAuditRecord
         public string $caseReference,
         public string $approvalDecisionReference,
         public string $approverAccountId,
+        /** @var list<string> */
+        public array $approverAccountIds,
         public string $stepUpReference,
         public string $approvalDecision,
         public string $stepUpDecision,
@@ -30,5 +32,7 @@ final readonly class ProfileMembershipRoleChangeAuditRecord
             $approvalReference,$caseReference,$approvalDecisionReference,$approverAccountId,$stepUpReference] as $value)
             if($value===''||strlen($value)>191||preg_match('/[\x00-\x1F\x7F]/',$value)===1)throw new \InvalidArgumentException('invalid_profile_role_change_audit_record');
         if($approvalDecision!=='APPROVED'||$stepUpDecision!=='VERIFIED'||$transactionOutcome!=='SUCCESS')throw new \InvalidArgumentException('invalid_profile_role_change_audit_outcome');
+        if(count($approverAccountIds)!==2||count(array_unique($approverAccountIds,SORT_STRING))!==2
+            ||!in_array($approverAccountId,$approverAccountIds,true))throw new \InvalidArgumentException('invalid_profile_role_change_approvers');
     }
 }

@@ -24,10 +24,11 @@ final class DisposableApprovalPort implements ProfileOwnershipApprovalPort
         if($transaction!==$this->pdo||!$transaction->inTransaction())throw new RuntimeException('approval_transaction_required');
         $s=$this->pdo->prepare('SELECT * FROM qa_ownership_approvals WHERE approval_reference=? FOR UPDATE');$s->execute([$request->approvalReference]);$r=$s->fetch(PDO::FETCH_ASSOC);
         if(!is_array($r)||$r['status']!=='APPROVED'||$r['consumed_operation_id']!==null)throw new RuntimeException('approval_denied');
+        if($r['approver_account_id']===$r['target_account_id'])throw new RuntimeException('approval_self_denied');
         $u=$this->pdo->prepare("UPDATE qa_ownership_approvals SET consumed_operation_id=?,status='CONSUMED' WHERE approval_reference=? AND status='APPROVED' AND consumed_operation_id IS NULL");
         $u->execute([$request->operationId,$request->approvalReference]);if($u->rowCount()!==1)throw new RuntimeException('approval_replay');
         return new ProfileOwnershipApprovalEvidence($r['approval_reference'],$r['case_reference'],$r['decision_reference'],$r['approver_account_id'],
-            $r['executor_account_id'],$r['operation_id'],$r['membership_id'],$r['target_account_id'],$r['profile_doctor_id'],$r['expected_role'],'profile',$r['new_role'],
+            [$r['approver_account_id'],'qa_approver_2'],$r['executor_account_id'],$r['operation_id'],$r['membership_id'],$r['target_account_id'],$r['profile_doctor_id'],$r['expected_role'],'profile',$r['new_role'],
             new DateTimeImmutable($r['approved_at'],new DateTimeZone('UTC')),new DateTimeImmutable($r['expires_at'],new DateTimeZone('UTC')));
     }
 }

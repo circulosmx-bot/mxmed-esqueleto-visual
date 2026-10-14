@@ -65,7 +65,7 @@ final class ProfileMembershipRoleChangeService
                 $request->targetAccountId,$request->profileDoctorId,$request->membershipId,
                 $request->expectedRole,$request->newRole,$request->expectedScope,
                 $approval->approvalReference,$approval->caseReference,$approval->decisionReference,
-                $approval->approverAccountId,$stepUp->auditReference,'APPROVED','VERIFIED','SUCCESS',$this->clock->now()
+                $approval->approverAccountId,$approval->approverAccountIds,$stepUp->auditReference,'APPROVED','VERIFIED','SUCCESS',$this->clock->now()
             );
             $this->audit->append($this->pdo,$record);
             if(!$this->pdo->commit())throw new \RuntimeException('profile_role_change_commit_failed');
@@ -123,7 +123,9 @@ final class ProfileMembershipRoleChangeService
     {
         $now=$this->clock->now();
         if($e->approvalReference!==$r->approvalReference||$e->executorAccountId!==$executor
-            ||$e->approverAccountId===$r->targetAccountId||$e->operationId!==$r->operationId
+            ||$e->approverAccountId===$r->targetAccountId||count($e->approverAccountIds)!==2
+            ||count(array_unique($e->approverAccountIds,SORT_STRING))!==2||in_array($r->targetAccountId,$e->approverAccountIds,true)
+            ||$e->operationId!==$r->operationId
             ||$e->membershipId!==$r->membershipId||$e->targetAccountId!==$r->targetAccountId
             ||$e->profileDoctorId!==$r->profileDoctorId||$e->expectedRole!==$r->expectedRole
             ||$e->expectedScope!==$r->expectedScope||$e->newRole!==$r->newRole

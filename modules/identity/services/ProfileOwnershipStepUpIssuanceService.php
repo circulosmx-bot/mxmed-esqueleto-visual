@@ -42,7 +42,7 @@ final class ProfileOwnershipStepUpIssuanceService
             throw new \RuntimeException('profile_ownership_step_up_credential_denied');
         try{
             $this->pdo->beginTransaction();
-            $approval=$this->pdo->prepare("SELECT approver_account_id,executor_account_id,target_account_id,membership_id,
+            $approval=$this->pdo->prepare("SELECT approver_account_id,case_reference,executor_account_id,target_account_id,membership_id,
                 profile_doctor_id,expected_role,expected_scope,new_role,status,expires_at
                 FROM auth_profile_ownership_approvals WHERE approval_reference=:approval_reference
                 AND operation_id=:operation_id FOR SHARE");
@@ -54,6 +54,16 @@ final class ProfileOwnershipStepUpIssuanceService
                 ||$row['expected_role']!==$request->expectedRole||$row['expected_scope']!==$request->expectedScope
                 ||$row['new_role']!==$request->newRole||new \DateTimeImmutable((string)$row['expires_at'],new \DateTimeZone('UTC'))<=$now)
                 throw new \RuntimeException('profile_ownership_step_up_approval_denied');
+            $dual=$this->pdo->prepare("SELECT COUNT(DISTINCT approver_account_id) FROM auth_profile_ownership_approval_endorsements
+                WHERE approval_reference=:approval_reference AND operation_id=:operation_id AND case_reference=:case_reference
+                  AND target_account_id=:target_account_id AND membership_id=:membership_id AND profile_doctor_id=:profile_doctor_id
+                  AND capability='profile_initial_ownership_approve' AND status='APPROVED' AND consumed_at IS NULL
+                  AND consumed_operation_id IS NULL AND expires_at>:now");
+            $dual->execute(['approval_reference'=>$request->approvalReference,'operation_id'=>$request->operationId,
+                'case_reference'=>(string)$row['case_reference'],'target_account_id'=>$request->targetAccountId,
+                'membership_id'=>$request->membershipId,'profile_doctor_id'=>$request->profileDoctorId,
+                'now'=>$now->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u')]);
+            if((int)$dual->fetchColumn()!==2)throw new \RuntimeException('profile_ownership_step_up_dual_approval_required');
             $proof=OneTimeTokenCodec::issue();$stepUpId=OneTimeTokenCodec::id('stepup_');$expires=$now->modify('+5 minutes');
             $this->proofs->issue($stepUpId,OneTimeTokenCodec::hash($proof),$request,$actor->accountId(),
                 (string)$session->sessionId(),$actor->principal()->credentialVersion(),$now,$expires);

@@ -11,6 +11,8 @@ final readonly class ProfileOwnershipApprovalEvidence
         public string $caseReference,
         public string $decisionReference,
         public string $approverAccountId,
+        /** @var list<string> */
+        public array $approverAccountIds,
         public string $executorAccountId,
         public string $operationId,
         public string $membershipId,
@@ -28,6 +30,11 @@ final readonly class ProfileOwnershipApprovalEvidence
         foreach ([$approverAccountId,$executorAccountId,$targetAccountId,$membershipId,$profileDoctorId] as $identifier) {
             if (preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/D',$identifier)!==1) throw new \InvalidArgumentException('invalid_approval_evidence_identifier');
         }
+        if(count($approverAccountIds)!==2||count(array_unique($approverAccountIds,SORT_STRING))!==2
+            ||!in_array($approverAccountId,$approverAccountIds,true)||in_array($targetAccountId,$approverAccountIds,true))
+            throw new \InvalidArgumentException('invalid_approval_evidence_authorities');
+        foreach($approverAccountIds as $identifier)if(preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/D',$identifier)!==1)
+            throw new \InvalidArgumentException('invalid_approval_evidence_identifier');
         if($expiresAt<=$approvedAt)throw new \InvalidArgumentException('invalid_approval_evidence_window');
     }
 }
