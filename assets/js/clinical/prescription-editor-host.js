@@ -66,6 +66,7 @@
   const openEmbedded = options => {
     try { window.bootstrap?.Modal?.getInstance(modal)?.hide(); } catch (_) {}
     mode = 'embedded'; caller=options?.caller||'patient'; sourceElement=options?.sourceElement||null;returnFocus=options?.returnFocus||null;
+    workspace.dataset.rxCaller=caller;
     returnView = ['history','plan'].includes(options?.returnView) ? options.returnView : 'landing';
     if(options?.workspaceMount) options.workspaceMount.appendChild(workspace); else workspaceAnchor.after(workspace);
     workspace.classList.remove('d-none');
@@ -82,7 +83,7 @@
     const closedCaller=caller,closedSource=sourceElement,closedReturnFocus=returnFocus,currentParent=workspace.parentElement;
     restoreModalBody(); workspaceAnchor.after(workspace);
     if(currentParent&&currentParent!==workspaceHome)currentParent.classList.add('d-none');
-    closedSource?.classList.remove('d-none');mode='modal';caller='patient';sourceElement=null;returnFocus=null;
+    closedSource?.classList.remove('d-none');delete workspace.dataset.rxCaller;mode='modal';caller='patient';sourceElement=null;returnFocus=null;
     workspace.dispatchEvent(new CustomEvent('mxmed:prescription-host-closed',{bubbles:true,detail:{returnView,caller:closedCaller}}));
     closedReturnFocus?.focus?.({preventScroll:true});
   };

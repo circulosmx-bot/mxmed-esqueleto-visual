@@ -38417,16 +38417,56 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   window.validatePrescriptionDraft = validatePrescriptionDraft;
 
   let rxClinicalContext = null, rxClinicalContextRevision = '', rxClinicalContextGeneration = 0;
+  const prescriptionCompactAllergy = data => {
+    if(data?.state==='CONFIRMED_NONE')return 'Sin alergias conocidas registradas';
+    if(data?.state==='UNREVIEWED')return 'Alergias no revisadas';
+    if(data?.state!=='PRESENT')return 'Información de alergias no disponible';
+    const names=[...new Set((data.items||[]).map(row=>normalizeRecetaText(row.substance)).filter(Boolean))];
+    if(!names.length)return 'Información de alergias no disponible';
+    const visible=names.slice(0,2).join(', '),more=names.length-2;
+    return `${names.length===1?'Alergia activa':'Alergias activas'}: ${visible}${more>0?` + ${more} más`:''}`;
+  };
+  const prescriptionCompactMedication = data => {
+    if(data?.state==='PRESENT'){
+      const count=(data.items||[]).length;
+      return `${count} medicamento${count===1?'':'s'} registrado${count===1?'':'s'}`;
+    }
+    if(['CONFIRMED_NONE','NONE_ACTIVE'].includes(data?.state))return 'Sin medicamentos relevantes registrados';
+    if(data?.state==='UNREVIEWED')return 'Medicación no revisada';
+    return 'Información de medicación no disponible';
+  };
+  const prescriptionCompactProblem = data => {
+    if(data?.state==='PRESENT'){
+      const count=(data.items||[]).length;
+      return `${count} problema${count===1?'':'s'} activo${count===1?'':'s'}`;
+    }
+    if(data?.state==='NONE_ACTIVE')return 'Sin problemas activos registrados';
+    return 'Información de problemas no disponible';
+  };
   const renderRecetaContextPanel = (ctx, canonical = null) => {
     const prescriptionContext = collectPrescriptionClinicalContext(ctx, canonical);
     if (window.mxmedPrescriptionHost?.isEmbedded()) {
       const list = values => (Array.isArray(values) ? values : []).map(value=>`<li>${escapeHtmlLite(value)}</li>`).join('');
-      els.rxContext.className='rx-embedded-context mb-3';
-      els.rxContext.innerHTML=`<div class="rx-context-card"><strong>Consulta</strong><span>${escapeHtmlLite(prescriptionContext.encounter_status)}</span></div>
-        <div class="rx-context-card"><strong>Alergias</strong><ul>${list(prescriptionContext.allergies)}</ul></div>
-        <div class="rx-context-card"><strong>Medicación actual</strong><ul>${list(prescriptionContext.current_medications)}</ul></div>
-        <div class="rx-context-card"><strong>Problemas activos</strong><ul>${list(prescriptionContext.active_problems)}</ul></div>
-        <div class="rx-context-date">Fecha clínica local: ${escapeHtmlLite(prescriptionContext.display_current_date)}</div>`;
+      const caller=window.mxmedPrescriptionHost?.caller?.()||'patient';
+      const allergy=prescriptionCompactAllergy(canonical?.allergies);
+      const medication=prescriptionCompactMedication(canonical?.medications);
+      const problem=prescriptionCompactProblem(canonical?.problems);
+      const consultation=prescriptionContext.clinical_reason||prescriptionContext.encounter_status;
+      els.rxContext.className=`rx-embedded-context rx-compact-context mb-3 rx-context-host-${escapeHtmlLite(caller)}`;
+      els.rxContext.innerHTML=`<section class="rx-safety-summary" aria-labelledby="rx-safety-summary-title">
+          <div><strong id="rx-safety-summary-title">Seguridad clínica</strong><div class="rx-safety-facts" role="list">
+            <span class="rx-safety-allergy" role="listitem">${escapeHtmlLite(allergy)}</span>
+            <span role="listitem">${escapeHtmlLite(medication)}</span><span role="listitem">${escapeHtmlLite(problem)}</span>
+          </div></div>
+          <button type="button" class="rx-context-toggle" data-rx-context-toggle aria-expanded="false" aria-controls="rx-clinical-context-detail">Ver contexto clínico</button>
+        </section>
+        <section class="rx-context-detail" id="rx-clinical-context-detail" data-rx-context-detail hidden aria-label="Contexto clínico completo">
+          <div class="rx-context-card"><strong>Consulta</strong><span>${escapeHtmlLite(consultation||'Sin consulta activa')}</span></div>
+          <div class="rx-context-card"><strong>Alergias</strong><ul>${list(prescriptionContext.allergies)}</ul></div>
+          <div class="rx-context-card"><strong>Medicamentos relevantes</strong><ul>${list(prescriptionContext.current_medications)}</ul></div>
+          <div class="rx-context-card"><strong>Problemas activos</strong><ul>${list(prescriptionContext.active_problems)}</ul></div>
+          <div class="rx-context-date">Contexto clínico al ${escapeHtmlLite(prescriptionContext.display_current_date)}</div>
+        </section>`;
     } else {
       renderClinicalSlimHeader(els.rxContext, prescriptionContext, { layout: 'modal' });
       let problems = els.rxContext?.querySelector('[data-rx-context-problems]');
@@ -38439,6 +38479,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if (problems) problems.textContent = `Problemas activos: ${(prescriptionContext.active_problems || []).join(' · ')}`;
     }
   };
+  els.rxContext?.addEventListener('click', event => {
+    const button=event.target.closest('[data-rx-context-toggle]');
+    if(!button)return;
+    const detail=els.rxContext.querySelector('[data-rx-context-detail]'),expanded=button.getAttribute('aria-expanded')==='true';
+    button.setAttribute('aria-expanded',String(!expanded));button.textContent=expanded?'Ver contexto clínico':'Ocultar contexto clínico';
+    if(detail)detail.hidden=expanded;
+  });
   const rxFetchClinicalContext = async ctx => {
     const patientId = normalizeRecetaText(ctx.patient_id);
     if (!patientId) throw new Error('Paciente no disponible.');
