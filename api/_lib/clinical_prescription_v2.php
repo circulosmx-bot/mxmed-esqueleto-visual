@@ -176,8 +176,11 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
     clinical_encounter_integrity_assert_schema_ready($pdo);
     $semantic = ['patient_id'=>$patientId,'doctor_id'=>(string)$doctor['doctor_id'],
         'intent'=>$intent,'draft_ref'=>$draftRef,'expected_version'=>$expected,'body'=>$body];
-    $service = new ClinicalEncounterIntegrityService($pdo);
-    return $service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT', (string)$doctor['doctor_id'],
+    // Prescription V2 is a canonical patient-level document writer. It may carry an
+    // explicitly validated encounter reference, but it is not an encounter mutation
+    // and must not depend on the rollout gate for the encounter integrity service.
+    return (new ClinicalIdempotentCreateExecutor($pdo))->execute(
+        'CREATE_ENCOUNTER_DOCUMENT', (string)$doctor['doctor_id'],
         'PATIENT', $patientId, $idempotencyKey, $semantic, 'document_id', (string)$doctor['user_id'],
         function () use ($pdo,$doctor,$patientId,$body,$intent,$draftRef,$expected): int {
             if (!clinical_has_active_doctor_patient_link($pdo,(string)$doctor['doctor_id'],$patientId))

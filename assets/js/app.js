@@ -34714,6 +34714,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxDxText: document.getElementById('ne_rx_dx_text'),
     rxUseTemplate: document.getElementById('ne_rx_use_template'),
     rxSaveTemplate: document.getElementById('ne_rx_save_template'),
+    rxAddedHeading: document.getElementById('ne_rx_added_heading'),
     rxTemplateStatus: document.getElementById('ne_rx_template_status'),
     rxCount: document.getElementById('ne_rx_count'),
 
@@ -37808,7 +37809,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   };
   const updateRxCount = () => {
     if (!els.rxCount) return;
-    els.rxCount.textContent = String(mapValidPrescriptionItems(collectRxModal()).length);
+    const confirmed = Array.from(els.rxGrid?.querySelectorAll('.ne-rx-row[data-ne-rx-existing="1"]') || [])
+      .filter(row => normalizeRecetaText(row.querySelector('[data-ne-rx="name"]')?.value)).length;
+    els.rxCount.textContent = String(confirmed);
+    els.rxAddedHeading?.classList.toggle('d-none', confirmed === 0);
+    document.getElementById('ne_rx_medication_composition')?.classList.toggle('has-added', confirmed > 0);
     refreshRxTemplateAvailability();
   };
   const refreshRxRowsVisuals = () => {
@@ -39397,6 +39402,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         return;
       }
       setRxRowState(row, 'collapsed');
+      row.setAttribute('data-ne-rx-existing', '1');
       setRxFeedback('', 'muted');
       refreshRxRowsVisuals();
       return;
@@ -39409,6 +39415,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setRxRowState(row, 'collapsed');
       } else {
         row.remove();
+        if (!els.rxGrid?.querySelector('.ne-rx-row')) {
+          const first = normalizePrescriptionMedication({}, 'rxm_1');
+          first.__existing = false;
+          els.rxGrid.innerHTML = rxRowHtml(0, first);
+          setRxRowState(els.rxGrid.querySelector('.ne-rx-row'), 'expanded');
+        }
       }
       resetPrescriptionAnalysisDraft();
       updateRxAnalysisActionState();
@@ -39428,6 +39440,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.rxGrid.insertAdjacentHTML('beforeend', rxRowHtml(idx, clone));
       const inserted = els.rxGrid.querySelectorAll('.ne-rx-row')[idx];
       if (inserted) {
+        inserted.setAttribute('data-ne-rx-existing', '1');
         updateRxRowSummary(inserted);
         setRxRowState(inserted, 'collapsed');
       }
@@ -39439,6 +39452,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (del) {
       const rows = els.rxGrid ? els.rxGrid.querySelectorAll('.ne-rx-row') : [];
       del.closest('.ne-rx-row')?.remove();
+      if (rows.length === 1 && els.rxGrid) {
+        const first = normalizePrescriptionMedication({}, 'rxm_1');
+        first.__existing = false;
+        els.rxGrid.innerHTML = rxRowHtml(0, first);
+        setRxRowState(els.rxGrid.querySelector('.ne-rx-row'), 'expanded');
+      }
       resetPrescriptionAnalysisDraft();
       updateRxAnalysisActionState();
       refreshRxRowsVisuals();

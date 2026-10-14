@@ -138,7 +138,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=rec-tpl02" />
+<link rel="stylesheet" href="assets/css/style.css?v=rec-vis06" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -8343,7 +8343,7 @@
 
               <div class="tab-pane fade" id="t-tratamiento" data-rx-patient-root>
                 <section class="rx-ux-panel" data-rx-view="landing">
-                  <h2>Recetas</h2>
+                  <h2>RECETAS</h2>
                   <p>Emite una nueva receta o consulta las recetas registradas para este paciente.</p>
                   <div class="rx-ux-choices">
                     <button type="button" class="rx-ux-choice" data-rx-action="emit">
@@ -8357,7 +8357,7 @@
                   </div>
                 </section>
                 <section class="rx-ux-panel d-none" data-rx-view="history" aria-label="Historial de recetas">
-                  <div class="rx-ux-history-head"><button type="button" class="btn btn-outline-primary btn-sm" data-rx-action="back">← Volver a Recetas</button><h2>Consultar recetas</h2></div>
+                  <div class="rx-ux-history-head"><h2>CONSULTAR RECETAS</h2><button type="button" class="btn btn-outline-primary btn-sm" data-rx-action="back">← Volver a Recetas</button></div>
                   <div class="rx-ux-filters" role="group" aria-label="Filtrar recetas">
                     <button type="button" class="btn btn-primary btn-sm" data-rx-filter="all" aria-pressed="true">Todas</button>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-rx-filter="issued" aria-pressed="false">Emitidas</button>
@@ -8649,10 +8649,14 @@
                         <div class="rx-template-safety-summary mb-2" data-rx-template-safety role="status" aria-live="polite">
                           <strong>Seguridad actual</strong><span>Consultando alergias, medicación y problemas activos…</span>
                         </div>
-                        <div class="ne-rx-grid" id="ne_rx_grid">
-                          <!-- filas dinámicas -->
+                        <div class="rx-medication-composition" id="ne_rx_medication_composition">
+                          <h4 class="ne-rx-section-title ne-rx-list-title d-none" id="ne_rx_added_heading" aria-live="polite">
+                            MEDICAMENTOS AGREGADOS (<span id="ne_rx_count">0</span>)
+                          </h4>
+                          <div class="ne-rx-grid" id="ne_rx_grid">
+                            <!-- filas dinámicas -->
+                          </div>
                         </div>
-                        <div class="ne-rx-section-title ne-rx-list-title mt-3 mb-2">Receta (<span id="ne_rx_count">0</span> medicamentos)</div>
                         <div class="mb-2">
                           <label class="form-label mb-1" for="ne_rx_observations">Observaciones para el paciente</label>
                           <textarea class="form-control form-control-sm" id="ne_rx_observations" rows="2"></textarea>
@@ -11511,7 +11515,7 @@
 <script src="assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/clinical/prescription-editor-host.js?v=rec-tpl02"></script>
-<script src="assets/js/app.js?v=rec-tpl02"></script>
+<script src="assets/js/app.js?v=rec-vis06"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
