@@ -34712,9 +34712,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxAnalysisConfirm: document.getElementById('ne_rx_analysis_confirm'),
     rxDxMode: document.getElementById('ne_rx_dx_mode'),
     rxDxText: document.getElementById('ne_rx_dx_text'),
+    rxUseTemplate: document.getElementById('ne_rx_use_template'),
     rxSaveTemplate: document.getElementById('ne_rx_save_template'),
+    rxTemplateStatus: document.getElementById('ne_rx_template_status'),
     rxCount: document.getElementById('ne_rx_count'),
-    rxTemplateHint: document.getElementById('ne_rx_template_hint'),
 
     docModal: document.getElementById('modalNotaEvolucion'),
     docModalTitle: document.getElementById('ne_doc_modal_title'),
@@ -37083,7 +37084,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const isExisting = row.getAttribute('data-ne-rx-existing') === '1';
       setRxRowState(row, isExisting ? 'collapsed' : 'expanded');
     });
-    updateRxTemplateHint();
+    refreshRxTemplateAvailability();
     refreshRxRowsVisuals();
     rxClinicalContext = null;
     rxClinicalContextRevision = '';
@@ -37670,17 +37671,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const text = normalizeRecetaText(els.rxDxText?.value);
     return { mode, text };
   };
-  const diagnosticModeLabel = (mode) => {
-    if (mode === 'diagnostico') return 'Diagnóstico';
-    if (mode === 'prediagnostico') return 'Prediagnóstico';
-    return 'Sin diagnóstico definido';
-  };
-  const updateRxTemplateHint = () => {
-    if (!els.rxTemplateHint) return;
-    const dx = collectRxDiagnosticContext();
-    const label = diagnosticModeLabel(dx.mode);
-    const suffix = dx.text ? `${label}: ${dx.text}` : label;
-    els.rxTemplateHint.textContent = `Plantilla de receta para: ${suffix}.`;
+  const refreshRxTemplateAvailability = () => {
+    const hasMedication = mapValidPrescriptionItems(collectRxModal()).length > 0;
+    els.rxSaveTemplate?.classList.toggle('d-none', !hasMedication);
   };
   const hydrateRxDiagnosticContext = (draft) => {
     const mode = normalizeRecetaText(draft?.diagnostic_context?.mode) || 'sin_diagnostico';
@@ -37816,6 +37809,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   const updateRxCount = () => {
     if (!els.rxCount) return;
     els.rxCount.textContent = String(mapValidPrescriptionItems(collectRxModal()).length);
+    refreshRxTemplateAvailability();
   };
   const refreshRxRowsVisuals = () => {
     if (!els.rxGrid) return;
@@ -38445,12 +38439,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   };
   const renderRecetaContextPanel = (ctx, canonical = null) => {
     const prescriptionContext = collectPrescriptionClinicalContext(ctx, canonical);
+    const allergy=prescriptionCompactAllergy(canonical?.allergies);
+    const medication=prescriptionCompactMedication(canonical?.medications);
+    const problem=prescriptionCompactProblem(canonical?.problems);
+    const stageSafety=document.querySelector('[data-rx-template-safety]');
+    if(stageSafety)stageSafety.innerHTML=`<strong>Seguridad actual</strong><span class="rx-safety-allergy">${escapeHtmlLite(allergy)}</span><span>${escapeHtmlLite(medication)}</span><span>${escapeHtmlLite(problem)}</span>`;
     if (window.mxmedPrescriptionHost?.isEmbedded()) {
       const list = values => (Array.isArray(values) ? values : []).map(value=>`<li>${escapeHtmlLite(value)}</li>`).join('');
       const caller=window.mxmedPrescriptionHost?.caller?.()||'patient';
-      const allergy=prescriptionCompactAllergy(canonical?.allergies);
-      const medication=prescriptionCompactMedication(canonical?.medications);
-      const problem=prescriptionCompactProblem(canonical?.problems);
       const consultation=prescriptionContext.clinical_reason||prescriptionContext.encounter_status;
       els.rxContext.className=`rx-embedded-context rx-compact-context mb-3 rx-context-host-${escapeHtmlLite(caller)}`;
       els.rxContext.innerHTML=`<section class="rx-safety-summary" aria-labelledby="rx-safety-summary-title">
@@ -38781,6 +38777,247 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (!response.ok || !result?.ok) throw new Error(result?.message || result?.error || `HTTP ${response.status}`);
     return result.data;
   };
+  const rxTemplateModal = document.getElementById('modalPrescriptionTemplateFlow');
+  const rxTemplateTitle = document.getElementById('rx_tpl_modal_title');
+  const rxTemplateBody = document.getElementById('rx_tpl_modal_body');
+  const rxTemplateFooter = document.getElementById('rx_tpl_modal_footer');
+  // The canonical editor moves between tab hosts; keep its auxiliary dialog at the expediente root.
+  if (rxTemplateModal && rxTemplateModal.parentElement !== document.getElementById('p-expediente')) {
+    document.getElementById('p-expediente')?.append(rxTemplateModal);
+  }
+  let rxAppliedTemplateProvenance = null;
+  const rxTemplateMedicationFields = ['name','presentation','dose','route','frequency','duration','quantity','instructions'];
+  const rxTemplateMedicationLabels = {
+    name:'Medicamento',presentation:'Presentación',dose:'Dosis',route:'Vía',frequency:'Frecuencia',
+    duration:'Duración',quantity:'Cantidad',instructions:'Indicaciones al paciente'
+  };
+  const rxTemplateButton = (label, action, style = 'btn-outline-primary') => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = `btn btn-sm ${style}`;
+    button.textContent = label; button.dataset.rxTplAction = action;
+    return button;
+  };
+  const rxTemplateSetStatus = (message, tone = 'success') => {
+    if (!els.rxTemplateStatus) return;
+    els.rxTemplateStatus.textContent = String(message || '');
+    els.rxTemplateStatus.classList.toggle('d-none', !message);
+    els.rxTemplateStatus.classList.toggle('text-success', tone === 'success');
+    els.rxTemplateStatus.classList.toggle('text-danger', tone === 'error');
+  };
+  const rxTemplateSafeMedication = (item = {}) => Object.fromEntries(
+    rxTemplateMedicationFields.map((field) => [field, normalizeRecetaText(item?.[field])])
+  );
+  const rxTemplateCurrentMedications = () => mapValidPrescriptionItems(collectRxModal()).map(rxTemplateSafeMedication);
+  const rxTemplateContentFromCurrent = ({ diagnostic = false, observations = false, professionalHeader = false } = {}) => {
+    const content = { medications: rxTemplateCurrentMedications() };
+    if (diagnostic) content.diagnostic_context = collectRxDiagnosticContext();
+    if (observations) content.observations = normalizeRecetaText(rxObservations?.value);
+    if (professionalHeader) content.professional_header = rxProfessionalHeader?.value === 'hidden' ? 'hidden' : 'shown';
+    return content;
+  };
+  const rxTemplateHasExistingAuthoring = () => rxTemplateCurrentMedications().length > 0
+    || normalizeRecetaText(els.rxDxText?.value) !== '' || normalizeRecetaText(rxObservations?.value) !== '';
+  const rxTemplateEndpoint = async () => {
+    const scope = await rxCanonicalScope();
+    return `${window.location.origin}/api/clinical/index.php/doctors/${encodeURIComponent(scope.doctorId)}/prescription-templates`;
+  };
+  const rxTemplateRequest = async (suffix = '', method = 'GET', body = null) =>
+    rxRequest(`${await rxTemplateEndpoint()}${suffix}`, method, body);
+  const rxApplyTemplateContent = (record) => {
+    const content = record?.content || {};
+    const medications = Array.isArray(content.medications) ? content.medications.map((item, index) => ({
+      ...rxTemplateSafeMedication(item), uid:`rxm_${Date.now()}_${index + 1}`, source:'manual', private_notes:'', meta:{}, __existing:true
+    })) : [];
+    if (!medications.length) throw new Error('La plantilla no contiene medicamentos utilizables.');
+    els.rxGrid.innerHTML = medications.map((item,index)=>rxRowHtml(index,item)).join('');
+    Array.from(els.rxGrid.querySelectorAll('.ne-rx-row')).forEach((row)=>{
+      syncRowControlledStateFromInputs(row);
+      applyMedicationAdministrationContextToRow(row,'template');
+      updateRxRowSummary(row); setRxRowState(row,'collapsed');
+    });
+    if (content.diagnostic_context) hydrateRxDiagnosticContext({diagnostic_context:content.diagnostic_context});
+    if (Object.hasOwn(content,'observations') && rxObservations) rxObservations.value = content.observations || '';
+    if (Object.hasOwn(content,'professional_header') && rxProfessionalHeader) {
+      rxProfessionalHeader.value = content.professional_header === 'hidden' ? 'hidden' : 'shown';
+    }
+    const context = resolveRecetaRuntimeContext();
+    setRxDraft(context.patient_id, medications, { diagnostic_context: collectRxDiagnosticContext() });
+    rxAppliedTemplateProvenance = { template_uuid:record.uuid, template_version_applied:record.version };
+    rxReviewedFingerprint = '';
+    resetPrescriptionAnalysisDraft(); updateRxAnalysisActionState(); refreshRxRowsVisuals();
+    rxTemplateSetStatus(`Plantilla aplicada: ${record.template_name}.`);
+    setRxFeedback('Plantilla aplicada como base editable. Revisa la receta antes de continuar.','success');
+  };
+  const openRxTemplateFlow = async (initialView = 'library') => {
+    if (!rxTemplateModal || !rxTemplateBody || !rxTemplateFooter || !window.bootstrap?.Modal) return;
+    const modal = window.bootstrap.Modal.getOrCreateInstance(rxTemplateModal,{backdrop:false,focus:true});
+    const returnFocus = document.activeElement;
+    let records = [], showArchived = false, pendingApply = null, editing = null, deleting = null, busy = false;
+    const clear = (title) => { rxTemplateTitle.textContent = title; rxTemplateBody.replaceChildren(); rxTemplateFooter.replaceChildren(); };
+    const paragraph = (copy, className = 'small text-muted') => {
+      const p=document.createElement('p');p.className=className;p.textContent=copy;rxTemplateBody.append(p);return p;
+    };
+    const focusFirst = () => window.requestAnimationFrame(()=>rxTemplateBody.querySelector('input,button,select,textarea')?.focus());
+    const medicationEditorRow = (item = {}, index = 0) => {
+      const row=document.createElement('fieldset');row.className='rx-template-medication';row.dataset.rxTplMedication=String(index);
+      const legend=document.createElement('legend');legend.textContent=`Medicamento ${index + 1}`;
+      const remove=rxTemplateButton('Eliminar','remove-medication','btn-link text-danger');remove.dataset.index=String(index);
+      const head=document.createElement('div');head.className='rx-template-medication__head';head.append(legend,remove);row.append(head);
+      const grid=document.createElement('div');grid.className='rx-template-medication__grid';
+      rxTemplateMedicationFields.forEach((field)=>{
+        const label=document.createElement('label');label.className='ci-template-editor__field';
+        const span=document.createElement('span');span.className='form-label';span.textContent=rxTemplateMedicationLabels[field];
+        const input=document.createElement(field==='instructions'?'textarea':'input');
+        if(field!=='instructions')input.type='text';else input.rows=2;
+        input.className='form-control';input.dataset.rxTplField=field;input.value=String(item?.[field]||'');
+        if(field==='name')input.required=true;label.append(span,input);grid.append(label);
+      });
+      row.append(grid);return row;
+    };
+    const collectEditor = () => {
+      const form=rxTemplateBody.querySelector('#rx_template_editor_form');
+      if(!form?.reportValidity())return null;
+      const medications=[...form.querySelectorAll('[data-rx-tpl-medication]')].map((row)=>Object.fromEntries(
+        rxTemplateMedicationFields.map((field)=>[field,row.querySelector(`[data-rx-tpl-field="${field}"]`)?.value?.trim()||''])
+      )).filter((item)=>item.name);
+      if(!medications.length){ paragraph('Agrega al menos un medicamento con nombre.','alert alert-danger mt-3');return null; }
+      const content={medications};
+      const dxText=form.elements.namedItem('diagnostic_text')?.value?.trim()||'';
+      const dxMode=form.elements.namedItem('diagnostic_mode')?.value||'';
+      if(dxText||dxMode)content.diagnostic_context={mode:dxMode||'sin_diagnostico',text:dxText};
+      const observations=form.elements.namedItem('observations')?.value?.trim()||'';
+      if(observations)content.observations=observations;
+      const header=form.elements.namedItem('professional_header')?.value||'';
+      if(header)content.professional_header=header;
+      return {template_name:form.elements.namedItem('template_name').value.trim(),content};
+    };
+    const renderEditor = (record = null) => {
+      editing=record;clear(record?'EDITAR PLANTILLA':'NUEVA PLANTILLA');
+      paragraph('Contenido reutilizable privado. No incluye paciente, consulta, seguridad clínica, firma ni notas privadas.');
+      const content=record?.content||{};
+      const form=document.createElement('form');form.id='rx_template_editor_form';form.className='ci-template-editor';
+      const name=document.createElement('label');name.className='ci-template-editor__field';
+      name.innerHTML='<span class="form-label fw-semibold">Nombre de la plantilla</span>';
+      const nameInput=document.createElement('input');nameInput.className='form-control';nameInput.name='template_name';nameInput.maxLength=160;nameInput.required=true;nameInput.value=record?.template_name||'';name.append(nameInput);form.append(name);
+      const meds=document.createElement('div');meds.id='rx_tpl_editor_medications';meds.className='rx-template-medications';
+      const initial=content.medications?.length?content.medications:(rxTemplateCurrentMedications().length?rxTemplateCurrentMedications():[{}]);
+      initial.forEach((item,index)=>meds.append(medicationEditorRow(item,index)));form.append(meds);
+      form.append(rxTemplateButton('+ Agregar medicamento','add-medication','btn-outline-primary'));
+      const extras=document.createElement('div');extras.className='rx-template-editor-extras';
+      extras.innerHTML=`<label class="ci-template-editor__field"><span class="form-label">Clasificación diagnóstica opcional</span><select class="form-select" name="diagnostic_mode"><option value="">No incluir</option><option value="diagnostico">Diagnóstico</option><option value="prediagnostico">Prediagnóstico</option><option value="sin_diagnostico">Sin diagnóstico definido</option></select></label><label class="ci-template-editor__field"><span class="form-label">Descripción diagnóstica opcional</span><input class="form-control" name="diagnostic_text" maxlength="2000"></label><label class="ci-template-editor__field"><span class="form-label">Observaciones reutilizables opcionales</span><textarea class="form-control" name="observations" rows="2" maxlength="12000"></textarea></label><label class="ci-template-editor__field"><span class="form-label">Preferencia de encabezado opcional</span><select class="form-select" name="professional_header"><option value="">No incluir</option><option value="shown">Mostrar encabezado</option><option value="hidden">Ocultar encabezado</option></select></label>`;
+      extras.querySelector('[name="diagnostic_mode"]').value=content.diagnostic_context?.mode||'';
+      extras.querySelector('[name="diagnostic_text"]').value=content.diagnostic_context?.text||'';
+      extras.querySelector('[name="observations"]').value=content.observations||'';
+      extras.querySelector('[name="professional_header"]').value=content.professional_header||'';
+      form.append(extras);rxTemplateBody.append(form);
+      rxTemplateFooter.append(rxTemplateButton('Cancelar','library','btn-outline-secondary'),rxTemplateButton('Guardar plantilla','save-editor','btn-primary'));focusFirst();
+    };
+    const renderSaveCurrent = () => {
+      clear('GUARDAR COMO PLANTILLA');
+      paragraph('Los medicamentos se incluirán. El paciente, la consulta, el contexto clínico y las notas privadas nunca se guardan.');
+      const form=document.createElement('form');form.id='rx_template_save_current';form.className='ci-template-editor';
+      form.innerHTML=`<label class="ci-template-editor__field"><span class="form-label fw-semibold">Nombre de la plantilla</span><input class="form-control" name="template_name" maxlength="160" required></label><label class="form-check"><input class="form-check-input" type="checkbox" name="include_diagnostic"><span class="form-check-label">Incluir clasificación y descripción diagnóstica</span></label><label class="form-check"><input class="form-check-input" type="checkbox" name="include_observations"><span class="form-check-label">Incluir observaciones para el paciente</span></label><label class="form-check"><input class="form-check-input" type="checkbox" name="include_header"><span class="form-check-label">Incluir preferencia de encabezado profesional</span></label>`;
+      rxTemplateBody.append(form);rxTemplateFooter.append(rxTemplateButton('Cancelar','close','btn-outline-secondary'),rxTemplateButton('Guardar plantilla','save-current','btn-primary'));focusFirst();
+    };
+    const templateRow = (record) => {
+      const row=document.createElement('div');row.className='ci-template-row';
+      const icon=document.createElement('span');icon.className='material-symbols-outlined ci-template-row__icon';icon.setAttribute('aria-hidden','true');icon.textContent='prescriptions';
+      const copy=document.createElement('div');copy.className='ci-template-row__copy';
+      const name=document.createElement('strong');name.textContent=record.template_name;
+      const meta=document.createElement('span');meta.className='small text-muted';
+      const count=record.content?.medications?.length||0;const dx=record.content?.diagnostic_context?.text||'';
+      meta.textContent=`${count} medicamento${count===1?'':'s'}${dx?` · ${dx}`:''}`;
+      const date=document.createElement('span');date.className='small text-muted';date.textContent=`Actualizada: ${String(record.updated_at||'').replace('T',' ').slice(0,16)||'fecha no disponible'}`;
+      copy.append(name,meta,date);
+      const actions=document.createElement('div');actions.className='ci-template-row__actions';
+      if(record.status==='active'){
+        const use=rxTemplateButton('Usar plantilla','use','btn-primary');use.dataset.uuid=record.uuid;
+        const edit=rxTemplateButton('Editar','edit');edit.dataset.uuid=record.uuid;actions.append(use,edit);
+      }else{const badge=document.createElement('span');badge.className='badge bg-light text-dark border';badge.textContent='Archivada';actions.append(badge);}
+      const more=rxTemplateButton('⋯','more','btn-outline-secondary ci-template-row__more');more.dataset.uuid=record.uuid;more.setAttribute('aria-expanded','false');more.setAttribute('aria-haspopup','menu');more.setAttribute('aria-label',`Más acciones para plantilla ${record.template_name}`);
+      const menu=document.createElement('div');menu.className='ci-template-row__more-menu';menu.id=`rx_tpl_menu_${record.uuid.replace(/[^a-zA-Z0-9_-]/g,'_')}`;menu.hidden=true;menu.setAttribute('role','menu');menu.setAttribute('aria-label',`Acciones para plantilla ${record.template_name}`);more.setAttribute('aria-controls',menu.id);
+      if(record.status==='active')for(const [label,action] of [['Duplicar','duplicate'],['Archivar','archive']]){const b=rxTemplateButton(label,action,'btn-link');b.dataset.uuid=record.uuid;b.setAttribute('role','menuitem');menu.append(b);}
+      const del=rxTemplateButton('Eliminar','delete','btn-link text-danger');del.dataset.uuid=record.uuid;del.setAttribute('role','menuitem');menu.append(del);actions.append(more,menu);row.append(icon,copy,actions);return row;
+    };
+    const renderLibrary = async (notice = '') => {
+      clear('PLANTILLAS DE RECETA');paragraph('Mis plantillas · El contenido reutilizable se copiará a la receta actual.');
+      if(notice)paragraph(notice,'alert alert-success');
+      try{records=await rxTemplateRequest('?include_archived=1');}catch(error){paragraph(error.message,'alert alert-danger');records=[];}
+      records.sort((a,b)=>String(b.updated_at||'').localeCompare(String(a.updated_at||''))||a.template_name.localeCompare(b.template_name,'es'));
+      const tools=document.createElement('div');tools.className='ci-template-selector-tools';
+      const searchWrap=document.createElement('div');searchWrap.className='ci-template-selector-search';
+      searchWrap.innerHTML='<label class="form-label small fw-semibold mb-1" for="rx_tpl_search">Buscar plantilla</label><input id="rx_tpl_search" type="search" class="form-control" placeholder="Buscar plantilla...">';
+      tools.append(searchWrap,rxTemplateButton('+ Nueva plantilla','create'));rxTemplateBody.append(tools);
+      const archived=records.filter((item)=>item.status==='archived').length;
+      if(archived||showArchived){const toggle=rxTemplateButton(showArchived?'Volver a mis plantillas':`Ver archivadas (${archived})`,'archived-toggle','btn-link ci-template-archive-toggle');rxTemplateBody.append(toggle);}
+      const empty=paragraph('No tienes plantillas de receta guardadas.','text-muted small');
+      const list=document.createElement('div');list.className='ci-template-list';list.id='rx_tpl_selector_list';rxTemplateBody.append(list);
+      const filter=()=>{const query=normalizeQuickToken(searchWrap.querySelector('input').value);const matches=records.filter((item)=>item.status===(showArchived?'archived':'active')).filter((item)=>normalizeQuickToken(`${item.template_name} ${item.content?.diagnostic_context?.text||''}`).includes(query));list.replaceChildren(...matches.map(templateRow));empty.classList.toggle('d-none',matches.length>0);};
+      searchWrap.querySelector('input').addEventListener('input',filter);filter();
+      rxTemplateFooter.append(rxTemplateButton('Cerrar','close','btn-outline-secondary'));focusFirst();
+    };
+    const renderApplyConfirm = (record) => {
+      pendingApply=record;clear('USAR PLANTILLA');
+      paragraph('Esta plantilla reemplazará los medicamentos capturados y aplicará únicamente los campos reutilizables incluidos. El contexto clínico del paciente no cambiará.','alert alert-warning');
+      rxTemplateFooter.append(rxTemplateButton('Cancelar','library','btn-outline-secondary'),rxTemplateButton('Usar plantilla','confirm-use','btn-primary'));focusFirst();
+    };
+    const renderDelete = (record) => {
+      deleting=record;clear('ELIMINAR PLANTILLA');paragraph(`Eliminarás permanentemente «${record.template_name}». Las recetas creadas anteriormente no cambiarán.`);
+      const label=document.createElement('label');label.className='ci-template-editor__field';label.innerHTML='<span class="form-label fw-semibold">Para confirmar, escribe ELIMINAR.</span>';
+      const input=document.createElement('input');input.className='form-control';input.id='rx_tpl_delete_confirm';input.autocomplete='off';label.append(input);rxTemplateBody.append(label);
+      const cancel=rxTemplateButton('Cancelar','library','btn-outline-secondary');const confirm=rxTemplateButton('Eliminar plantilla','confirm-delete','btn-danger');confirm.disabled=true;
+      input.addEventListener('input',()=>{confirm.disabled=input.value.trim()!=='ELIMINAR';});rxTemplateFooter.append(cancel,confirm);focusFirst();
+    };
+    const onClick = async (event) => {
+      const button=event.target.closest('[data-rx-tpl-action]');if(!button||busy)return;
+      const action=button.dataset.rxTplAction;const record=records.find((item)=>item.uuid===button.dataset.uuid);
+      try{
+        if(action==='close'){modal.hide();return;}
+        if(action==='library'){await renderLibrary();return;}
+        if(action==='archived-toggle'){showArchived=!showArchived;await renderLibrary();return;}
+        if(action==='more'){const menu=button.nextElementSibling;const open=button.getAttribute('aria-expanded')==='true';rxTemplateBody.querySelectorAll('.ci-template-row__more-menu').forEach((item)=>item.hidden=true);rxTemplateBody.querySelectorAll('.ci-template-row__more').forEach((item)=>item.setAttribute('aria-expanded','false'));if(!open){menu.hidden=false;button.setAttribute('aria-expanded','true');}return;}
+        if(action==='create'){renderEditor();return;}
+        if(action==='edit'&&record){renderEditor(await rxTemplateRequest(`/${encodeURIComponent(record.uuid)}`));return;}
+        if(action==='add-medication'){event.preventDefault();const box=rxTemplateBody.querySelector('#rx_tpl_editor_medications');box.append(medicationEditorRow({},box.children.length));return;}
+        if(action==='remove-medication'){button.closest('[data-rx-tpl-medication]')?.remove();return;}
+        if(action==='save-editor'){
+          const payload=collectEditor();if(!payload)return;busy=true;
+          if(editing){payload.expected_version=editing.version;await rxTemplateRequest(`/${encodeURIComponent(editing.uuid)}`,'PUT',payload);}
+          else await rxTemplateRequest('','POST',payload);
+          editing=null;await renderLibrary('Plantilla guardada.');return;
+        }
+        if(action==='duplicate'&&record){busy=true;await rxTemplateRequest(`/${encodeURIComponent(record.uuid)}/duplicate`,'POST',{});await renderLibrary('Plantilla duplicada.');return;}
+        if(action==='archive'&&record){busy=true;await rxTemplateRequest(`/${encodeURIComponent(record.uuid)}/archive`,'POST',{expected_version:record.version});await renderLibrary('Plantilla archivada.');return;}
+        if(action==='delete'&&record){renderDelete(record);return;}
+        if(action==='confirm-delete'&&deleting){if(rxTemplateBody.querySelector('#rx_tpl_delete_confirm')?.value.trim()!=='ELIMINAR')return;busy=true;await rxTemplateRequest(`/${encodeURIComponent(deleting.uuid)}`,'DELETE',{expected_version:deleting.version});deleting=null;await renderLibrary('Plantilla eliminada.');return;}
+        if(action==='use'&&record){const selected=await rxTemplateRequest(`/${encodeURIComponent(record.uuid)}`);if(rxTemplateHasExistingAuthoring())renderApplyConfirm(selected);else{rxApplyTemplateContent(selected);modal.hide();}return;}
+        if(action==='confirm-use'&&pendingApply){rxApplyTemplateContent(pendingApply);pendingApply=null;modal.hide();return;}
+        if(action==='save-current'){
+          const form=rxTemplateBody.querySelector('#rx_template_save_current');if(!form?.reportValidity())return;
+          busy=true;await rxTemplateRequest('','POST',{template_name:form.elements.namedItem('template_name').value.trim(),content:rxTemplateContentFromCurrent({diagnostic:form.elements.namedItem('include_diagnostic').checked,observations:form.elements.namedItem('include_observations').checked,professionalHeader:form.elements.namedItem('include_header').checked})});
+          rxTemplateSetStatus('Plantilla guardada.');modal.hide();return;
+        }
+      }catch(error){paragraph(error?.message||'No se pudo completar la operación.','alert alert-danger mt-3');}
+      finally{busy=false;}
+    };
+    const onKeydown=(event)=>{
+      if(event.target.matches('[role="menuitem"]')&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+        const items=[...event.target.closest('[role="menu"]').querySelectorAll('[role="menuitem"]')];const index=items.indexOf(event.target);
+        const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
+        event.preventDefault();items[next]?.focus();return;
+      }
+      if(event.key==='Escape'){
+        const trigger=rxTemplateBody.querySelector('.ci-template-row__more[aria-expanded="true"]');
+        if(trigger){event.preventDefault();event.stopPropagation();trigger.nextElementSibling.hidden=true;trigger.setAttribute('aria-expanded','false');trigger.focus();}
+      }
+    };
+    const onHidden=()=>{rxTemplateModal.removeEventListener('click',onClick);rxTemplateModal.removeEventListener('keydown',onKeydown,true);rxTemplateModal.removeEventListener('hidden.bs.modal',onHidden);rxTemplateModal.style.zIndex='';returnFocus?.focus?.();};
+    rxTemplateModal.addEventListener('click',onClick);rxTemplateModal.addEventListener('keydown',onKeydown,true);rxTemplateModal.addEventListener('hidden.bs.modal',onHidden);
+    modal.show();rxTemplateModal.style.zIndex='1240';
+    if(initialView==='save')renderSaveCurrent();else await renderLibrary();
+  };
+  els.rxUseTemplate?.addEventListener('click',()=>void openRxTemplateFlow('library'));
+  els.rxSaveTemplate?.addEventListener('click',()=>void openRxTemplateFlow('save'));
   const rxCanonicalBody = (scope) => ({
     document_type: 'prescription',
     context: { patient_id: scope.patientId, ...(!rxServerDraft?.is_reissue && scope.ctx.encounter_key ? { encounter_key: scope.ctx.encounter_key } : {}) },
@@ -39487,16 +39724,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   els.rxDxMode?.addEventListener('change', () => {
     const ctx = resolveRecetaRuntimeContext();
     setRxDraft(ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
-    updateRxTemplateHint();
+    refreshRxTemplateAvailability();
   });
   els.rxDxText?.addEventListener('input', () => {
     const ctx = resolveRecetaRuntimeContext();
     setRxDraft(ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
-    updateRxTemplateHint();
-  });
-  els.rxSaveTemplate?.addEventListener('click', (event) => {
-    event.preventDefault();
-    setRxFeedback('La función de plantillas quedará habilitada en una siguiente fase.', 'muted');
+    refreshRxTemplateAvailability();
   });
   // Hook pendientes (cuando tengan confirmación de éxito explícita): estudios, documentos adjuntos y procedimientos.
 

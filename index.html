@@ -138,7 +138,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=rec-vis05" />
+<link rel="stylesheet" href="assets/css/style.css?v=rec-tpl02" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -8635,13 +8635,20 @@
                             </div>
                             <div class="col-lg-3">
                               <div class="ne-rx-dx-hint">
-                                Este contexto se usará para sugerencias y para guardar la receta como plantilla.
+                                Este contexto se usará para sugerencias. Podrás incluirlo de forma opcional al guardar una plantilla.
                               </div>
                             </div>
                           </div>
                         </div></section>
                         <section data-rx-engine-stage="2" aria-labelledby="ne-rx-stage-medications">
                         <h3 class="ne-rx-section-title visually-hidden" id="ne-rx-stage-medications" tabindex="-1">Medicamentos</h3>
+                        <div class="rx-template-stage-tools mb-2">
+                          <div><strong>Medicamentos</strong><span>Comienza en blanco o usa una base reutilizable.</span></div>
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_use_template">Usar plantilla</button>
+                        </div>
+                        <div class="rx-template-safety-summary mb-2" data-rx-template-safety role="status" aria-live="polite">
+                          <strong>Seguridad actual</strong><span>Consultando alergias, medicación y problemas activos…</span>
+                        </div>
                         <div class="ne-rx-grid" id="ne_rx_grid">
                           <!-- filas dinámicas -->
                         </div>
@@ -8671,10 +8678,10 @@
                             <div class="small text-muted mt-2" id="ne_rx_analysis_disclaimer">Este análisis es una herramienta de apoyo. El médico es responsable de la interpretación clínica.</div>
                           </div>
                           <div class="ne-rx-template-card">
-                            <div class="ne-rx-template-title">¿Desea guardar como plantilla?</div>
-                            <div class="small text-muted mb-2">Al emitir, podrá guardar esta receta como plantilla clínica.</div>
-                            <div class="small fw-semibold" id="ne_rx_template_hint">Plantilla de receta para: Sin diagnóstico definido.</div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="ne_rx_save_template" disabled>Guardar como plantilla de receta</button>
+                            <div class="ne-rx-template-title">Contenido reutilizable</div>
+                            <div class="small text-muted mb-2">Guarda los medicamentos como una plantilla privada. El paciente y su contexto clínico no se incluyen.</div>
+                            <button type="button" class="btn btn-outline-primary btn-sm d-none" id="ne_rx_save_template">Guardar como plantilla</button>
+                            <div class="small mt-2 d-none" id="ne_rx_template_status" role="status" aria-live="polite"></div>
                           </div>
                           <div class="ne-rx-emit-wrap">
                             <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_save_draft">Guardar borrador</button>
@@ -8727,6 +8734,19 @@
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="modal fade" id="modalPrescriptionTemplateFlow" tabindex="-1" aria-labelledby="rx_tpl_modal_title" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title" id="rx_tpl_modal_title">PLANTILLAS DE RECETA</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="rx_tpl_modal_body"></div>
+                      <div class="modal-footer" id="rx_tpl_modal_footer"></div>
                     </div>
                   </div>
                 </div>
@@ -11490,8 +11510,8 @@
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/clinical/prescription-editor-host.js?v=rec-vis04"></script>
-<script src="assets/js/app.js?v=rec-vis04"></script>
+<script src="assets/js/clinical/prescription-editor-host.js?v=rec-tpl02"></script>
+<script src="assets/js/app.js?v=rec-tpl02"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
