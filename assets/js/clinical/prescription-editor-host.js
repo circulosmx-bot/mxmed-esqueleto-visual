@@ -35,11 +35,13 @@
     const prev = workspace.querySelector('[data-rx-host-prev]');
     const next = workspace.querySelector('[data-rx-host-next]');
     const save = workspace.querySelector('[data-rx-host-save]');
-    if (prev) prev.disabled = stage === 1;
+    const progress = workspace.querySelector('[data-rx-host-progress]');
+    if (prev) { prev.disabled = stage === 1; prev.classList.toggle('d-none',stage===1); }
+    if (progress) progress.textContent=`Etapa ${stage} de 5`;
     if (save) save.classList.toggle('d-none', stage !== 2);
     if (next) {
-      next.textContent = stage === 2 ? 'Continuar a vista previa' : stage === 3 ? 'Continuar a firma'
-        : stage === 4 ? 'Revisión final' : stage === 5 ? 'Emitir receta' : 'Continuar';
+      next.textContent = stage === 2 ? 'Continuar a vista previa →' : stage === 3 ? 'Continuar a firma →'
+        : stage === 4 ? 'Revisión final →' : stage === 5 ? 'Emitir receta' : 'Continuar →';
       next.disabled = stage === 4 && document.getElementById('ne_rx_final_review')?.disabled === true;
     }
     workspace.dataset.rxStage = String(stage);

@@ -19,6 +19,6 @@ assert.match(globalEntry,/mxmedSetQuickRxPatientSnapshot/);
 assert.match(host,/workspaceMount\.appendChild\(workspace\)/);
 assert.match(host,/workspaceAnchor\.after\(workspace\)/);
 assert.match(css,/rx-clinical-prescription-active/);
-assert.match(css,/@media\(max-width:850px\)[\s\S]+grid-template-columns:repeat\(5/);
+assert.match(css,/@media\(max-width:850px\)[\s\S]+\.rx-editor-stepper\{width:100%\}/);
 assert.doesNotMatch(host,/fetch\(/);
 console.log('REC-VIS02 host normalization contract: PASS');

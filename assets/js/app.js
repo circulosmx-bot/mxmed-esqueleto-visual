@@ -37703,32 +37703,32 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       </div>
       <div class="ne-rx-editor" data-role="rx-row-editor">
         <div class="ne-rx-name-wrap">
-          <input class="form-control form-control-sm" placeholder="Nombre del medicamento" data-ne-rx="name" autocomplete="off" value="${escapeAttr(m.name)}">
+          <label class="ne-rx-field"><span>Medicamento</span><input class="form-control form-control-sm" placeholder="Busca por nombre" data-ne-rx="name" autocomplete="off" value="${escapeAttr(m.name)}"></label>
           <div class="ne-rx-suggest d-none" data-role="rx-med-suggestions"></div>
         </div>
-        <input class="form-control form-control-sm" placeholder="Presentación" data-ne-rx="presentation" value="${escapeAttr(m.presentation)}">
+        <label class="ne-rx-field ne-rx-presentation"><span>Presentación</span><input class="form-control form-control-sm" placeholder="Ej. Tableta 500 mg" data-ne-rx="presentation" value="${escapeAttr(m.presentation)}"></label>
         <div class="ne-rx-field-wrap" data-rx-field-wrap="dose">
-          <input class="form-control form-control-sm" placeholder="Dosis" data-ne-rx="dose" value="${escapeAttr(m.dose)}">
+          <label class="ne-rx-field"><span>Dosis</span><input class="form-control form-control-sm" placeholder="Ej. 1 tableta" data-ne-rx="dose" value="${escapeAttr(m.dose)}"></label>
           ${renderQuickFieldSuggestions('dose')}
         </div>
         <div class="ne-rx-field-wrap" data-rx-field-wrap="route">
-          <input class="form-control form-control-sm" placeholder="Vía" data-ne-rx="route" value="${escapeAttr(m.route)}">
+          <label class="ne-rx-field"><span>Vía</span><input class="form-control form-control-sm" placeholder="Ej. Oral" data-ne-rx="route" value="${escapeAttr(m.route)}"></label>
           ${renderQuickFieldSuggestions('route')}
         </div>
         <div class="ne-rx-field-wrap" data-rx-field-wrap="frequency">
-          <input class="form-control form-control-sm" placeholder="Frecuencia" data-ne-rx="frequency" value="${escapeAttr(m.frequency)}">
+          <label class="ne-rx-field"><span>Frecuencia</span><input class="form-control form-control-sm" placeholder="Ej. Cada 8 horas" data-ne-rx="frequency" value="${escapeAttr(m.frequency)}"></label>
           ${renderQuickFieldSuggestions('frequency')}
         </div>
         <div class="ne-rx-field-wrap" data-rx-field-wrap="duration">
-          <input class="form-control form-control-sm" placeholder="Duración" data-ne-rx="duration" value="${escapeAttr(m.duration)}">
+          <label class="ne-rx-field"><span>Duración</span><input class="form-control form-control-sm" placeholder="Ej. 7 días" data-ne-rx="duration" value="${escapeAttr(m.duration)}"></label>
           ${renderQuickFieldSuggestions('duration')}
         </div>
-        <input class="form-control form-control-sm" placeholder="Cantidad total" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}">
+        <label class="ne-rx-field ne-rx-quantity"><span>Cantidad</span><input class="form-control form-control-sm" placeholder="Cantidad total" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"></label>
         <div class="ne-rx-field-wrap ne-rx-field-wrap-wide" data-rx-field-wrap="instructions">
-          <input class="form-control form-control-sm" placeholder="Indicaciones al paciente" data-ne-rx="instructions" value="${escapeAttr(m.instructions)}">
+          <label class="ne-rx-field"><span>Indicaciones al paciente</span><input class="form-control form-control-sm" placeholder="Ej. Tomar después de alimentos" data-ne-rx="instructions" value="${escapeAttr(m.instructions)}"></label>
           ${renderQuickFieldSuggestions('instructions')}
         </div>
-        <input class="form-control form-control-sm" placeholder="Notas médicas privadas" data-ne-rx="private_notes" value="${escapeAttr(m.private_notes)}">
+        <label class="ne-rx-field ne-rx-private-notes"><span>Notas médicas privadas <small>Opcional · no se imprimen</small></span><input class="form-control form-control-sm" placeholder="Sólo visibles en el expediente" data-ne-rx="private_notes" value="${escapeAttr(m.private_notes)}"></label>
         <div class="ne-rx-actions">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-ne-rx-cancel>Cancelar</button>
           <button type="button" class="btn btn-primary btn-sm" data-ne-rx-collapse>Agregar medicamento</button>

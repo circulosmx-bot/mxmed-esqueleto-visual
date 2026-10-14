@@ -138,7 +138,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=sign-ux02" />
+<link rel="stylesheet" href="assets/css/style.css?v=rec-vis03" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -8388,6 +8388,7 @@
                   <div class="rx-editor-mount" data-rx-editor-mount></div>
                   <nav class="rx-editor-actions" aria-label="Navegación de la receta">
                     <button type="button" class="btn btn-outline-secondary" data-rx-host-prev>Anterior</button>
+                    <span class="rx-editor-progress" data-rx-host-progress>Etapa 1 de 5</span>
                     <div class="rx-editor-actions-primary">
                       <button type="button" class="btn btn-outline-primary" data-rx-host-save>Guardar borrador</button>
                       <button type="button" class="btn btn-primary" data-rx-host-next>Continuar</button>
@@ -8606,6 +8607,7 @@
                       <div class="modal-body ne-rx-modal-body">
                         <div id="ne_rx_capture">
                         <section data-rx-engine-stage="1" aria-labelledby="ne-rx-stage-context">
+                        <h3 class="ne-rx-stage-title" id="ne-rx-stage-context" tabindex="-1">Contexto clínico</h3>
                         <div class="mx-clinical-header-host mb-3" id="ne_rx_context" data-clinical-header="slim" data-clinical-layout="modal"></div>
                         <div class="d-flex justify-content-end align-items-center gap-2 mb-2">
                           <span class="small text-muted" id="ne_rx_draft_status"></span>
@@ -8618,7 +8620,7 @@
                           <div class="small text-muted" data-rx-encounter-copy></div>
                         </div>
                         <div class="ne-rx-dx mb-3" id="ne_rx_dx_block">
-                          <h3 class="ne-rx-context-head" id="ne-rx-stage-context" tabindex="-1">Contexto diagnóstico</h3>
+                          <h4 class="ne-rx-context-head">Contexto diagnóstico</h4>
                           <div class="row g-2 align-items-end">
                             <div class="col-lg-3 col-md-4">
                               <label class="form-label mb-1" for="ne_rx_dx_mode">Clasificación clínica</label>
@@ -8657,7 +8659,7 @@
                           </select>
                         </div>
                         <div class="d-flex justify-content-center align-items-center mt-2 gap-2 flex-wrap ne-rx-add-row">
-                          <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_add">+ Agregar medicamento</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_add">Agregar otro medicamento</button>
                           <div class="small d-none" id="ne_rx_feedback" role="status" aria-live="polite"></div>
                         </div>
                         <div class="ne-rx-footer-grid mt-3">
@@ -11489,8 +11491,8 @@
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/clinical/prescription-editor-host.js?v=rec-vis02-r2"></script>
-<script src="assets/js/app.js?v=rec-vis02-r3"></script>
+<script src="assets/js/clinical/prescription-editor-host.js?v=rec-vis03"></script>
+<script src="assets/js/app.js?v=rec-vis03"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
