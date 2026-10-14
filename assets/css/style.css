@@ -18092,6 +18092,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   min-height:88px;
   position:relative;
 }
+.ne-rx-context-problems{
+  border-top:1px solid #d8e5f3;
+  color:#1d4165;
+  font-size:.92rem;
+  font-weight:600;
+  padding:9px 16px 11px;
+}
 .ne-rx-clinical-header{
   position:relative;
   border:1px solid #c8d9ef;

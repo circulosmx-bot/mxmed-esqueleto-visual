@@ -11,6 +11,7 @@ require_once __DIR__ . '/../_lib/clinical_longitudinal_antecedents.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_problems.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_medications.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_tasks.php';
+require_once __DIR__ . '/../_lib/clinical_prescription_context.php';
 require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
 require_once __DIR__ . '/../_lib/clinical_order_result_read.php';
@@ -4219,6 +4220,28 @@ try {
         }
     }
     if (clinical_treatment_route($method, $segments)) return;
+    if ($method === 'GET' && ($segments[0] ?? '') === 'patients'
+        && ($segments[2] ?? '') === 'prescription-context' && count($segments) === 3) {
+        $routeName = 'patients/{patient_id}/prescription-context';
+        header('Cache-Control: private, no-store');
+        $context = clinical_require_doctor_context($routeName);
+        if ($context === null) return;
+        $patientId = trim(rawurldecode((string)$segments[1]));
+        try {
+            $data = (new ClinicalPrescriptionContext(clinical_documents_pdo()))
+                ->read((string)$context['doctor_id'], $patientId);
+            clinical_send_response(['ok'=>true,'data'=>$data,
+                'meta'=>['route'=>$routeName,'method'=>'GET']], 200);
+        } catch (ClinicalLongitudinalException $e) {
+            clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->errorCode,
+                'data'=>null,'meta'=>['route'=>$routeName,'method'=>'GET']], $e->httpStatus);
+        } catch (Throwable) {
+            clinical_send_response(['ok'=>false,'error'=>'CONTEXT_UNAVAILABLE',
+                'message'=>'Información clínica no disponible','data'=>null,
+                'meta'=>['route'=>$routeName,'method'=>'GET']], 503);
+        }
+        return;
+    }
     if ($method==='GET' && $segments===['longitudinal','follow-ups','agenda']) {
         $routeName='longitudinal/follow-ups/agenda';
         $context=clinical_require_doctor_context($routeName);if($context===null)return;

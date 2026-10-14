@@ -37084,7 +37084,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     });
     updateRxTemplateHint();
     refreshRxRowsVisuals();
+    rxClinicalContext = null;
+    rxClinicalContextRevision = '';
     renderRecetaContextPanel(ctx);
+    if (rxPreview) rxPreview.disabled = true;
+    void rxRefreshClinicalContext(ctx, true).catch(error => {
+      rxClinicalContext = null;
+      rxClinicalContextRevision = '';
+      renderRecetaContextPanel(ctx);
+      if (rxPreview) rxPreview.disabled = true;
+      setRxFeedback(`No se pudo cargar el contexto clínico. La revisión y emisión permanecen bloqueadas (${error.message}).`, 'error');
+    });
     resetPrescriptionAnalysisDraft();
     updateRxAnalysisActionState();
     if (els.rxFeedback) {
@@ -38302,43 +38312,45 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
   };
 
-  const collectPrescriptionClinicalContext = (ctxInput = null) => {
-    const ctx = ctxInput || resolveRecetaRuntimeContext();
-    const patientId = normalizeRecetaText(ctx?.patient_id);
-    const encounterKey = normalizeRecetaText(ctx?.encounter_key);
-    const citas = getClinicalCitations();
-    const getChipValues = (itemKey) => {
-      const chips = Array.from(document.querySelectorAll(`#t-historia [data-hc-item="${itemKey}"] [data-hc-chips] .hc-chip`));
-      return chips.map((chip) => {
-        const detail = String(chip.getAttribute('data-details') || '').trim();
-        const label = String(chip.textContent || '').trim();
-        return detail || label;
-      }).filter(Boolean);
-    };
-    const allergies = getChipValues('alergias');
-    const currentMedsFromHistoria = getChipValues('medicamentos');
-    const currentDraft = getRxDraft(patientId);
-    const currentMedicationsFromDraft = (Array.isArray(currentDraft.medications) ? currentDraft.medications : [])
-      .map((item) => String(item?.name || '').trim())
-      .filter(Boolean);
-    const currentMedications = currentMedsFromHistoria.length ? currentMedsFromHistoria : currentMedicationsFromDraft;
-    const encounterStatus = encounterKey ? 'Consulta activa' : 'Sin consulta activa';
-    return {
-      patient_id: patientId || null,
-      encounter_id: encounterKey || null,
-      patient_name: normalizeRecetaText(ctx?.patient?.nombre_completo),
-      age: normalizeRecetaText(ctx?.patient?.edad),
-      sex: normalizeRecetaText(ctx?.patient?.sexo),
-      clinical_reason: normalizeRecetaText(citas?.motivo_consulta),
-      doctor_name: normalizeRecetaText(ctx?.medico?.nombre || ctx?.actor?.nombre_completo),
-      current_date: new Date().toISOString().slice(0, 10),
-      date: new Date().toISOString().slice(0, 10),
-      display_current_date: localClinicalDateISO(),
-      encounter_status: encounterStatus,
-      allergies,
-      current_medications: currentMedications,
-      current_medication: currentMedications
-    };
+  const prescriptionUnavailableContext = ctx => ({patient_id:normalizeRecetaText(ctx?.patient_id)||null,
+    encounter_id:null,patient_name:normalizeRecetaText(ctx?.patient?.nombre_completo),age:normalizeRecetaText(ctx?.patient?.edad),
+    sex:normalizeRecetaText(ctx?.patient?.sexo),clinical_reason:'Información clínica no disponible',
+    current_date:'Información no disponible',date:'Información no disponible',display_current_date:'Información no disponible',
+    encounter_status:'Información de consulta no disponible',allergies:['Información de alergias no disponible'],
+    current_medications:['Información de medicación no disponible'],current_medication:['Información de medicación no disponible'],
+    active_problems:['Información de problemas no disponible'],context_available:false});
+  const prescriptionAllergyLabels = data => {
+    if(data?.state==='CONFIRMED_NONE')return ['Sin alergias conocidas registradas.'];
+    if(data?.state==='UNREVIEWED')return ['Alergias no revisadas.'];
+    if(data?.state!=='PRESENT')return ['Información de alergias no disponible'];
+    return (data.items||[]).map(row=>[row.substance,row.reaction,row.validation_state==='CLINICIAN_REVIEWED'?'Revisada':'Reportada'].filter(Boolean).join(' · '));
+  };
+  const prescriptionMedicationLabels = data => {
+    if(data?.state==='CONFIRMED_NONE')return ['Sin medicación activa registrada.'];
+    if(data?.state==='NONE_ACTIVE')return ['Sin medicación activa registrada.'];
+    if(data?.state==='UNREVIEWED')return ['Medicación no revisada.'];
+    if(data?.state!=='PRESENT')return ['Información de medicación no disponible'];
+    const labels={ACTIVE_CONFIRMED:'Activa confirmada',REPORTED_BY_PATIENT:'Referida por paciente',
+      PRESCRIBED_NOT_CONFIRMED_ACTIVE:'Prescrita; actividad no confirmada'};
+    return (data.items||[]).map(row=>[row.medication_name,[row.dose,row.dose_unit,row.route,row.frequency].filter(Boolean).join(' '),labels[row.state]||row.state].filter(Boolean).join(' · '));
+  };
+  const collectPrescriptionClinicalContext = (ctxInput = null, canonical = null) => {
+    const ctx=ctxInput||resolveRecetaRuntimeContext();
+    if(!canonical||typeof canonical!=='object')return prescriptionUnavailableContext(ctx);
+    const explicit=normalizeRecetaText(ctx?.encounter_key),active=canonical.encounter||{},activeId=String(active.encounter_id||'');
+    const linked=explicit!==''&&(explicit===activeId||explicit.endsWith(`:${activeId}`));
+    const status=active.state==='OPEN'?(linked?'Consulta vinculada':'Consulta en curso disponible'):'Sin consulta activa';
+    const reason=active.state==='OPEN'&&active.motive?`${linked?'Consulta vinculada':'Consulta en curso'}: ${active.motive}`:'';
+    const medications=prescriptionMedicationLabels(canonical.medications);
+    return {patient_id:normalizeRecetaText(canonical.patient?.patient_id)||null,encounter_id:explicit||null,
+      available_encounter_id:active.state==='OPEN'?activeId:null,patient_name:normalizeRecetaText(canonical.patient?.display_name),
+      age:canonical.patient?.age==null?'':String(canonical.patient.age),sex:normalizeRecetaText(canonical.patient?.sex),
+      clinical_reason:reason,doctor_name:normalizeRecetaText(ctx?.medico?.nombre||ctx?.actor?.nombre_completo),
+      current_date:normalizeRecetaText(canonical.clinical_date),date:normalizeRecetaText(canonical.clinical_date),
+      display_current_date:normalizeRecetaText(canonical.clinical_date),encounter_status:status,
+      allergies:prescriptionAllergyLabels(canonical.allergies),current_medications:medications,current_medication:medications,
+      active_problems:canonical.problems?.state==='PRESENT'?(canonical.problems.items||[]).map(row=>row.label).filter(Boolean):['Sin problemas activos registrados.'],
+      context_available:true,context_revision:normalizeRecetaText(canonical.revision)};
   };
   window.mxmedBuildClinicalHeaderData = collectPrescriptionClinicalContext;
   window.collectPrescriptionClinicalContext = collectPrescriptionClinicalContext;
@@ -38403,9 +38415,42 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   };
   window.validatePrescriptionDraft = validatePrescriptionDraft;
 
-  const renderRecetaContextPanel = (ctx) => {
-    const prescriptionContext = collectPrescriptionClinicalContext(ctx);
+  let rxClinicalContext = null, rxClinicalContextRevision = '', rxClinicalContextGeneration = 0;
+  const renderRecetaContextPanel = (ctx, canonical = null) => {
+    const prescriptionContext = collectPrescriptionClinicalContext(ctx, canonical);
     renderClinicalSlimHeader(els.rxContext, prescriptionContext, { layout: 'modal' });
+    let problems = els.rxContext?.querySelector('[data-rx-context-problems]');
+    if (!problems && els.rxContext) {
+      problems = document.createElement('div');
+      problems.className = 'ne-rx-context-problems';
+      problems.dataset.rxContextProblems = '';
+      els.rxContext.append(problems);
+    }
+    if (problems) problems.textContent = `Problemas activos: ${(prescriptionContext.active_problems || []).join(' · ')}`;
+  };
+  const rxFetchClinicalContext = async ctx => {
+    const patientId = normalizeRecetaText(ctx.patient_id);
+    if (!patientId) throw new Error('Paciente no disponible.');
+    return rxRequest(`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/prescription-context`);
+  };
+  const rxRefreshClinicalContext = async (ctx, establishBaseline = false) => {
+    const generation = ++rxClinicalContextGeneration;
+    const data = await rxFetchClinicalContext(ctx);
+    if (generation !== rxClinicalContextGeneration || resolveRecetaRuntimeContext().patient_id !== ctx.patient_id) return null;
+    rxClinicalContext = data;
+    if (establishBaseline) rxClinicalContextRevision = String(data.revision || '');
+    renderRecetaContextPanel(ctx, data);
+    if (rxPreview) rxPreview.disabled = false;
+    return data;
+  };
+  const rxAssertClinicalContextFresh = async ctx => {
+    const latest = await rxFetchClinicalContext(ctx);
+    if (!rxClinicalContextRevision || String(latest.revision || '') !== rxClinicalContextRevision) {
+      rxClinicalContext = latest;
+      renderRecetaContextPanel(ctx, latest);
+      throw new Error('Cambió el contexto de alergias, medicación, problemas o consulta. Revísalo antes de continuar.');
+    }
+    return latest;
   };
 
   const mapValidPrescriptionItems = (meds) => {
@@ -38735,6 +38780,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxWriteBusy = true; rxPreview.disabled = true;
     try {
       const scope = await rxCanonicalScope();
+      await rxAssertClinicalContextFresh(scope.ctx);
       const body = { ...rxCanonicalBody(scope), final_review: true };
       const data = await rxRequest(`${scope.url}/preview`, 'POST', body);
       if (rxPreviewHtml) rxPreviewHtml.innerHTML = data.html || '';
@@ -39222,6 +39268,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     try{
       if(!rxSignature||!rxServerDraft)throw new Error('Aplica la firma médica antes de continuar.');
       const scope=await rxCanonicalScope();
+      await rxAssertClinicalContextFresh(scope.ctx);
       const data=await rxRequest(`${scope.url}/preview`,'POST',{...rxCanonicalBody(scope),final_review:true,
         include_signature:true,draft_ref:rxServerDraft.document_uuid,expected_version:rxServerDraft.version});
       document.getElementById('ne_rx_final_html').innerHTML=data.html||'';
@@ -39236,6 +39283,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const status=document.getElementById('ne_rx_final_status');
     try{
       const scope=await rxCanonicalScope();
+      await rxAssertClinicalContextFresh(scope.ctx);
       const body=rxCanonicalBody(scope);
       if(JSON.stringify({...body,final_review:true})!==rxReviewedFingerprint)
         throw new Error('La receta cambió después de la revisión. Vuelve a previsualizarla.');
