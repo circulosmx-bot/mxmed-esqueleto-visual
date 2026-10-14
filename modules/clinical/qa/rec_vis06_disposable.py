@@ -1,4 +1,4 @@
-"""REC-VIS06 browser workflow and responsive visual evidence; no clinical emission."""
+"""REC-VIS06/07 browser workflow and responsive visual evidence; no clinical emission."""
 import json
 import os
 from pathlib import Path
@@ -90,8 +90,30 @@ with sync_playwright() as pw:
     expect(page.locator('#ne_rx_added_heading')).to_have_text('MEDICAMENTOS AGREGADOS (1)')
     expect(page.locator('#ne_rx_add')).to_be_visible()
     expect(page.locator('[data-rx-host-next]')).to_have_text('Continuar a vista previa →')
+    colors=page.evaluate("""()=>{const style=s=>getComputedStyle(document.querySelector(s));return {
+      groupBackground:style('#ne_rx_medication_composition').backgroundColor,
+      groupBorder:style('#ne_rx_medication_composition').borderTopColor,
+      cardBackground:style('.ne-rx-row[data-ne-rx-state="collapsed"]').backgroundColor,
+      addBackground:style('#ne_rx_add').backgroundColor,
+      addColor:style('#ne_rx_add').color,
+      nextBackground:style('[data-rx-host-next]').backgroundColor
+    }}""")
+    check('ADDED_GROUP_TURQUOISE',colors['groupBackground']=='rgb(234, 248, 249)' and colors['groupBorder']=='rgb(85, 189, 199)')
+    check('INNER_MEDICATION_CARD_WHITE',colors['cardBackground']=='rgb(255, 255, 255)')
+    check('ADD_ANOTHER_STRONG_CTA',colors['addBackground']=='rgb(0, 143, 164)' and colors['addColor']=='rgb(255, 255, 255)')
+    check('CONTINUE_PREVIEW_REMAINS_PRIMARY',page.locator('[data-rx-host-next]').evaluate("e=>e.classList.contains('btn-primary')") and colors['nextBackground']!=colors['addBackground'])
     page.screenshot(path=str(OUT/'e-stage2-one-medication-1440x900.png'))
     check('ONE_MEDICATION_HIERARCHY',True)
+    page.locator('[data-ne-rx-edit]').first.click()
+    expect(page.locator('#ne_rx_add')).to_be_hidden()
+    page.locator('[data-ne-rx-cancel]').first.click()
+    expect(page.locator('#ne_rx_add')).to_be_visible()
+    check('EDIT_FLOW_PRESERVED',True)
+    page.locator('[data-ne-rx-dup]').first.click()
+    expect(page.locator('#ne_rx_added_heading')).to_have_text('MEDICAMENTOS AGREGADOS (2)')
+    page.locator('[data-ne-rx-del]').last.click()
+    expect(page.locator('#ne_rx_added_heading')).to_have_text('MEDICAMENTOS AGREGADOS (1)')
+    check('DUPLICATE_DELETE_FLOW_PRESERVED',True)
     page.locator('#ne_rx_add').click()
     expect(page.locator('#ne_rx_add')).to_be_hidden()
     page.locator('.ne-rx-row[data-ne-rx-state="expanded"] [data-ne-rx="name"]').fill('Metformina')
@@ -109,6 +131,16 @@ with sync_playwright() as pw:
     expect(page.locator('[data-rx-template-safety]')).to_contain_text('Penicilina')
     page.screenshot(path=str(OUT/'g-stage2-template-applied-1440x900.png'))
     check('TEMPLATE_AND_SAFETY_PRESERVED',True)
+    for width,height,label in [(1366,768,'1366_768'),(820,1180,'820_1180')]:
+        page.set_viewport_size({'width':width,'height':height})
+        check(label+'_STAGE2_FIT',page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'))
+        check(label+'_STAGE2_ACTIONS_VISIBLE',page.locator('#ne_rx_add').is_visible() and page.locator('[data-rx-host-next]').is_visible())
+        check(label+'_STAGE2_CARD_WHITE',page.locator('.ne-rx-row[data-ne-rx-state="collapsed"]').first.evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(255, 255, 255)')
+        page.screenshot(path=str(OUT/f'g-stage2-template-{width}x{height}.png'))
+    page.set_viewport_size({'width':1440,'height':900})
+    page.locator('[data-rx-host-save]').click()
+    expect(page.locator('#ne_rx_draft_status')).to_contain_text('Borrador guardado')
+    check('SAVE_DRAFT_PRESERVED',writes.count('draft')==1)
     page.locator('[data-rx-host-next]').click()
     expect(page.locator('[data-qa-preview]')).to_be_visible()
     page.screenshot(path=str(OUT/'h-stage3-preview-1440x900.png'))
@@ -140,3 +172,4 @@ with sync_playwright() as pw:
     check('NO_JS_ERRORS',not errors)
     browser.close()
     print('REC_VIS06_BROWSER=PASS',flush=True)
+    print('REC_VIS07_BROWSER=PASS',flush=True)

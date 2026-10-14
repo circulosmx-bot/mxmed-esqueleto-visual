@@ -207,7 +207,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=rec-vis06" />
+<link rel="stylesheet" href="assets/css/style.css?v=rec-vis07" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
