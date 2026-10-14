@@ -19,5 +19,7 @@ The document resolver should select only rows with `document_publication_enabled
 
 Future Prescription snapshots must freeze the selected location name, full address and eligible regular phones. The signature binding must gain a backward-compatible new projection version before footer fields participate in signed output. Existing V1 bindings and issued snapshots remain unchanged.
 
+The lower-right footer area remains structurally reserved for DOC-REC-STD03B. No QR or empty placeholder is emitted in STD03A. Once a canonical public route and public origin are enabled, its visible caption must be exactly `AGENDA UNA CITA`; `Perfil público` is not an approved document caption.
+
 Rollback is safe before application code writes configuration. Once settings are in use, export the three configured values before running the rollback because dropping the columns intentionally removes those decisions. The rollback does not modify existing address, contact, Agenda, schedule or appointment fields.
 
