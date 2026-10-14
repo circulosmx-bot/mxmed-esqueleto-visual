@@ -27,6 +27,42 @@ function clinical_prescription_v2_encounter(PDO $pdo, string $key, string $patie
     return $row;
 }
 
+/**
+ * Resolve the physician logo from the canonical immutable Media publication record.
+ * A profile reference alone is insufficient: the referenced asset must still be the
+ * physician's PUBLIC/READY personal logo.
+ */
+function clinical_prescription_v2_published_logo(PDO $pdo, string $doctorId): string
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT a.public_url
+               FROM profiles_doctors p
+               JOIN media_assets a ON a.public_url = p.logo_url
+              WHERE p.doctor_id = ?
+                AND a.owner_type = 'PHYSICIAN'
+                AND a.owner_id = p.doctor_id
+                AND a.purpose = 'PHYSICIAN_PERSONAL_LOGO'
+                AND a.classification = 'PUBLIC'
+                AND a.status = 'READY'
+                AND a.mime_type = 'image/webp'
+              LIMIT 1"
+        );
+        $stmt->execute([$doctorId]);
+        $url = trim((string)($stmt->fetchColumn() ?: ''));
+    } catch (Throwable) {
+        return '';
+    }
+
+    return preg_match('#^/api/media/index\.php/public/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$#iD', $url)
+        ? $url : '';
+}
+
+function clinical_prescription_v2_published_logo_url(string $url): bool
+{
+    return preg_match('#^/api/media/index\.php/public/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$#iD', trim($url)) === 1;
+}
+
 function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $patientId, array $body,
     bool $final = false): array
 {
@@ -74,10 +110,7 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
     $appointmentId = $encounter === null ? null : (string)($encounter['appointment_id'] ?? '');
     $identity = clinical_portable_identity($pdo, (string)$doctor['doctor_id'], $patientId,
         $appointmentId ?: null, $final);
-    $profile = $pdo->prepare('SELECT logo_url FROM profiles_doctors WHERE doctor_id=? LIMIT 1');
-    $profile->execute([(string)$doctor['doctor_id']]);
-    $logo = (string)($profile->fetchColumn() ?: '');
-    if (!preg_match('#^/storage/clinical_uploads/branding/[^/]+/logo-opt\.webp$#D', $logo)) $logo = '';
+    $logo = clinical_prescription_v2_published_logo($pdo, (string)$doctor['doctor_id']);
     $patient = (array)$identity['patient'];
     $physician = (array)$identity['physician'];
     $age = '';
@@ -121,7 +154,7 @@ function clinical_prescription_v2_render(array $payload): string
     $html = '<article class="rx-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe"><div class="doc-base-sheet-inner doc-base-body">';
     if (clinical_legal_document_professional_header_mode($payload) === 'shown') {
         $html .= '<header class="clinical-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">';
-        if (preg_match('#^/storage/clinical_uploads/branding/[^/]+/logo-opt\.webp$#D', $logo))
+        if (clinical_prescription_v2_published_logo_url($logo))
             $html .= '<div class="clinical-doc-head-logo-slot"><img src="'.$h($logo).'" alt="Logo médico"></div>';
         $html .= '<div class="clinical-doc-head-main"><div class="clinical-doc-doctor-name">'.$h($doctor['full_name'] ?? '').'</div>';
         foreach (['designation'=>'','specialty'=>'','license'=>'Cédula profesional: ',
@@ -239,7 +272,7 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
                     $payload['signatures']['doctor'] = $oldPayload['signatures']['doctor'];
             }
             $html = clinical_prescription_v2_render($payload);
-            $payload['prescription_snapshot'] = ['version'=>1,'html'=>$html];
+            $payload['prescription_snapshot'] = ['version'=>2,'html'=>$html];
             $status = $intent === 'finalize' ? 'generated' : 'draft';
             if ($existing === null) {
                 $doc = mxmed_build_clinical_document(['type'=>'prescription','title'=>'Receta médica',

@@ -59,16 +59,28 @@
 
 /* Prescription V2 uses this same frozen sheet in review, viewer and print. */
 .rx-doc-sheet.doc-base-sheet--letter {
-  width: min(8.5in, 100%);
-  max-width: 100%;
+  width: 8.5in;
+  max-width: none;
 }
 .rx-doc-sheet .rx-doc-list { padding-left: 1.4rem; }
 .rx-doc-sheet .rx-doc-item { margin-bottom: .8rem; break-inside: avoid; }
 .rx-doc-sheet .rx-doc-item-meta { margin-top: .2rem; line-height: 1.45; }
 .rx-doc-sheet .rx-doc-sign-line { border-bottom: 1px solid #263746; height: 3.5rem; }
-@media (max-width: 767.98px) {
+/* A document preview is read at page width on desktop and reflows on tablets.
+ * Its height is never scaled to the viewport, so the clinical body stays legible
+ * and the surrounding application owns vertical scrolling. */
+.doc-base-sheet-frame:has(.rx-doc-sheet) {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+@media (max-width: 900px) {
   .doc-base-sheet-frame:has(.rx-doc-sheet) { padding: 4px; }
-  .rx-doc-sheet.doc-base-sheet--letter { padding: 20px 16px; min-height: 0; }
+  .rx-doc-sheet.doc-base-sheet--letter {
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 24px;
+    min-height: 0;
+  }
 }
 
 .doc-base-body {

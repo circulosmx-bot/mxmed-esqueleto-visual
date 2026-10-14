@@ -741,6 +741,9 @@ $isCertificadoDoc = in_array($docTypeNorm, [
     'constancia_incapacidad',
 ], true);
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
+$isPrescriptionV2 = $isPrescriptionDoc && (int)($payload['contract_version'] ?? 0) === 2;
+$prescriptionV2SnapshotHtml = $isPrescriptionV2
+    ? trim((string)($payload['prescription_snapshot']['html'] ?? '')) : '';
 $prescriptionContext = $isPrescriptionDoc && is_array($payload['context'] ?? null) ? $payload['context'] : [];
 $prescriptionLegacy = $isPrescriptionDoc && is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
 $prescriptionItems = [];
@@ -970,7 +973,7 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
-<?php if ($isMultimediaConsentDoc || $isFreeDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
+<?php if ($isPrescriptionV2 || $isMultimediaConsentDoc || $isFreeDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=resp-imp01a">
 <?php endif; ?>
@@ -1704,7 +1707,11 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($isPrescriptionDoc): ?>
+    <?php if ($isPrescriptionV2 && $prescriptionV2SnapshotHtml !== ''): ?>
+      <div class="doc-base-sheet-frame prescription-v2-viewer-snapshot mb-3">
+        <?php echo $prescriptionV2SnapshotHtml; ?>
+      </div>
+    <?php elseif ($isPrescriptionDoc): ?>
       <article class="rx-view-sheet mb-3">
         <header class="rx-view-head">
           <div>
