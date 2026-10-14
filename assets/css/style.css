@@ -23248,3 +23248,38 @@ button.mx-signature-remote{
 .rx-global-search{margin-top:14px;max-width:650px}.rx-global-search label{display:block;font-weight:700;margin-bottom:5px}.rx-global-results{display:grid;gap:6px;margin:8px 0}
 .rx-global-result{width:100%;text-align:left;border:1px solid #b9ddea;border-radius:8px;background:white;padding:9px 12px;color:#07385b}.rx-global-result:focus-visible{outline:3px solid #00a9bd}
 @media(max-width:700px){.rx-ux-choices{grid-template-columns:1fr}#t-tratamiento .rx-ux-panel{padding:15px}.rx-ux-choice{min-height:115px}}
+
+/* REC-VIS01: the canonical editor mounted inside the patient Recetas tab. */
+.rx-editor-workspace{border:1px solid #b9ddea;border-radius:16px;background:#f7fbfd;padding:20px;color:#013151}
+.rx-editor-workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}
+.rx-editor-workspace-head h2{font-size:1.55rem;margin:0;color:#013151}.rx-editor-workspace-head p{margin:4px 0 0;color:#506b80}
+.rx-editor-eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.12em;color:#078aa1}
+.rx-editor-stepper{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));list-style:none;padding:0;margin:0 0 18px;gap:8px}
+.rx-editor-stepper li{display:flex;align-items:center;gap:8px;min-width:0;padding:10px;border:1px solid #c9dde7;border-radius:10px;background:#eef4f7;color:#6b8190}
+.rx-editor-stepper li span{display:grid;place-items:center;flex:0 0 26px;height:26px;border-radius:50%;background:#d8e3e9;font-weight:800}
+.rx-editor-stepper li strong{font-size:.78rem;line-height:1.15;text-transform:uppercase}
+.rx-editor-stepper li.is-current{border-color:#1267aa;background:#e8f4ff;color:#013151;box-shadow:inset 0 -3px #1267aa}
+.rx-editor-stepper li.is-current span{background:#1267aa;color:#fff}.rx-editor-stepper li.is-complete{border-color:#77c9cc;background:#eaf8f6;color:#116c70}
+.rx-editor-stepper li.is-complete span{background:#168f92;color:#fff}
+.rx-editor-mount{min-width:0}.rx-editor-embedded-body{padding:0!important;background:transparent!important;overflow:visible!important}
+.rx-editor-embedded-body #ne_rx_context.mx-clinical-header-host{display:block}.rx-editor-embedded-body .rx-engine-actions{display:none!important}
+.rx-editor-embedded-body .ne-rx-footer-grid .ne-rx-emit-wrap #ne_rx_preview{display:none}
+.rx-editor-actions{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding:12px 0 2px;background:linear-gradient(0deg,#f7fbfd 80%,transparent)}
+.rx-editor-actions-primary{display:flex;gap:10px;justify-content:flex-end}.rx-editor-actions .btn{min-width:120px}
+.rx-embedded-context{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rx-context-card{display:grid;gap:5px;padding:12px;border:1px solid #c5dfe8;border-radius:10px;background:#fff}.rx-context-card strong{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+.rx-context-card ul{margin:0;padding-left:18px;color:#334f63;font-size:.9rem}.rx-context-date{grid-column:1/-1;font-size:.82rem;color:#506b80}
+.ne-rx-encounter-choice{padding:12px 14px;border:1px solid #8ccbd5;border-radius:10px;background:#effbfc;margin-bottom:14px}
+.rx-editor-embedded-body [data-rx-engine-stage]>h3{font-size:1.05rem;color:#013151;margin-bottom:12px}
+.rx-editor-embedded-body .ne-rx-editor{grid-template-columns:repeat(12,minmax(0,1fr))}
+.rx-editor-embedded-body .ne-rx-editor>.ne-rx-name-wrap{grid-column:1/7}
+.rx-editor-embedded-body .ne-rx-editor>[data-ne-rx="presentation"]{grid-column:7/13}
+.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="dose"]{grid-column:1/4}
+.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="route"]{grid-column:4/7}
+.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="frequency"]{grid-column:7/10}
+.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="duration"]{grid-column:10/13}
+.rx-editor-embedded-body .ne-rx-editor>[data-ne-rx="quantity"]{grid-column:1/4}
+.rx-editor-embedded-body .ne-rx-editor>[data-rx-field-wrap="instructions"]{grid-column:4/13}
+.rx-editor-embedded-body .ne-rx-editor>[data-ne-rx="private_notes"]{grid-column:1/13}
+@media(max-width:1100px){.rx-editor-stepper li{padding:8px 6px}.rx-editor-stepper li strong{font-size:.7rem}.rx-editor-stepper li span{flex-basis:23px;height:23px}}
+@media(max-width:850px){.rx-editor-workspace{padding:14px}.rx-editor-workspace-head{align-items:flex-start}.rx-editor-stepper{display:flex;overflow-x:auto;padding-bottom:5px}.rx-editor-stepper li{flex:0 0 132px}.rx-embedded-context{grid-template-columns:1fr}.rx-editor-actions{flex-wrap:wrap}.rx-editor-actions-primary{margin-left:auto}.rx-editor-actions .btn{min-width:auto}.rx-editor-embedded-body .ne-rx-editor>*{grid-column:1/-1!important}}

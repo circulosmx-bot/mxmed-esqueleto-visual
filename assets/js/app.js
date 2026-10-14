@@ -30751,7 +30751,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const selectedPatientId = cleanValue(pane?.dataset?.patientId || pane?.dataset?.activePatientId);
     const requestedPatientId = cleanValue(patientId);
     if (window.mxmedPrescriptionStandaloneIntent === true)
-      return { patient_id: requestedPatientId, mode: 'standalone', encounter_key: null };
+      return { patient_id: requestedPatientId, mode: 'standalone',
+        encounter_key: cleanValue(window.mxmedPrescriptionSelectedEncounterKey) || null };
     const inConsultation = window.mxmedPrescriptionStandaloneIntent !== true
       && document.body.classList.contains('mx-consultation-mode')
       && !!pane?.querySelector('[data-bs-target="#t-consulta-actual"].active');
@@ -37697,7 +37698,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           <span class="text-muted">·</span>
           <button type="button" class="btn btn-link btn-sm p-0" data-ne-rx-dup>Duplicar</button>
           <span class="text-muted">·</span>
-          <button type="button" class="btn btn-link btn-sm p-0 text-danger" data-ne-rx-del>Eliminar</button>
+          <button type="button" class="btn btn-link btn-sm p-0 text-danger" data-ne-rx-del aria-label="Eliminar medicamento">Eliminar</button>
         </div>
       </div>
       <div class="ne-rx-editor" data-role="rx-row-editor">
@@ -38418,15 +38419,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   let rxClinicalContext = null, rxClinicalContextRevision = '', rxClinicalContextGeneration = 0;
   const renderRecetaContextPanel = (ctx, canonical = null) => {
     const prescriptionContext = collectPrescriptionClinicalContext(ctx, canonical);
-    renderClinicalSlimHeader(els.rxContext, prescriptionContext, { layout: 'modal' });
-    let problems = els.rxContext?.querySelector('[data-rx-context-problems]');
-    if (!problems && els.rxContext) {
-      problems = document.createElement('div');
-      problems.className = 'ne-rx-context-problems';
-      problems.dataset.rxContextProblems = '';
-      els.rxContext.append(problems);
+    if (window.mxmedPrescriptionHost?.isEmbedded()) {
+      const list = values => (Array.isArray(values) ? values : []).map(value=>`<li>${escapeHtmlLite(value)}</li>`).join('');
+      els.rxContext.className='rx-embedded-context mb-3';
+      els.rxContext.innerHTML=`<div class="rx-context-card"><strong>Consulta</strong><span>${escapeHtmlLite(prescriptionContext.encounter_status)}</span></div>
+        <div class="rx-context-card"><strong>Alergias</strong><ul>${list(prescriptionContext.allergies)}</ul></div>
+        <div class="rx-context-card"><strong>Medicación actual</strong><ul>${list(prescriptionContext.current_medications)}</ul></div>
+        <div class="rx-context-card"><strong>Problemas activos</strong><ul>${list(prescriptionContext.active_problems)}</ul></div>
+        <div class="rx-context-date">Fecha clínica local: ${escapeHtmlLite(prescriptionContext.display_current_date)}</div>`;
+    } else {
+      renderClinicalSlimHeader(els.rxContext, prescriptionContext, { layout: 'modal' });
+      let problems = els.rxContext?.querySelector('[data-rx-context-problems]');
+      if (!problems && els.rxContext) {
+        problems = document.createElement('div');
+        problems.className = 'ne-rx-context-problems';
+        problems.dataset.rxContextProblems = '';
+        els.rxContext.append(problems);
+      }
+      if (problems) problems.textContent = `Problemas activos: ${(prescriptionContext.active_problems || []).join(' · ')}`;
     }
-    if (problems) problems.textContent = `Problemas activos: ${(prescriptionContext.active_problems || []).join(' · ')}`;
   };
   const rxFetchClinicalContext = async ctx => {
     const patientId = normalizeRecetaText(ctx.patient_id);
@@ -38440,17 +38451,39 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxClinicalContext = data;
     if (establishBaseline) rxClinicalContextRevision = String(data.revision || '');
     renderRecetaContextPanel(ctx, data);
+    const choice=document.querySelector('[data-rx-encounter-choice]');
+    const checkbox=document.querySelector('[data-rx-encounter-link]');
+    const active=data?.encounter||{}, patientEntry=window.mxmedPrescriptionHost?.isEmbedded()
+      && window.mxmedPrescriptionStandaloneIntent===true;
+    const available=patientEntry&&active.state==='OPEN'&&active.encounter_id;
+    choice?.classList.toggle('d-none',!available);
+    if(checkbox){checkbox.checked=!!window.mxmedPrescriptionSelectedEncounterKey;checkbox.dataset.encounterKey=available?`enc:${active.encounter_id}`:'';}
+    const copy=document.querySelector('[data-rx-encounter-copy]');
+    if(copy)copy.textContent=available?`Consulta ${active.encounter_id} disponible${active.motive?` · ${active.motive}`:''}. La vinculación es opcional.`:'';
     if (rxPreview) rxPreview.disabled = false;
     return data;
   };
   const rxAssertClinicalContextFresh = async ctx => {
     const latest = await rxFetchClinicalContext(ctx);
-    if (!rxClinicalContextRevision || String(latest.revision || '') !== rxClinicalContextRevision) {
+    if (!rxClinicalContextRevision) {
+      rxClinicalContext=latest;rxClinicalContextRevision=String(latest.revision||'');
+      renderRecetaContextPanel(ctx,latest);return latest;
+    }
+    if (String(latest.revision || '') !== rxClinicalContextRevision) {
       rxClinicalContext = latest;
       renderRecetaContextPanel(ctx, latest);
       throw new Error('Cambió el contexto de alergias, medicación, problemas o consulta. Revísalo antes de continuar.');
     }
     return latest;
+  };
+  const rxHandleProgressError = error => {
+    const message=String(error?.message||error||'');
+    if(message.includes('Cambió el contexto')&&window.mxmedPrescriptionHost?.isEmbedded()){
+      rxShowCapture();window.mxmedPrescriptionHost.setStage(1);
+      setRxFeedback(`${message} Conservamos los medicamentos capturados para que revises el contexto.`,'error');
+      return true;
+    }
+    return false;
   };
 
   const mapValidPrescriptionItems = (meds) => {
@@ -38668,8 +38701,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   const rxObservations = document.getElementById('ne_rx_observations');
   const rxCanonicalScope = async () => {
     const ctx = resolveRecetaRuntimeContext();
-    const patientId = /^p_/i.test(String(ctx.patient_id || ''))
-      ? String(ctx.patient_id) : await resolveCanonicalPatientIdSafe(ctx.patient_id);
+    const rawPatientId = String(ctx.patient_id || '').trim();
+    const resolvedPatientId = /^p_/i.test(rawPatientId) ? rawPatientId
+      : await resolveCanonicalPatientIdSafe(rawPatientId);
+    // Already-canonical restored identifiers do not necessarily use the p_ prefix.
+    // The physician-scoped API remains the authority for accepting the identifier.
+    const patientId = String(resolvedPatientId || rawPatientId).trim();
     const doctorId = String(window.resolveDoctorId?.() || window.mxmedStore?.doctorId
       || window.mxmedStore?.doctor_id || window.mxmedStore?.activeProfessionalContext?.doctor_id
       || window.mxmedDoctor?.doctor_id || '').trim();
@@ -38718,6 +38755,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (rxBackToCapture) rxBackToCapture.disabled = false;
     if (rxReviewStatus) rxReviewStatus.textContent = '';
     rxGuardModal?.querySelector('.modal-body')?.scrollTo({ top: 0 });
+    if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(1,false);
   };
   const rxLoadAvailableDraft = async () => {
     const scope = await rxCanonicalScope();
@@ -38786,9 +38824,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if (rxPreviewHtml) rxPreviewHtml.innerHTML = data.html || '';
       rxReviewedFingerprint = JSON.stringify(body);
       rxCapture?.classList.add('d-none'); rxReview?.classList.remove('d-none');
+      if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(3);
       rxGuardModal?.querySelector('.modal-body')?.scrollTo({ top: 0 });
       setRxFeedback('', 'muted');
-    } catch (error) { setRxFeedback(`No se pudo previsualizar la receta (${error.message}).`, 'error'); }
+    } catch (error) { if(!rxHandleProgressError(error))setRxFeedback(`No se pudo previsualizar la receta (${error.message}).`, 'error'); }
     finally { rxWriteBusy = false; rxPreview.disabled = false; }
   });
   rxBackToCapture?.addEventListener('click', rxShowCapture);
@@ -38823,6 +38862,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         rxSignatureStatus.classList.toggle(name, !!rxSignature);
     }
     if (rxFinalButton) rxFinalButton.disabled = !rxSignature;
+    if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(4);
     rxGuardModal?.querySelector('.modal-body')?.scrollTo({top:0});
   };
   const rxResetCanvas = () => {
@@ -38934,8 +38974,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     professional_header:rxProfessionalHeader?.value || 'shown',observaciones:rxObservations?.value || ''});
   const rxGuardKey = patientId=>storage.rxKeyForPatient(patientId);
   const rxGuardReadStored = patientId=>{try{return localStorage.getItem(rxGuardKey(patientId));}catch(_){return null;}};
-  const rxGuardDirty = ()=>!!(rxGuardModal?.classList.contains('show') && rxGuardBaseline && rxGuardSnapshot() !== rxGuardBaseline);
-  rxGuardModal?.addEventListener('show.bs.modal', () => {
+  const rxGuardDirty = ()=>!!((rxGuardModal?.classList.contains('show')||window.mxmedPrescriptionHost?.isEmbedded())
+    && rxGuardBaseline && rxGuardSnapshot() !== rxGuardBaseline);
+  const rxInitialize = () => {
     rxServerDraft = null; rxAvailableDraft = null;
     rxShowCapture();
     if (rxProfessionalHeader) rxProfessionalHeader.value = 'shown';
@@ -38943,11 +38984,27 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxContinueDraft?.classList.add('d-none');
     renderRxModal();
     rxLoadAvailableDraft().catch((error) => setRxFeedback(`No se pudieron consultar los borradores (${error.message}).`, 'error'));
-  });
+    rxGuardPatient=resolveRecetaRuntimeContext().patient_id;
+    rxGuardStored=rxGuardReadStored(rxGuardPatient);
+    rxGuardBaseline=rxGuardSnapshot();
+  };
+  rxGuardModal?.addEventListener('show.bs.modal', rxInitialize);
   rxGuardModal?.addEventListener('show.bs.modal',()=>{
     rxGuardPatient=resolveRecetaRuntimeContext().patient_id;
     rxGuardStored=rxGuardReadStored(rxGuardPatient);
     rxGuardBaseline=rxGuardSnapshot();
+  });
+  window.addEventListener('mxmed:prescription-host-open',event=>{if(event.detail?.mode==='embedded')rxInitialize();});
+  document.querySelector('[data-rx-encounter-link]')?.addEventListener('change',event=>{
+    window.mxmedPrescriptionSelectedEncounterKey=event.target.checked?event.target.dataset.encounterKey||'':null;
+    void rxRefreshClinicalContext(resolveRecetaRuntimeContext(),true)
+      .catch(error=>setRxFeedback(`No se pudo actualizar el contexto (${error.message}).`,'error'));
+  });
+  window.addEventListener('mxmed:prescription-host-request-close',()=>{
+    const close=()=>{window.mxmedPrescriptionHost?.closeEmbedded();window.mxmedPrescriptionStandaloneIntent=false;window.mxmedPrescriptionSelectedEncounterKey=null;};
+    if(!rxGuardDirty()){close();return;}
+    void window.mxmedPatientWorkspaceNavigationGuard?.request('prescription-embedded-close',close,
+      document.querySelector('[data-rx-editor-workspace]'),['prescription-modal']);
   });
   rxGuardModal?.addEventListener('hide.bs.modal',event=>{
     if(rxGuardBypass||rxWriteBusy||!rxGuardDirty()){
@@ -38962,7 +39019,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   });
   window.mxmedPatientWorkspaceNavigationGuard?.register({
     id:'prescription-modal',copy:'prescription',isDirty:rxGuardDirty,
-    isSaving:()=>!!rxGuardModal?.classList.contains('show')&&rxWriteBusy,
+    isSaving:()=>!!(rxGuardModal?.classList.contains('show')||window.mxmedPrescriptionHost?.isEmbedded())&&rxWriteBusy,
     discard:()=>{
       if(rxGuardPatient){
         try{
@@ -39273,8 +39330,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         include_signature:true,draft_ref:rxServerDraft.document_uuid,expected_version:rxServerDraft.version});
       document.getElementById('ne_rx_final_html').innerHTML=data.html||'';
       rxSignPanel?.classList.add('d-none');rxFinalPanel?.classList.remove('d-none');
+      if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(5);
       rxGuardModal?.querySelector('.modal-body')?.scrollTo({top:0});
-    }catch(e){rxFeedback(e.message);}
+    }catch(e){if(!rxHandleProgressError(e))rxFeedback(e.message);}
   });
   document.getElementById('ne_rx_final_back')?.addEventListener('click',rxShowSignature);
   document.getElementById('ne_rx_emit_signed')?.addEventListener('click', async () => {
@@ -39314,7 +39372,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       rxReviewedFingerprint = '';
       rxBackToCapture.disabled = true;
     } catch (error) {
-      if (status) status.textContent=`No se pudo emitir la receta (${error.message}).`;
+      if(!rxHandleProgressError(error)&&status)status.textContent=`No se pudo emitir la receta (${error.message}).`;
     } finally {
       rxWriteBusy=false;document.getElementById('ne_rx_emit_signed').disabled=!rxServerDraft;
     }
@@ -40990,10 +41048,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     }catch(_){}
     return true;
   };
-  window.mxmedOpenCanonicalPrescription = ({ standalone = false, draftUuid = '' } = {}) => {
+  window.mxmedOpenCanonicalPrescription = ({ standalone = false, draftUuid = '', host = 'modal', returnView = 'landing' } = {}) => {
     window.mxmedPrescriptionStandaloneIntent = standalone === true;
+    window.mxmedPrescriptionSelectedEncounterKey = null;
     window.mxmedPrescriptionRequestedDraftUuid = String(draftUuid || '').trim();
-    const opened = openRecetaFromActividad();
+    const opened = host === 'embedded' && window.mxmedPrescriptionHost
+      ? window.mxmedPrescriptionHost.openEmbedded({returnView,draftUuid}) : openRecetaFromActividad();
     if (!opened) window.mxmedPrescriptionStandaloneIntent = false;
     return opened;
   };

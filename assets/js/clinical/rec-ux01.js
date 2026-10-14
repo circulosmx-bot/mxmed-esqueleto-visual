@@ -160,7 +160,7 @@
   const openEditor = (draftUuid = '') => {
     const patient = rawPatientId();
     if (!patient) return;
-    window.mxmedOpenCanonicalPrescription?.({standalone:true,draftUuid});
+    window.mxmedOpenCanonicalPrescription?.({standalone:true,draftUuid,host:'embedded',returnView:view});
   };
   let pendingAction = '', pendingUuid = '', dialogTrigger = null;
   const dialog = one('[data-rx-lifecycle-dialog]');
@@ -234,6 +234,8 @@
   window.addEventListener('mxmed:clinical-document-created',event => {
     if (event.detail?.document_type==='prescription' && view==='history') void loadHistory();
   });
+  root.addEventListener('mxmed:prescription-host-open',()=>show('editor'));
+  root.addEventListener('mxmed:prescription-host-closed',event=>show(event.detail?.returnView==='history'?'history':'landing'));
 
   const restoreRecetasNavigation = () => {
     const params = new URLSearchParams(window.location.search);
