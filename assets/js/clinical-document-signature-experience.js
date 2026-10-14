@@ -129,11 +129,11 @@
       instruction.textContent = copy.instruction;
       pad.insertBefore(instruction, canvas);
     });
-    const remoteSelectors = '[data-action="ci-signature-open-qr"], [data-action="ci-doctor-signature-open-qr"], #im_signature_qr_open, #ix_signature_qr_open, #nm_signature_qr_open, #am_signature_qr_open, #rm_signer_signature_qr, #rm_doctor_signature_qr, #cm_signature_qr_open, [data-fd-open-qr], [data-mmc-qr]';
+    const remoteSelectors = '[data-action="ci-signature-open-qr"], [data-action="ci-doctor-signature-open-qr"], #im_signature_qr_open, #ix_signature_qr_open, #nm_signature_qr_open, #am_signature_qr_open, #rm_signer_signature_qr, #rm_doctor_signature_qr, #cm_signature_qr_open, #ne_rx_remote_signature, [data-fd-open-qr], [data-mmc-qr]';
     choose(remoteSelectors).forEach(button => { button.textContent = copy.remote; button.classList.add('mx-signature-remote'); });
-    choose('[data-mmc-draw]').forEach(button => { button.textContent = copy.direct; button.classList.add('mx-signature-direct'); });
-    choose('[data-mmc-registered], [data-fd-use-registered]').forEach(button => { button.textContent = copy.registered; button.classList.add('mx-signature-registered'); });
-    choose('[data-mmc-clear], [data-fd-clear-sign]').forEach(button => { button.textContent = copy.clear; });
+    choose('[data-mmc-draw], #ne_rx_apply_signature').forEach(button => { button.textContent = copy.direct; button.classList.add('mx-signature-direct'); });
+    choose('[data-mmc-registered], [data-fd-use-registered], #ne_rx_registered_signature').forEach(button => { button.textContent = copy.registered; button.classList.add('mx-signature-registered'); });
+    choose('[data-mmc-clear], [data-fd-clear-sign], #ne_rx_clear_signature').forEach(button => { button.textContent = copy.clear; });
     choose('.mx-signature-pad + .d-flex button, .mx-signature-pad ~ .d-flex button').forEach(button => {
       if (/^Volver a firmar$/i.test(button.textContent.trim())) button.textContent = copy.replace;
     });

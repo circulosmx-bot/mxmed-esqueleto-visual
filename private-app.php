@@ -6040,21 +6040,21 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                     </div>
                   </div>
                 </div>
-                  <!-- RESP-IMP01B: separate Responsiva authority, shared mobile handoff presentation. -->
-                  <div class="modal fade" id="modalResponsivaSignatureQr" tabindex="-1" aria-labelledby="rm-qr-title" aria-hidden="true">
+                  <!-- SIGN-UX02: neutral presentation shell; each document family retains its own QR authority. -->
+                  <div class="modal fade" id="modalDocumentSignatureQr" tabindex="-1" aria-labelledby="document-signature-qr-title" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered ci-signature-handoff-dialog">
                       <div class="modal-content docux-action-modal ci-signature-handoff plan02b-modal">
                         <header class="modal-header">
                           <span class="material-symbols-rounded docux-action-icon" aria-hidden="true">smartphone</span>
                           <div>
-                            <h4 class="modal-title" id="rm-qr-title">FIRMAR EN OTRO DISPOSITIVO</h4>
+                            <h4 class="modal-title" id="document-signature-qr-title">FIRMAR EN OTRO DISPOSITIVO</h4>
                             <p>Abre el enlace o escanea el código en el otro dispositivo. Revisa el documento y firma allí.</p>
                           </div>
                           <button type="button" class="btn btn-link" data-bs-dismiss="modal" aria-label="Cerrar">×</button>
                         </header>
                         <div class="modal-body plan02b-modal-content">
-                          <p class="ci-signature-context">Firmando como: <strong data-role="rm-qr-context">Firmante principal</strong></p>
-                          <div data-role="rm-qr-waiting">
+                          <p class="ci-signature-context">Firmando como: <strong data-role="document-qr-context">Firmante principal</strong></p>
+                          <div data-role="document-qr-waiting">
                             <div class="docux-capture-guide">
                               <ol class="docux-capture-steps">
                                 <li><span aria-hidden="true">1</span>Escanea el código<br>o abre el enlace</li>
@@ -6063,10 +6063,10 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                               </ol>
                               <div class="docux-capture-columns">
                                 <div class="docux-qr-panel">
-                                  <div class="docux-qr" data-role="rm-qr-image" role="img" aria-label="Código QR para firmar la responsiva"></div>
+                                  <div class="docux-qr" data-role="document-qr-image" role="img" aria-label="Código QR para firmar la responsiva"></div>
                                   <p>Escanea con la cámara de tu teléfono</p>
                                   <div class="docux-links">
-                                    <a href="#" target="_blank" rel="noopener noreferrer" data-role="rm-qr-link"><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace</a>
+                                    <a href="#" target="_blank" rel="noopener noreferrer" data-role="document-qr-link"><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace</a>
                                   </div>
                                   <p class="docux-capture-expiry">Código de un solo uso · vence en 15 min</p>
                                 </div>
@@ -6077,13 +6077,13 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                               </div>
                             </div>
                           </div>
-                          <div class="d-none text-center" data-role="rm-qr-received">
-                            <div class="fs-4 fw-bold text-success" data-role="rm-qr-received-heading" tabindex="-1">✓ Firma recibida correctamente</div>
-                            <p class="mb-1" data-role="rm-qr-received-signer" data-document-handoff-signer></p>
+                          <div class="d-none text-center" data-role="document-qr-received">
+                            <div class="fs-4 fw-bold text-success" data-role="document-qr-received-heading" tabindex="-1">✓ Firma recibida correctamente</div>
+                            <p class="mb-1" data-role="document-qr-received-signer" data-document-handoff-signer></p>
                             <p class="text-success fw-semibold">Firma vinculada a esta versión</p>
-                            <img data-role="rm-qr-preview" alt="Firma recibida" class="img-fluid rounded border bg-white" style="max-height:110px;object-fit:contain">
+                            <img data-role="document-qr-preview" alt="Firma recibida" class="img-fluid rounded border bg-white" style="max-height:110px;object-fit:contain">
                           </div>
-                          <p class="docux-capture-status" data-role="rm-qr-status" role="status" aria-live="polite">Esperando firma…</p>
+                          <p class="docux-capture-status" data-role="document-qr-status" role="status" aria-live="polite">Esperando firma…</p>
                         </div>
                         <footer class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></footer>
                       </div>
@@ -8779,12 +8779,14 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                           <div class="small text-muted mb-2">La firma quedará vinculada a esta versión exacta de la receta.</div>
                           <div id="ne_rx_signature_status" class="small mb-2" role="status" aria-live="polite">Aún no hay firma aplicada.</div>
                           <img id="ne_rx_signature_image" class="d-none" alt="Firma médica aplicada" style="display:block;max-width:240px;max-height:90px;object-fit:contain">
-                          <canvas id="ne_rx_signature_canvas" width="540" height="160" style="width:100%;max-width:540px;height:160px;background:#fff;border:1px solid #b9d4e0;touch-action:none" aria-label="Dibujar firma médica"></canvas>
-                          <div class="d-flex gap-2 flex-wrap mt-2">
-                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_clear_signature">Limpiar</button>
-                            <button type="button" class="btn btn-primary" id="ne_rx_apply_signature">Firmar aquí</button>
-                            <button type="button" class="btn btn-outline-primary" id="ne_rx_registered_signature">Usar firma registrada</button>
-                            <button type="button" class="btn btn-outline-primary" id="ne_rx_remote_signature">Firmar en otro dispositivo</button>
+                          <div class="mx-signature-pad" data-signature-role="doctor">
+                            <canvas id="ne_rx_signature_canvas" class="mx-signature-pad__canvas" width="540" height="160" aria-label="Área para dibujar la firma del médico"></canvas>
+                          </div>
+                          <div class="d-flex gap-2 flex-wrap mt-2 mx-signature-actions" aria-label="Acciones de firma médica">
+                            <button type="button" class="btn btn-outline-primary mx-signature-direct" id="ne_rx_apply_signature">FIRMAR AQUÍ</button>
+                            <button type="button" class="btn btn-outline-primary mx-signature-registered" id="ne_rx_registered_signature">USAR FIRMA REGISTRADA</button>
+                            <button type="button" class="btn btn-outline-primary mx-signature-remote" id="ne_rx_remote_signature">FIRMAR EN OTRO DISPOSITIVO</button>
+                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_clear_signature">LIMPIAR DIBUJO</button>
                           </div>
                           <div class="d-flex justify-content-between gap-2 mt-3 rx-engine-actions">
                             <button type="button" class="btn btn-outline-secondary" id="ne_rx_sign_back">Volver a editar</button>

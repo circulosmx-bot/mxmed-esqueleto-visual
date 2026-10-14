@@ -20279,6 +20279,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-signature-pad:focus-within{border-color:#008fa4}
 .mx-signature-remote{min-height:44px;white-space:normal;text-align:center}
 .mx-signature-direct,.mx-signature-registered{min-height:44px;white-space:normal;text-align:center}
+.mx-signature-actions{align-items:center}
+.mx-signature-actions .btn{min-height:44px;white-space:normal;text-align:center}
 .mx-signature-direct:focus-visible,.mx-signature-remote:focus-visible,.mx-signature-registered:focus-visible,
 .mx-signature-pad__canvas:focus-visible{outline:3px solid #007c96;outline-offset:2px}
 [data-signature-input="direct-touch"] .mx-signature-pad,
@@ -20313,6 +20315,7 @@ body{margin:0;background:var(--mm-fondo-base);}
     padding:.45rem;
   }
 .mx-signature-pad__canvas{height:174px;}
+.mx-signature-actions .btn{flex:1 1 100%;width:100%}
 }
 
 .cm-final-sheet-frame{

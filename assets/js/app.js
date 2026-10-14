@@ -39121,13 +39121,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   const rxCanvas = document.getElementById('ne_rx_signature_canvas');
   const rxCanvasCtx = rxCanvas?.getContext('2d');
   const rxExperience = window.mxmedSignatureExperience;
-  const rxQrModal = document.getElementById('modalResponsivaSignatureQr');
-  const rxQrEl = role => rxQrModal?.querySelector(`[data-role="rm-qr-${role}"]`);
+  const rxApplyButton = document.getElementById('ne_rx_apply_signature');
+  const rxRegisteredButton = document.getElementById('ne_rx_registered_signature');
+  const rxRemoteButton = document.getElementById('ne_rx_remote_signature');
+  const rxClearButton = document.getElementById('ne_rx_clear_signature');
+  const rxQrModal = document.getElementById('modalDocumentSignatureQr');
+  const rxQrEl = role => rxQrModal?.querySelector(`[data-role="document-qr-${role}"]`);
   let rxSignature = null, rxHasStroke = false, rxEmittedToken = '';
   const rxQr = { token:'', status:'', timer:0, generation:0 };
   const rxFeedback = message => { if (rxSignatureFeedback) rxSignatureFeedback.textContent = message; };
   const rxSignatureBody = scope => ({ ...rxCanonicalBody(scope), draft_ref:rxServerDraft?.document_uuid,
     expected_version:rxServerDraft?.version, payload:rxServerDraft?.payload });
+  rxExperience?.decorate(rxSignPanel || document);
   const rxShowSignature = () => {
     rxCapture?.classList.add('d-none'); rxReview?.classList.add('d-none'); rxFinalPanel?.classList.add('d-none');
     rxSignPanel?.classList.remove('d-none');
@@ -39143,6 +39148,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         rxSignatureStatus.classList.toggle(name, !!rxSignature);
     }
     if (rxFinalButton) rxFinalButton.disabled = !rxSignature;
+    if (rxRegisteredButton) {
+      const available = !!window.mxmedPhysicianSignature?.read?.();
+      rxRegisteredButton.disabled = !available;
+      rxRegisteredButton.setAttribute('aria-disabled', available ? 'false' : 'true');
+      rxRegisteredButton.title = available ? '' : 'No hay una firma médica registrada disponible.';
+    }
+    if (rxClearButton) rxClearButton.textContent = rxSignature ? rxExperience.copy.replace : rxExperience.copy.clear;
     if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(4);
     rxGuardModal?.querySelector('.modal-body')?.scrollTo({top:0});
   };
@@ -39153,16 +39165,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxCanvasCtx.fillStyle='#fff';rxCanvasCtx.fillRect(0,0,rect.width,rect.height);
     rxCanvasCtx.strokeStyle='#102a43';rxCanvasCtx.lineWidth=2.5;
     rxCanvasCtx.lineCap='round';rxCanvasCtx.lineJoin='round';rxHasStroke=false;
+    if(rxApplyButton)rxApplyButton.disabled=true;
   };
   if (rxCanvas && rxExperience) {
     rxExperience.bindPointer(rxCanvas,{
       start(event){const p=rxExperience.point(rxCanvas,event);rxCanvasCtx.beginPath();rxCanvasCtx.moveTo(p.x,p.y);event.preventDefault();},
-      move(event){const p=rxExperience.point(rxCanvas,event);rxCanvasCtx.lineTo(p.x,p.y);rxCanvasCtx.stroke();rxHasStroke=true;event.preventDefault();},
+      move(event){const p=rxExperience.point(rxCanvas,event);rxCanvasCtx.lineTo(p.x,p.y);rxCanvasCtx.stroke();rxHasStroke=true;if(rxApplyButton)rxApplyButton.disabled=false;event.preventDefault();},
       end(event){rxCanvasCtx.closePath();event.preventDefault();}
     });
     rxExperience.observeResize(rxCanvas,{preserve:true,strokeStyle:'#102a43',lineWidth:2.5});
   }
-  document.getElementById('ne_rx_clear_signature')?.addEventListener('click',rxResetCanvas);
+  rxClearButton?.addEventListener('click',()=>{
+    rxResetCanvas();
+    rxCanvas?.focus({preventScroll:true});
+    rxFeedback(rxSignature ? 'Dibuja una nueva firma y presiona «FIRMAR AQUÍ» para reemplazarla.' : 'Dibuja la firma en el recuadro.');
+  });
   const rxApplySignature = async signature => {
     if (!rxServerDraft) throw new Error('Guarda el borrador antes de firmar.');
     const scope=await rxCanonicalScope();
@@ -39183,11 +39200,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (!signature) throw new Error('Dibuja una firma con trazos visibles.');
     await rxApplySignature(signature);
   };
-  document.getElementById('ne_rx_apply_signature')?.addEventListener('click',()=>{
+  rxApplyButton?.addEventListener('click',()=>{
     if(!rxHasStroke){rxFeedback('Dibuja una firma con trazos visibles.');return;}
     rxLocalSignature('local_canvas',rxCanvas.toDataURL('image/png')).catch(e=>rxFeedback(e.message));
   });
-  document.getElementById('ne_rx_registered_signature')?.addEventListener('click',()=>{
+  rxRegisteredButton?.addEventListener('click',()=>{
     const image=window.mxmedPhysicianSignature?.read()||'';
     if(!image){rxFeedback('No hay una firma médica registrada disponible.');return;}
     rxLocalSignature('registered_profile',image).catch(e=>rxFeedback(e.message));
@@ -39226,6 +39243,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     await rxInvalidateQr();
     const generation=++rxQr.generation;
     if(rxQrModal.parentElement!==document.body)document.body.appendChild(rxQrModal);
+    const title=rxQrModal.querySelector('#document-signature-qr-title');
+    if(title)title.textContent=rxExperience.copy.remote;
+    const intro=rxQrModal.querySelector('.modal-header p');
+    if(intro)intro.textContent=rxExperience.copy.remoteIntro;
     const reviewStep=rxQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
     if(reviewStep)reviewStep.innerHTML='<span aria-hidden="true">2</span>Revisa la receta';
     rxQrEl('image')?.setAttribute('aria-label','Código QR para firmar la receta médica');
@@ -39245,7 +39266,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if(rxQrEl('status'))rxQrEl('status').textContent='Esperando firma…';
     rxQr.timer=setInterval(()=>void rxPollQr(),2000);void rxPollQr();
   };
-  document.getElementById('ne_rx_remote_signature')?.addEventListener('click',()=>rxOpenQr().catch(e=>rxFeedback(e.message)));
+  rxRemoteButton?.addEventListener('click',()=>rxOpenQr().catch(e=>rxFeedback(e.message)));
   rxQrModal?.addEventListener('hidden.bs.modal',()=>{if(rxQr.status==='pending')void rxInvalidateQr();});
   rxGuardModal?.addEventListener('hidden.bs.modal',()=>{if(rxQr.status==='pending')void rxInvalidateQr();});
   document.getElementById('ne_rx_sign_back')?.addEventListener('click',()=>{
@@ -52399,8 +52420,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       els.responsivaDoctorSignatureRemoteStatus.classList.toggle('text-danger', tone === 'error');
       els.responsivaDoctorSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
     };
-    const responsivaQrModal = document.getElementById('modalResponsivaSignatureQr');
-    const responsivaQrEl = role => responsivaQrModal?.querySelector(`[data-role="rm-qr-${role}"]`);
+    const sharedDocumentQrModal = document.getElementById('modalDocumentSignatureQr');
+    const sharedDocumentQrEl = role => sharedDocumentQrModal?.querySelector(`[data-role="document-qr-${role}"]`);
     let responsivaHandoffShell = null;
     let responsivaHandoffPoller = null;
     const stopResponsivaQrPolling = ()=>{
@@ -52409,7 +52430,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaState.qr.pollId = 0;
     };
     const setResponsivaQrStatus = (message, tone = 'muted')=>{
-      const el = responsivaQrEl('status');
+      const el = sharedDocumentQrEl('status');
       if(!el) return;
       el.textContent = message;
       el.classList.toggle('text-success', tone === 'success');
@@ -52417,8 +52438,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaHandoffShell?.phase(tone === 'success' ? 'received'
         : tone === 'error' ? 'error' : 'waiting', {
         message,
-        imageData: responsivaQrEl('preview')?.getAttribute('src') || '',
-        signer: responsivaQrEl('received-signer')?.textContent || ''
+        imageData: sharedDocumentQrEl('preview')?.getAttribute('src') || '',
+        signer: sharedDocumentQrEl('received-signer')?.textContent || ''
       });
     };
     const invalidateResponsivaQr = async (reason = 'changed')=>{
@@ -52472,19 +52493,19 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       setResponsivaReplacementActive(role, false);
       if(generation !== responsivaState.qr.generation || token !== responsivaState.qr.token) return;
       responsivaState.qr.status = 'consumed';
-      const signer = responsivaQrEl('received-signer');
+      const signer = sharedDocumentQrEl('received-signer');
       if(signer) signer.textContent = `Firmante: ${data.role_label || ''} · ${data.signer_name || ''}`;
-      const preview = responsivaQrEl('preview');
+      const preview = sharedDocumentQrEl('preview');
       if(preview) preview.src = signature.image_data;
       setResponsivaQrStatus('Firma recibida correctamente', 'success');
       setResponsivaNotice('');
       responsivaState.finalReviewedBody = null;
     };
     responsivaHandoffShell = documentUi.handoff({
-      modal: responsivaQrModal,
-      waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
-      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
-      preview: responsivaQrEl('preview'),
+      modal: sharedDocumentQrModal,
+      waiting: sharedDocumentQrEl('waiting'), received: sharedDocumentQrEl('received'),
+      status: sharedDocumentQrEl('status'), receivedHeading: sharedDocumentQrEl('received-heading'),
+      preview: sharedDocumentQrEl('preview'),
       adapter: {
         createSession: async ({ document_uuid, document_version, role })=>{
           const response = await fetch('/api/clinical/index.php/responsiva-qr-sessions', {
@@ -52514,14 +52535,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const pollResponsivaQr = async ()=>{
       const { token, generation, role } = responsivaState.qr;
       if(!token || responsivaState.qr.status !== 'pending'
-        || !responsivaQrModal?.classList.contains('show')) return;
+        || !sharedDocumentQrModal?.classList.contains('show')) return;
       if(responsivaState.qr.inFlight) return;
       responsivaState.qr.inFlight = true;
       try{
         const data = await responsivaHandoffShell.adapter.getStatus(token);
         if(generation !== responsivaState.qr.generation || token !== responsivaState.qr.token
           || responsivaState.qr.status !== 'pending'
-          || !responsivaQrModal?.classList.contains('show')) return;
+          || !sharedDocumentQrModal?.classList.contains('show')) return;
         if(data.status === 'uploaded' && data.signature){
           responsivaState.qr.status = 'saving';
           stopResponsivaQrPolling();
@@ -52542,16 +52563,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     };
     const setSharedDocumentQrCopy = (type)=>{
-      if(!responsivaQrModal) return;
+      if(!sharedDocumentQrModal) return;
       const certificate = type === 'certificado';
       const interconsulta = type === 'interconsulta';
       const informe = type === 'informe';
       const nota = type === 'nota';
       const alta = type === 'alta';
-      const title = responsivaQrModal.querySelector('#rm-qr-title');
-      const intro = responsivaQrModal.querySelector('.modal-header p');
-      const reviewStep = responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
-      const image = responsivaQrEl('image');
+      const title = sharedDocumentQrModal.querySelector('#document-signature-qr-title');
+      const intro = sharedDocumentQrModal.querySelector('.modal-header p');
+      const reviewStep = sharedDocumentQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
+      const image = sharedDocumentQrEl('image');
       if(title) title.textContent = signatureExperience.copy.remote;
       if(intro) intro.textContent = signatureExperience.copy.remoteIntro;
       if(reviewStep) reviewStep.innerHTML = '<span aria-hidden="true">2</span>'
@@ -52564,7 +52585,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setResponsivaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.');
         return;
       }
-      if(!responsivaQrModal || !window.bootstrap?.Modal){
+      if(!sharedDocumentQrModal || !window.bootstrap?.Modal){
         setResponsivaNotice('No se pudo abrir la firma en otro dispositivo.');
         return;
       }
@@ -52574,16 +52595,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       responsivaState.qr.generation += 1;
       const generation = responsivaState.qr.generation;
       responsivaState.qr = { token: '', role, generation, pollId: 0, status: 'preparing', inFlight: false };
-      ensureModalAttachedToBody(responsivaQrModal);
+      ensureModalAttachedToBody(sharedDocumentQrModal);
       setSharedDocumentQrCopy('responsiva');
-      const signer = responsivaQrEl('context');
+      const signer = sharedDocumentQrEl('context');
       if(signer) signer.textContent = role === 'doctor' ? 'Médico responsable' : 'Firmante principal';
-      responsivaQrEl('waiting')?.classList.remove('d-none');
-      responsivaQrEl('received')?.classList.add('d-none');
-      responsivaQrEl('image')?.replaceChildren();
+      sharedDocumentQrEl('waiting')?.classList.remove('d-none');
+      sharedDocumentQrEl('received')?.classList.add('d-none');
+      sharedDocumentQrEl('image')?.replaceChildren();
       setResponsivaQrStatus('Preparando código…');
-      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
-      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ sharedDocumentQrModal.style.zIndex = '1240'; }, 0);
       try{
         await saveResponsivaDraftInPlace();
         if(generation !== responsivaState.qr.generation) return;
@@ -52598,12 +52619,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const url = new URL(path, window.location.origin).href;
         responsivaState.qr.token = token;
         responsivaState.qr.status = 'pending';
-        const image = responsivaQrEl('image');
+        const image = sharedDocumentQrEl('image');
         image?.replaceChildren();
         new QRCode(image, { text: url, width: 216, height: 216,
           colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
         image?.removeAttribute('title');
-        const link = responsivaQrEl('link');
+        const link = sharedDocumentQrEl('link');
         if(link) link.href = url;
         setResponsivaQrStatus('Esperando firma…');
         responsivaHandoffPoller.start();
@@ -54192,21 +54213,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setInformeNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
-      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      if(!sharedDocumentQrModal || !window.bootstrap?.Modal) return;
       await invalidateInformeQr('new_session');
       informeState.qr.generation += 1;
       const generation = informeState.qr.generation;
       informeState.qr.status = 'preparing';
       informeState.qr.token = '';
-      ensureModalAttachedToBody(responsivaQrModal);
+      ensureModalAttachedToBody(sharedDocumentQrModal);
       setSharedDocumentQrCopy('informe');
-      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Informe médico';
-      responsivaQrEl('waiting')?.classList.remove('d-none');
-      responsivaQrEl('received')?.classList.add('d-none');
-      responsivaQrEl('image')?.replaceChildren();
+      if(sharedDocumentQrEl('context')) sharedDocumentQrEl('context').textContent = 'Médico responsable · Informe médico';
+      sharedDocumentQrEl('waiting')?.classList.remove('d-none');
+      sharedDocumentQrEl('received')?.classList.add('d-none');
+      sharedDocumentQrEl('image')?.replaceChildren();
       informeHandoffShell.phase('waiting', { message: 'Preparando código…' });
-      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
-      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ sharedDocumentQrModal.style.zIndex = '1240'; }, 0);
       try{
         await persistInformeDocument('draft');
         if(generation !== informeState.qr.generation) return;
@@ -54221,11 +54242,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const url = new URL(path, window.location.origin).href;
         informeState.qr.token = token;
         informeState.qr.status = 'pending';
-        const image = responsivaQrEl('image');
+        const image = sharedDocumentQrEl('image');
         image?.replaceChildren();
         new QRCode(image, { text: url, width: 216, height: 216,
           colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        const link = responsivaQrEl('link');
+        const link = sharedDocumentQrEl('link');
         if(link) link.href = url;
         informeHandoffShell.phase('waiting', { message: 'Esperando firma…' });
         informeHandoffPoller.start();
@@ -54248,9 +54269,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         body: JSON.stringify({ reason }) }).catch(()=>{});
     };
     const informeHandoffShell = documentUi.handoff({
-      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
-      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
-      preview: responsivaQrEl('preview'),
+      modal: sharedDocumentQrModal, waiting: sharedDocumentQrEl('waiting'), received: sharedDocumentQrEl('received'),
+      status: sharedDocumentQrEl('status'), receivedHeading: sharedDocumentQrEl('received-heading'),
+      preview: sharedDocumentQrEl('preview'),
       adapter: {
         createSession: async data=>{
           const response = await fetch('/api/clinical/index.php/informe-qr-sessions', {
@@ -54291,18 +54312,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     });
     const informeHandoffPoller = informeHandoffShell.createPoller(()=>void pollInformeQr(), 2000);
-    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+    sharedDocumentQrModal?.addEventListener('hidden.bs.modal', ()=>{
       void invalidateInformeQr('modal_closed');
       informeHandoffPoller.stop();
       informeState.qr.generation += 1;
     });
     const pollInformeQr = async ()=>{
       const { token, generation } = informeState.qr;
-      if(!token || informeState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      if(!token || informeState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
       try{
         const data = await informeHandoffShell.adapter.getStatus(token);
         if(generation !== informeState.qr.generation || token !== informeState.qr.token
-          || informeState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+          || informeState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
         if(data.status === 'uploaded' && data.signature){
           informeState.qr.status = 'saving';
           informeHandoffPoller.stop();
@@ -54322,21 +54343,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setNotaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
-      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      if(!sharedDocumentQrModal || !window.bootstrap?.Modal) return;
       await invalidateNotaQr('new_session');
       notaState.qr.generation += 1;
       const generation = notaState.qr.generation;
       notaState.qr.status = 'preparing';
       notaState.qr.token = '';
-      ensureModalAttachedToBody(responsivaQrModal);
+      ensureModalAttachedToBody(sharedDocumentQrModal);
       setSharedDocumentQrCopy('nota');
-      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Nota médica';
-      responsivaQrEl('waiting')?.classList.remove('d-none');
-      responsivaQrEl('received')?.classList.add('d-none');
-      responsivaQrEl('image')?.replaceChildren();
+      if(sharedDocumentQrEl('context')) sharedDocumentQrEl('context').textContent = 'Médico responsable · Nota médica';
+      sharedDocumentQrEl('waiting')?.classList.remove('d-none');
+      sharedDocumentQrEl('received')?.classList.add('d-none');
+      sharedDocumentQrEl('image')?.replaceChildren();
       notaHandoffShell.phase('waiting', { message: 'Preparando código…' });
-      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
-      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ sharedDocumentQrModal.style.zIndex = '1240'; }, 0);
       try{
         await persistNotaDocument('draft');
         if(generation !== notaState.qr.generation) return;
@@ -54351,11 +54372,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const url = new URL(path, window.location.origin).href;
         notaState.qr.token = token;
         notaState.qr.status = 'pending';
-        const image = responsivaQrEl('image');
+        const image = sharedDocumentQrEl('image');
         image?.replaceChildren();
         new QRCode(image, { text: url, width: 216, height: 216,
           colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        const link = responsivaQrEl('link');
+        const link = sharedDocumentQrEl('link');
         if(link) link.href = url;
         notaHandoffShell.phase('waiting', { message: 'Esperando firma…' });
         notaHandoffPoller.start();
@@ -54378,9 +54399,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         body: JSON.stringify({ reason }) }).catch(()=>{});
     };
     const notaHandoffShell = documentUi.handoff({
-      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
-      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
-      preview: responsivaQrEl('preview'),
+      modal: sharedDocumentQrModal, waiting: sharedDocumentQrEl('waiting'), received: sharedDocumentQrEl('received'),
+      status: sharedDocumentQrEl('status'), receivedHeading: sharedDocumentQrEl('received-heading'),
+      preview: sharedDocumentQrEl('preview'),
       adapter: {
         createSession: async data=>{
           const response = await fetch('/api/clinical/index.php/nota-qr-sessions', {
@@ -54421,18 +54442,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     });
     const notaHandoffPoller = notaHandoffShell.createPoller(()=>void pollNotaQr(), 2000);
-    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+    sharedDocumentQrModal?.addEventListener('hidden.bs.modal', ()=>{
       void invalidateNotaQr('modal_closed');
       notaHandoffPoller.stop();
       notaState.qr.generation += 1;
     });
     const pollNotaQr = async ()=>{
       const { token, generation } = notaState.qr;
-      if(!token || notaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      if(!token || notaState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
       try{
         const data = await notaHandoffShell.adapter.getStatus(token);
         if(generation !== notaState.qr.generation || token !== notaState.qr.token
-          || notaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+          || notaState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
         if(data.status === 'uploaded' && data.signature){
           notaState.qr.status = 'saving';
           notaHandoffPoller.stop();
@@ -54452,21 +54473,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setAltaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
-      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      if(!sharedDocumentQrModal || !window.bootstrap?.Modal) return;
       await invalidateAltaQr('new_session');
       altaState.qr.generation += 1;
       const generation = altaState.qr.generation;
       altaState.qr.status = 'preparing';
       altaState.qr.token = '';
-      ensureModalAttachedToBody(responsivaQrModal);
+      ensureModalAttachedToBody(sharedDocumentQrModal);
       setSharedDocumentQrCopy('alta');
-      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Alta médica';
-      responsivaQrEl('waiting')?.classList.remove('d-none');
-      responsivaQrEl('received')?.classList.add('d-none');
-      responsivaQrEl('image')?.replaceChildren();
+      if(sharedDocumentQrEl('context')) sharedDocumentQrEl('context').textContent = 'Médico responsable · Alta médica';
+      sharedDocumentQrEl('waiting')?.classList.remove('d-none');
+      sharedDocumentQrEl('received')?.classList.add('d-none');
+      sharedDocumentQrEl('image')?.replaceChildren();
       altaHandoffShell.phase('waiting', { message: 'Preparando código…' });
-      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
-      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ sharedDocumentQrModal.style.zIndex = '1240'; }, 0);
       try{
         await persistAltaDocument('draft');
         if(generation !== altaState.qr.generation) return;
@@ -54481,11 +54502,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const url = new URL(path, window.location.origin).href;
         altaState.qr.token = token;
         altaState.qr.status = 'pending';
-        const image = responsivaQrEl('image');
+        const image = sharedDocumentQrEl('image');
         image?.replaceChildren();
         new QRCode(image, { text: url, width: 216, height: 216,
           colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        const link = responsivaQrEl('link');
+        const link = sharedDocumentQrEl('link');
         if(link) link.href = url;
         altaHandoffShell.phase('waiting', { message: 'Esperando firma…' });
         altaHandoffPoller.start();
@@ -54508,9 +54529,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         body: JSON.stringify({ reason }) }).catch(()=>{});
     };
     const altaHandoffShell = documentUi.handoff({
-      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
-      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
-      preview: responsivaQrEl('preview'),
+      modal: sharedDocumentQrModal, waiting: sharedDocumentQrEl('waiting'), received: sharedDocumentQrEl('received'),
+      status: sharedDocumentQrEl('status'), receivedHeading: sharedDocumentQrEl('received-heading'),
+      preview: sharedDocumentQrEl('preview'),
       adapter: {
         createSession: async data=>{
           const response = await fetch('/api/clinical/index.php/alta-qr-sessions', {
@@ -54551,18 +54572,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     });
     const altaHandoffPoller = altaHandoffShell.createPoller(()=>void pollAltaQr(), 2000);
-    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+    sharedDocumentQrModal?.addEventListener('hidden.bs.modal', ()=>{
       void invalidateAltaQr('modal_closed');
       altaHandoffPoller.stop();
       altaState.qr.generation += 1;
     });
     const pollAltaQr = async ()=>{
       const { token, generation } = altaState.qr;
-      if(!token || altaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      if(!token || altaState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
       try{
         const data = await altaHandoffShell.adapter.getStatus(token);
         if(generation !== altaState.qr.generation || token !== altaState.qr.token
-          || altaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+          || altaState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
         if(data.status === 'uploaded' && data.signature){
           altaState.qr.status = 'saving';
           altaHandoffPoller.stop();
@@ -54582,21 +54603,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setCertificadoRemoteStatus('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
-      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      if(!sharedDocumentQrModal || !window.bootstrap?.Modal) return;
       await invalidateCertificadoQr('new_session');
       certificadoState.qr.generation += 1;
       const generation = certificadoState.qr.generation;
       certificadoState.qr.status = 'preparing';
       certificadoState.qr.token = '';
-      ensureModalAttachedToBody(responsivaQrModal);
+      ensureModalAttachedToBody(sharedDocumentQrModal);
       setSharedDocumentQrCopy('certificado');
-      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Certificado médico';
-      responsivaQrEl('waiting')?.classList.remove('d-none');
-      responsivaQrEl('received')?.classList.add('d-none');
-      responsivaQrEl('image')?.replaceChildren();
+      if(sharedDocumentQrEl('context')) sharedDocumentQrEl('context').textContent = 'Médico responsable · Certificado médico';
+      sharedDocumentQrEl('waiting')?.classList.remove('d-none');
+      sharedDocumentQrEl('received')?.classList.add('d-none');
+      sharedDocumentQrEl('image')?.replaceChildren();
       certificadoHandoffShell.phase('waiting', { message: 'Preparando código…' });
-      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
-      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ sharedDocumentQrModal.style.zIndex = '1240'; }, 0);
       try{
         await saveCertificadoDraftInPlace();
         if(generation !== certificadoState.qr.generation) return;
@@ -54611,11 +54632,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const url = new URL(path, window.location.origin).href;
         certificadoState.qr.token = token;
         certificadoState.qr.status = 'pending';
-        const image = responsivaQrEl('image');
+        const image = sharedDocumentQrEl('image');
         image?.replaceChildren();
         new QRCode(image, { text: url, width: 216, height: 216,
           colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        const link = responsivaQrEl('link');
+        const link = sharedDocumentQrEl('link');
         if(link) link.href = url;
         certificadoHandoffShell.phase('waiting', { message: 'Esperando firma…' });
         certificadoHandoffPoller.start();
@@ -54638,9 +54659,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         body: JSON.stringify({ reason }) }).catch(()=>{});
     };
     const certificadoHandoffShell = documentUi.handoff({
-      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
-      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
-      preview: responsivaQrEl('preview'),
+      modal: sharedDocumentQrModal, waiting: sharedDocumentQrEl('waiting'), received: sharedDocumentQrEl('received'),
+      status: sharedDocumentQrEl('status'), receivedHeading: sharedDocumentQrEl('received-heading'),
+      preview: sharedDocumentQrEl('preview'),
       adapter: {
         createSession: async data=>{
           const response = await fetch('/api/clinical/index.php/certificado-qr-sessions', {
@@ -54680,18 +54701,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     });
     const certificadoHandoffPoller = certificadoHandoffShell.createPoller(()=>void pollCertificadoQr(), 2000);
-    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+    sharedDocumentQrModal?.addEventListener('hidden.bs.modal', ()=>{
       void invalidateCertificadoQr('modal_closed');
       certificadoHandoffPoller.stop();
       certificadoState.qr.generation += 1;
     });
     const pollCertificadoQr = async ()=>{
       const { token, generation } = certificadoState.qr;
-      if(!token || certificadoState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      if(!token || certificadoState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
       try{
         const data = await certificadoHandoffShell.adapter.getStatus(token);
         if(generation !== certificadoState.qr.generation || token !== certificadoState.qr.token
-          || certificadoState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+          || certificadoState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
         if(data.status === 'uploaded' && data.signature){
           certificadoState.qr.status = 'saving';
           certificadoHandoffPoller.stop();
@@ -54711,21 +54732,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         setInterconsultaNotice('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.', 'error');
         return;
       }
-      if(!responsivaQrModal || !window.bootstrap?.Modal) return;
+      if(!sharedDocumentQrModal || !window.bootstrap?.Modal) return;
       await invalidateInterconsultaQr('new_session');
       interconsultaState.qr.generation += 1;
       const generation = interconsultaState.qr.generation;
       interconsultaState.qr.status = 'preparing';
       interconsultaState.qr.token = '';
-      ensureModalAttachedToBody(responsivaQrModal);
+      ensureModalAttachedToBody(sharedDocumentQrModal);
       setSharedDocumentQrCopy('interconsulta');
-      if(responsivaQrEl('context')) responsivaQrEl('context').textContent = 'Médico responsable · Interconsulta';
-      responsivaQrEl('waiting')?.classList.remove('d-none');
-      responsivaQrEl('received')?.classList.add('d-none');
-      responsivaQrEl('image')?.replaceChildren();
+      if(sharedDocumentQrEl('context')) sharedDocumentQrEl('context').textContent = 'Médico responsable · Interconsulta';
+      sharedDocumentQrEl('waiting')?.classList.remove('d-none');
+      sharedDocumentQrEl('received')?.classList.add('d-none');
+      sharedDocumentQrEl('image')?.replaceChildren();
       interconsultaHandoffShell.phase('waiting', { message: 'Preparando código…' });
-      window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal, { backdrop: false, focus: true }).show();
-      window.setTimeout(()=>{ responsivaQrModal.style.zIndex = '1240'; }, 0);
+      window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal, { backdrop: false, focus: true }).show();
+      window.setTimeout(()=>{ sharedDocumentQrModal.style.zIndex = '1240'; }, 0);
       try{
         await saveInterconsultaDraftInPlace();
         if(generation !== interconsultaState.qr.generation) return;
@@ -54740,11 +54761,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const url = new URL(path, window.location.origin).href;
         interconsultaState.qr.token = token;
         interconsultaState.qr.status = 'pending';
-        const image = responsivaQrEl('image');
+        const image = sharedDocumentQrEl('image');
         image?.replaceChildren();
         new QRCode(image, { text: url, width: 216, height: 216,
           colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        const link = responsivaQrEl('link');
+        const link = sharedDocumentQrEl('link');
         if(link) link.href = url;
         interconsultaHandoffShell.phase('waiting', { message: 'Esperando firma…' });
         interconsultaHandoffPoller.start();
@@ -54767,9 +54788,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         body: JSON.stringify({ reason }) }).catch(()=>{});
     };
     const interconsultaHandoffShell = documentUi.handoff({
-      modal: responsivaQrModal, waiting: responsivaQrEl('waiting'), received: responsivaQrEl('received'),
-      status: responsivaQrEl('status'), receivedHeading: responsivaQrEl('received-heading'),
-      preview: responsivaQrEl('preview'),
+      modal: sharedDocumentQrModal, waiting: sharedDocumentQrEl('waiting'), received: sharedDocumentQrEl('received'),
+      status: sharedDocumentQrEl('status'), receivedHeading: sharedDocumentQrEl('received-heading'),
+      preview: sharedDocumentQrEl('preview'),
       adapter: {
         createSession: async data=>{
           const response = await fetch('/api/clinical/index.php/interconsulta-qr-sessions', {
@@ -54809,18 +54830,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
     });
     const interconsultaHandoffPoller = interconsultaHandoffShell.createPoller(()=>void pollInterconsultaQr(), 2000);
-    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+    sharedDocumentQrModal?.addEventListener('hidden.bs.modal', ()=>{
       void invalidateInterconsultaQr('modal_closed');
       interconsultaHandoffPoller.stop();
       interconsultaState.qr.generation += 1;
     });
     const pollInterconsultaQr = async ()=>{
       const { token, generation } = interconsultaState.qr;
-      if(!token || interconsultaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+      if(!token || interconsultaState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
       try{
         const data = await interconsultaHandoffShell.adapter.getStatus(token);
         if(generation !== interconsultaState.qr.generation || token !== interconsultaState.qr.token
-          || interconsultaState.qr.status !== 'pending' || !responsivaQrModal?.classList.contains('show')) return;
+          || interconsultaState.qr.status !== 'pending' || !sharedDocumentQrModal?.classList.contains('show')) return;
         if(data.status === 'uploaded' && data.signature){
           interconsultaState.qr.status = 'saving';
           interconsultaHandoffPoller.stop();
@@ -56563,7 +56584,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       };
       const pollQr=async()=>{
         const {token,generation}=state.qr;
-        if(!token||state.qr.status!=='pending'||!responsivaQrModal?.classList.contains('show'))return;
+        if(!token||state.qr.status!=='pending'||!sharedDocumentQrModal?.classList.contains('show'))return;
         try{
           const data=await qrStatus(token);
           if(generation!==state.qr.generation||token!==state.qr.token||state.qr.status!=='pending')return;
@@ -56580,37 +56601,37 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             await writeAction('apply_signature');
             if(generation!==state.qr.generation)return;
             state.signedFingerprint=fingerprint;state.qr.status='consumed';showSignature();
-            responsivaQrEl('waiting')?.classList.add('d-none');
-            responsivaQrEl('received')?.classList.remove('d-none');
-            const heading=responsivaQrEl('received-heading');if(heading)heading.textContent='Firma recibida correctamente';
-            const signer=responsivaQrEl('received-signer');if(signer)signer.textContent=data.signature.signer_name||'';
-            const status=responsivaQrEl('status');if(status)status.textContent='Firma recibida correctamente';
-            const image=responsivaQrEl('preview');if(image){image.src=data.signature.image_data;image.classList.remove('d-none');}
+            sharedDocumentQrEl('waiting')?.classList.add('d-none');
+            sharedDocumentQrEl('received')?.classList.remove('d-none');
+            const heading=sharedDocumentQrEl('received-heading');if(heading)heading.textContent='Firma recibida correctamente';
+            const signer=sharedDocumentQrEl('received-signer');if(signer)signer.textContent=data.signature.signer_name||'';
+            const status=sharedDocumentQrEl('status');if(status)status.textContent='Firma recibida correctamente';
+            const image=sharedDocumentQrEl('preview');if(image){image.src=data.signature.image_data;image.classList.remove('d-none');}
             one('[data-fd-status]').textContent='Firma recibida correctamente';
           }else if(['expired','stale','cancelled','consumed'].includes(data.status)){
             state.qr.status=data.status;clearInterval(state.qr.timer);state.qr.timer=0;
-            const status=responsivaQrEl('status');if(status)status.textContent='El código dejó de ser válido. Genera uno nuevo.';
+            const status=sharedDocumentQrEl('status');if(status)status.textContent='El código dejó de ser válido. Genera uno nuevo.';
           }
         }catch(e){state.qr.status='error';clearInterval(state.qr.timer);state.qr.timer=0;
-          const status=responsivaQrEl('status');if(status)status.textContent=e.message;error(e.message);}
+          const status=sharedDocumentQrEl('status');if(status)status.textContent=e.message;error(e.message);}
       };
       const openQr=async()=>{
         if(!window.isSecureContext||!window.crypto?.subtle?.digest)throw new Error('Abre MXMED por HTTPS seguro para firmar en otro dispositivo.');
         await ensureDraft();await invalidateQr('new_session');
         const generation=++state.qr.generation;state.qr.status='preparing';state.qr.token='';
-        ensureModalAttachedToBody(responsivaQrModal);setSharedDocumentQrCopy('nota');
-        const title=responsivaQrModal.querySelector('#rm-qr-title');if(title)title.textContent=signatureExperience.copy.remote;
-        const intro=responsivaQrModal.querySelector('.modal-header p');
+        ensureModalAttachedToBody(sharedDocumentQrModal);setSharedDocumentQrCopy('nota');
+        const title=sharedDocumentQrModal.querySelector('#document-signature-qr-title');if(title)title.textContent=signatureExperience.copy.remote;
+        const intro=sharedDocumentQrModal.querySelector('.modal-header p');
         if(intro)intro.textContent='Abre el enlace o escanea el código en el otro dispositivo. Revisa el documento y firma allí.';
-        const reviewStep=responsivaQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
+        const reviewStep=sharedDocumentQrModal.querySelector('.docux-capture-steps li:nth-child(2)');
         if(reviewStep)reviewStep.innerHTML='<span aria-hidden="true">2</span>Revisa el documento';
-        responsivaQrEl('image')?.setAttribute('aria-label','Código QR para firmar el documento libre');
-        const context=responsivaQrEl('context');if(context)context.textContent='Médico responsable · Documento libre';
-        responsivaQrEl('waiting')?.classList.remove('d-none');responsivaQrEl('received')?.classList.add('d-none');
-        responsivaQrEl('image')?.replaceChildren();
-        const status=responsivaQrEl('status');if(status)status.textContent='Preparando código…';
-        window.bootstrap.Modal.getOrCreateInstance(responsivaQrModal,{backdrop:false,focus:true}).show();
-        window.setTimeout(()=>{responsivaQrModal.style.zIndex='1240';},0);
+        sharedDocumentQrEl('image')?.setAttribute('aria-label','Código QR para firmar el documento libre');
+        const context=sharedDocumentQrEl('context');if(context)context.textContent='Médico responsable · Documento libre';
+        sharedDocumentQrEl('waiting')?.classList.remove('d-none');sharedDocumentQrEl('received')?.classList.add('d-none');
+        sharedDocumentQrEl('image')?.replaceChildren();
+        const status=sharedDocumentQrEl('status');if(status)status.textContent='Preparando código…';
+        window.bootstrap.Modal.getOrCreateInstance(sharedDocumentQrModal,{backdrop:false,focus:true}).show();
+        window.setTimeout(()=>{sharedDocumentQrModal.style.zIndex='1240';},0);
         const response=await fetch('/api/clinical/index.php/free-document-qr-sessions',{
           method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json'},
           body:JSON.stringify({document_uuid:state.ref,document_version:state.version,role:'doctor'})});
@@ -56620,12 +56641,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const data=json.data||{},token=String(data.token||''),url=new URL(data.mobile_url||'',location.origin).href;
         if(!token||!data.mobile_url||typeof QRCode!=='function')throw new Error('No se pudo mostrar el código QR.');
         state.qr.token=token;state.qr.status='pending';
-        new QRCode(responsivaQrEl('image'),{text:url,width:216,height:216,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
-        const link=responsivaQrEl('link');if(link)link.href=url;
+        new QRCode(sharedDocumentQrEl('image'),{text:url,width:216,height:216,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+        const link=sharedDocumentQrEl('link');if(link)link.href=url;
         if(status)status.textContent='Esperando firma…';
         state.qr.timer=setInterval(()=>void pollQr(),2000);void pollQr();
       };
-      responsivaQrModal?.addEventListener('hidden.bs.modal',()=>{void invalidateQr('modal_closed');});
+      sharedDocumentQrModal?.addEventListener('hidden.bs.modal',()=>{void invalidateQr('modal_closed');});
       modal.addEventListener('hidden.bs.modal',()=>{void invalidateQr('desktop_closed');});
       one('[data-fd-sections]').addEventListener('input',()=>{syncSections();onMaterialEdit();});
       one('[data-fd-sections]').addEventListener('click',event=>{
@@ -60362,7 +60383,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       event.preventDefault();
       openResponsivaSignatureQr('doctor');
     });
-    responsivaQrModal?.addEventListener('hidden.bs.modal', ()=>{
+    sharedDocumentQrModal?.addEventListener('hidden.bs.modal', ()=>{
       invalidateResponsivaQr('modal_closed').catch(()=>{});
       stopResponsivaQrPolling();
       responsivaState.qr.generation += 1;

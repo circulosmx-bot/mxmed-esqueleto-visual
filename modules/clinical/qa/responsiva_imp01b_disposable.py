@@ -116,12 +116,12 @@ with sync_playwright() as pw:
         print('QR_CREATE_RESPONSE', created.value.status, created.value.text(), flush=True)
         print('QR_CREATE_BODY', created.value.request.post_data, flush=True)
         print('DRAFT_DB', sql("SELECT CONCAT_WS('|',document_uuid,version,status,patient_id,created_by_user_id,JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.actor_snapshot.user_id'))) FROM clinical_documents WHERE document_type='responsiva_medica'"), flush=True)
-        print('QR_UI_STATUS', desktop.locator('#modalResponsivaSignatureQr [data-role="rm-qr-status"]').inner_text(), flush=True)
+        print('QR_UI_STATUS', desktop.locator('#modalDocumentSignatureQr [data-role="document-qr-status"]').inner_text(), flush=True)
     check('T01_CREATE_SIGNER_SESSION', created.value.status == 201)
     data = created.value.json()['data']
     token = data['token']
     check('QR_OPAQUE_TOKEN', bool(re.fullmatch(r'[a-f0-9]{64}', token)))
-    link = desktop.locator('#modalResponsivaSignatureQr [data-role="rm-qr-link"]')
+    link = desktop.locator('#modalDocumentSignatureQr [data-role="document-qr-link"]')
     expect(link).to_have_attribute('href', re.compile('token='), timeout=15000)
     href = link.get_attribute('href')
     if os.environ.get('RESP_QR_DESKTOP_SCREENSHOT'):
@@ -163,13 +163,13 @@ with sync_playwright() as pw:
     check('T10_ARTIFACT_DIGEST', bool(re.fullmatch(r'[a-f0-9]{64}', qrrow(token)['artifact'])))
     check('T15_REPLAY_REJECTED', phone_api.post(BASE + f'/api/clinical/index.php/responsiva-qr-sessions/{token}/signature',
           data={'signature_data': blank}).status == 409)
-    expect(desktop.locator('#modalResponsivaSignatureQr [data-role="rm-qr-received"]')).to_be_visible(timeout=20000)
+    expect(desktop.locator('#modalDocumentSignatureQr [data-role="document-qr-received"]')).to_be_visible(timeout=20000)
     check('T11_BINDING_PERSISTED', row(doc_uuid)[2]['signature_binding_status']['signer'] == 'valid_bound_signature'
           and qrrow(token)['status'] == 'consumed')
     check('T23_DRAFT_REMOTE_SIGNER', row(doc_uuid)[0] == 'draft')
-    check('DESKTOP_RECEIVED', 'Firma recibida correctamente' in desktop.locator('#modalResponsivaSignatureQr [data-role="rm-qr-status"]').inner_text())
-    desktop.locator('#modalResponsivaSignatureQr [data-bs-dismiss="modal"]').last.click()
-    expect(desktop.locator('#modalResponsivaSignatureQr')).to_be_hidden()
+    check('DESKTOP_RECEIVED', 'Firma recibida correctamente' in desktop.locator('#modalDocumentSignatureQr [data-role="document-qr-status"]').inner_text())
+    desktop.locator('#modalDocumentSignatureQr [data-bs-dismiss="modal"]').last.click()
+    expect(desktop.locator('#modalDocumentSignatureQr')).to_be_hidden()
     desktop.locator('#rm_save').click()
     expect(desktop.locator('#modalResponsivaMedica')).to_be_hidden()
     desktop.locator('#t-consent .docvis-back').click()

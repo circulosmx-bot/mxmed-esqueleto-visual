@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const html=fs.readFileSync('index.html','utf8');
+const html=fs.readFileSync('private-app.php','utf8');
 const app=fs.readFileSync('assets/js/app.js','utf8');
 const host=fs.readFileSync('assets/js/clinical/prescription-editor-host.js','utf8');
 const history=fs.readFileSync('assets/js/clinical/rec-ux01.js','utf8');
