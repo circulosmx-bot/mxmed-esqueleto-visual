@@ -23,6 +23,10 @@ class ConsultoriosRepository
             'geocode_updated_at',
             'logo_url',
             'foto_url',
+            'document_is_primary',
+            'document_display_order',
+            'document_publication_enabled',
+            'document_primary_slot',
         ];
         if (!$this->tableExists('consultorios')) {
             throw new RuntimeException('schema_not_ready');
@@ -33,6 +37,9 @@ class ConsultoriosRepository
             }
         }
         if (!$this->indexExists('consultorios', 'idx_consultorios_group_id')
+            || !$this->indexExists('consultorios', 'uq_consultorios_document_primary')
+            || !$this->indexExists('consultorios', 'uq_consultorios_document_order')
+            || !$this->indexExists('consultorios', 'idx_consultorios_document_footer')
             || strtolower($this->columnDataType('consultorios', 'logo_url')) !== 'longtext'
             || strtolower($this->columnDataType('consultorios', 'foto_url')) !== 'longtext') {
             throw new RuntimeException('schema_not_ready');
@@ -73,6 +80,32 @@ class ConsultoriosRepository
         $this->ensureTable();
         if (($payload['group_id_is_set'] ?? 1) && trim((string)($payload['group_id'] ?? '')) !== '') {
             $this->assertMedicalGroup((string)$payload['group_id']);
+        }
+        $presentationIsSet = (int)($payload['document_is_primary_is_set'] ?? 0) === 1
+            || (int)($payload['document_display_order_is_set'] ?? 0) === 1
+            || (int)($payload['document_publication_enabled_is_set'] ?? 0) === 1;
+        $ownsTransaction = false;
+        if ($presentationIsSet && !$this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+            $ownsTransaction = true;
+        }
+        if ($presentationIsSet) {
+            try {
+                $lock = $this->pdo->prepare(
+                    'SELECT consultorio_id, document_is_primary, document_display_order
+                       FROM consultorios
+                      WHERE doctor_id = :doctor_id
+                      ORDER BY consultorio_id
+                      FOR UPDATE'
+                );
+                $lock->execute(['doctor_id' => (string)$payload['doctor_id']]);
+                $lock->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e) {
+                if ($ownsTransaction && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                throw $e;
+            }
         }
         $groupIdIsSet = (int)($payload['group_id_is_set'] ?? 1);
         $tituloIsSet = (int)($payload['titulo_is_set'] ?? 1);
@@ -169,8 +202,9 @@ class ConsultoriosRepository
                 ELSE geocode_updated_at
             END,
             updated_at = NOW()';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
             'doctor_id' => (string)$payload['doctor_id'],
             'consultorio_id' => (string)$payload['consultorio_id'],
             'group_id' => $payload['group_id'] ?? null,
@@ -210,8 +244,103 @@ class ConsultoriosRepository
             'lat_is_set' => $latIsSet,
             'lng_is_set' => $lngIsSet,
             'geocode_source_is_set' => $geocodeSourceIsSet,
-            'geocode_updated_at_is_set' => $geocodeUpdatedAtIsSet,
-        ]);
+                'geocode_updated_at_is_set' => $geocodeUpdatedAtIsSet,
+            ]);
+            if ($presentationIsSet) {
+                $this->applyDocumentPresentation($payload);
+            }
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Apply document presentation decisions while the physician's consultorio rows
+     * are locked. This method deliberately has no implicit-primary fallback.
+     */
+    private function applyDocumentPresentation(array $payload): void
+    {
+        $doctorId = (string)$payload['doctor_id'];
+        $consultorioId = (string)$payload['consultorio_id'];
+
+        if ((int)($payload['document_display_order_is_set'] ?? 0) === 1) {
+            $current = $this->pdo->prepare(
+                'SELECT document_display_order FROM consultorios
+                  WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id LIMIT 1'
+            );
+            $current->execute(['doctor_id' => $doctorId, 'consultorio_id' => $consultorioId]);
+            $oldOrder = $current->fetchColumn();
+            $oldOrder = $oldOrder === false || $oldOrder === null ? null : (int)$oldOrder;
+            $newOrder = $payload['document_display_order'] ?? null;
+            $newOrder = $newOrder === null ? null : (int)$newOrder;
+
+            if ($newOrder !== $oldOrder) {
+                $clearTarget = $this->pdo->prepare(
+                    'UPDATE consultorios SET document_display_order = NULL
+                      WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id'
+                );
+                $clearTarget->execute(['doctor_id' => $doctorId, 'consultorio_id' => $consultorioId]);
+                if ($newOrder !== null) {
+                    $swap = $this->pdo->prepare(
+                        'UPDATE consultorios SET document_display_order = :old_order
+                          WHERE doctor_id = :doctor_id
+                            AND consultorio_id <> :consultorio_id
+                            AND document_display_order = :new_order'
+                    );
+                    $swap->bindValue(':old_order', $oldOrder, $oldOrder === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+                    $swap->bindValue(':doctor_id', $doctorId);
+                    $swap->bindValue(':consultorio_id', $consultorioId);
+                    $swap->bindValue(':new_order', $newOrder, PDO::PARAM_INT);
+                    $swap->execute();
+                    $setOrder = $this->pdo->prepare(
+                        'UPDATE consultorios SET document_display_order = :new_order
+                          WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id'
+                    );
+                    $setOrder->execute([
+                        'new_order' => $newOrder,
+                        'doctor_id' => $doctorId,
+                        'consultorio_id' => $consultorioId,
+                    ]);
+                }
+            }
+        }
+
+        if ((int)($payload['document_is_primary_is_set'] ?? 0) === 1) {
+            if ((int)($payload['document_is_primary'] ?? 0) === 1) {
+                $clearPrimary = $this->pdo->prepare(
+                    'UPDATE consultorios SET document_is_primary = 0
+                      WHERE doctor_id = :doctor_id AND document_is_primary = 1'
+                );
+                $clearPrimary->execute(['doctor_id' => $doctorId]);
+            }
+            $setPrimary = $this->pdo->prepare(
+                'UPDATE consultorios SET document_is_primary = :is_primary
+                  WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id'
+            );
+            $setPrimary->execute([
+                'is_primary' => (int)($payload['document_is_primary'] ?? 0),
+                'doctor_id' => $doctorId,
+                'consultorio_id' => $consultorioId,
+            ]);
+        }
+
+        if ((int)($payload['document_publication_enabled_is_set'] ?? 0) === 1) {
+            $publish = $this->pdo->prepare(
+                'UPDATE consultorios SET document_publication_enabled = :enabled
+                  WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id'
+            );
+            $publish->execute([
+                'enabled' => (int)($payload['document_publication_enabled'] ?? 0),
+                'doctor_id' => $doctorId,
+                'consultorio_id' => $consultorioId,
+            ]);
+        }
     }
 
     public function updateGroupSnapshot(

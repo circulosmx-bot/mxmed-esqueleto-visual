@@ -11,7 +11,7 @@
       return result;
     });
     const header=p.presentation?.professional_header==='hidden'?'hidden':'shown';
-    return {version:1,document_type:'prescription',document_uuid:clean(body?.draft_ref),
+    const result={version:1,document_type:'prescription',document_uuid:clean(body?.draft_ref),
       document_version:Number(body?.expected_version)||0,
       patient:{id:clean(patient.id),name:clean(patient.full_name),age:clean(patient.age),sex:clean(patient.sex)},
       physician:{user_id:clean(doctor.user_id),doctor_id:clean(doctor.doctor_id),name:clean(doctor.full_name),
@@ -25,6 +25,18 @@
       presentation:{professional_header:header},professional_context:{logo_url:header==='hidden'?'':clean(professional.logo_url),
         consultorio:{name:header==='shown'?clean(consultorio.name):'',
           address:header==='shown'?clean(consultorio.address):''}}};
+    const footer=p.professional_presentation||{};
+    if(Number(footer.version)>=2){
+      result.version=2;
+      result.professional_context.consultorio={name:'',address:''};
+      result.professional_presentation={version:2,offices:(Array.isArray(footer.offices)?footer.offices:[]).slice(0,3).map(office=>({
+        name:clean(office?.name),address:clean(office?.address),
+        phones:(Array.isArray(office?.phones)?office.phones:[]).map(clean),
+        is_primary:office?.is_primary===true,
+        display_order:office?.display_order==null?null:(Number(office.display_order)||0)
+      }))};
+    }
+    return result;
   };
   const hash=async body=>{
     const bytes=new TextEncoder().encode(JSON.stringify(projection(body)));

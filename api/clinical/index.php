@@ -9693,7 +9693,7 @@ try {
                             || (string)($stored['context']['patient_id'] ?? '') !== $patientId)
                             throw new InvalidArgumentException('PRESCRIPTION_REVIEW_VERSION_INVALID');
                         $old = (array)($stored['content']['payload'] ?? []);
-                        foreach (['patient_snapshot','physician_snapshot','professional_context','issue_date','encounter_reference'] as $key)
+                        foreach (['patient_snapshot','physician_snapshot','professional_context','professional_presentation','issue_date','encounter_reference'] as $key)
                             $normalized[$key] = $old[$key] ?? $normalized[$key];
                         $check = ['draft_ref'=>$ref,'expected_version'=>$version,
                             'context'=>['patient_id'=>$patientId],'payload'=>$normalized];

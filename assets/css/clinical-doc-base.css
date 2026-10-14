@@ -66,6 +66,24 @@
 .rx-doc-sheet .rx-doc-item { margin-bottom: .8rem; break-inside: avoid; }
 .rx-doc-sheet .rx-doc-item-meta { margin-top: .2rem; line-height: 1.45; }
 .rx-doc-sheet .rx-doc-sign-line { border-bottom: 1px solid #263746; height: 3.5rem; }
+.rx-doc-professional-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr);
+  column-gap: 24px;
+  margin-top: 10px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(10, 81, 104, 0.22);
+  color: var(--doc-ink-muted);
+  font-size: 0.68rem;
+  line-height: 1.28;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.rx-doc-professional-locations { grid-column: 1; display: grid; gap: 5px; min-width: 0; }
+.rx-doc-professional-location { min-width: 0; overflow-wrap: anywhere; }
+.rx-doc-professional-location-name { color: var(--doc-ink-secondary); font-weight: 700; }
+.rx-doc-professional-location-address,
+.rx-doc-professional-location-phones { white-space: normal; }
 /* A document preview is read at page width on desktop and reflows on tablets.
  * Its height is never scaled to the viewport, so the clinical body stays legible
  * and the surrounding application owns vertical scrolling. */
@@ -81,6 +99,7 @@
     padding: 28px 24px;
     min-height: 0;
   }
+  .rx-doc-professional-footer { grid-template-columns: minmax(0, 1fr); }
 }
 
 .doc-base-body {

@@ -1,6 +1,6 @@
 # DOC-REC-STD03A schema proposal
 
-Status: prepared and rehearsed; not authorized for normal-local application.
+Status: authorized, backed up, applied and verified in normal-local on 2026-10-14. Staging and production remain outside this authorization.
 
 The existing `consultorios` aggregate and `PUT /api/agenda/index.php/consultorios` remain the canonical administration surface. The proposed additive fields are:
 
@@ -17,7 +17,7 @@ The current private Agenda policy permits consultorio writes only for `owner` an
 
 The document resolver should select only rows with `document_publication_enabled=1`, place an explicitly configured primary first, then sort authorized secondaries by `document_display_order`, and limit the result to three. It may render `telefonos_json` because those fields are labeled and managed as regular professional consultorio phones. It must exclude `whatsapp` and `urgencias_json`. A location without an explicit publication opt-in contributes no name, address or phone to documents.
 
-Future Prescription snapshots must freeze the selected location name, full address and eligible regular phones. The signature binding must gain a backward-compatible new projection version before footer fields participate in signed output. Existing V1 bindings and issued snapshots remain unchanged.
+Future Prescription snapshots freeze the selected location name, full address and eligible regular phones. Signature content uses presentation projection V2 when the footer contract is present; payloads without that contract retain the exact V1 projection. Existing V1 bindings and issued snapshots remain unchanged. The Prescription header no longer exposes a legacy appointment location when presentation V2 is active, so only explicit document-publication decisions can place a location in a new document.
 
 The lower-right footer area remains structurally reserved for DOC-REC-STD03B. No QR or empty placeholder is emitted in STD03A. Once a canonical public route and public origin are enabled, its visible caption must be exactly `AGENDA UNA CITA`; `Perfil público` is not an approved document caption.
 

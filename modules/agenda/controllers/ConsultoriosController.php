@@ -159,6 +159,34 @@ class ConsultoriosController
             }
             return $default;
         };
+        $cleanBoolean = static function ($value): ?int {
+            if (is_bool($value)) return $value ? 1 : 0;
+            if (is_int($value) && ($value === 0 || $value === 1)) return $value;
+            if (is_string($value) && in_array(strtolower(trim($value)), ['0', '1', 'false', 'true'], true)) {
+                return in_array(strtolower(trim($value)), ['1', 'true'], true) ? 1 : 0;
+            }
+            return null;
+        };
+
+        $documentPrimaryIsSet = array_key_exists('document_is_primary', $payload);
+        $documentPublicationIsSet = array_key_exists('document_publication_enabled', $payload);
+        $documentOrderIsSet = array_key_exists('document_display_order', $payload);
+        $documentPrimary = $documentPrimaryIsSet ? $cleanBoolean($payload['document_is_primary']) : null;
+        $documentPublication = $documentPublicationIsSet ? $cleanBoolean($payload['document_publication_enabled']) : null;
+        if (($documentPrimaryIsSet && $documentPrimary === null)
+            || ($documentPublicationIsSet && $documentPublication === null)) {
+            return $this->error('invalid_params', 'document presentation booleans must be true or false');
+        }
+        $documentOrder = null;
+        if ($documentOrderIsSet && $payload['document_display_order'] !== null
+            && trim((string)$payload['document_display_order']) !== '') {
+            $rawOrder = $payload['document_display_order'];
+            if ((!is_int($rawOrder) && !(is_string($rawOrder) && ctype_digit($rawOrder)))
+                || (int)$rawOrder < 1 || (int)$rawOrder > 3) {
+                return $this->error('invalid_params', 'document_display_order must be between 1 and 3');
+            }
+            $documentOrder = (int)$rawOrder;
+        }
 
         $visibleNameIsSet = $hasAnyKey($payload, ['nombre_visible', 'titulo']);
         $baseNameIsSet = $hasAnyKey($payload, ['nombre_base', 'grupo_nombre']);
@@ -220,6 +248,12 @@ class ConsultoriosController
             'geocode_source_is_set' => $geocodeSourceIsSet ? 1 : 0,
             'geocode_updated_at' => $geocodeUpdatedAtIsSet ? $normalizeDateTime($payload['geocode_updated_at']) : null,
             'geocode_updated_at_is_set' => $geocodeUpdatedAtIsSet ? 1 : 0,
+            'document_is_primary' => $documentPrimary ?? 0,
+            'document_is_primary_is_set' => $documentPrimaryIsSet ? 1 : 0,
+            'document_display_order' => $documentOrder,
+            'document_display_order_is_set' => $documentOrderIsSet ? 1 : 0,
+            'document_publication_enabled' => $documentPublication ?? 0,
+            'document_publication_enabled_is_set' => $documentPublicationIsSet ? 1 : 0,
         ];
 
         try {
@@ -342,6 +376,10 @@ class ConsultoriosController
             'public_map_has_confirmed_coords' => $hasConfirmedCoordinates,
             'public_map_iframe_url' => $publicMapIframeUrl,
             'public_map_source' => $publicMapSource,
+            'document_is_primary' => (int)($row['document_is_primary'] ?? 0) === 1,
+            'document_display_order' => ($row['document_display_order'] ?? null) === null
+                ? null : (int)$row['document_display_order'],
+            'document_publication_enabled' => (int)($row['document_publication_enabled'] ?? 0) === 1,
             'created_at' => $row['created_at'] ?? null,
             'updated_at' => $row['updated_at'] ?? null,
         ];

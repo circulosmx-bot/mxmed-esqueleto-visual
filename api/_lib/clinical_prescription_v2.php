@@ -5,6 +5,7 @@ require_once __DIR__ . '/clinical_documents.php';
 require_once __DIR__ . '/clinical_portable_order.php';
 require_once __DIR__ . '/clinical_legal_document_presentation.php';
 require_once __DIR__ . '/clinical_prescription_binding.php';
+require_once __DIR__ . '/clinical_professional_presentation.php';
 
 /** The V2 payload is the only authoring and rendering authority for new prescriptions. */
 function clinical_prescription_v2_text(mixed $value, int $limit = 4000): string
@@ -111,6 +112,7 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
     $identity = clinical_portable_identity($pdo, (string)$doctor['doctor_id'], $patientId,
         $appointmentId ?: null, $final);
     $logo = clinical_prescription_v2_published_logo($pdo, (string)$doctor['doctor_id']);
+    $professionalPresentation = clinical_professional_presentation_resolve($pdo, (string)$doctor['doctor_id']);
     $patient = (array)$identity['patient'];
     $physician = (array)$identity['physician'];
     $age = '';
@@ -133,7 +135,9 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
             'designation'=>(string)($physician['designation'] ?? ''),'specialty'=>(string)($physician['specialty'] ?? ''),
             'license'=>(string)($physician['professional_license'] ?? ''),
             'specialty_license'=>(string)($physician['specialty_license'] ?? '')],
-        'professional_context'=>['consultorio'=>$identity['consultorio'] ?? null,'logo_url'=>$logo],
+        // Location publication is governed exclusively by professional_presentation V2.
+        'professional_context'=>['consultorio'=>null,'logo_url'=>$logo],
+        'professional_presentation'=>$professionalPresentation,
         'presentation'=>['version'=>1,'professional_header'=>
             ($source['presentation']['professional_header'] ?? 'shown') === 'hidden' ? 'hidden' : 'shown'],
         'encounter_reference'=>$encounter === null ? null : ['encounter_id'=>(int)$encounter['encounter_id'],
@@ -161,7 +165,8 @@ function clinical_prescription_v2_render(array $payload): string
             'specialty_license'=>'Cédula de especialidad: '] as $key=>$prefix) {
             if (!empty($doctor[$key])) $html .= '<div class="clinical-doc-doctor-site">'.$h($prefix.$doctor[$key]).'</div>';
         }
-        $place = (array)($professional['consultorio'] ?? []);
+        $usesAuthorizedFooter = (int)($payload['professional_presentation']['version'] ?? 0) >= 2;
+        $place = $usesAuthorizedFooter ? [] : (array)($professional['consultorio'] ?? []);
         foreach (['name','address'] as $key) if (!empty($place[$key]))
             $html .= '<div class="clinical-doc-doctor-site">'.$h($place[$key]).'</div>';
         $html .= '</div></header>';
@@ -192,7 +197,27 @@ function clinical_prescription_v2_render(array $payload): string
     else $html .= '<div class="rx-doc-sign-line"></div>';
     $html .= '<div class="doc-base-signature-meta">'.$h($doctor['full_name'] ?? '').'</div>';
     if (!empty($doctor['license'])) $html .= '<div class="doc-base-signature-meta">Cédula profesional: '.$h($doctor['license']).'</div>';
-    $html .= '</section></div></div></article>';
+    $html .= '</section></div>';
+    $offices = (array)($payload['professional_presentation']['offices'] ?? []);
+    if ($offices !== []) {
+        $html .= '<div class="doc-base-flex-spacer" aria-hidden="true"></div>'
+            . '<footer class="rx-doc-professional-footer doc-base-print-safe"><div class="rx-doc-professional-locations">';
+        foreach (array_slice($offices, 0, 3) as $office) {
+            if (!is_array($office)) continue;
+            $name = trim((string)($office['name'] ?? ''));
+            $address = trim((string)($office['address'] ?? ''));
+            $phones = array_values(array_filter(array_map(static fn(mixed $v): string => trim((string)$v),
+                (array)($office['phones'] ?? [])), static fn(string $v): bool => $v !== ''));
+            if ($name === '' && $address === '' && $phones === []) continue;
+            $html .= '<div class="rx-doc-professional-location">';
+            if ($name !== '') $html .= '<div class="rx-doc-professional-location-name">'.$h($name).'</div>';
+            if ($address !== '') $html .= '<div class="rx-doc-professional-location-address">'.$h($address).'</div>';
+            if ($phones !== []) $html .= '<div class="rx-doc-professional-location-phones">Tel. '.$h(implode(' · ', $phones)).'</div>';
+            $html .= '</div>';
+        }
+        $html .= '</div></footer>';
+    }
+    $html .= '</div></article>';
     return $html;
 }
 
@@ -238,7 +263,7 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
                 throw new InvalidArgumentException('PRESCRIPTION_DRAFT_ENCOUNTER_IMMUTABLE');
             $oldPayload = $existing === null ? null : json_decode((string)$existing['payload_json'],true);
             if ($existing !== null && is_array($oldPayload)) {
-                foreach (['patient_snapshot','physician_snapshot','professional_context','issue_date','encounter_reference'] as $snapshotKey)
+                foreach (['patient_snapshot','physician_snapshot','professional_context','professional_presentation','issue_date','encounter_reference'] as $snapshotKey)
                     $payload[$snapshotKey] = $oldPayload[$snapshotKey] ?? $payload[$snapshotKey];
             }
             $bindingBody = ['draft_ref'=>$draftRef,'expected_version'=>$expected,

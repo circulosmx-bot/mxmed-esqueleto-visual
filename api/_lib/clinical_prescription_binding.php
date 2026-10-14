@@ -22,7 +22,7 @@ function clinical_prescription_binding_projection(array $body): array
         $items[] = $value;
     }
     $headerShown = ($p['presentation']['professional_header'] ?? 'shown') !== 'hidden';
-    return [
+    $projection = [
         'version'=>1, 'document_type'=>'prescription',
         'document_uuid'=>$c($body['draft_ref'] ?? ''),
         'document_version'=>(int)($body['expected_version'] ?? 0),
@@ -44,6 +44,27 @@ function clinical_prescription_binding_projection(array $body): array
             'consultorio'=>['name'=>$headerShown ? $c($consultorio['name'] ?? '') : '',
                 'address'=>$headerShown ? $c($consultorio['address'] ?? '') : '']],
     ];
+    $footer = (array)($p['professional_presentation'] ?? []);
+    if ((int)($footer['version'] ?? 0) >= 2) {
+        $offices = [];
+        foreach (array_slice((array)($footer['offices'] ?? []), 0, 3) as $office) {
+            if (!is_array($office)) continue;
+            $phones = [];
+            foreach ((array)($office['phones'] ?? []) as $phone) $phones[] = $c($phone);
+            $offices[] = [
+                'name'=>$c($office['name'] ?? ''),
+                'address'=>$c($office['address'] ?? ''),
+                'phones'=>$phones,
+                'is_primary'=>($office['is_primary'] ?? false) === true,
+                'display_order'=>($office['display_order'] ?? null) === null
+                    ? null : (int)$office['display_order'],
+            ];
+        }
+        $projection['version'] = 2;
+        $projection['professional_context']['consultorio'] = ['name'=>'', 'address'=>''];
+        $projection['professional_presentation'] = ['version'=>2, 'offices'=>$offices];
+    }
+    return $projection;
 }
 
 function clinical_prescription_binding_fingerprint(array $body): string

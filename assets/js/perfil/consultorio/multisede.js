@@ -169,7 +169,7 @@ function mxClearHorarioInputs(inputs){
 
   function getConsultorioFallbackLabel(index){
     const idx = Number(index || 1) || 1;
-    if(idx === 1) return 'CONSULTORIO PRINCIPAL';
+    if(idx === 1) return 'PRIMER CONSULTORIO';
     if(idx === 2) return 'SEGUNDO CONSULTORIO';
     if(idx === 3) return 'TERCER CONSULTORIO';
     return `CONSULTORIO ${idx}`;
@@ -256,7 +256,7 @@ function mxClearHorarioInputs(inputs){
       });
       // renombrar ids con sufijo n
       const sfx = String(n);
-      const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-foto-slot','cons-map','cons-map-frame','cons-lat','cons-lng','cons-logo','cons-logo-slot','cons-logo-prev','cons-logo-img','cons-logo-del','cons-logo-sync','cons-logo-manual'];
+      const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-document-primary','cons-document-order','cons-document-publication','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-foto-slot','cons-map','cons-map-frame','cons-lat','cons-lng','cons-logo','cons-logo-slot','cons-logo-prev','cons-logo-img','cons-logo-del','cons-logo-sync','cons-logo-manual'];
       ids.forEach(base=>{ const el = pane.querySelector('#'+base); if(el){ el.id = base + (base==='sched-body'||base==='sched-copy-mon'||base==='sched-clear' ? '-'+sfx : sfx); const lab = pane.querySelector(`label[for="${base}"]`); if(lab) lab.setAttribute('for', el.id); } });
       // Evita arrastrar filas/horarios renderizados del consultorio origen al clon.
       try{
@@ -4037,6 +4037,9 @@ function mxClearHorarioInputs(inputs){
         telefonos: [tel1, tel2, tel3].filter(Boolean),
         whatsapp: clean(getWhatsappField(pane)?.value || ''),
         urgencias: [urg1, urg2].filter(Boolean),
+        document_is_primary: !!getField(pane, '[id^="cons-document-primary"]')?.checked,
+        document_display_order: clean(getField(pane, '[id^="cons-document-order"]')?.value || '') || null,
+        document_publication_enabled: !!getField(pane, '[id^="cons-document-publication"]')?.checked,
         logo_url: logoFromInput || logoPreviewValue,
         foto_url: fotoFromInput || fotoPreviewValue
       };
@@ -4076,6 +4079,9 @@ function mxClearHorarioInputs(inputs){
         ...(Array.isArray(payload.telefonos) ? payload.telefonos : []),
         ...(Array.isArray(payload.urgencias) ? payload.urgencias : [])
       ].some((value)=> clean(value) !== '')
+      || payload.document_is_primary === true
+      || payload.document_publication_enabled === true
+      || payload.document_display_order !== null
       || (
         Number.isFinite(Number(payload?.lat))
         && Number.isFinite(Number(payload?.lng))
@@ -4572,6 +4578,12 @@ function mxClearHorarioInputs(inputs){
       const urgs = Array.isArray(row?.urgencias) ? row.urgencias : [];
       setValue(getField(pane, '[id^="cons-urg1"]'), urgs[0] || '');
       setValue(getField(pane, '[id^="cons-urg2"]'), urgs[1] || '');
+      const documentPrimary = getField(pane, '[id^="cons-document-primary"]');
+      const documentOrder = getField(pane, '[id^="cons-document-order"]');
+      const documentPublication = getField(pane, '[id^="cons-document-publication"]');
+      if(documentPrimary instanceof HTMLInputElement) documentPrimary.checked = row?.document_is_primary === true;
+      if(documentOrder instanceof HTMLSelectElement) documentOrder.value = row?.document_display_order == null ? '' : String(row.document_display_order);
+      if(documentPublication instanceof HTMLInputElement) documentPublication.checked = row?.document_publication_enabled === true;
       applyPreview(pane, '.logo-slot-preview img, .mf-upload[data-type="logo"] .mf-prev img', row?.logo_url || '');
       applyPreview(pane, '.foto-slot .mf-prev img', row?.foto_url || '');
       const geoLat = toFiniteNumber(row?.lat);
@@ -4879,6 +4891,11 @@ function mxClearHorarioInputs(inputs){
       const pane = target.closest('.tab-pane[id^="sede"]');
       if(!pane) return;
       const targetId = clean(target.id || '');
+      if(targetId.startsWith('cons-document-primary') && target instanceof HTMLInputElement && target.checked){
+        root.querySelectorAll('input[id^="cons-document-primary"]').forEach((candidate)=>{
+          if(candidate !== target && candidate instanceof HTMLInputElement) candidate.checked = false;
+        });
+      }
       if(
         targetId.startsWith('cons-grupo-si')
         || targetId.startsWith('cons-grupo-no')

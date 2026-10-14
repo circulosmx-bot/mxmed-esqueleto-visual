@@ -37,6 +37,8 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     $pdo->exec((string)file_get_contents($root . '/modules/agenda/db/consultorios_schema.sql'));
+    // Reconstruct the exact pre-migration table contract for the forward rehearsal.
+    $pdo->exec((string)file_get_contents($root . '/modules/agenda/db/migrations/2026_10_14_10_rollback_consultorio_document_presentation.sql'));
     $pdo->exec("INSERT INTO consultorios
         (doctor_id,consultorio_id,titulo,calle,num_ext,telefonos_json,whatsapp,urgencias_json)
         VALUES

@@ -1542,7 +1542,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span>
 
-                  <span class="tab-lbl">CONSULTORIO<br>PRINCIPAL</span>
+                  <span class="tab-lbl">PRIMER<br>CONSULTORIO</span>
 
                 </button>
 
@@ -1684,6 +1684,33 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                   <div class="col-12">
                     <label class="form-label">Puedes escribir una referencia para que los pacientes ubiquen mejor tu consultorio (opcional)</label>
                     <input class="form-control" placeholder="Ejemplo: Frente al parque central, segundo piso, arriba de farmacia."/>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="card border-0 bg-light p-3" data-cons-document-presentation>
+                      <div class="d-flex flex-wrap gap-4 align-items-start">
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="cons-document-primary">
+                          <label class="form-check-label fw-semibold" for="cons-document-primary">Consultorio principal</label>
+                          <div class="form-text">Solo puede existir uno por médico. No se elige automáticamente.</div>
+                        </div>
+                        <div>
+                          <label class="form-label fw-semibold mb-1" for="cons-document-order">Orden de presentación</label>
+                          <select class="form-select form-select-sm" id="cons-document-order">
+                            <option value="">Sin configurar</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                          </select>
+                          <div class="form-text">Orden explícito para sedes adicionales en documentos.</div>
+                        </div>
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="cons-document-publication">
+                          <label class="form-check-label fw-semibold" for="cons-document-publication">Mostrar en documentos</label>
+                          <div class="form-text">Autoriza nombre, domicilio completo y teléfonos regulares de esta sede. No publica WhatsApp ni urgencias.</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
 
