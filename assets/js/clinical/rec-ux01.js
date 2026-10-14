@@ -15,7 +15,9 @@
   const rawPatientId = () => String(window.resolveActivePatientId?.() || '').trim();
   const canonicalPatientId = async () => {
     const raw = rawPatientId();
-    return /^p_/i.test(raw) ? raw : String(await window.mxmedResolveCanonicalPrescriptionPatientId?.(raw) || '');
+    if (!raw) return '';
+    const resolved = String(await window.mxmedResolveCanonicalPrescriptionPatientId?.(raw) || '').trim();
+    return resolved || raw;
   };
   const request = async (url, method = 'GET', body = null) => {
     const response = await fetch(url, {method, credentials:'same-origin', headers:{'Accept':'application/json',...(body ? {'Content-Type':'application/json'} : {})},
