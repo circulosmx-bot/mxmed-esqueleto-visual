@@ -35,7 +35,13 @@ class Proxy(http.server.BaseHTTPRequestHandler):
             self.fail(413)
             return
         self.connection.settimeout(30)
-        connection = http.client.HTTPConnection('127.0.0.1', self.server.backend_port, timeout=30)
+        backend_port = (self.server.views_port
+                        if self.path.split('?', 1)[0] in {
+                            '/modules/clinical/ui/document.php',
+                            '/modules/clinical/ui/viewer.php',
+                        }
+                        else self.server.backend_port)
+        connection = http.client.HTTPConnection('127.0.0.1', backend_port, timeout=30)
         try:
             body = self.rfile.read(length) if length else None
             if body is not None and len(body) != length:
@@ -79,10 +85,11 @@ class Proxy(http.server.BaseHTTPRequestHandler):
     do_GET = do_HEAD = do_POST = do_PUT = do_PATCH = do_DELETE = do_OPTIONS = do_request
 
 
-def make_server(cert, key, port=8443, backend_port=8091):
+def make_server(cert, key, port=8443, backend_port=8091, views_port=8092):
     server = http.server.ThreadingHTTPServer(('127.0.0.1', port), Proxy)
     server.daemon_threads = True
     server.backend_port = backend_port
+    server.views_port = views_port
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(cert, key)

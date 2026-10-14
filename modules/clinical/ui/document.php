@@ -322,10 +322,21 @@ function clinical_doc_format_date(string $value, bool $includeTime = false): str
 
 function http_get_json(string $url, int $timeoutSeconds = 8): array {
   $headers = "Accept: application/json\r\n";
-  // The printable document uses the same scoped API as the viewer. Forward only
-  // this request's session cookie, and only to the configured same-host API.
+  // The normal-local HTTPS front door serves this page through the views process
+  // and the scoped API through the API process. Forward only a recognized session
+  // cookie, and only when both endpoints are the same host or local loopback peers.
   $requestHost = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
-  if (parse_url($url, PHP_URL_HOST) === $requestHost && isset($_COOKIE['PHPSESSID'])
+  $targetHost = parse_url($url, PHP_URL_HOST);
+  $sameAuthorityHost = $targetHost === $requestHost
+    || (in_array($targetHost, ['localhost', '127.0.0.1'], true)
+      && in_array($requestHost, ['localhost', '127.0.0.1'], true));
+  if ($sameAuthorityHost && preg_match('/^[A-Za-z0-9.:-]+$/D', (string)($_SERVER['HTTP_HOST'] ?? ''))) {
+    $headers .= 'Host: ' . $_SERVER['HTTP_HOST'] . "\r\n";
+  }
+  if ($sameAuthorityHost && isset($_COOKIE['__Host-mxmed_session'])
+      && preg_match('/^[A-Za-z0-9_-]{43,64}$/D', (string)$_COOKIE['__Host-mxmed_session'])) {
+    $headers .= 'Cookie: __Host-mxmed_session=' . $_COOKIE['__Host-mxmed_session'] . "\r\n";
+  } elseif ($sameAuthorityHost && isset($_COOKIE['PHPSESSID'])
       && preg_match('/^[A-Za-z0-9,-]+$/D', (string)$_COOKIE['PHPSESSID'])) {
     $headers .= 'Cookie: PHPSESSID=' . $_COOKIE['PHPSESSID'] . "\r\n";
   }
