@@ -23130,7 +23130,7 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 .plan02b-leave div { display: flex; flex-wrap: wrap; gap: .7rem; }
 .plan02b-linked { display: block; white-space: normal; overflow-wrap: anywhere; text-align: left; font-size: .75rem; line-height: 1.35; margin-top: .45rem; padding-top: .35rem; border-top: 1px solid currentColor; }
 .mx-ag-custom-slot-card.is-occupied:has(.plan02b-linked) { height: auto; min-height: 80px; }
-@media(max-width: 600px) { .plan02b-next-steps { padding: .7rem; } .plan02b-date-grid { grid-template-columns: minmax(0,1fr); } }
+@media(max-width: 600px) { .plan02b-next-steps { padding: .7rem; } .plan02b-date-grid { grid-template-columns: minmax(0,1fr); } .plan02b-canonical-rx{grid-template-columns:auto minmax(0,1fr)}.plan02b-canonical-rx .btn{grid-column:1/-1;justify-self:start} }
 
 /* PLAN02B-R1: fixed Plan bar, one local capture modal, same-state Step 6 collector. */
 .plan02b-next-steps { padding: .65rem .8rem; margin-top: .6rem; }
@@ -23138,6 +23138,8 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 .plan02b-action-bar { display: flex; flex-wrap: wrap; gap: .5rem; }
 .plan02b-action-bar .btn { min-height: 42px; flex: 1 1 150px; white-space: normal; }
 .plan02b-next-steps .plan02b-feedback { height: 2.8em; line-height: 1.4; margin: .35rem 0 0; font-size: .8rem; }
+.plan02b-rx-workspace{min-width:0}.plan02b-rx-workspace>.rx-editor-workspace{margin-top:.75rem}
+.plan02b-canonical-rx{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.65rem;margin-top:.35rem;padding:.65rem .75rem;border:1px solid #b7dce3;border-radius:9px;background:#fff;color:#07536e}.plan02b-canonical-rx[hidden]{display:none!important}.plan02b-canonical-rx>.material-symbols-rounded{color:#008fa4}.plan02b-canonical-rx p{margin:0}.plan02b-canonical-rx .btn{min-height:40px}
 [data-plan02b-section="plan"] [data-lon06b-m7-follow-up] { display: none !important; }
 .plan02b-modal { box-sizing: border-box; width: min(650px,calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 1rem; border: 1px solid #9cbfcb; border-radius: 14px; color: #173e50; overflow-y: auto; }
 .plan02b-modal::backdrop { background: #173e5077; }

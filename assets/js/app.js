@@ -38462,7 +38462,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const linked=choice?.querySelector('[data-rx-encounter-linked]');linked?.classList.toggle('d-none',!consultationLinked);
     if(checkbox){checkbox.checked=!!window.mxmedPrescriptionSelectedEncounterKey;checkbox.dataset.encounterKey=available?`enc:${active.encounter_id}`:'';}
     const copy=document.querySelector('[data-rx-encounter-copy]');
-    if(copy)copy.textContent=consultationLinked?`Consulta ${ctx.encounter_key}${active.motive?` · ${active.motive}`:''}`:
+    if(copy)copy.textContent=consultationLinked?`Consulta ${active.encounter_id||ctx.encounter_key}${active.motive?` · ${active.motive}`:''}`:
       available?`Consulta ${active.encounter_id} disponible${active.motive?` · ${active.motive}`:''}. La vinculación es opcional.`:'';
     if (rxPreview) rxPreview.disabled = false;
     return data;
@@ -41042,16 +41042,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   };
   document.getElementById('ne_open_rx')?.addEventListener('click',event=>{event.preventDefault();openRecetaFromActividad();});
   window.addEventListener('mxmed:prescription-host-closed',event=>{
-    if(['consultation','activity'].includes(event.detail?.caller))
+    if(['consultation','consultation-plan','activity'].includes(event.detail?.caller))
       pane.querySelectorAll('.rx-clinical-prescription-active').forEach(node=>node.classList.remove('rx-clinical-prescription-active'));
   });
   window.mxmedOpenCanonicalPrescription = ({ standalone = false, draftUuid = '', host = 'modal', returnView = 'landing',
-    caller = 'patient', workspaceMount = null, sourceElement = null, patient = null } = {}) => {
+    caller = 'patient', workspaceMount = null, sourceElement = null, returnFocus = null, patient = null } = {}) => {
     window.mxmedPrescriptionStandaloneIntent = standalone === true;
     window.mxmedPrescriptionSelectedEncounterKey = null;
     window.mxmedPrescriptionRequestedDraftUuid = String(draftUuid || '').trim();
     const opened = host === 'embedded' && window.mxmedPrescriptionHost
-      ? window.mxmedPrescriptionHost.openEmbedded({returnView,draftUuid,caller,workspaceMount,sourceElement,patient}) : openRecetaFromActividad();
+      ? window.mxmedPrescriptionHost.openEmbedded({returnView,draftUuid,caller,workspaceMount,sourceElement,returnFocus,patient}) : openRecetaFromActividad();
     if (!opened) window.mxmedPrescriptionStandaloneIntent = false;
     return opened;
   };

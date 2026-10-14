@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const plan=fs.readFileSync('assets/js/clinical/plan02b-next-steps.js','utf8');
+const host=fs.readFileSync('assets/js/clinical/prescription-editor-host.js','utf8');
+const app=fs.readFileSync('assets/js/app.js','utf8');
+const css=fs.readFileSync('assets/css/style.css','utf8');
+
+assert.match(plan,/data-ns="prescription"[\s\S]*plan02b-action-title">Receta/);
+assert.match(plan,/if\(e\.dataset\.ns==='prescription'\)\{openCanonicalPrescription\(e\);return;\}/);
+assert.match(plan,/caller:'consultation-plan'/);
+assert.match(plan,/runtime\?\.mode!=='consultation'/);
+assert.match(plan,/runtime\.patient_id!==c\.patient\|\|runtime\.encounter_key!==c\.key/);
+assert.match(plan,/sourceElement:planLayout/);
+assert.match(plan,/returnFocus:trigger/);
+assert.match(plan,/history\.pushState\(canonicalRxHistoryState\(c\)/);
+assert.match(plan,/window\.addEventListener\('popstate'/);
+assert.match(plan,/restoreCanonicalPrescriptionFromHistory/);
+assert.match(plan,/if\(kind==='prescription'\)return; \/\/ Retired/);
+assert.doesNotMatch(plan,/document_type:'prescription'/);
+assert.doesNotMatch(plan,/contract_version:1,prescription/);
+assert.doesNotMatch(plan,/bootstrap/i);
+assert.match(host,/consultation-plan'\?'← Volver al Plan'/);
+assert.match(host,/\['history','plan'\]\.includes\(options\?\.returnView\)/);
+assert.match(app,/consultationLinked[\s\S]*checkbox\?\.closest\('label'\)\?\.classList\.toggle\('d-none',consultationLinked\)/);
+assert.match(app,/Consulta \$\{active\.encounter_id\|\|ctx\.encounter_key\}/);
+assert.match(app,/caller,workspaceMount,sourceElement,returnFocus,patient/);
+assert.match(css,/\.plan02b-rx-workspace/);
+assert.match(css,/\.plan02b-canonical-rx/);
+console.log('CONS-REC01 canonical consultation prescription bridge: PASS');

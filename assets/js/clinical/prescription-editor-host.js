@@ -13,7 +13,7 @@
   workspace.before(workspaceAnchor);
   const workspaceHome = workspaceAnchor.parentElement;
   let mode = 'modal', stage = 1, returnView = 'landing';
-  let caller = 'patient', sourceElement = null;
+  let caller = 'patient', sourceElement = null, returnFocus = null;
   const stages = () => Array.from(workspace.querySelectorAll('[data-rx-host-step]'));
   const engineStage = number => body.querySelector(`[data-rx-engine-stage="${number}"]`);
   const focusStage = number => {
@@ -61,12 +61,12 @@
     if(name)name.textContent=patient.name||'Paciente activo';
     if(meta)meta.textContent=[patient.age,patient.sex].filter(Boolean).join(' · ');
     const close=workspace.querySelector('[data-rx-host-close]');
-    if(close)close.textContent=options?.caller==='consultation'?'← Volver a Consulta':options?.caller==='activity'?'← Volver a Actividad clínica':'← Volver a Recetas';
+    if(close)close.textContent=options?.caller==='consultation-plan'?'← Volver al Plan':options?.caller==='consultation'?'← Volver a Consulta':options?.caller==='activity'?'← Volver a Actividad clínica':'← Volver a Recetas';
   };
   const openEmbedded = options => {
     try { window.bootstrap?.Modal?.getInstance(modal)?.hide(); } catch (_) {}
-    mode = 'embedded'; caller=options?.caller||'patient'; sourceElement=options?.sourceElement||null;
-    returnView = options?.returnView === 'history' ? 'history' : 'landing';
+    mode = 'embedded'; caller=options?.caller||'patient'; sourceElement=options?.sourceElement||null;returnFocus=options?.returnFocus||null;
+    returnView = ['history','plan'].includes(options?.returnView) ? options.returnView : 'landing';
     if(options?.workspaceMount) options.workspaceMount.appendChild(workspace); else workspaceAnchor.after(workspace);
     workspace.classList.remove('d-none');
     options?.workspaceMount?.classList.remove('d-none');
@@ -79,11 +79,12 @@
   };
   const closeEmbedded = () => {
     if (mode !== 'embedded') return;
-    const closedCaller=caller,closedSource=sourceElement,currentParent=workspace.parentElement;
+    const closedCaller=caller,closedSource=sourceElement,closedReturnFocus=returnFocus,currentParent=workspace.parentElement;
     restoreModalBody(); workspaceAnchor.after(workspace);
     if(currentParent&&currentParent!==workspaceHome)currentParent.classList.add('d-none');
-    closedSource?.classList.remove('d-none');mode='modal';caller='patient';sourceElement=null;
+    closedSource?.classList.remove('d-none');mode='modal';caller='patient';sourceElement=null;returnFocus=null;
     workspace.dispatchEvent(new CustomEvent('mxmed:prescription-host-closed',{bubbles:true,detail:{returnView,caller:closedCaller}}));
+    closedReturnFocus?.focus?.({preventScroll:true});
   };
   workspace.querySelector('[data-rx-host-change-patient]')?.addEventListener('click',()=>
     window.dispatchEvent(new CustomEvent('mxmed:prescription-host-request-change-patient')));

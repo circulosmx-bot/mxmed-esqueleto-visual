@@ -5,19 +5,21 @@
   if(!root||!body||!pane||!collector||!badge)return;
   const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='btn btn-outline-primary';confirmButton.dataset.ns='confirm';
   const confirmSlot=document.querySelector('[data-plan-confirm-slot]');
+  const planLayout=root.closest('.vis04-layout');
+  const planSurface=planLayout?.parentElement;
   const eligible=['tentative','pending_otp','pending','scheduled','confirmed'];
+  const canonicalRxHistoryView='consultation-plan-prescription-v2';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid=()=>crypto.randomUUID(), utc=()=>new Date().toISOString().slice(0,19).replace('T',' ');
   const dateOnly=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const localDate=s=>new Date(String(s).replace(' ','T'));
   const exact=d=>new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'long',year:'numeric'}).format(localDate(d+'T12:00:00'));
   const appointmentLabel=a=>a?`${new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}).format(localDate(a.start_at))} · ${a.consultorio_name||'Consultorio'}`:'';
-  const blank=()=>({orders:[],orderReviews:[],prescription:null,appointment:null,followup:null,expanded:'',days:10,date:dateOnly(new Date(Date.now()+10*86400000)),consultorio:'',message:''});
-  const medication=()=>({medicamento:'',dosis:'',via:'',frecuencia:'',duracion:'',indicaciones:''});
+  const blank=()=>({orders:[],orderReviews:[],appointment:null,followup:null,expanded:'',days:10,date:dateOnly(new Date(Date.now()+10*86400000)),consultorio:'',message:''});
   const action=extra=>({id:uid(),key:uid(),state:'DRAFT',event:utc(),payload:null,result:null,error:'',...extra});
   const labels={DRAFT:'Por registrar',IN_PROGRESS:'Registrando…',SUCCESS:'Registrado',FAILED:'Pendiente de reintento',BLOCKED_BY_DEPENDENCY:'Pendiente de otra indicación'};
-  let context=null,state=blank(),busy=false,appointments=[],locations=[],slots=[],loading='',epoch=0,guardPromise=null,modal=null,feedbackTimer=null,summaryEpoch=0,summaryKey='',canonicalDocs=[],verified=new Map(),summaryLoading=false,summaryFailed=false;
-  const actions=()=>[...state.orders,state.prescription,state.appointment,...state.orderReviews,state.followup].filter(Boolean);
+  let context=null,state=blank(),busy=false,appointments=[],locations=[],slots=[],loading='',epoch=0,guardPromise=null,modal=null,feedbackTimer=null,summaryEpoch=0,summaryKey='',canonicalDocs=[],verified=new Map(),summaryLoading=false,summaryFailed=false,canonicalRxKey='',canonicalPrescriptions=[];
+  const actions=()=>[...state.orders,state.appointment,...state.orderReviews,state.followup].filter(Boolean);
   const unresolved=()=>actions().filter(a=>a.state!=='SUCCESS');
   const pending=()=>unresolved().length>0;
   const storageKey=()=>context?'mxmed-plan02b:'+context.doctor+':'+context.patient+':'+context.encounter:'';
@@ -28,18 +30,18 @@
   const uncertain=a=>!!a && a.state!=='SUCCESS' && (a.uncertain || a.state==='IN_PROGRESS' || (a.state==='FAILED' && a.payload && (a.code==='AMBIGUOUS'||!a.code)));
   const frozen=a=>a?.state==='SUCCESS'||uncertain(a);
   const sameContext=()=>context&&JSON.stringify(contextNow())===JSON.stringify(context);
-  const semantic=(kind,a)=>JSON.stringify(kind==='orders'?{items:a.items||[],priority:a.priority,indication:a.indication,review:a.review||{mode:'none'}}:kind==='prescription'?{items:a.items,observaciones:a.observaciones}:kind==='appointment'?{mode:a.mode,selection:a.selection}:{title:a.title,due:a.due,link:a.link,ownDue:a.ownDue});
+  const semantic=(kind,a)=>JSON.stringify(kind==='orders'?{items:a.items||[],priority:a.priority,indication:a.indication,review:a.review||{mode:'none'}}:kind==='appointment'?{mode:a.mode,selection:a.selection}:{title:a.title,due:a.due,link:a.link,ownDue:a.ownDue});
   function sync(){
     const next=contextNow();
     if(!next.patient||!next.doctor||!next.encounter||!next.key){root.hidden=true;collector.hidden=true;badge.hidden=true;summaryEpoch++;summaryKey='';clearSummary();return;}
     if(!context||JSON.stringify(next)!==JSON.stringify(context)){
       if(busy)return; // Supported context transitions are blocked while a writer is active.
       if(modal)closeModal();
-      persist();context=next;state=blank();appointments=[];locations=[];slots=[];epoch++;summaryEpoch++;clearSummary();summaryKey='';
+      persist();context=next;state=blank();appointments=[];locations=[];slots=[];epoch++;summaryEpoch++;clearSummary();summaryKey='';canonicalRxKey='';canonicalPrescriptions=[];
       try{
         const stored=JSON.parse(sessionStorage.getItem(storageKey()));
         if(stored&&Array.isArray(stored.orders)){
-          state={...blank(),...stored};
+          state={...blank(),...stored};delete state.prescription;
           actions().forEach(a=>{if(a.state==='IN_PROGRESS'){a.state='FAILED';a.uncertain=true;a.code='AMBIGUOUS';a.error='Respuesta pendiente. Reintenta para recuperar el registro.';}});
         }
       }catch(_){}
@@ -47,6 +49,8 @@
     // A same-encounter resume may have temporarily hidden the badge during reload.
     render();
     root.hidden=body.dataset.plan02bSection!=='plan'||body.dataset.encounterState!=='open';
+    if(body.dataset.plan02bSection==='plan'&&body.dataset.encounterState==='open')void refreshCanonicalPrescriptionFeedback();
+    queueMicrotask(restoreCanonicalPrescriptionFromHistory);
     collector.hidden=body.dataset.plan02bSection!=='finalize';
     const current=storageKey()+':'+body.dataset.plan02bSection;
     if(current!==summaryKey){summaryKey=current;if(body.dataset.plan02bSection==='finalize')refreshSummary();}
@@ -61,17 +65,66 @@
   function field(label,html){return `<label>${label}${html}</label>`;}
   root.innerHTML='<h4>Agregar al plan</h4><div class="plan02b-action-bar"><button type="button" class="btn btn-outline-primary" data-ns="orders"><span class="material-symbols-rounded plan02b-action-icon" aria-hidden="true">science</span><strong class="plan02b-action-title">Orden de estudios</strong><span class="material-symbols-rounded plan02b-action-chevron" aria-hidden="true">chevron_right</span></button><button type="button" class="btn btn-outline-primary" data-ns="prescription"><span class="material-symbols-rounded plan02b-action-icon" aria-hidden="true">description</span><strong class="plan02b-action-title">Receta</strong><span class="material-symbols-rounded plan02b-action-chevron" aria-hidden="true">chevron_right</span></button><button type="button" class="btn btn-outline-primary" data-ns="appointment"><span class="material-symbols-rounded plan02b-action-icon" aria-hidden="true">calendar_month</span><strong class="plan02b-action-title">Próxima cita</strong><span class="material-symbols-rounded plan02b-action-chevron" aria-hidden="true">chevron_right</span></button><button type="button" class="btn btn-outline-primary" data-ns="followup"><span class="material-symbols-rounded plan02b-action-icon" aria-hidden="true">person_add</span><strong class="plan02b-action-title">Seguimiento</strong><span class="material-symbols-rounded plan02b-action-chevron" aria-hidden="true">chevron_right</span></button></div><p class="plan02b-feedback" role="status" aria-live="polite"></p>';
   function feedback(text){clearTimeout(feedbackTimer);root.querySelector('[role=status]').textContent=text;feedbackTimer=setTimeout(()=>{root.querySelector('[role=status]').textContent='';},5000);}
+  function prescriptionMount(){
+    if(!planSurface)return null;
+    let mount=planSurface.querySelector(':scope > [data-plan02b-rx-workspace]');
+    if(!mount){mount=document.createElement('section');mount.dataset.plan02bRxWorkspace='';mount.className='plan02b-rx-workspace d-none';mount.setAttribute('aria-label','Receta de esta consulta');planSurface.append(mount);}
+    return mount;
+  }
+  function canonicalRxHistoryState(c){return {...(history.state||{}),mxmedView:canonicalRxHistoryView,mxmedPatient:c.patient,mxmedEncounter:c.key};}
+  function clearCanonicalRxHistory(){
+    if(history.state?.mxmedView!==canonicalRxHistoryView)return;
+    const next={...(history.state||{})};delete next.mxmedView;delete next.mxmedPatient;delete next.mxmedEncounter;history.replaceState(next,'',location.href);
+  }
+  function openCanonicalPrescription(trigger,restoreHistory=false){
+    const c=contextNow(),runtime=window.mxmedPrescriptionRuntimeScope?.(c.patient),mount=prescriptionMount();
+    if(!mount||!planLayout||!window.mxmedOpenCanonicalPrescription||body.dataset.encounterState!=='open'
+      ||!sameContext()||runtime?.mode!=='consultation'||runtime.patient_id!==c.patient||runtime.encounter_key!==c.key){
+      feedback('No se pudo abrir la receta porque cambió el contexto de esta consulta.');return false;
+    }
+    const opened=window.mxmedOpenCanonicalPrescription({standalone:false,host:'embedded',caller:'consultation-plan',
+      workspaceMount:mount,sourceElement:planLayout,returnFocus:trigger,returnView:'plan',patient:{patient_id:c.patient}});
+    if(opened&&!restoreHistory&&history.state?.mxmedView!==canonicalRxHistoryView)history.pushState(canonicalRxHistoryState(c),'',location.href);
+    if(!opened)feedback('No se pudo abrir la receta en esta consulta.');
+    return opened;
+  }
+  function restoreCanonicalPrescriptionFromHistory(){
+    const saved=history.state||{},c=contextNow();
+    if(saved.mxmedView!==canonicalRxHistoryView||saved.mxmedPatient!==c.patient||saved.mxmedEncounter!==c.key
+      ||body.dataset.encounterState!=='open'||window.mxmedPrescriptionHost?.isEmbedded())return;
+    const trigger=root.querySelector('[data-ns="prescription"]');
+    if(body.dataset.plan02bSection!=='plan'){document.querySelector('.m7-workspace-sections [data-m7-section="plan"]')?.click();return;}
+    openCanonicalPrescription(trigger,true);
+  }
+  function renderCanonicalPrescriptionFeedback(){
+    let panel=root.querySelector('[data-plan02b-canonical-rx]');
+    if(!panel){panel=document.createElement('section');panel.dataset.plan02bCanonicalRx='';panel.className='plan02b-canonical-rx';root.append(panel);}
+    const latest=canonicalPrescriptions[0];panel.hidden=!latest;
+    panel.innerHTML=latest?`<span class="material-symbols-rounded" aria-hidden="true">prescriptions</span><div><strong>Receta emitida</strong><p>Registrada en esta consulta.</p></div><button type="button" class="btn btn-outline-primary btn-sm" data-plan02b-rx-view="${esc(latest.document_uuid||'')}">Ver receta</button>`:'';
+  }
+  async function refreshCanonicalPrescriptionFeedback(force=false){
+    if(!sameContext())return;const c={...context},key=`${storageKey()}:canonical-rx`;
+    if(!force&&canonicalRxKey===key)return;canonicalRxKey=key;
+    try{
+      const data=await api(`/api/clinical/index.php/doctors/${encodeURIComponent(c.doctor)}/patients/${encodeURIComponent(c.patient)}/documents?limit=200`);
+      if(!sameContext()||context.key!==c.key)return;
+      canonicalPrescriptions=(data.items||[]).filter(d=>String(d.encounter_ref_id||d.encounter_id)===String(c.encounter)
+        &&['prescription','receta','rx'].includes(String(d.document_type||'').toLowerCase())
+        &&['generated','signed'].includes(String(d.status||'').toLowerCase())&&d.has_successor!=1)
+        .sort((a,b)=>String(b.event_datetime||b.generated_at||'').localeCompare(String(a.event_datetime||a.generated_at||'')));
+    }catch(_){canonicalPrescriptions=[];}
+    renderCanonicalPrescriptionFeedback();
+  }
   function clearSummary(){canonicalDocs=[];verified.clear();summaryLoading=false;summaryFailed=false;document.querySelector('[data-review-documents]').hidden=true;document.querySelector('[data-review-document-list]').replaceChildren();}
-  const kindOf=a=>state.orders.includes(a)?'orders':a===state.prescription?'prescription':a===state.appointment?'appointment':'followup';
+  const kindOf=a=>state.orders.includes(a)?'orders':a===state.appointment?'appointment':'followup';
   function summaryCard(a){
     const kind=kindOf(a),ok=verified.get(a.id),registered=a.state==='SUCCESS'&&!!ok;
-    const type={orders:'Orden de estudio',prescription:'Receta',appointment:'Próxima cita',followup:a.derivedFromOrder?'Revisión del resultado':'Seguimiento'}[kind];
-    let rxItems=a.items||[];if(registered&&kind==='prescription'){try{const payload=typeof ok.payload_json==='string'?JSON.parse(ok.payload_json):ok.payload_json;rxItems=payload?.prescription?.items||rxItems;}catch(_){}}
-    const title=kind==='appointment'?appointmentLabel(registered?ok:a.selection):kind==='prescription'?`${rxItems.length} medicamento${rxItems.length===1?'':'s'}`:registered?ok.title:a.title;
-    const stateLabel=a.state==='SUCCESS'?(registered?(kind==='appointment'?(eligible.includes(String(ok.status).toLowerCase())?'Agendada':'Cita '+String(ok.status)):kind==='orders'||kind==='prescription'?'Registrada':({OPEN:'Pendiente',RESOLVED:'Resuelto',CANCELLED:'Cancelado'}[ok.state]||'Registrado')):'Verificación pendiente'):labels[a.state];
+    const type={orders:'Orden de estudio',appointment:'Próxima cita',followup:a.derivedFromOrder?'Revisión del resultado':'Seguimiento'}[kind];
+    const title=kind==='appointment'?appointmentLabel(registered?ok:a.selection):registered?ok.title:a.title;
+    const stateLabel=a.state==='SUCCESS'?(registered?(kind==='appointment'?(eligible.includes(String(ok.status).toLowerCase())?'Agendada':'Cita '+String(ok.status)):kind==='orders'?'Registrada':({OPEN:'Pendiente',RESOLVED:'Resuelto',CANCELLED:'Cancelado'}[ok.state]||'Registrado')):'Verificación pendiente'):labels[a.state];
     const due=registered&&kind==='followup'?ok.due_at:a.due;
     const extra=kind==='followup'?(a.reviewMode==='days'?`En ${a.reviewDays} días · `:'')+(a.link?'En la próxima cita':due?due.slice(0,10):'Sin fecha límite'):'';
-    return `<article class="plan02b-prepared flow-consequence" data-prepared="${a.id}" data-action-state="${a.state}"><span class="material-symbols-rounded" aria-hidden="true">${{orders:'description',prescription:'medication',appointment:'event_available',followup:'person'}[kind]}</span><div><strong>${type}</strong><p>${esc(title||'Preparación pendiente de completar')}</p>${extra?`<small>${esc(extra)}</small>`:''}<span class="plan02b-state" data-state="${registered?'SUCCESS':a.state==='SUCCESS'?'VERIFYING':a.state}">${stateLabel}</span>${a.error?`<p class="plan02b-error" role="alert">${esc(a.error)}</p>`:''}${uncertain(a)&&a.state!=='IN_PROGRESS'?'<small>Confirma de nuevo para recuperar el mismo registro.</small>':''}</div>${a.state==='SUCCESS'?'':`<div class="plan02b-row-actions"><button type="button" class="btn btn-outline-primary btn-sm" data-review="${a.id}" ${busy?'disabled':''}>${uncertain(a)?'Ver detalles':'Revisar'}</button>${!uncertain(a)&&(!a.payload||kind==='prescription')?`<button type="button" class="btn btn-link btn-sm" data-remove="${a.id}" ${busy?'disabled':''}>Retirar</button>`:''}</div>`}</article>`;
+    return `<article class="plan02b-prepared flow-consequence" data-prepared="${a.id}" data-action-state="${a.state}"><span class="material-symbols-rounded" aria-hidden="true">${{orders:'description',appointment:'event_available',followup:'person'}[kind]}</span><div><strong>${type}</strong><p>${esc(title||'Preparación pendiente de completar')}</p>${extra?`<small>${esc(extra)}</small>`:''}<span class="plan02b-state" data-state="${registered?'SUCCESS':a.state==='SUCCESS'?'VERIFYING':a.state}">${stateLabel}</span>${a.error?`<p class="plan02b-error" role="alert">${esc(a.error)}</p>`:''}${uncertain(a)&&a.state!=='IN_PROGRESS'?'<small>Confirma de nuevo para recuperar el mismo registro.</small>':''}</div>${a.state==='SUCCESS'?'':`<div class="plan02b-row-actions"><button type="button" class="btn btn-outline-primary btn-sm" data-review="${a.id}" ${busy?'disabled':''}>${uncertain(a)?'Ver detalles':'Revisar'}</button>${!uncertain(a)&&!a.payload?`<button type="button" class="btn btn-link btn-sm" data-remove="${a.id}" ${busy?'disabled':''}>Retirar</button>`:''}</div>`}</article>`;
   }
   function render(){
     const list=unresolved();badge.hidden=!list.length;badge.textContent=String(list.length);badge.setAttribute('aria-label',`${list.length} indicaciones requieren revisión en Finalizar`);
@@ -93,7 +146,7 @@
       canonicalDocs=(data.items||[]).filter(d=>String(d.encounter_ref_id||d.encounter_id)===String(c.encounter));verified.clear();
       for(const a of actions().filter(a=>a.state==='SUCCESS')){
         const kind=kindOf(a);
-        if(kind==='orders'||kind==='prescription'){
+        if(kind==='orders'){
           const doc=canonicalDocs.find(d=>String(d.document_uuid)===String(a.result?.document_uuid)||String(d.id)===String(a.result?.document_id));if(doc)verified.set(a.id,doc);
         }else{
           try{
@@ -121,6 +174,7 @@
     closeModal();
   }
   function openModal(kind,original,trigger){
+    if(kind==='prescription')return; // Retired: Consulta prescriptions use the canonical V2 workspace.
     if(busy||modal||!sameContext())return;
     const draft=original?clone(original):action(kind==='orders'?{title:'',summary:'',items:[],priority:'Rutinaria',indication:'',review:{mode:'none',days:10,date:''}}:kind==='prescription'?{items:[medication()],observaciones:''}:kind==='appointment'?{mode:'existing',selection:null}:{title:'',due:'',link:false,ownDue:false});
     const dialog=document.createElement('dialog');dialog.className='plan02b-modal';dialog.setAttribute('aria-labelledby','plan02b-modal-title');
@@ -273,8 +327,8 @@
   async function execute(){
     if(busy||modal||!pending()||body.dataset.plan02bSection!=='finalize')return;
     const c=contextNow();if(JSON.stringify(c)!==JSON.stringify(context)||body.dataset.encounterState!=='open')return;
-    const a=state.appointment,f=state.followup,r=state.prescription;
-    if(state.orders.some(o=>o.state!=='SUCCESS'&&(!Array.isArray(o.items)||!o.items.length||o.items.length>100))||(r&&(!r.items?.length||r.items.some(item=>!String(item.medicamento||'').trim())))||(a&&!a.selection)||(f&&(!f.title.trim()||(f.link&&!a?.selection)))){state.message='Completa las acciones seleccionadas antes de confirmar.';render();return;}
+    const a=state.appointment,f=state.followup;
+    if(state.orders.some(o=>o.state!=='SUCCESS'&&(!Array.isArray(o.items)||!o.items.length||o.items.length>100))||(a&&!a.selection)||(f&&(!f.title.trim()||(f.link&&!a?.selection)))){state.message='Completa las acciones seleccionadas antes de confirmar.';render();return;}
     busy=true;state.message='';render();
     try{
       for(const o of state.orders){
@@ -285,18 +339,6 @@
           document_type:type,title:o.title.trim(),summary:Array.from(o.summary||'').slice(0,512).join(''),event_datetime:o.event,
           payload:{source:'m7_ws04',order_area:window.mxmedStudyComposer.orderArea(o.items),priority:o.priority||'Rutinaria',indication:o.indication||'',order_items:orderItems}
         });
-      }
-      if(r&&r.state!=='SUCCESS'){
-        const scope=window.mxmedPrescriptionRuntimeScope?.(c.patient);
-        if(scope?.mode!=='consultation'||scope.patient_id!==c.patient||scope.encounter_key!==c.key){
-          r.state='FAILED';r.code='CONTEXT_CHANGED';r.error='La consulta activa cambió. Vuelve a esta consulta antes de reintentar.';
-        }else{
-          const saved=await run(r,`/api/clinical/index.php/encounters/${encodeURIComponent(c.key)}/documents`,{
-            document_type:'prescription',title:'Receta médica',event_datetime:r.event,context:{patient_id:c.patient},
-            payload:{contract_version:1,prescription:{items:r.items,observaciones:r.observaciones||''}}
-          });
-          if(saved)window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:c.patient,encounter_key:c.key,document_type:'prescription',document_ref:r.result?.document_uuid||r.result?.document_id||''}}));
-        }
       }
       if(a&&a.state!=='SUCCESS'){
         if(a.mode==='existing'){
@@ -320,14 +362,21 @@
   confirmButton.onclick=()=>execute();
   matchMedia('(min-width:1200px)').addEventListener('change',()=>render());
   root.addEventListener('click',event=>{
+    const viewer=event.target.closest('[data-plan02b-rx-view]');
+    if(viewer){
+      const uuid=String(viewer.dataset.plan02bRxView||'').trim(),doctor=String(context?.doctor||'');
+      if(uuid)window.open(`/modules/clinical/ui/document.php?${new URLSearchParams({uuid,...(doctor?{doctor_id:doctor}:{})})}`,'_blank','noopener');
+      return;
+    }
     const e=event.target.closest('[data-ns]');if(!e)return;
+    if(e.dataset.ns==='prescription'){openCanonicalPrescription(e);return;}
     openModal(e.dataset.ns,e.dataset.ns==='orders'?null:state[e.dataset.ns],e);
   });
   collector.addEventListener('click',event=>{
     const e=event.target.closest('button');if(!e||busy)return;
     if(e.dataset.ns==='confirm')return;
     const a=actions().find(x=>x.id===(e.dataset.review||e.dataset.remove));if(!a)return;
-    const kind=state.orders.includes(a)?'orders':a===state.prescription?'prescription':a===state.appointment?'appointment':'followup';
+    const kind=state.orders.includes(a)?'orders':a===state.appointment?'appointment':'followup';
     if(e.dataset.review){openModal(kind,a,e);return;}
     if((a.payload&&kind!=='prescription')||a.state==='SUCCESS'||uncertain(a))return;
     if(kind==='appointment'&&[...state.orderReviews,state.followup].some(f=>f?.link)){state.message='Este seguimiento depende de la próxima cita. Revísalo y elige «No vincular» o retira primero su preparación.';render();return;}
@@ -357,7 +406,7 @@
       const trigger=document.activeElement,dialog=document.createElement('dialog');dialog.className='plan02b-leave';dialog.setAttribute('aria-label',unknown?'Resultado pendiente de recuperar':'Acciones sin confirmar');
       dialog.innerHTML=`<h4>${unknown?'Hay un resultado pendiente de recuperar.':'Tienes acciones sin confirmar.'}</h4><p>${unknown?'Vuelve a Revisar y finalizar y confirma de nuevo para recuperar el mismo registro antes de salir o finalizar.':'Las acciones registradas se conservarán.'}</p><div><button type="button" class="btn btn-primary" data-stay>Seguir aquí</button>${unknown?'':'<button type="button" class="btn btn-outline-secondary" data-discard>Descartar acciones y continuar</button>'}</div>`;
       document.body.append(dialog);const finish=value=>{dialog.close();dialog.remove();guardPromise=null;trigger?.focus({preventScroll:true});resolve(value);};dialog.querySelector('[data-stay]').onclick=()=>finish(false);dialog.oncancel=e=>{e.preventDefault();finish(false);};
-      const discard=dialog.querySelector('[data-discard]');if(discard)discard.onclick=()=>{state.orders=state.orders.filter(o=>o.state==='SUCCESS');state.orderReviews=state.orderReviews.filter(f=>f.state==='SUCCESS');if(state.prescription?.state!=='SUCCESS')state.prescription=null;if(state.appointment?.state!=='SUCCESS')state.appointment=null;if(state.followup?.state!=='SUCCESS')state.followup=null;state.message='';render();finish(true);};
+      const discard=dialog.querySelector('[data-discard]');if(discard)discard.onclick=()=>{state.orders=state.orders.filter(o=>o.state==='SUCCESS');state.orderReviews=state.orderReviews.filter(f=>f.state==='SUCCESS');if(state.appointment?.state!=='SUCCESS')state.appointment=null;if(state.followup?.state!=='SUCCESS')state.followup=null;state.message='';render();finish(true);};
       dialog.showModal();dialog.querySelector('[data-stay]').focus();
     });return guardPromise;
   }
@@ -366,7 +415,7 @@
   document.querySelector('[data-m7-terminal-refresh]').addEventListener('click',refreshSummary);
   window.mxmedPlanNextSteps={mayLeave,mayLeaveView,hasPending:()=>pending()||!!dirtyModal(),isBusy:()=>busy};
   window.mxmedPatientWorkspaceNavigationGuard?.register({
-    id:'plan02b-preparations',getContextCopy:()=>state.prescription&&!state.orders.some(a=>a.state!=='SUCCESS')?'prescription':state.orders.some(a=>a.state!=='SUCCESS')&&!state.prescription?'order':'generic',
+    id:'plan02b-preparations',getContextCopy:()=>state.orders.some(a=>a.state!=='SUCCESS')?'order':'generic',
     isInProgress:()=>pending()||!!dirtyModal(),isSaving:()=>busy,
     risksDestination:destination=>!String(destination).startsWith('#t-')||!!dirtyModal(),
     canDiscard:()=>!actions().some(uncertain),
@@ -375,11 +424,23 @@
       closeModal();
       state.orders=state.orders.filter(a=>a.state==='SUCCESS');
       state.orderReviews=state.orderReviews.filter(a=>a.state==='SUCCESS');
-      if(state.prescription?.state!=='SUCCESS')state.prescription=null;
       if(state.appointment?.state!=='SUCCESS')state.appointment=null;
       if(state.followup?.state!=='SUCCESS')state.followup=null;
       state.message='';render();
     }
+  });
+  window.addEventListener('mxmed:clinical-document-created',event=>{
+    const detail=event.detail||{};
+    if(detail.document_type==='prescription'&&sameContext()&&String(detail.patient_id||'')===context.patient
+      &&String(detail.encounter_key||'')===context.key)void refreshCanonicalPrescriptionFeedback(true);
+  });
+  window.addEventListener('mxmed:prescription-host-closed',event=>{
+    if(event.detail?.caller==='consultation-plan'){clearCanonicalRxHistory();void refreshCanonicalPrescriptionFeedback(true);}
+  });
+  window.addEventListener('popstate',()=>{
+    if(!window.mxmedPrescriptionHost?.isEmbedded()||window.mxmedPrescriptionHost.caller()!=='consultation-plan')return;
+    const c=contextNow();history.pushState(canonicalRxHistoryState(c),'',location.href);
+    window.dispatchEvent(new CustomEvent('mxmed:prescription-host-request-close'));
   });
   window.addEventListener('beforeunload',event=>{if(pending()||busy||dirtyModal()){event.preventDefault();event.returnValue='';}});
   new MutationObserver(sync).observe(body,{attributes:true,attributeFilter:['data-encounter-id','data-encounter-key','data-encounter-state','data-plan02b-section']});
