@@ -22,5 +22,5 @@ assert.equal((html.match(/data-m7-section=/g) || []).length, 7);
 for (const section of ['measurements', 'exam', 'documents', 'finalize']) {
   assert.match(html, new RegExp(`data-m7-section="${section}" disabled`));
 }
-assert.match(endpoint, /clinical_m6_patient_route_uses_v1\(\$context, \$patientId\)/);
+assert.match(endpoint, /activeSnapshot\(\$context\['doctor_id'\], \$patientId\)/);
 console.log('M7 WS01 static boundary: PASS');

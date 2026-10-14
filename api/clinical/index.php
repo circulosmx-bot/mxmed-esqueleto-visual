@@ -6370,16 +6370,9 @@ try {
 
         $context = clinical_require_doctor_context('patients/{patient_id}/encounters/active');
         if ($context === null) return;
-        $currentUserId = $context['user_id'];
-        $useV1 = clinical_m6_patient_route_uses_v1($context, $patientId);
-
         try {
             $pdo = clinical_documents_pdo();
-            if ($useV1) {
-                clinical_encounter_integrity_assert_schema_ready($pdo);
-            } else {
-                clinical_encounters_ensure_schema($pdo);
-            }
+            clinical_encounter_integrity_assert_schema_ready($pdo);
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
                     'ok' => false,
@@ -6391,9 +6384,8 @@ try {
                 return;
             }
             if (!clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, 'patients/{patient_id}/encounters/active')) return;
-            $active = $useV1
-                ? (new ClinicalEncounterIntegrityService($pdo))->active($context['doctor_id'], $patientId)
-                : clinical_encounter_open_fetch($pdo, $patientId, $context['doctor_id'], $currentUserId);
+            $snapshot = (new ClinicalEncounterIntegrityRepository($pdo))
+                ->activeSnapshot($context['doctor_id'], $patientId);
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
             $schemaNotReady = str_starts_with($msg, 'SCHEMA_NOT_READY');
@@ -6407,13 +6399,26 @@ try {
             return;
         }
 
-        if (!is_array($active) || $active === []) {
+        $openCount = (int)$snapshot['open_count'];
+        if ($openCount > 1) {
+            clinical_send_response([
+                'ok'=>false,
+                'error'=>['code'=>'MULTIPLE_OPEN_ENCOUNTERS','message'=>'Canonical encounter integrity conflict'],
+                'data'=>null,
+                'meta'=>['method'=>'GET','route'=>'patients/{patient_id}/encounters/active',
+                    'integrity_v1'=>true,'canonical'=>true,'open_count'=>$openCount,'state'=>'CONFLICT'],
+            ], 409);
+            return;
+        }
+        $active = $snapshot['encounter'];
+        if ($openCount === 0) {
             clinical_send_response([
                 'ok' => true,
                 'error' => null,
                 'message' => 'no active encounter',
                 'data' => null,
-                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active', 'integrity_v1' => $useV1],
+                'meta' => ['method'=>'GET','route'=>'patients/{patient_id}/encounters/active',
+                    'integrity_v1'=>true,'canonical'=>true,'open_count'=>0,'state'=>'NONE'],
             ], 200);
             return;
         }
@@ -6431,7 +6436,8 @@ try {
                 'status' => 'open',
                 'opened_by_user_id' => (string)($active['opened_by_user_id'] ?? ''),
             ],
-            'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active', 'integrity_v1' => $useV1],
+            'meta' => ['method'=>'GET','route'=>'patients/{patient_id}/encounters/active',
+                'integrity_v1'=>true,'canonical'=>true,'open_count'=>1,'state'=>'OPEN'],
         ], 200);
         return;
     }
@@ -6462,7 +6468,9 @@ try {
 
         $context = clinical_require_doctor_context('patients/{patient_id}/encounters');
         if ($context === null) return;
-        $useV1 = clinical_m6_patient_route_uses_v1($context, $patientId);
+        // Identity-authenticated patient encounter commands use the canonical
+        // repository. M6 cohort controls remain on legacy mutation surfaces.
+        $useV1 = true;
 
         try {
             $pdo = clinical_documents_pdo();
@@ -6577,13 +6585,17 @@ try {
                 $payload['appointment_id'] = null;
             }
             try {
-                $created = (new ClinicalEncounterIntegrityService($pdo))->start(
-                    $context['doctor_id'],
-                    $context['user_id'],
-                    $patientId,
-                    $payload,
-                    $idempotencyKey
-                );
+                $preStart = (new ClinicalEncounterIntegrityRepository($pdo))
+                    ->activeSnapshot($context['doctor_id'], $patientId);
+                if ((int)$preStart['open_count'] > 1) {
+                    clinical_send_response(['ok'=>false,
+                        'error'=>['code'=>'MULTIPLE_OPEN_ENCOUNTERS','message'=>'Canonical encounter integrity conflict'],
+                        'data'=>null,'meta'=>['method'=>'POST','route'=>'patients/{patient_id}/encounters',
+                            'integrity_v1'=>true,'canonical'=>true,'open_count'=>(int)$preStart['open_count']]],409);
+                    return;
+                }
+                $created = (new ClinicalEncounterIntegrityRepository($pdo))->start(
+                    $context['doctor_id'], $context['user_id'], $patientId, $payload, $idempotencyKey);
                 $startCreated = ($created['_integrity_start_created'] ?? false) === true;
                 unset($created['_integrity_start_created']);
                 clinical_send_response([
@@ -6593,7 +6605,8 @@ try {
                     'data' => $created + [
                         'encounter_key' => clinical_encounter_key((int)$created['encounter_id'], (string)($created['appointment_id'] ?? '')),
                     ],
-                    'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/encounters', 'integrity_v1' => true],
+                    'meta' => ['method'=>'POST','route'=>'patients/{patient_id}/encounters',
+                        'integrity_v1'=>true,'canonical'=>true,'open_count'=>1],
                 ], $startCreated ? 201 : 200);
             } catch (ClinicalIdempotencyException $e) {
                 clinical_send_response([

@@ -565,7 +565,12 @@
         if(seen === epoch) renderHistory(rows, seen);
       }catch(error){ if(seen === epoch) fail(error); }
     }catch(error){
-      if(seen === epoch){ status.textContent = 'No se pudo comprobar el estado de la consulta.'; fail(error); }
+      if(seen === epoch){
+        status.textContent = errorCode(error?.code) === 'MULTIPLE_OPEN_ENCOUNTERS'
+          ? 'Revisión requerida: hay más de una consulta abierta.'
+          : 'No se pudo comprobar el estado de la consulta.';
+        fail(error);
+      }
     }
   }
   startButton.addEventListener('click', async ()=>{

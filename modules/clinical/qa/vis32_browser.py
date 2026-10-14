@@ -46,7 +46,7 @@ with sync_playwright() as p:
   page.wait_for_function("!!document.querySelector('[data-m7-body]')?.dataset.encounterId")
   STARTED=page.locator('[data-m7-body]').get_attribute('data-encounter-id')
   check('explicit START exactly one',sql("SELECT COUNT(*) FROM clinical_encounters WHERE patient_id='review-no-open' AND status='open'")[0][0]==1)
-  for _ in range(3):leave();six();expect(page.locator('[data-vis02-action="consulta"]')).to_have_text('VOLVER A CONSULTA');resume(STARTED)
+  for _ in range(3):leave();six();expect(page.locator('[data-vis02-action="consulta"]')).to_have_text('CONTINUAR CONSULTA');resume(STARTED)
   check('repeat resume zero extra START',len(writes)==n+1)
   ready('plan02','1015');n=len(writes);leave();check('clean exit immediate no write or dialog',len(writes)==n and not dialogs)
   page.locator('[data-exp-tabs] [data-bs-target="#t-estudios"]').click();resume('1015');leave();expect(page.locator('#t-estudios')).to_be_visible();check('return remembers valid general tab')

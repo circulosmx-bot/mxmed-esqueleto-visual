@@ -442,6 +442,19 @@ final class ClinicalEncounterIntegrityRepository
 {
     public function __construct(private PDO $pdo) {}
 
+    /** Canonical read contract: never choose arbitrarily when integrity is already broken. */
+    public function activeSnapshot(string $doctorId, string $patientId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM clinical_encounters
+            WHERE doctor_id=:doctor AND patient_id=:patient AND BINARY status=BINARY 'open'
+            ORDER BY encounter_id");
+        $stmt->execute([':doctor'=>$doctorId, ':patient'=>$patientId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $count = count($rows);
+        return ['open_count'=>$count, 'encounter'=>$count === 1 ? $rows[0] : null,
+            'integrity_state'=>$count > 1 ? 'CONFLICT' : ($count === 1 ? 'OPEN' : 'NONE')];
+    }
+
     public function findOpen(string $doctorId,string $patientId,bool $forUpdate=false): ?array
     {
         $sql="SELECT * FROM clinical_encounters WHERE doctor_id=:doctor AND patient_id=:patient AND BINARY status=BINARY 'open' ORDER BY encounter_id LIMIT 1".($forUpdate?' FOR UPDATE':'');

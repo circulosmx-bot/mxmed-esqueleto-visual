@@ -6,7 +6,7 @@ out=Path(os.environ['VIS32_ARTIFACTS']);out.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
  b=p.chromium.launch();page=b.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack))
  page.goto('http://127.0.0.1:18143/index.html?review_patient=plan02ux&qa_tools=hide',wait_until='commit')
- expect(page.locator('[data-vis02-action="consulta"]')).to_have_text('VOLVER A CONSULTA',timeout=55000)
+ expect(page.locator('[data-vis02-action="consulta"]')).to_have_text('CONTINUAR CONSULTA',timeout=55000)
  for w,h in [(1440,900),(1366,768),(820,1180),(390,844)]:
   page.set_viewport_size({'width':w,'height':h});page.wait_for_timeout(800);page.evaluate('scrollTo(0,0)')
   expect(page.locator('#t-resumen-longitudinal')).to_be_visible()

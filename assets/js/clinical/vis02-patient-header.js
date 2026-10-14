@@ -46,15 +46,15 @@
     card.classList.toggle('vis16-consultation-open', state === 'open');
     if (state === 'open') {
       message('consulta', 'CONSULTA EN CURSO');
-      cta.textContent = 'VOLVER A CONSULTA';
+      cta.textContent = 'CONTINUAR CONSULTA';
       cta.disabled = false;
     } else if (state === 'none') {
       message('consulta', 'Sin consulta activa');
       cta.textContent = 'INICIAR CONSULTA';
       cta.disabled = false;
     } else {
-      message('consulta', state === 'legacy' ? 'Consultar estado de atención' : 'Estado no disponible');
-      cta.textContent = 'CONSULTAR ESTADO';
+      message('consulta', state === 'conflict' ? 'Revisión requerida' : 'Estado no disponible');
+      cta.textContent = state === 'conflict' ? 'REVISIÓN REQUERIDA' : 'ESTADO NO DISPONIBLE';
       cta.disabled = true;
     }
     syncConsultationCtaVisibility();
@@ -81,7 +81,7 @@
     const id = patient, run = ++epoch;
     pendingTasks();
     const cta = host.querySelector('[data-vis02-action="consulta"]');
-    if (!['open', 'none', 'legacy'].includes(encounterState)) {
+    if (!['open', 'none', 'conflict'].includes(encounterState)) {
       encounterState = 'unavailable';
       cta.textContent = 'CONSULTANDO…'; cta.disabled = true;
       message('consulta', 'Consultando…');
@@ -92,7 +92,11 @@
     const read = async suffix => {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/${suffix}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
       const result = await response.json();
-      if (!response.ok || result?.ok !== true) throw new Error('unavailable');
+      if (!response.ok || result?.ok !== true) {
+        const error = new Error('unavailable');
+        error.code = result?.error?.code || result?.error || '';
+        throw error;
+      }
       return result;
     };
     // Reuse the former rail's patient task authority without delaying other summaries.
@@ -106,8 +110,8 @@
     const [enc, allergies, medications, problems, longitudinal] = results;
     if (enc.status === 'fulfilled') {
       const snapshot = enc.value;
-      consultationState(snapshot.meta?.integrity_v1 !== true ? 'legacy' : snapshot.data?.encounter_key ? 'open' : 'none');
-    } else consultationState('unavailable');
+      consultationState(snapshot.meta?.open_count > 1 ? 'conflict' : snapshot.data?.encounter_key ? 'open' : 'none');
+    } else consultationState(enc.reason?.code === 'MULTIPLE_OPEN_ENCOUNTERS' ? 'conflict' : 'unavailable');
     if (allergies.status !== 'fulfilled') message('allergies', 'Estado no disponible');
     else {
       const data = allergies.value.data || {};
