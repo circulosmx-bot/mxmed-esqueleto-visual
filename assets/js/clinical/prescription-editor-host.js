@@ -9,7 +9,11 @@
   if (!modal || !modalContent || !body || !workspace || !mount) return;
   const modalBodyAnchor = document.createComment('canonical prescription editor host');
   body.before(modalBodyAnchor);
+  const workspaceAnchor = document.createComment('canonical prescription workspace host');
+  workspace.before(workspaceAnchor);
+  const workspaceHome = workspaceAnchor.parentElement;
   let mode = 'modal', stage = 1, returnView = 'landing';
+  let caller = 'patient', sourceElement = null;
   const stages = () => Array.from(workspace.querySelectorAll('[data-rx-host-step]'));
   const engineStage = number => body.querySelector(`[data-rx-engine-stage="${number}"]`);
   const focusStage = number => {
@@ -45,20 +49,42 @@
     if (body.parentElement !== modalContent) modalBodyAnchor.after(body);
     body.classList.remove('rx-editor-embedded-body');
   };
+  const renderPatientContext = options => {
+    const panel=workspace.querySelector('[data-rx-host-patient-context]');
+    const global=options?.caller==='global';
+    panel?.classList.toggle('d-none',!global);
+    const patient=options?.patient||{};
+    const name=workspace.querySelector('[data-rx-host-patient-name]');
+    const meta=workspace.querySelector('[data-rx-host-patient-meta]');
+    if(name)name.textContent=patient.name||'Paciente activo';
+    if(meta)meta.textContent=[patient.age,patient.sex].filter(Boolean).join(' · ');
+    const close=workspace.querySelector('[data-rx-host-close]');
+    if(close)close.textContent=options?.caller==='consultation'?'← Volver a Consulta':options?.caller==='activity'?'← Volver a Actividad clínica':'← Volver a Recetas';
+  };
   const openEmbedded = options => {
     try { window.bootstrap?.Modal?.getInstance(modal)?.hide(); } catch (_) {}
-    mode = 'embedded'; returnView = options?.returnView === 'history' ? 'history' : 'landing';
+    mode = 'embedded'; caller=options?.caller||'patient'; sourceElement=options?.sourceElement||null;
+    returnView = options?.returnView === 'history' ? 'history' : 'landing';
+    if(options?.workspaceMount) options.workspaceMount.appendChild(workspace); else workspaceAnchor.after(workspace);
+    workspace.classList.remove('d-none');
+    options?.workspaceMount?.classList.remove('d-none');
+    sourceElement?.classList.add('d-none');
+    renderPatientContext(options);
     mount.appendChild(body); body.classList.add('rx-editor-embedded-body');
-    workspace.dispatchEvent(new CustomEvent('mxmed:prescription-host-open',{bubbles:true,detail:options||{}}));
-    window.dispatchEvent(new CustomEvent('mxmed:prescription-host-open',{detail:{mode, ...(options||{})}}));
+    workspace.dispatchEvent(new CustomEvent('mxmed:prescription-host-open',{bubbles:true,detail:{mode,...(options||{})}}));
     sync(1,false); workspace.querySelector('#rx-editor-title')?.focus({preventScroll:true});
     return true;
   };
   const closeEmbedded = () => {
     if (mode !== 'embedded') return;
-    restoreModalBody(); mode='modal';
-    workspace.dispatchEvent(new CustomEvent('mxmed:prescription-host-closed',{bubbles:true,detail:{returnView}}));
+    const closedCaller=caller,closedSource=sourceElement,currentParent=workspace.parentElement;
+    restoreModalBody(); workspaceAnchor.after(workspace);
+    if(currentParent&&currentParent!==workspaceHome)currentParent.classList.add('d-none');
+    closedSource?.classList.remove('d-none');mode='modal';caller='patient';sourceElement=null;
+    workspace.dispatchEvent(new CustomEvent('mxmed:prescription-host-closed',{bubbles:true,detail:{returnView,caller:closedCaller}}));
   };
+  workspace.querySelector('[data-rx-host-change-patient]')?.addEventListener('click',()=>
+    window.dispatchEvent(new CustomEvent('mxmed:prescription-host-request-change-patient')));
   workspace.querySelector('[data-rx-host-close]')?.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('mxmed:prescription-host-request-close')));
   workspace.querySelector('[data-rx-host-save]')?.addEventListener('click',()=>document.getElementById('ne_rx_save_draft')?.click());
   workspace.querySelector('[data-rx-host-prev]')?.addEventListener('click',()=>{
@@ -72,5 +98,5 @@
     else if(stage===4)document.getElementById('ne_rx_final_review')?.click();
     else if(stage===5)document.getElementById('ne_rx_emit_signed')?.click();
   });
-  window.mxmedPrescriptionHost = {openEmbedded,closeEmbedded,setStage:sync,isEmbedded:()=>mode==='embedded',stage:()=>stage,restoreModalBody};
+  window.mxmedPrescriptionHost = {openEmbedded,closeEmbedded,setStage:sync,isEmbedded:()=>mode==='embedded',stage:()=>stage,caller:()=>caller,restoreModalBody};
 })();

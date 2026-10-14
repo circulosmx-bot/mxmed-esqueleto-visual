@@ -300,6 +300,7 @@
         const button=node('button',`${name}${birthdate ? ` · ${birthdate}` : ''}`,'rx-global-result');
         button.type='button';button.setAttribute('role','option');
         button.addEventListener('click',()=>{
+          window.mxmedSetQuickRxPatientSnapshot?.({...item,patient_id:id,display_name:name});
           window.mxmedSelectQuickRxPatient?.(id,name);results.replaceChildren();query.value='';
           message.textContent=`Paciente seleccionado: ${name}.`;
           syncGlobalSearch();

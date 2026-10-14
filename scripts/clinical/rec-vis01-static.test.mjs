@@ -8,7 +8,7 @@ const history=fs.readFileSync('assets/js/clinical/rec-ux01.js','utf8');
 const css=fs.readFileSync('assets/css/style.css','utf8');
 
 assert.equal((html.match(/data-rx-host-step=/g)||[]).length,5);
-for(const label of ['Contexto clínico','Medicamentos','Vista previa','Firma','Revisión y emisión']) assert.match(html,new RegExp(label,'i'));
+for(const label of ['Contexto','Medicamentos','Vista previa','Firma','Revisión']) assert.match(html,new RegExp(label,'i'));
 assert.match(html,/data-rx-editor-workspace/);
 assert.match(html,/data-rx-encounter-link/);
 assert.match(host,/mount\.appendChild\(body\)/);

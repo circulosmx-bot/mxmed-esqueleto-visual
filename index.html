@@ -4482,6 +4482,7 @@
                 <span data-quick-rx-note>No se puede emitir una receta sin paciente. El guardado usa el flujo clínico doctor-paciente existente.</span>
               </div>
             </div>
+            <div class="rx-global-workspace-mount d-none" data-rx-global-workspace-mount></div>
 
           </div>
 
@@ -8373,12 +8374,16 @@
                       <p>Captura las indicaciones, revisa el documento y firma antes de emitir.</p></div>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-rx-host-close>← Volver a Recetas</button>
                   </header>
+                  <div class="rx-host-patient-context d-none" data-rx-host-patient-context>
+                    <div><span>Paciente</span><strong data-rx-host-patient-name>Paciente activo</strong><small data-rx-host-patient-meta></small></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-rx-host-change-patient>Cambiar paciente</button>
+                  </div>
                   <ol class="rx-editor-stepper" aria-label="Progreso de nueva receta">
-                    <li data-rx-host-step="1"><span>1</span><strong>Contexto clínico</strong></li>
+                    <li data-rx-host-step="1"><span>1</span><strong>Contexto</strong></li>
                     <li data-rx-host-step="2"><span>2</span><strong>Medicamentos</strong></li>
                     <li data-rx-host-step="3"><span>3</span><strong>Vista previa</strong></li>
                     <li data-rx-host-step="4"><span>4</span><strong>Firma</strong></li>
-                    <li data-rx-host-step="5"><span>5</span><strong>Revisión y emisión</strong></li>
+                    <li data-rx-host-step="5"><span>5</span><strong>Revisión</strong></li>
                   </ol>
                   <div class="rx-editor-mount" data-rx-editor-mount></div>
                   <nav class="rx-editor-actions" aria-label="Navegación de la receta">
@@ -8554,7 +8559,7 @@
                                 <div class="ne-rx-ttl">Medicamentos (receta)</div>
                                 <div class="ne-rx-sub text-muted">Se administran desde receta; aquí se muestra un resumen.</div>
                               </div>
-                              <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" id="ne_open_rx" data-bs-toggle="modal" data-bs-target="#modalReceta">
+                              <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" id="ne_open_rx">
                                 Abrir receta
                               </button>
                             </div>
@@ -8609,6 +8614,7 @@
                         <div class="ne-rx-encounter-choice d-none" data-rx-encounter-choice>
                           <label class="form-check"><input class="form-check-input" type="checkbox" data-rx-encounter-link>
                             <span class="form-check-label fw-semibold">Vincular con la consulta en curso</span></label>
+                          <div class="fw-semibold d-none" data-rx-encounter-linked>Vinculada a esta consulta</div>
                           <div class="small text-muted" data-rx-encounter-copy></div>
                         </div>
                         <div class="ne-rx-dx mb-3" id="ne_rx_dx_block">
@@ -8716,7 +8722,7 @@
                           <div id="ne_rx_post_actions" class="d-none d-flex gap-2 mt-2">
                             <button type="button" class="btn btn-outline-primary" id="ne_rx_post_print">IMPRIMIR</button>
                             <button type="button" class="btn btn-outline-primary" id="ne_rx_post_view">VER RECETA</button>
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">CERRAR</button>
+                            <button type="button" class="btn btn-outline-secondary" id="ne_rx_post_close">CERRAR</button>
                           </div>
                         </div>
                       </div>
@@ -11483,9 +11489,9 @@
 <script src="assets/js/clinical/interconsulta-signature-binding.js?v=ix-imp01"></script>
 <script src="assets/js/clinical-document-signature-experience.js?v=sign-ux02"></script>
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
-<script src="assets/js/clinical/prescription-editor-host.js?v=rec-vis01"></script>
-<script src="assets/js/app.js?v=rec-vis01"></script>
-<script src="assets/js/clinical/rec-ux01.js?v=rec-nav01-r3"></script>
+<script src="assets/js/clinical/prescription-editor-host.js?v=rec-vis02-r2"></script>
+<script src="assets/js/app.js?v=rec-vis02-r3"></script>
+<script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
 <script src="assets/js/clinical/consent-field-help.js?v=cons-help03"></script>

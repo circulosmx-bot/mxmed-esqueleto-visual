@@ -38453,13 +38453,17 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     renderRecetaContextPanel(ctx, data);
     const choice=document.querySelector('[data-rx-encounter-choice]');
     const checkbox=document.querySelector('[data-rx-encounter-link]');
-    const active=data?.encounter||{}, patientEntry=window.mxmedPrescriptionHost?.isEmbedded()
-      && window.mxmedPrescriptionStandaloneIntent===true;
+    const active=data?.encounter||{}, embedded=window.mxmedPrescriptionHost?.isEmbedded(),
+      patientEntry=embedded&&window.mxmedPrescriptionStandaloneIntent===true,
+      consultationLinked=embedded&&window.mxmedPrescriptionStandaloneIntent!==true&&!!ctx.encounter_key;
     const available=patientEntry&&active.state==='OPEN'&&active.encounter_id;
-    choice?.classList.toggle('d-none',!available);
+    choice?.classList.toggle('d-none',!available&&!consultationLinked);
+    checkbox?.closest('label')?.classList.toggle('d-none',consultationLinked);
+    const linked=choice?.querySelector('[data-rx-encounter-linked]');linked?.classList.toggle('d-none',!consultationLinked);
     if(checkbox){checkbox.checked=!!window.mxmedPrescriptionSelectedEncounterKey;checkbox.dataset.encounterKey=available?`enc:${active.encounter_id}`:'';}
     const copy=document.querySelector('[data-rx-encounter-copy]');
-    if(copy)copy.textContent=available?`Consulta ${active.encounter_id} disponible${active.motive?` · ${active.motive}`:''}. La vinculación es opcional.`:'';
+    if(copy)copy.textContent=consultationLinked?`Consulta ${ctx.encounter_key}${active.motive?` · ${active.motive}`:''}`:
+      available?`Consulta ${active.encounter_id} disponible${active.motive?` · ${active.motive}`:''}. La vinculación es opcional.`:'';
     if (rxPreview) rxPreview.disabled = false;
     return data;
   };
@@ -39385,6 +39389,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(print)params.set('print','1');
       window.open(`/modules/clinical/ui/document.php?${params.toString()}`,'_blank','noopener');
     });
+  document.getElementById('ne_rx_post_close')?.addEventListener('click',()=>{
+    if(window.mxmedPrescriptionHost?.isEmbedded())
+      window.dispatchEvent(new CustomEvent('mxmed:prescription-host-request-close'));
+    else window.bootstrap?.Modal?.getInstance(document.getElementById('modalReceta'))?.hide();
+  });
   els.rxOpenDoc?.addEventListener('click', (event) => {
     event.preventDefault();
     const token = String(els.rxOpenDoc?.getAttribute('data-rx-document-token') || '').trim();
@@ -41016,44 +41025,33 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   };
   const openRecetaFromActividad = ()=>{
     hideActividadClinicaModal();
-    const modalEl = document.getElementById('modalReceta');
-    const BsModal = window.bootstrap && window.bootstrap.Modal;
-    if(!modalEl || !BsModal) return false;
-    try{
-      // Si el modal vive dentro de un tab oculto (#t-notas), el backdrop se abre
-      // pero el modal queda invisible; moverlo a body evita ese bloqueo visual.
-      let parent = modalEl.parentElement;
-      let insideHiddenPane = false;
-      while(parent && parent !== document.body){
-        if(parent.classList?.contains('tab-pane') && !parent.classList.contains('show')){
-          insideHiddenPane = true;
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      if(insideHiddenPane && modalEl.parentElement !== document.body){
-        document.body.appendChild(modalEl);
-      }
-    }catch(_){}
-    try{
-      const modal = (typeof BsModal.getOrCreateInstance === 'function')
-        ? BsModal.getOrCreateInstance(modalEl)
-        : new BsModal(modalEl);
-      modal.show();
-    }catch(_){
-      return false;
-    }
+    const activePane=pane.querySelector('.tab-pane.active.show')||pane.querySelector('#t-tratamiento');
+    if(!activePane||!window.mxmedPrescriptionHost)return false;
+    let hostMount=activePane.querySelector(':scope > [data-rx-clinical-workspace-mount]');
+    if(!hostMount){hostMount=document.createElement('div');hostMount.dataset.rxClinicalWorkspaceMount='';activePane.prepend(hostMount);}
+    activePane.classList.add('rx-clinical-prescription-active');
+    const runtime=window.mxmedPrescriptionRuntimeScope?.(getActivePatientId());
+    const caller=runtime?.encounter_key?'consultation':'activity';
+    const opened=window.mxmedOpenCanonicalPrescription({standalone:false,host:'embedded',caller,
+      workspaceMount:hostMount,returnView:caller});
+    if(!opened)activePane.classList.remove('rx-clinical-prescription-active');
     try{
       console.info('[mxmed-actividad-clinica] open receta');
     }catch(_){}
-    return true;
+    return opened;
   };
-  window.mxmedOpenCanonicalPrescription = ({ standalone = false, draftUuid = '', host = 'modal', returnView = 'landing' } = {}) => {
+  document.getElementById('ne_open_rx')?.addEventListener('click',event=>{event.preventDefault();openRecetaFromActividad();});
+  window.addEventListener('mxmed:prescription-host-closed',event=>{
+    if(['consultation','activity'].includes(event.detail?.caller))
+      pane.querySelectorAll('.rx-clinical-prescription-active').forEach(node=>node.classList.remove('rx-clinical-prescription-active'));
+  });
+  window.mxmedOpenCanonicalPrescription = ({ standalone = false, draftUuid = '', host = 'modal', returnView = 'landing',
+    caller = 'patient', workspaceMount = null, sourceElement = null, patient = null } = {}) => {
     window.mxmedPrescriptionStandaloneIntent = standalone === true;
     window.mxmedPrescriptionSelectedEncounterKey = null;
     window.mxmedPrescriptionRequestedDraftUuid = String(draftUuid || '').trim();
     const opened = host === 'embedded' && window.mxmedPrescriptionHost
-      ? window.mxmedPrescriptionHost.openEmbedded({returnView,draftUuid}) : openRecetaFromActividad();
+      ? window.mxmedPrescriptionHost.openEmbedded({returnView,draftUuid,caller,workspaceMount,sourceElement,patient}) : openRecetaFromActividad();
     if (!opened) window.mxmedPrescriptionStandaloneIntent = false;
     return opened;
   };
@@ -62778,6 +62776,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	    quickRxExplicitPatientName = '';
 	    renderQuickRxPanel();
 	  };
+	  window.addEventListener('mxmed:prescription-host-request-change-patient',()=>{
+	    if(window.mxmedPrescriptionHost?.caller()!=='global')return;
+	    const change=()=>{window.mxmedPrescriptionHost.closeEmbedded();window.mxmedChangeQuickRxPatient();
+	      quickRxPanel.querySelector('[data-rx-global-search]')?.classList.remove('d-none');
+	      window.setTimeout(()=>quickRxPanel.querySelector('[data-rx-global-query]')?.focus(),0);};
+	    void window.mxmedPatientWorkspaceNavigationGuard?.request('prescription-global-change',change,
+	      quickRxPanel.querySelector('[data-rx-host-change-patient]'),['prescription-modal']);
+	  });
 	  const openQuickRxForActivePatient = async ()=>{
 	    if(!quickRxPanel || !quickRxEls) return false;
 	    clearQuickRxPatientSearchIntent();
@@ -62791,7 +62797,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	    if(btn) btn.disabled = true;
 	    setQuickRxFeedback('Preparando receta para el paciente activo...', 'info');
 	    try{
-	      if(typeof setActivePatientId === 'function'){
+	      const alreadyActive=sanitizeText(window.resolveActivePatientId?.()||getActivePatientId())===patientId;
+	      if(typeof setActivePatientId === 'function'&&!alreadyActive){
 	        const changed = await setActivePatientId(patientId, {
 	          emitEvent: false,
 	          skipActiveEncounterConfirm: true,
@@ -62806,7 +62813,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      await new Promise((resolve)=>{
 	        window.requestAnimationFrame(()=> resolve());
 	      });
-	      const opened = window.mxmedOpenCanonicalPrescription({ standalone: true });
+	      const snapshot=window.mxmedQuickRxPatientSnapshot||{};
+	      const opened = window.mxmedOpenCanonicalPrescription({standalone:true,host:'embedded',caller:'global',
+	        workspaceMount:quickRxPanel.querySelector('[data-rx-global-workspace-mount]'),
+	        sourceElement:quickRxPanel.querySelector('[data-quick-rx-root]'),returnView:'global',patient:{
+	          name:resolveQuickRxPatientName(patientId),age:sanitizeText(snapshot.edad)?`${sanitizeText(snapshot.edad)} años`:'',
+	          sex:sanitizeText(snapshot.sexo)}});
 	      if(!opened){
 	        setQuickRxFeedback('No fue posible abrir la receta en este momento.', 'error');
 	        return false;
