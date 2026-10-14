@@ -62,50 +62,25 @@ function resolve_media_href(string $value): string {
 
 function validate_return_to(string $value): ?string {
   $value = trim($value);
-  if ($value === '') {
+  if ($value === '' || strlen($value) > 2048 || preg_match('/[\x00-\x1F\x7F\\\\]/', $value)) {
     return null;
   }
-
-  if ($value[0] === '/') {
-    return (strpos($value, '//') === 0) ? null : $value;
-  }
-
-  if (!preg_match('/^https?:\/\//i', $value)) {
+  // Return navigation is deliberately local and relative to this origin.
+  if ($value[0] !== '/' || strpos($value, '//') === 0) {
     return null;
   }
-
   $parts = parse_url($value);
-  if (!is_array($parts)) {
+  if (!is_array($parts) || isset($parts['scheme']) || isset($parts['host'])
+      || isset($parts['user']) || isset($parts['pass'])) {
     return null;
   }
-
-  $urlPath = (string)($parts['path'] ?? '');
-  if ($urlPath !== '' && strpos($urlPath, '/modules/clinical/ui/') === 0) {
-    return $value;
-  }
-
-  $host = strtolower((string)($parts['host'] ?? ''));
-  $scheme = strtolower((string)($parts['scheme'] ?? ''));
-  $port = isset($parts['port']) ? (int)$parts['port'] : null;
-
-  $currentHostRaw = (string)($_SERVER['HTTP_HOST'] ?? '');
-  $currentHostParts = parse_url('http://' . $currentHostRaw);
-  $currentHost = strtolower((string)($currentHostParts['host'] ?? ''));
-  $currentPort = isset($currentHostParts['port']) ? (int)$currentHostParts['port'] : null;
-  $currentScheme = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
-
-  if ($host === '' || $currentHost === '') {
+  $path = (string)($parts['path'] ?? '');
+  $decodedPath = rawurldecode($path);
+  $allowedPath = $path === '/' || $path === '/index.html'
+      || str_starts_with($path, '/modules/clinical/ui/');
+  if ($path === '' || str_contains($path, '..') || str_contains($decodedPath, '..') || !$allowedPath) {
     return null;
   }
-
-  if ($host !== $currentHost || $scheme !== $currentScheme) {
-    return null;
-  }
-
-  if (($port ?? ($scheme === 'https' ? 443 : 80)) !== ($currentPort ?? ($currentScheme === 'https' ? 443 : 80))) {
-    return null;
-  }
-
   return $value;
 }
 
@@ -381,7 +356,8 @@ function http_get_json(string $url, int $timeoutSeconds = 8): array {
 $uuid = trim((string)($_GET['uuid'] ?? ''));
 $doctorId = sanitize_doctor_scope_id((string)($_GET['doctor_id'] ?? ''));
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
-$backHref = $returnTo ?? 'javascript:history.back()';
+$fromRecetas = (string)($_GET['from'] ?? '') === 'recetas';
+$backHref = $returnTo ?? ($fromRecetas ? '/index.html' : 'javascript:history.back()');
 $errorMessage = '';
 $document = null;
 $apiBase = normalize_clinical_api_base((string)getenv('CLINICAL_API_BASE'));
@@ -1175,8 +1151,8 @@ if (!$embed) {
       <?php endif; ?>
     </div>
     <div class="d-flex flex-wrap justify-content-end gap-2">
-      <?php if ($isPrescriptionDoc && (string)($_GET['from'] ?? '') === 'recetas'): ?>
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.opener){window.opener.focus();window.close()}else{history.back()}">← Volver a Recetas</button>
+      <?php if ($isPrescriptionDoc && $fromRecetas): ?>
+        <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">← Volver a Recetas</a>
       <?php else: ?>
         <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
       <?php endif; ?>

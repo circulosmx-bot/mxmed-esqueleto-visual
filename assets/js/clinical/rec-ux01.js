@@ -27,6 +27,7 @@
     return data.data;
   };
   let view = 'landing', filter = 'all', page = 1, currentPatient = '', currentRawPatient = '', loading = 0;
+  let selectedPrescription = '', restoreScrollY = null;
   const show = (next) => {
     view = next;
     root.querySelectorAll('[data-rx-view]').forEach(panel => panel.classList.toggle('d-none', panel.dataset.rxView !== next));
@@ -34,10 +35,27 @@
   };
   const date = value => String(value || '').slice(0,10) || 'Fecha no disponible';
   const api = (patientId) => `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId())}/patients/${encodeURIComponent(patientId)}/prescriptions`;
+  const recetasReturnTarget = (uuid) => {
+    const target = new URL(window.location.href);
+    target.hash = '';
+    target.searchParams.set('rx_return', 'history');
+    target.searchParams.set('rx_patient', rawPatientId());
+    target.searchParams.set('rx_filter', filter);
+    target.searchParams.set('rx_page', String(page));
+    target.searchParams.set('rx_scroll', String(Math.max(0, Math.round(window.scrollY || 0))));
+    target.searchParams.set('rx_selected', String(uuid || ''));
+    return `${target.pathname}${target.search}${target.hash}`;
+  };
   const viewer = (uuid, print = false) => {
     const params = new URLSearchParams({uuid, doctor_id:doctorId(), from:'recetas'});
-    if (print) params.set('print','1');
-    window.open(`/modules/clinical/ui/document.php?${params}`, '_blank');
+    if (print) {
+      params.set('print','1');
+      window.open(`/modules/clinical/ui/document.php?${params}`, '_blank', 'noopener');
+      return;
+    }
+    selectedPrescription = String(uuid || '');
+    params.set('return_to', recetasReturnTarget(selectedPrescription));
+    window.location.assign(`/modules/clinical/ui/document.php?${params}`);
   };
   const actionButton = (label, action, uuid, style = 'btn-outline-primary') => {
     const button = node('button',label,`btn btn-sm ${style}`);
@@ -76,6 +94,7 @@
       const label = item.status === 'voided'
         ? (replacementState === 'completed' ? 'ANULADA / REEMPLAZADA' : 'ANULADA') : 'EMITIDA';
       head.append(node('span',label,`rx-ux-status ${item.status === 'voided' ? 'is-voided' : ''}`));
+      row.dataset.rxPrescriptionUuid = item.document_uuid;
       row.append(head);
       row.append(node('small',`${date(item.event_datetime)}${item.physician_name ? ` · ${item.physician_name}` : ''}${item.is_legacy ? ' · Receta histórica; firma moderna no verificada' : ''}`));
       if (replacementState === 'pending' && item.replaced_by_prescription_uuid) {
@@ -124,6 +143,18 @@
       if (epoch !== loading || patient !== await canonicalPatientId()) return;
       renderRows(history); renderDrafts(Array.isArray(drafts.drafts) ? drafts.drafts : []);
       status.textContent = '';
+      if (selectedPrescription) {
+        const selected = Array.from(root.querySelectorAll('[data-rx-prescription-uuid]'))
+          .find(row => row.dataset.rxPrescriptionUuid === selectedPrescription);
+        selected?.querySelector('[data-rx-row-action="view"]')?.focus({preventScroll:true});
+      }
+      if (restoreScrollY !== null) {
+        const top = restoreScrollY; restoreScrollY = null;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          window.scrollTo({top, behavior:'auto'});
+          window.setTimeout(() => window.scrollTo({top, behavior:'auto'}), 100);
+        }));
+      }
     } catch (error) { if (epoch === loading) status.textContent = `No se pudieron cargar las recetas: ${error.message}`; }
   }
   const openEditor = (draftUuid = '') => {
@@ -203,6 +234,45 @@
   window.addEventListener('mxmed:clinical-document-created',event => {
     if (event.detail?.document_type==='prescription' && view==='history') void loadHistory();
   });
+
+  const restoreRecetasNavigation = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('rx_return') !== 'history') return;
+    const expectedPatient = String(params.get('rx_patient') || '').trim();
+    const restoredFilter = String(params.get('rx_filter') || 'all');
+    const restoredPage = Number.parseInt(params.get('rx_page') || '1', 10);
+    const restoredScroll = Number.parseInt(params.get('rx_scroll') || '0', 10);
+    if (!['all','issued','voided'].includes(restoredFilter) || !Number.isInteger(restoredPage) || restoredPage < 1) return;
+    let attempts = 0;
+    const apply = () => {
+      attempts += 1;
+      const patient = rawPatientId();
+      if (!patient || (expectedPatient && patient !== expectedPatient)) {
+        if (attempts < 120) window.setTimeout(apply, 100);
+        return;
+      }
+      if (typeof window.showPanel === 'function') window.showPanel('p-expediente');
+      else document.querySelector('[data-panel="p-expediente"]')?.click();
+      document.querySelector('[data-bs-target="#t-tratamiento"]')?.click();
+      filter = restoredFilter; page = restoredPage;
+      selectedPrescription = String(params.get('rx_selected') || '').trim();
+      restoreScrollY = Number.isFinite(restoredScroll) ? Math.max(0, restoredScroll) : 0;
+      root.querySelectorAll('[data-rx-filter]').forEach(button => {
+        const active = button.dataset.rxFilter === filter;
+        button.setAttribute('aria-pressed', String(active));
+        button.classList.toggle('btn-primary', active);
+        button.classList.toggle('btn-outline-primary', !active);
+      });
+      show('history');
+      for (const key of ['rx_return','rx_patient','rx_filter','rx_page','rx_scroll','rx_selected']) params.delete(key);
+      const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`;
+      window.history.replaceState(window.history.state, '', clean);
+    };
+    apply();
+  };
+  // The shell restores its top-level panel during startup. Apply the nested
+  // Recetas state afterwards so the shell cannot overwrite the destination.
+  window.addEventListener('load', () => window.setTimeout(restoreRecetasNavigation, 2000), {once:true});
 
   // The global entry uses the same physician-scoped patient search as the patient archive.
   const query = one('[data-rx-global-query]',global), results = one('[data-rx-global-results]',global);
