@@ -426,40 +426,13 @@ function clinical_documents_save_create_request(PDO $pdo, array $payload, ?array
 
 function clinical_request_actor_user_id(?array $payload = null): string
 {
-    $payload = is_array($payload) ? $payload : [];
-    $actor = is_array($payload['actor'] ?? null) ? $payload['actor'] : [];
-    $candidates = [
-        $actor['user_id'] ?? null,
-        $_SERVER['HTTP_X_USER_ID'] ?? null,
-        $_SESSION['user_id'] ?? null,
-        $_SERVER['PHP_AUTH_USER'] ?? null,
-    ];
-    foreach ($candidates as $candidate) {
-        $value = trim((string)($candidate ?? ''));
-        if ($value !== '') {
-            return $value;
-        }
-    }
-    return 'qa';
+    return clinical_request_actor_user_id_strict($payload);
 }
 
 function clinical_request_actor_user_id_strict(?array $payload = null): string
 {
-    $payload = is_array($payload) ? $payload : [];
-    $actor = is_array($payload['actor'] ?? null) ? $payload['actor'] : [];
-    $candidates = [
-        $actor['user_id'] ?? null,
-        $_SERVER['HTTP_X_USER_ID'] ?? null,
-        $_SESSION['user_id'] ?? null,
-        $_SERVER['PHP_AUTH_USER'] ?? null,
-    ];
-    foreach ($candidates as $candidate) {
-        $value = trim((string)($candidate ?? ''));
-        if ($value !== '') {
-            return $value;
-        }
-    }
-    return '';
+    $context=clinical_authenticated_doctor_context();
+    return is_array($context)?trim((string)($context['account_id']??'')):'';
 }
 
 function clinical_has_active_doctor_patient_link(PDO $pdo, string $doctorId, string $patientId): bool
@@ -506,12 +479,15 @@ function clinical_encounter_owned_by_doctor(array $encounter, string $doctorId):
 /** @return array{doctor_id:string,user_id:string}|null */
 function clinical_require_doctor_context(string $route): ?array
 {
-    $context = clinical_authenticated_doctor_context();
-    if ($context === null) {
-        clinical_send_response(['ok' => false, 'error' => 'unauthorized', 'message' => 'authentication required',
-            'data' => null, 'meta' => ['route' => $route]], 401);
+    $capability=preg_match('/prescription|receta/i',$route)===1?'prescriptions':'clinical_record';
+    $resolved=clinical_request_identity($capability);$context=$resolved['context'];
+    if(!is_array($context)){
+        $status=(int)$resolved['http_status'];
+        clinical_send_response(['ok'=>false,'error'=>$status===401?'unauthorized':'forbidden',
+            'message'=>(string)$resolved['reason'],'data'=>null,'meta'=>['route'=>$route]],$status);
+        return null;
     }
-    return $context;
+    return $context+['user_id'=>(string)$context['account_id']];
 }
 
 function clinical_require_doctor_patient_scope(PDO $pdo, string $doctorId, string $patientId, string $route): bool

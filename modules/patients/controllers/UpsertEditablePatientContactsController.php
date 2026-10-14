@@ -9,6 +9,7 @@ use RuntimeException;
 require_once __DIR__ . '/../repositories/PatientsRepository.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 require_once __DIR__ . '/../../agenda/helpers/db_helpers.php';
+require_once __DIR__ . '/../../../api/_lib/clinical_identity_authority.php';
 
 class UpsertEditablePatientContactsController
 {
@@ -44,12 +45,9 @@ class UpsertEditablePatientContactsController
         if (trim($doctorId) === '' || trim($patientId) === '') {
             return $this->error('invalid_params', 'doctor_id and patient_id required', 400, $meta);
         }
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        $sessionDoctorId = trim((string)($_SESSION['doctor_id'] ?? $_SESSION['active_doctor_id'] ?? $_SESSION['mxmed_doctor_id'] ?? ''));
-        $sessionUserId = trim((string)($_SESSION['user_id'] ?? $_SESSION['mxmed_user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['actor_user_id'] ?? ''));
-        if ($sessionDoctorId === '' || $sessionUserId === '') {
-            return $this->error('unauthorized', 'authentication required', 401, $meta);
-        }
+        $authority=\clinical_request_identity('patients');$context=$authority['context'];
+        if(!is_array($context))return $this->error($authority['http_status']===401?'unauthorized':'forbidden',$authority['reason'],$authority['http_status'],$meta);
+        $sessionDoctorId=(string)$context['doctor_id'];
         if ($sessionDoctorId !== $doctorId) {
             return $this->error('forbidden', 'doctor scope mismatch', 403, $meta);
         }

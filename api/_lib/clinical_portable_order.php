@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_study_contract.php';
+require_once __DIR__ . '/clinical_identity_authority.php';
 
 final class ClinicalPortableOrderException extends InvalidArgumentException
 {
@@ -14,10 +15,8 @@ final class ClinicalPortableOrderException extends InvalidArgumentException
 /** Shared session authority for the clinical API and the private print page. */
 function clinical_portable_doctor_context(): ?array
 {
-    if (session_status() === PHP_SESSION_NONE) session_start(['read_and_close' => true]);
-    $doctorId = trim((string)($_SESSION['doctor_id'] ?? $_SESSION['active_doctor_id'] ?? $_SESSION['mxmed_doctor_id'] ?? ''));
-    $userId = trim((string)($_SESSION['user_id'] ?? $_SESSION['mxmed_user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['actor_user_id'] ?? ''));
-    return $doctorId !== '' && $userId !== '' ? ['doctor_id' => $doctorId, 'user_id' => $userId] : null;
+    $resolved=clinical_request_identity('clinical_record');$context=$resolved['context'];
+    return is_array($context)?$context+['user_id'=>(string)$context['account_id']]:null;
 }
 
 function clinical_portable_table_exists(PDO $pdo, string $table): bool

@@ -41,6 +41,24 @@ final class AccountMembershipRepository
         }
     }
 
+    /** Canonical lifecycle transition used to remove authority without deleting history. */
+    public function revoke(string $membershipId, string $accountId): bool
+    {
+        foreach ([$membershipId, $accountId] as $identifier) {
+            if (preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$/', trim($identifier)) !== 1) {
+                throw new \InvalidArgumentException('invalid_membership_identifier');
+            }
+        }
+        try {
+            $stmt=$this->pdo->prepare("UPDATE auth_account_memberships SET status='revoked', updated_at=CURRENT_TIMESTAMP
+                WHERE membership_id=:membership_id AND account_id=:account_id AND status='active'");
+            $stmt->execute(['membership_id'=>$membershipId,'account_id'=>$accountId]);
+            return $stmt->rowCount()===1;
+        } catch (PDOException $e) {
+            throw new \RuntimeException('identity_membership_revoke_failed',0,$e);
+        }
+    }
+
     /** @return list<array<string, mixed>> */
     public function activeForAccount(string $accountId): array
     {

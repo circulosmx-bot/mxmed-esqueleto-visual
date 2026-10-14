@@ -1,6 +1,21 @@
 ﻿// MXMed app bundle
 console.info('app.js loaded :: 20251123a');
 
+(function(){
+  const syncCanonicalSessionLabel=async()=>{
+    const label=document.querySelector('.mx-hb-session-label');
+    if(!label)return;
+    label.textContent='Sesión no iniciada';
+    try{
+      const response=await fetch('/api/identity/index.php/current-session',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      const session=response.ok?await response.json():null;
+      label.textContent=session?.authenticated===true?'Sesión iniciada':'Sesión no iniciada';
+    }catch(_){label.textContent='Sesión no iniciada';}
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncCanonicalSessionLabel,{once:true});
+  else syncCanonicalSessionLabel();
+})();
+
 // Shared patient-name validation for patient creation surfaces.
 (function(){
   if(window.mxmedPatientNameTools) return;
