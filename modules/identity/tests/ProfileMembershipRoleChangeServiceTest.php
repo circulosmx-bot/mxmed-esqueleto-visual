@@ -27,7 +27,7 @@ final class DisposableApprovalPort implements ProfileOwnershipApprovalPort
         $u=$this->pdo->prepare("UPDATE qa_ownership_approvals SET consumed_operation_id=?,status='CONSUMED' WHERE approval_reference=? AND status='APPROVED' AND consumed_operation_id IS NULL");
         $u->execute([$request->operationId,$request->approvalReference]);if($u->rowCount()!==1)throw new RuntimeException('approval_replay');
         return new ProfileOwnershipApprovalEvidence($r['approval_reference'],$r['case_reference'],$r['decision_reference'],$r['approver_account_id'],
-            $r['executor_account_id'],$r['operation_id'],$r['membership_id'],$r['target_account_id'],$r['profile_doctor_id'],$r['expected_role'],$r['new_role'],
+            $r['executor_account_id'],$r['operation_id'],$r['membership_id'],$r['target_account_id'],$r['profile_doctor_id'],$r['expected_role'],'profile',$r['new_role'],
             new DateTimeImmutable($r['approved_at'],new DateTimeZone('UTC')),new DateTimeImmutable($r['expires_at'],new DateTimeZone('UTC')));
     }
 }
@@ -42,8 +42,8 @@ final class DisposableStepUpPort implements ProfileOwnershipStepUpPort
         if(!is_array($r)||$r['status']!=='VERIFIED'||$r['consumed_operation_id']!==null)throw new RuntimeException('step_up_denied');
         $u=$this->pdo->prepare("UPDATE qa_ownership_step_up SET consumed_operation_id=?,status='CONSUMED' WHERE step_up_reference=? AND status='VERIFIED' AND consumed_operation_id IS NULL");
         $u->execute([$request->operationId,$request->stepUpReference]);if($u->rowCount()!==1)throw new RuntimeException('step_up_replay');
-        return new ProfileOwnershipStepUpEvidence($r['step_up_reference'],$r['operation_id'],$r['account_id'],$r['session_id'],(int)$r['credential_version'],
-            $r['membership_id'],$r['profile_doctor_id'],$r['new_role'],new DateTimeImmutable($r['verified_at'],new DateTimeZone('UTC')),
+        return new ProfileOwnershipStepUpEvidence($r['step_up_reference'],'stepup-audit-0001',$request->approvalReference,$r['operation_id'],$r['account_id'],$r['session_id'],(int)$r['credential_version'],
+            $r['membership_id'],$r['profile_doctor_id'],$request->expectedRole,$request->expectedScope,$r['new_role'],new DateTimeImmutable($r['verified_at'],new DateTimeZone('UTC')),
             new DateTimeImmutable($r['expires_at'],new DateTimeZone('UTC')));
     }
 }

@@ -17,6 +17,7 @@ final readonly class ProfileOwnershipApprovalEvidence
         public string $targetAccountId,
         public string $profileDoctorId,
         public string $expectedRole,
+        public string $expectedScope,
         public string $newRole,
         public \DateTimeImmutable $approvedAt,
         public \DateTimeImmutable $expiresAt,

@@ -82,7 +82,7 @@ $rows=CanonicalAuditPolicyRegistry::canonicalRows();
 check(count($rows)===50 && count(CanonicalAuditEventType::all())===50,'50 events/policies');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
 check(array_slice(CanonicalAuditEventType::all(),38,5)===array_keys($metadata),'exactly five new events');
-check(hash('sha256',json_encode(array_slice($rows,0,38),JSON_UNESCAPED_SLASHES))==='aa7327ccd64e9e4537cc9da4e86cb7216d0a66684f0da9e4122704390f64d958','existing 38 policies unchanged');
+check(hash('sha256',json_encode(array_slice($rows,0,38),JSON_UNESCAPED_SLASHES))==='28e4640f9df343a97fbc389a4e4bb2552accf77bb8772b04e0e3ac745b51fd4c','existing policies plus authorized QA02B ownership evidence');
 $catalog=new SensitiveAdminActionCatalog();
 check($catalog->all()===[],'generic catalog remains empty');
 denied(fn()=>$catalog->definition('UNRATIFIED_ACTION'),'unknown_sensitive_admin_action_key');
@@ -136,5 +136,5 @@ foreach ($metadata as $event=>$fields) {
     check($pdo->commits===1 && !$pdo->active,'caller commit accepted');
     echo $event."_ACCEPTED=true\n";
 }
-echo "AUDCRD01_POLICY_AND_WRITER=PASS\nEXISTING_38_EVENT_POLICIES_CHANGED=0\n";
+echo "AUDCRD01_POLICY_AND_WRITER=PASS\nQA02B_AUTHORIZED_OWNERSHIP_POLICIES_ENRICHED=3\n";
 echo "JOINED_PDO_TRANSACTION_PROTOCOL=PASS\nPHYSICAL_DATABASE_TEST=NOT_RUN\nDB_WRITES=0\n";

@@ -65,7 +65,7 @@ final class ProfileMembershipRoleChangeService
                 $request->targetAccountId,$request->profileDoctorId,$request->membershipId,
                 $request->expectedRole,$request->newRole,$request->expectedScope,
                 $approval->approvalReference,$approval->caseReference,$approval->decisionReference,
-                $approval->approverAccountId,$stepUp->stepUpReference,'APPROVED','VERIFIED','SUCCESS',$this->clock->now()
+                $approval->approverAccountId,$stepUp->auditReference,'APPROVED','VERIFIED','SUCCESS',$this->clock->now()
             );
             $this->audit->append($this->pdo,$record);
             if(!$this->pdo->commit())throw new \RuntimeException('profile_role_change_commit_failed');
@@ -125,7 +125,8 @@ final class ProfileMembershipRoleChangeService
         if($e->approvalReference!==$r->approvalReference||$e->executorAccountId!==$executor
             ||$e->approverAccountId===$r->targetAccountId||$e->operationId!==$r->operationId
             ||$e->membershipId!==$r->membershipId||$e->targetAccountId!==$r->targetAccountId
-            ||$e->profileDoctorId!==$r->profileDoctorId||$e->expectedRole!==$r->expectedRole||$e->newRole!==$r->newRole
+            ||$e->profileDoctorId!==$r->profileDoctorId||$e->expectedRole!==$r->expectedRole
+            ||$e->expectedScope!==$r->expectedScope||$e->newRole!==$r->newRole
             ||$e->caseReference===''||$e->decisionReference===''||$e->approvedAt>$now||$e->expiresAt<=$now)
             throw new \RuntimeException('profile_role_change_approval_denied');
     }
@@ -133,10 +134,11 @@ final class ProfileMembershipRoleChangeService
     private function assertStepUp(ProfileOwnershipStepUpEvidence $e,ProfileMembershipRoleChangeRequest $r,AuthenticatedAccessContext $actor):void
     {
         $now=$this->clock->now();
-        if($e->stepUpReference!==$r->stepUpReference||$e->operationId!==$r->operationId
+        if($e->stepUpReference!==$r->stepUpReference||$e->approvalReference!==$r->approvalReference||$e->operationId!==$r->operationId
             ||$e->accountId!==$r->targetAccountId||$e->sessionId!==(string)$actor->session()->sessionId()
             ||$e->credentialVersion!==$actor->principal()->credentialVersion()||$e->membershipId!==$r->membershipId
-            ||$e->profileDoctorId!==$r->profileDoctorId||$e->newRole!==$r->newRole
+            ||$e->profileDoctorId!==$r->profileDoctorId||$e->expectedRole!==$r->expectedRole
+            ||$e->expectedScope!==$r->expectedScope||$e->newRole!==$r->newRole
             ||$e->verifiedAt>$now||$e->expiresAt<=$now||$e->verifiedAt<$now->modify('-10 minutes'))
             throw new \RuntimeException('profile_role_change_step_up_denied');
     }
