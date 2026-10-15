@@ -14,6 +14,20 @@ final class AccountMembershipRepository
 
     public function usesConnection(PDO $pdo): bool { return $this->pdo === $pdo; }
 
+    /** Owner-appointed operators only; caller owns profile lock, audit and transaction. */
+    public function transitionOperatorStatus(string $id, string $account, string $profile, string $expected, string $next): bool
+    {
+        if (!$this->pdo->inTransaction() || !in_array([$expected,$next], [
+            ['active','suspended'], ['suspended','active'], ['active','revoked'], ['suspended','revoked'],
+        ], true)) throw new \InvalidArgumentException('operator_membership_transition_invalid');
+        $s=$this->pdo->prepare("UPDATE auth_account_memberships SET status=?,revoked_at=CASE WHEN ?='revoked' THEN UTC_TIMESTAMP() ELSE revoked_at END
+            WHERE membership_id=? AND account_id=? AND profile_doctor_id=? AND entity_group_id IS NULL
+            AND scope_code='profile' AND role_code IN ('administrator','collaborator')
+            AND assignment_source='owner_operator_invitation' AND status=?");
+        $s->execute([$next,$next,$id,$account,$profile,$expected]);
+        return $s->rowCount()===1;
+    }
+
     public function create(AccountMembership $membership): void
     {
         $reference = $membership->reference();
@@ -66,7 +80,7 @@ final class AccountMembershipRepository
     public function activeForAccount(string $accountId): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT membership_id, account_id, profile_doctor_id, entity_group_id, role_code, scope_code, status
+            "SELECT membership_id, account_id, profile_doctor_id, entity_group_id, role_code, scope_code, status, assignment_source
              FROM auth_account_memberships WHERE account_id = :account_id AND status = 'active' ORDER BY membership_id"
         );
         $stmt->execute([':account_id' => $accountId]);

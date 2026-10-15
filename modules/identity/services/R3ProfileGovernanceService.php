@@ -10,7 +10,8 @@ use PDO;
 final class R3ProfileGovernanceService
 {
     public function __construct(private PDO $pdo,private StaffMfaService $mfa,
-        private PdoProfileOwnershipApproverAuthorityAdapter $authority,private Clock $clock=new SystemClock()){}
+        private PdoProfileOwnershipApproverAuthorityAdapter $authority,private Clock $clock=new SystemClock(),
+        private ?\Identity\Contracts\ProfileOperatorOwnershipBoundary $operators=null){}
 
     public function openInitialOwnerCase(AuthenticatedAccessContext $beneficiary,string $membershipId,string $reason):array
     {
@@ -83,6 +84,11 @@ final class R3ProfileGovernanceService
         $this->activeContext($requester);$now=$this->clock->now();return $this->transaction(function()use($requester,$caseId,$now):array{
             $s=$this->pdo->prepare("SELECT * FROM auth_governance_cases WHERE case_id=? FOR UPDATE");$s->execute([$caseId]);$c=$s->fetch(PDO::FETCH_ASSOC);
             if(!is_array($c)||$c['requester_account_id']!==$requester->accountId()||!in_array($c['operation'],['OWNER_REMOVAL','OWNER_REPLACEMENT'],true)||$c['status']!=='APPROVED'||new \DateTimeImmutable($c['expires_at'],new \DateTimeZone('UTC'))<=$now)throw new \RuntimeException('governance_recovery_denied');
+            // Same first authority lock as operator commands. Approvals remain mandatory.
+            $profile=$this->pdo->prepare('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE');
+            $profile->execute([$c['profile_doctor_id']]);
+            if($profile->fetchColumn()===false)throw new \RuntimeException('governance_recovery_profile_missing');
+            ProfileOperatorOwnershipGuard::assertConfigured($this->pdo,$c['profile_doctor_id'],$this->operators);
             $this->activeApprover($requester->accountId(),$requester->principal()->credentialVersion(),'__recovery_target__','__recovery_profile__');
             $endorse=$this->pdo->prepare("SELECT e.*,c.credential_version current_version FROM auth_governance_case_endorsements e JOIN auth_account_credentials c ON c.account_id=e.approver_account_id WHERE e.case_id=? AND e.status='APPROVED' ORDER BY e.endorsement_slot FOR UPDATE");$endorse->execute([$caseId]);$rows=$endorse->fetchAll(PDO::FETCH_ASSOC);if(count($rows)!==2)throw new \RuntimeException('governance_recovery_approval_denied');
             foreach($rows as $row){if((int)$row['credential_version']!==(int)$row['current_version'])throw new \RuntimeException('governance_recovery_approver_revoked');$this->authority->assertAuthorized($this->pdo,$row['approver_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],(int)$row['credential_version']);}
@@ -91,6 +97,7 @@ final class R3ProfileGovernanceService
             if($c['operation']==='OWNER_REMOVAL'&&count($ownerIds)<=1)throw new \RuntimeException('governance_recovery_last_owner_protected');
             if($c['operation']==='OWNER_REPLACEMENT'){$replacement=$this->pdo->prepare("SELECT * FROM auth_account_memberships WHERE membership_id=? AND profile_doctor_id=? AND status='active' AND role_code IN ('administrator','collaborator') FOR UPDATE");$replacement->execute([$c['replacement_membership_id'],$c['profile_doctor_id']]);$new=$replacement->fetch(PDO::FETCH_ASSOC);if(!is_array($new))throw new \RuntimeException('governance_recovery_replacement_denied');$u=$this->pdo->prepare("UPDATE auth_account_memberships SET role_code='owner' WHERE membership_id=? AND role_code=? AND status='active'");$u->execute([$new['membership_id'],$new['role_code']]);if($u->rowCount()!==1)throw new \RuntimeException('governance_recovery_race');}
             $d=$this->pdo->prepare("UPDATE auth_account_memberships SET role_code='administrator' WHERE membership_id=? AND role_code='owner' AND status='active'");$d->execute([$old['membership_id']]);if($d->rowCount()!==1)throw new \RuntimeException('governance_recovery_race');
+            $this->operators?->ownershipChanged($this->pdo,$c['profile_doctor_id'],$requester,$c['operation_id']);
             $u=$this->pdo->prepare("UPDATE auth_governance_cases SET status='CONSUMED',consumed_at=? WHERE case_id=? AND status='APPROVED'");$u->execute([$this->sql($now),$caseId]);$e=$this->pdo->prepare("UPDATE auth_governance_case_endorsements SET status='CONSUMED',consumed_at=? WHERE case_id=? AND status='APPROVED'");$e->execute([$this->sql($now),$caseId]);if($e->rowCount()!==2)throw new \RuntimeException('governance_recovery_endorsement_race');
             $this->event($caseId,$c['operation']==='OWNER_REPLACEMENT'?'OWNER_REPLACED':'OWNER_REMOVED',$c['requester_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],'APPROVED',$c['operation_id']);
             return ['case_id'=>$caseId,'operation'=>$c['operation'],'prior_owner_membership_id'=>$old['membership_id'],'replacement_membership_id'=>$c['replacement_membership_id']];

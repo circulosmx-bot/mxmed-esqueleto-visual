@@ -399,6 +399,14 @@ The future private administrative **OPERADORES** panel shows two delegated seats
 
 This amendment ratifies product policy and authorizes documentation only. Runtime permissions, schemas, memberships, professional bindings, real clinical data and QA05 remain unchanged. The source-backed endpoint/capability map, reuse plan, panel UX, quota recommendations and future verification gates are in [OP-POL02 implementation readiness](../identity/OP-POL02_NONMEDICAL_OPERATOR_IMPLEMENTATION_READINESS.md). That document distinguishes installed enforcement from proposed changes and unresolved decisions; it does not reopen deferred professional governance or authorize implementation.
 
+### OP-IMP01 — ratified operator foundation, disposable implementation only
+
+The Director ratifies Q01/Q02/Q03/Q04/Q12 from OP-POL02: a pending email invitation reserves one of two non-owner human seats; suspension keeps its seat, confirmed revocation/cancellation/expiry frees it; administrator uses the same quota. Invitations last seven server days, use purpose-specific single-use hashed tokens and require canonical login, verified invited email and explicit acceptance of the immutable offer. Changed offers require reissue and new acceptance. Governed owner changes cancel pending invitations and require explicit review of existing grants before delegation continues. All plans retain two seats; entitlements limit functions without deleting history or reviving revoked rights. Canonical transactional audit records the actual actor and closed operations, failing closed on critical failure.
+
+[OP-IMP01 implementation and disposable evidence](../identity/OP-IMP01_OPERATOR_FOUNDATION.md) prepares canonical invitations, membership-scoped versioned grants, owner-only lifecycle, profile locking/quota, governed ownership hooks and closed initial Agenda operation decisions. Canonical Identity memberships remain the only assignment authority. Legacy Agenda credentials/flags/MAX_ALLOWED=3 are not imported as grants. Forward/recovery SQL is rehearsed solely with synthetic disposable databases; normal-local and persistent QA05 remain unchanged.
+
+This phase does not activate invitations, operator acceptance, module actions or the OPERADORES panel outside that disposable CLI composition. Canonical clinical/private-shell consumers deny non-medical provenance; comprehensive HTTP denial across legacy consumers is still a release gate. OP-IMP02 must complete that gate, legacy cutover, real composition/dispatch and separately authorized schema rollout before wiring the existing Safari UI. Q05–Q11 and professional governance remain bounded as documented; no medical authority, subscription product or real membership is created here.
+
 ## 11. AI practice operator
 
 AI is a recognized non-human practice actor, not an implemented feature. Future implementation requires separate authorization and entitlement reconciliation.

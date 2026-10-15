@@ -43,6 +43,10 @@ final class CanonicalDoctorMembershipPolicy
             &&trim((string)($row['profile_doctor_id']??''))!==''));
         if(count($doctorMemberships)!==1)return ['membership'=>null,'reason'=>count($doctorMemberships)===0?'membership_missing':'membership_ambiguous'];
         $membership=$doctorMemberships[0];
+        // Non-medical appointment is never physician-shell/clinical authority,
+        // including a later administrator/owner label. Separate granular consumer required.
+        if(($membership['assignment_source']??'')==='owner_operator_invitation')
+            return ['membership'=>null,'reason'=>'nonmedical_operator_requires_granular_consumer'];
         if(($membership['status']??'')!=='active'||($membership['entity_group_id']??null)!==null
             ||!in_array((string)($membership['scope_code']??''),['profile','profile_doctor'],true)
             ||!in_array((string)($membership['role_code']??''),['owner','administrator','collaborator'],true))

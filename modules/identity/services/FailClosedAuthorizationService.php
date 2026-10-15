@@ -25,6 +25,12 @@ final class FailClosedAuthorizationService
         if (!in_array($targetType, ['profile_doctor', 'medical_group'], true)) return new AuthorizationDecision(false, ReasonCode::PROFILE_MISMATCH);
         try { $rows = $this->memberships->activeForAccount($context->accountId()); } catch (\Throwable) { return new AuthorizationDecision(false, ReasonCode::MEMBERSHIP_MISSING); }
         if (!is_array($rows)) return new AuthorizationDecision(false, ReasonCode::MEMBERSHIP_MISSING);
+        foreach ($rows as $row) {
+            if (is_array($row) && ($row['assignment_source'] ?? '') === 'owner_operator_invitation'
+                && ($row['status'] ?? '') === 'active' && $targetType === 'profile_doctor'
+                && (string)($row['profile_doctor_id'] ?? '') === $targetId)
+                return new AuthorizationDecision(false, ReasonCode::CAPABILITY_DENIED);
+        }
         $match = null;
         foreach ($rows as $row) {
             if (!is_array($row) || (string)($row['status'] ?? 'active') !== 'active') continue;

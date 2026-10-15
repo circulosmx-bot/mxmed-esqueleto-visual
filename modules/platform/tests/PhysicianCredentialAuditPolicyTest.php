@@ -79,12 +79,24 @@ $metadata=[
     'PHYSICIAN_CREDENTIAL_REVOKED'=>['credential_type'=>'SPECIALTY','previous_lifecycle_status'=>'ACTIVE','new_lifecycle_status'=>'REVOKED'],
 ];
 $rows=CanonicalAuditPolicyRegistry::canonicalRows();
-check(count($rows)===50 && count(CanonicalAuditEventType::all())===50,'50 events/policies');
+check(count($rows)===51 && count(CanonicalAuditEventType::all())===51,'51 events/policies including OP-IMP01');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
 check(array_slice(CanonicalAuditEventType::all(),38,5)===array_keys($metadata),'exactly five new events');
-check(hash('sha256',json_encode(array_slice($rows,0,38),JSON_UNESCAPED_SLASHES))==='28e4640f9df343a97fbc389a4e4bb2552accf77bb8772b04e0e3ac745b51fd4c','existing policies plus authorized QA02B ownership evidence');
+// OP-IMP01 extends only invitation metadata in these historical rows. Keep the
+// published a18cc367 baseline digest after removing exactly that extension.
+// The older QA02B digest was stale already at the published starting HEAD.
+$historical=array_slice($rows,0,38);
+foreach ($historical as &$row) {
+    if (in_array($row['event_type'],['INVITATION_CREATED','INVITATION_ACCEPTED','INVITATION_REVOKED'],true)) {
+        check($row['allowed_producer_metadata']===['operator_action','actor_membership_id','profile_doctor_id','membership_id','invitation_id','grant_revision','owner_membership_id','capabilities','operation_reason'],'OP-IMP01 exact invitation metadata extension');
+        $row['allowed_producer_metadata']=[];
+    }
+}
+unset($row);
+check(hash('sha256',json_encode($historical,JSON_UNESCAPED_SLASHES))==='b1fb43367b584e9ae569774d1be823c443b6649d5c51de589b5222a53d25960a','reviewed published a18cc367 policy baseline (without OP-IMP01 metadata)');
 $catalog=new SensitiveAdminActionCatalog();
 check($catalog->all()===[],'generic catalog remains empty');
+denied(fn()=>$catalog->definition('PROFILE_OPERATOR_DELEGATION_CHANGED'),'specific_canonical_event_must_not_be_duplicated');
 denied(fn()=>$catalog->definition('UNRATIFIED_ACTION'),'unknown_sensitive_admin_action_key');
 $context=TrustedAuditContext::fromServer('synthetic-advisor','account','ADVISOR','profile',
     'synthetic-request','synthetic-correlation','synthetic-session',null,null,'PROFILE','trusted-service');

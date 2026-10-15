@@ -1,5 +1,7 @@
 # OP-POL02 — operadores no médicos: reconciliación y preparación de implementación
 
+**Actualización OP-IMP01 (2026-10-15):** el Director ratificó Q01/Q02/Q03/Q04/Q12. Su estado «pendiente» en las secciones históricas siguientes queda sustituido por [OP-IMP01: implementación, reglas ratificadas y evidencia desechable](OP-IMP01_OPERATOR_FOUNDATION.md). Q05–Q11 siguen limitando consumidores posteriores. El panel y las invitaciones reales permanecen deshabilitados; no se instaló migración en normal-local o QA05.
+
 Fecha: 2026-10-15. Fuente: `7a4a332fa37545e13bcde57734797a76a0ae98bf`, rama `ux/consultation-step2-vitals-r1`, worktree `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`.
 
 **Estado: contrato de producto ratificado; auditoría de código de sólo lectura; panel y permisos todavía sin implementar.** Entrega documental, sin llamadas de negocio HTTP, lecturas de datos personales, migraciones, pruebas con fixtures persistentes o cambios de autoridad. Las observaciones sobre endpoints se sustentan en despacho/policies/servicios; no se declaran explotación HTTP ni exposición pública confirmadas.

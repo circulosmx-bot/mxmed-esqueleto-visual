@@ -7,10 +7,11 @@ final class OneTimeTokenPurpose
 {
     public const EMAIL_VERIFICATION = 'email_verification';
     public const PASSWORD_RECOVERY = 'password_recovery';
+    public const OPERATOR_INVITATION = 'operator_invitation';
 
     public static function assertValid(string $purpose): string
     {
-        if (!in_array($purpose, [self::EMAIL_VERIFICATION, self::PASSWORD_RECOVERY], true)) {
+        if (!in_array($purpose, [self::EMAIL_VERIFICATION, self::PASSWORD_RECOVERY, self::OPERATOR_INVITATION], true)) {
             throw new \InvalidArgumentException('unsupported_token_purpose');
         }
         return $purpose;

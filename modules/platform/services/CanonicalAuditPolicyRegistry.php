@@ -4,7 +4,7 @@ namespace Platform\Services;
 final class CanonicalAuditPolicyRegistry
 {
     private array $rows=[];
-    private function __construct(array $rows){foreach($rows as $row){$event=$row['event_type']??null;if(!is_string($event)||isset($this->rows[$event]))throw new \InvalidArgumentException('invalid_canonical_policy_rows');$this->rows[$event]=$row;}if(count($this->rows)!==50)throw new \InvalidArgumentException('canonical_policy_row_count');}
+    private function __construct(array $rows){foreach($rows as $row){$event=$row['event_type']??null;if(!is_string($event)||isset($this->rows[$event]))throw new \InvalidArgumentException('invalid_canonical_policy_rows');$this->rows[$event]=$row;}if(count($this->rows)!==51)throw new \InvalidArgumentException('canonical_policy_row_count');}
     public static function canonical(): self{return new self(self::canonicalRows());}
     public static function canonicalRows(): array{return [
             [
@@ -870,6 +870,9 @@ final class CanonicalAuditPolicyRegistry
             [
                 'actor_required' => true,
                 'allowed_producer_metadata' => [
+                    // OP-IMP01 closed operator action metadata; never raw email/token.
+                    'operator_action', 'actor_membership_id', 'profile_doctor_id', 'membership_id', 'invitation_id',
+                    'grant_revision', 'owner_membership_id', 'capabilities', 'operation_reason',
                 ],
                 'allowed_reason_codes' => [
                     'USER_REQUEST',
@@ -915,6 +918,9 @@ final class CanonicalAuditPolicyRegistry
             [
                 'actor_required' => true,
                 'allowed_producer_metadata' => [
+                    // OP-IMP01 closed operator action metadata; never raw email/token.
+                    'operator_action', 'actor_membership_id', 'profile_doctor_id', 'membership_id', 'invitation_id',
+                    'grant_revision', 'owner_membership_id', 'capabilities', 'operation_reason',
                 ],
                 'allowed_reason_codes' => [
                     'USER_REQUEST',
@@ -973,6 +979,9 @@ final class CanonicalAuditPolicyRegistry
             [
                 'actor_required' => true,
                 'allowed_producer_metadata' => [
+                    // OP-IMP01 closed operator action metadata; never raw email/token.
+                    'operator_action', 'actor_membership_id', 'profile_doctor_id', 'membership_id', 'invitation_id',
+                    'grant_revision', 'owner_membership_id', 'capabilities', 'operation_reason',
                 ],
                 'allowed_reason_codes' => [
                     'ADMIN_DECISION',
@@ -1671,6 +1680,15 @@ final class CanonicalAuditPolicyRegistry
                 'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'PHYSICIAN_SIGNATURE_HANDOFF_INVALIDATED',
                 'producer'=>'Signatures','reason_required'=>true,'retention_class'=>'ROLE_ADMIN',
                 'self_timeline'=>false,'session_required'=>true,'severity'=>'INFO','target_required'=>true,
+            ],
+            [
+                'actor_required'=>true,
+                'allowed_producer_metadata'=>['operator_action','actor_membership_id','profile_doctor_id','membership_id','invitation_id','grant_revision','owner_membership_id','capabilities','operation_reason'],
+                'allowed_reason_codes'=>['ADMIN_DECISION','SECURITY_RESPONSE'],
+                'allowed_result_reason_pairs'=>[['reason_code'=>'ADMIN_DECISION','result'=>'SUCCESS'],['reason_code'=>'SECURITY_RESPONSE','result'=>'SUCCESS']],
+                'allowed_results'=>['SUCCESS'],'allowed_writer_internal_metadata'=>[],
+                'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','producer'=>'Roles',
+                'reason_required'=>true,'retention_class'=>'ROLE_ADMIN','self_timeline'=>false,'session_required'=>true,'severity'=>'HIGH','target_required'=>true,
             ],
         ];}
     public function count(): int{return count($this->rows);}
