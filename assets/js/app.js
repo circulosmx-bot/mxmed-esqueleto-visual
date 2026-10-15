@@ -35571,11 +35571,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   let rxCatalogSeedPromise = null;
 
   const RX_QUICK_FIELD_SUGGESTIONS = {
-    frequency: ['Cada 4 horas', 'Cada 6 horas', 'Cada 8 horas', 'Cada 12 horas', 'Cada 24 horas', '1 vez al día', '2 veces al día', '3 veces al día', 'Antes de alimentos', 'Después de alimentos', 'En caso necesario'],
-    route: ['Vía oral', 'Sublingual', 'Intramuscular', 'Intravenosa', 'Subcutánea', 'Tópica', 'Oftálmica', 'Ótica', 'Nasal', 'Rectal', 'Vaginal', 'Inhalada'],
-    duration: ['1 día', '3 días', '5 días', '7 días', '10 días', '14 días', '21 días', '30 días', 'Uso continuo', 'Dosis única'],
-    instructions: ['Tomar después de alimentos', 'Tomar antes de alimentos', 'Agitar antes de usar', 'No suspender aunque exista mejoría', 'Evitar alcohol', 'Aplicar en área limpia y seca', 'Uso nocturno'],
-    dose: ['1 tableta', '1 cápsula', '5 ml', '10 ml', 'Aplicar capa delgada', '1 ampolleta']
+    frequency: ['Cada 8 horas', 'Cada 12 horas', 'Cada 24 horas'],
+    route: [],
+    duration: ['5 días', '7 días', '14 días'],
+    instructions: ['Tomar con agua', 'Tomar después de alimentos'],
+    dose: []
   };
   const RX_ROUTE_DISPLAY = {
     vo: 'Vía oral',
@@ -37305,7 +37305,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       return;
     }
     if (!holder) {
-      wrap.insertAdjacentHTML('beforeend', html);
+      const target=fieldKey==='frequency'?wrap.querySelector('[data-rx-regimen-section="scheduled-frequency"]'):
+        fieldKey==='duration'?wrap.querySelector('[data-rx-regimen-section="defined-duration"]'):null;
+      (target||wrap).insertAdjacentHTML('beforeend', html);
       return;
     }
     const tmp = document.createElement('div');
@@ -37623,7 +37625,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const quantityInput = row.querySelector('[data-ne-rx="quantity"]');
     if (!quantityInput) return;
     if (row.dataset.neRxSchema === '2') {
-      quantityInput.placeholder = 'Cantidad finita indicada por el médico';
+      quantityInput.placeholder = 'Ej. 20 tabletas';
       writeRowMeta(row, { ...meta, quantity_mode:'manual',
         quantity_value:normalizeRecetaText(quantityInput.value), quantity_unit:'' });
       return;
@@ -37702,41 +37704,61 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     for (const key of path.split('.')) current = current && typeof current === 'object' ? current[key] : undefined;
     return current == null ? fallback : current;
   };
-  const rxStructuredRegimenHtml = (m) => {
-    const regimen = m.regimen || emptyStructuredRegimen();
-    const admin = regimen.administration || {}, duration = regimen.duration || {};
-    const maxDose = admin.maximum_dose_per_period || {}, maxDosePeriod = maxDose.period || {};
-    const maxAdministrations = admin.maximum_administrations_per_period || {}, maxAdminPeriod = maxAdministrations.period || {};
-    const interval = admin.minimum_interval || {};
-    const legacyReference = [m.legacy_frequency_reference ? `Frecuencia anterior: ${m.legacy_frequency_reference}` : '',
-      m.legacy_duration_reference ? `Duración anterior: ${m.legacy_duration_reference}` : ''].filter(Boolean).join(' · ');
-    return `<section class="rx-regimen" data-rx-regimen-controls>
-      <div class="rx-regimen__notice${legacyReference ? '' : ' d-none'}" data-rx-legacy-reference>${escapeHtmlLite(legacyReference)}</div>
-      <div class="rx-regimen__grid">
-        <label class="ne-rx-field"><span>Forma de administración</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.pattern">
-          <option value="SCHEDULED"${rxSelected(admin.pattern,'SCHEDULED')}>Programada</option>
-          <option value="AS_NEEDED"${rxSelected(admin.pattern,'AS_NEEDED')}>Según necesidad</option>
-          <option value="PHYSICIAN_DEFINED"${rxSelected(admin.pattern,'PHYSICIAN_DEFINED')}>Pauta personalizada</option>
-        </select></label>
-        <label class="ne-rx-field" data-rx-regimen-section="scheduled"><span>Horario o frecuencia indicada</span><input class="form-control form-control-sm" data-ne-rx-regimen="administration.instruction" maxlength="500" placeholder="Ej. Cada 8 horas" value="${escapeAttr(rxRegimenValue(regimen,'administration.instruction'))}"></label>
-        <label class="ne-rx-field" data-rx-regimen-section="physician-administration"><span>Instrucción personalizada para el paciente</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="administration.instruction" maxlength="1000" rows="2" placeholder="Describe la pauta completa">${escapeHtmlLite(rxRegimenValue(regimen,'administration.instruction'))}</textarea></label>
-        <div class="rx-regimen__conditional" data-rx-regimen-section="prn">
-          <label class="ne-rx-field"><span>Motivo para usar según necesidad</span><input class="form-control form-control-sm" data-ne-rx-regimen="administration.indication" maxlength="500" placeholder="Ej. En caso de dolor" value="${escapeAttr(rxRegimenValue(regimen,'administration.indication'))}"></label>
-          <label class="ne-rx-field"><span>Repetición</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.repeat_mode"><option value="">Selecciona</option><option value="SINGLE_ADMINISTRATION"${rxSelected(admin.repeat_mode,'SINGLE_ADMINISTRATION')}>Administración única</option><option value="REPEATABLE"${rxSelected(admin.repeat_mode,'REPEATABLE')}>Puede repetirse</option></select></label>
-          <div class="rx-regimen__inline" data-rx-regimen-section="prn-interval"><label class="ne-rx-field"><span>Intervalo mínimo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.minimum_interval.value" value="${escapeAttr(interval.value)}"></label><label class="ne-rx-field"><span>Unidad</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.minimum_interval.unit"><option value="">Selecciona</option><option value="MINUTE"${rxSelected(interval.unit,'MINUTE')}>Minutos</option><option value="HOUR"${rxSelected(interval.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(interval.unit,'DAY')}>Días</option></select></label></div>
-          <label class="form-check rx-regimen__toggle"><input class="form-check-input" type="checkbox" data-ne-rx-regimen-toggle="max-dose"${rxChecked(admin.maximum_dose_per_period)}><span class="form-check-label">Agregar máximo de dosis por periodo</span></label>
-          <div class="rx-regimen__limit" data-rx-regimen-section="max-dose"><label class="ne-rx-field"><span>Máximo de dosis</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_dose_per_period.value" value="${escapeAttr(maxDose.value)}"></label><label class="ne-rx-field"><span>Unidad exacta</span><input class="form-control form-control-sm" maxlength="80" data-ne-rx-regimen="administration.maximum_dose_per_period.unit" placeholder="Ej. tabletas" value="${escapeAttr(maxDose.unit)}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_dose_per_period.period.value" value="${escapeAttr(maxDosePeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_dose_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxDosePeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxDosePeriod.unit,'DAY')}>Días</option></select></label></div>
-          <label class="form-check rx-regimen__toggle"><input class="form-check-input" type="checkbox" data-ne-rx-regimen-toggle="max-administrations"${rxChecked(admin.maximum_administrations_per_period)}><span class="form-check-label">Agregar máximo de administraciones por periodo</span></label>
-          <div class="rx-regimen__limit" data-rx-regimen-section="max-administrations"><label class="ne-rx-field"><span>Máximo de administraciones</span><input class="form-control form-control-sm" type="number" min="1" step="1" data-ne-rx-regimen="administration.maximum_administrations_per_period.count" value="${escapeAttr(maxAdministrations.count || '')}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.value" value="${escapeAttr(maxAdminPeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxAdminPeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxAdminPeriod.unit,'DAY')}>Días</option></select></label></div>
-        </div>
-        <label class="ne-rx-field"><span>Cómo termina el tratamiento</span><select class="form-select form-select-sm" data-ne-rx-regimen="duration.mode"><option value="">Selecciona</option><option value="DEFINED_DURATION"${rxSelected(duration.mode,'DEFINED_DURATION')}>Duración definida</option><option value="CONTINUOUS"${rxSelected(duration.mode,'CONTINUOUS')}>Tratamiento continuo</option><option value="UNTIL_REASSESSMENT"${rxSelected(duration.mode,'UNTIL_REASSESSMENT')}>Hasta nueva valoración médica</option><option value="UNTIL_DATE"${rxSelected(duration.mode,'UNTIL_DATE')}>Hasta una fecha determinada</option><option value="PHYSICIAN_DEFINED"${rxSelected(duration.mode,'PHYSICIAN_DEFINED')}>Duración personalizada</option></select></label>
-        <div class="rx-regimen__inline" data-rx-regimen-section="defined-duration"><label class="ne-rx-field"><span>Duración</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="duration.value" value="${escapeAttr(duration.value)}"></label><label class="ne-rx-field"><span>Unidad</span><select class="form-select form-select-sm" data-ne-rx-regimen="duration.unit"><option value="">Selecciona</option><option value="DAY"${rxSelected(duration.unit,'DAY')}>Días</option><option value="WEEK"${rxSelected(duration.unit,'WEEK')}>Semanas</option><option value="MONTH"${rxSelected(duration.unit,'MONTH')}>Meses</option></select></label></div>
-        <label class="ne-rx-field" data-rx-regimen-section="until-date"><span>Fecha de término</span><input class="form-control form-control-sm" type="date" data-ne-rx-regimen="duration.date" value="${escapeAttr(duration.date)}"></label>
-        <label class="ne-rx-field" data-rx-regimen-section="physician-duration"><span>Condición de término indicada</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="duration.instruction" maxlength="1000" rows="2" placeholder="Describe cuándo termina el tratamiento">${escapeHtmlLite(duration.instruction || '')}</textarea></label>
-        <p class="rx-regimen__open-note" data-rx-regimen-section="open-duration">La cantidad a dispensar sigue siendo manual y finita.</p>
-      </div>
-    </section>`;
+  const rxDurationUnitLabel = (unit, value = '') => {
+    const singular=String(value)==='1';
+    return unit==='DAY'?(singular?'día':'días'):unit==='WEEK'?(singular?'semana':'semanas'):unit==='MONTH'?(singular?'mes':'meses'):'';
   };
+  const rxDefinedDurationText = (duration = {}) => duration.value && duration.unit
+    ? `${duration.value} ${rxDurationUnitLabel(duration.unit,duration.value)}` : '';
+  const rxSpecialFrequencyLabel = (administration = {}) => administration.pattern==='AS_NEEDED'
+    ? `Según necesidad${administration.indication?`: ${administration.indication}`:''}`
+    : administration.pattern==='PHYSICIAN_DEFINED'?(administration.instruction||'Pauta personalizada'):'';
+  const rxSpecialDurationLabel = (duration = {}) => ({
+    CONTINUOUS:'Tratamiento continuo',UNTIL_REASSESSMENT:'Hasta nueva valoración médica',
+    UNTIL_DATE:duration.date?`Hasta ${duration.date}`:'Hasta una fecha determinada',
+    PHYSICIAN_DEFINED:duration.instruction||'Duración personalizada'
+  })[duration.mode]||'';
+  const rxStructuredFrequencyFieldHtml = (m) => {
+    const administration=m.regimen?.administration||{};
+    const scheduled=administration.pattern==='SCHEDULED'?(administration.instruction||m.frequency||''):'';
+    const shown=administration.pattern==='SCHEDULED'?scheduled:rxSpecialFrequencyLabel(administration);
+    return `<div class="ne-rx-field-wrap rx-regimen-primary" data-rx-field-wrap="frequency">
+      <label class="ne-rx-field"><span><span>Frecuencia</span><select class="rx-regimen-mode-select" data-ne-rx-regimen="administration.pattern" aria-label="Opciones de frecuencia"><option value="SCHEDULED"${rxSelected(administration.pattern,'SCHEDULED')}>Programada</option><option value="AS_NEEDED"${rxSelected(administration.pattern,'AS_NEEDED')}>Según necesidad</option><option value="PHYSICIAN_DEFINED"${rxSelected(administration.pattern,'PHYSICIAN_DEFINED')}>Pauta personalizada</option></select></span><input class="form-control form-control-sm" data-ne-rx="frequency" data-rx-defined-value="${escapeAttr(scheduled)}" placeholder="Ej. Cada 8 horas" value="${escapeAttr(shown)}"></label>
+      <div data-rx-regimen-section="scheduled-frequency">${renderQuickFieldSuggestions('frequency',['Cada 8 horas','Cada 12 horas','Cada 24 horas'])}</div>
+    </div>`;
+  };
+  const rxStructuredDurationFieldHtml = (m) => {
+    const duration=m.regimen?.duration||{};
+    const defined=duration.mode==='DEFINED_DURATION'?rxDefinedDurationText(duration):'';
+    const shown=duration.mode==='DEFINED_DURATION'?defined:rxSpecialDurationLabel(duration);
+    return `<div class="ne-rx-field-wrap rx-regimen-primary" data-rx-field-wrap="duration">
+      <label class="ne-rx-field"><span><span>Duración</span><select class="rx-regimen-mode-select" data-ne-rx-regimen="duration.mode" aria-label="Opciones de duración"><option value=""${rxSelected(duration.mode,'')}>Más opciones</option><option value="DEFINED_DURATION"${rxSelected(duration.mode,'DEFINED_DURATION')}>Definida</option><option value="CONTINUOUS"${rxSelected(duration.mode,'CONTINUOUS')}>Continua</option><option value="UNTIL_REASSESSMENT"${rxSelected(duration.mode,'UNTIL_REASSESSMENT')}>Hasta valoración</option><option value="UNTIL_DATE"${rxSelected(duration.mode,'UNTIL_DATE')}>Hasta fecha</option><option value="PHYSICIAN_DEFINED"${rxSelected(duration.mode,'PHYSICIAN_DEFINED')}>Personalizada</option></select></span><input class="form-control form-control-sm" data-ne-rx="duration" data-rx-defined-value="${escapeAttr(defined)}" placeholder="Ej. 7 días" value="${escapeAttr(shown)}"></label>
+      <div data-rx-regimen-section="defined-duration">${renderQuickFieldSuggestions('duration',['5 días','7 días','14 días'])}</div>
+    </div>`;
+  };
+  const rxStructuredContextHtml = (m) => {
+    const regimen=m.regimen||emptyStructuredRegimen(),admin=regimen.administration||{},duration=regimen.duration||{};
+    const maxDose=admin.maximum_dose_per_period||{},maxDosePeriod=maxDose.period||{};
+    const maxAdministrations=admin.maximum_administrations_per_period||{},maxAdminPeriod=maxAdministrations.period||{};
+    const interval=admin.minimum_interval||{};
+    return `<div class="rx-regimen-context" data-rx-regimen-context>
+      <div class="rx-regimen-context__panel" data-rx-regimen-section="prn">
+        <label class="ne-rx-field"><span>Motivo o situación de uso</span><input class="form-control form-control-sm" data-ne-rx-regimen="administration.indication" maxlength="500" placeholder="Ej. En caso de dolor" value="${escapeAttr(admin.indication)}"></label>
+        <label class="ne-rx-field"><span>Repetición</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.repeat_mode"><option value="">Selecciona</option><option value="SINGLE_ADMINISTRATION"${rxSelected(admin.repeat_mode,'SINGLE_ADMINISTRATION')}>Administración única</option><option value="REPEATABLE"${rxSelected(admin.repeat_mode,'REPEATABLE')}>Puede repetirse</option></select></label>
+        <div class="rx-regimen-context__inline" data-rx-regimen-section="prn-interval"><label class="ne-rx-field"><span>Intervalo mínimo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.minimum_interval.value" value="${escapeAttr(interval.value)}"></label><label class="ne-rx-field"><span>Unidad</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.minimum_interval.unit"><option value="">Selecciona</option><option value="MINUTE"${rxSelected(interval.unit,'MINUTE')}>Minutos</option><option value="HOUR"${rxSelected(interval.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(interval.unit,'DAY')}>Días</option></select></label></div>
+        <label class="form-check rx-regimen__toggle"><input class="form-check-input" type="checkbox" data-ne-rx-regimen-toggle="max-dose"${rxChecked(admin.maximum_dose_per_period)}><span class="form-check-label">Agregar máximo de dosis por periodo</span></label>
+        <div class="rx-regimen-context__limit" data-rx-regimen-section="max-dose"><label class="ne-rx-field"><span>Máximo de dosis</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_dose_per_period.value" value="${escapeAttr(maxDose.value)}"></label><label class="ne-rx-field"><span>Unidad exacta</span><input class="form-control form-control-sm" maxlength="80" data-ne-rx-regimen="administration.maximum_dose_per_period.unit" placeholder="Ej. tabletas" value="${escapeAttr(maxDose.unit)}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_dose_per_period.period.value" value="${escapeAttr(maxDosePeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_dose_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxDosePeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxDosePeriod.unit,'DAY')}>Días</option></select></label></div>
+        <label class="form-check rx-regimen__toggle"><input class="form-check-input" type="checkbox" data-ne-rx-regimen-toggle="max-administrations"${rxChecked(admin.maximum_administrations_per_period)}><span class="form-check-label">Agregar máximo de administraciones por periodo</span></label>
+        <div class="rx-regimen-context__limit" data-rx-regimen-section="max-administrations"><label class="ne-rx-field"><span>Máximo de administraciones</span><input class="form-control form-control-sm" type="number" min="1" step="1" data-ne-rx-regimen="administration.maximum_administrations_per_period.count" value="${escapeAttr(maxAdministrations.count||'')}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.value" value="${escapeAttr(maxAdminPeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxAdminPeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxAdminPeriod.unit,'DAY')}>Días</option></select></label></div>
+      </div>
+      <label class="ne-rx-field" data-rx-regimen-section="physician-administration"><span>Pauta personalizada para el paciente</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="administration.instruction" maxlength="1000" rows="2" placeholder="Describe la pauta completa">${escapeHtmlLite(admin.instruction||'')}</textarea></label>
+      <p class="rx-regimen-context__status" data-rx-regimen-section="continuous">Tratamiento continuo, sin fecha de término predeterminada.</p>
+      <p class="rx-regimen-context__status" data-rx-regimen-section="reassessment">El tratamiento continúa hasta una nueva valoración médica.</p>
+      <label class="ne-rx-field" data-rx-regimen-section="until-date"><span>Fecha de término</span><input class="form-control form-control-sm" type="date" data-ne-rx-regimen="duration.date" value="${escapeAttr(duration.date)}"></label>
+      <label class="ne-rx-field" data-rx-regimen-section="physician-duration"><span>Condición de término indicada</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="duration.instruction" maxlength="1000" rows="2" placeholder="Describe cuándo termina el tratamiento">${escapeHtmlLite(duration.instruction||'')}</textarea></label>
+    </div>`;
+  };
+  const rxStructuredRegimenHtml = (m) => `<section class="rx-regimen rx-regimen--template" data-rx-regimen-controls>${rxStructuredFrequencyFieldHtml(m)}${rxStructuredDurationFieldHtml(m)}${rxStructuredContextHtml(m)}</section>`;
   const syncRxRegimenVisibility = (row) => {
     if (!row || row.dataset.neRxSchema !== '2') return;
     const pattern = row.querySelector('[data-ne-rx-regimen="administration.pattern"]')?.value || '';
@@ -37745,13 +37767,35 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const maxDose = row.querySelector('[data-ne-rx-regimen-toggle="max-dose"]')?.checked === true;
     const maxAdministrations = row.querySelector('[data-ne-rx-regimen-toggle="max-administrations"]')?.checked === true;
     const show = (name, visible) => row.querySelectorAll(`[data-rx-regimen-section="${name}"]`).forEach(el=>el.hidden=!visible);
-    show('scheduled',pattern==='SCHEDULED'); show('physician-administration',pattern==='PHYSICIAN_DEFINED');
+    const frequency=row.querySelector('[data-ne-rx="frequency"]');
+    const duration=row.querySelector('[data-ne-rx="duration"]');
+    if(frequency){
+      if(pattern==='SCHEDULED'){
+        if(frequency.readOnly)frequency.value=frequency.dataset.rxDefinedValue||'';
+        frequency.readOnly=false;frequency.placeholder='Ej. Cada 8 horas';
+      }else{
+        if(!frequency.readOnly)frequency.dataset.rxDefinedValue=frequency.value;
+        frequency.readOnly=true;frequency.value=pattern==='AS_NEEDED'?'Según necesidad':'Pauta personalizada';
+      }
+    }
+    if(duration){
+      if(mode==='DEFINED_DURATION'||mode===''){
+        if(duration.readOnly)duration.value=duration.dataset.rxDefinedValue||'';
+        duration.readOnly=false;duration.placeholder='Ej. 7 días';
+      }else{
+        if(!duration.readOnly)duration.dataset.rxDefinedValue=duration.value;
+        duration.readOnly=true;duration.value=rxSpecialDurationLabel({mode,
+          date:row.querySelector('[data-ne-rx-regimen="duration.date"]')?.value||'',
+          instruction:row.querySelector('[data-ne-rx-regimen="duration.instruction"]')?.value||''});
+      }
+    }
+    show('scheduled-frequency',pattern==='SCHEDULED'); show('physician-administration',pattern==='PHYSICIAN_DEFINED');
     show('prn',pattern==='AS_NEEDED'); show('prn-interval',pattern==='AS_NEEDED'&&repeat==='REPEATABLE');
     show('max-dose',pattern==='AS_NEEDED'&&repeat==='REPEATABLE'&&maxDose);
     show('max-administrations',pattern==='AS_NEEDED'&&repeat==='REPEATABLE'&&maxAdministrations);
-    show('defined-duration',mode==='DEFINED_DURATION'); show('until-date',mode==='UNTIL_DATE');
+    show('defined-duration',mode==='DEFINED_DURATION'||mode===''); show('until-date',mode==='UNTIL_DATE');
     show('physician-duration',mode==='PHYSICIAN_DEFINED');
-    show('open-duration',['CONTINUOUS','UNTIL_REASSESSMENT','UNTIL_DATE','PHYSICIAN_DEFINED'].includes(mode));
+    show('continuous',mode==='CONTINUOUS');show('reassessment',mode==='UNTIL_REASSESSMENT');
   };
   const rxRegimenSet = (target, path, value) => {
     const keys=path.split('.');let current=target;
@@ -37765,6 +37809,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(path.endsWith('.count')&&value!=='')value=Number.parseInt(value,10);
       rxRegimenSet(regimen,path,value);
     });
+    if(regimen.administration.pattern==='SCHEDULED'){
+      regimen.administration.instruction=String(row.querySelector('[data-ne-rx="frequency"]')?.value||'').trim();
+    }
+    if(regimen.duration.mode==='DEFINED_DURATION'){
+      const text=normalizeQuickToken(row.querySelector('[data-ne-rx="duration"]')?.value||'').replace(',','.');
+      const match=text.match(/(\d+(?:\.\d+)?)\s*(dia|dias|semana|semanas|mes|meses)\b/);
+      regimen.duration.value=match?.[1]||'';
+      regimen.duration.unit=match?((match[2].startsWith('dia'))?'DAY':(match[2].startsWith('semana'))?'WEEK':'MONTH'):'';
+    }
     if(regimen.administration.pattern==='AS_NEEDED'&&regimen.administration.repeat_mode==='REPEATABLE'){
       if(!row.querySelector('[data-ne-rx-regimen-toggle="max-dose"]')?.checked)delete regimen.administration.maximum_dose_per_period;
       if(!row.querySelector('[data-ne-rx-regimen-toggle="max-administrations"]')?.checked)delete regimen.administration.maximum_administrations_per_period;
@@ -37789,7 +37842,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           <label class="ne-rx-field"><span>Medicamento</span><input class="form-control form-control-sm" placeholder="Busca por nombre" data-ne-rx="name" autocomplete="off" value="${escapeAttr(m.name)}"></label>
           <div class="ne-rx-suggest d-none" data-role="rx-med-suggestions"></div>
         </div>
-        <label class="ne-rx-field ne-rx-presentation"><span>Presentación</span><input class="form-control form-control-sm" placeholder="Ej. Tableta 500 mg" data-ne-rx="presentation" value="${escapeAttr(m.presentation)}"></label>
+        <label class="ne-rx-field ne-rx-medication-presentation"><span>Presentación</span><input class="form-control form-control-sm" placeholder="Ej. Tableta 500 mg" data-ne-rx="presentation" value="${escapeAttr(m.presentation)}"></label>
         <div class="ne-rx-field-wrap" data-rx-field-wrap="dose">
           <label class="ne-rx-field"><span>Dosis</span><input class="form-control form-control-sm" placeholder="Ej. 1 tableta" data-ne-rx="dose" value="${escapeAttr(m.dose)}"></label>
           ${renderQuickFieldSuggestions('dose')}
@@ -37798,21 +37851,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           <label class="ne-rx-field"><span>Vía</span><input class="form-control form-control-sm" placeholder="Ej. Oral" data-ne-rx="route" value="${escapeAttr(m.route)}"></label>
           ${renderQuickFieldSuggestions('route')}
         </div>
-        <div class="ne-rx-field-wrap${Number(m.medication_schema_version)===2?' d-none':''}" data-rx-field-wrap="frequency">
+        ${Number(m.medication_schema_version)===2?rxStructuredFrequencyFieldHtml(m):`<div class="ne-rx-field-wrap" data-rx-field-wrap="frequency">
           <label class="ne-rx-field"><span>Frecuencia</span><input class="form-control form-control-sm" placeholder="Ej. Cada 8 horas" data-ne-rx="frequency" value="${escapeAttr(m.frequency)}"></label>
           ${renderQuickFieldSuggestions('frequency')}
-        </div>
-        <div class="ne-rx-field-wrap${Number(m.medication_schema_version)===2?' d-none':''}" data-rx-field-wrap="duration">
+        </div>`}
+        ${Number(m.medication_schema_version)===2?rxStructuredDurationFieldHtml(m):`<div class="ne-rx-field-wrap" data-rx-field-wrap="duration">
           <label class="ne-rx-field"><span>Duración</span><input class="form-control form-control-sm" placeholder="Ej. 7 días" data-ne-rx="duration" value="${escapeAttr(m.duration)}"></label>
           ${renderQuickFieldSuggestions('duration')}
-        </div>
-        <label class="ne-rx-field ne-rx-quantity"><span>Cantidad</span><input class="form-control form-control-sm" placeholder="Cantidad total" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"></label>
+        </div>`}
+        ${Number(m.medication_schema_version)===2?rxStructuredContextHtml(m):''}
+        <label class="ne-rx-field ne-rx-quantity"><span>Cantidad</span><input class="form-control form-control-sm" placeholder="Ej. 20 tabletas" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"><small>Indica la cantidad total que debe dispensarse.</small></label>
         <div class="ne-rx-field-wrap ne-rx-field-wrap-wide" data-rx-field-wrap="instructions">
           <label class="ne-rx-field"><span>Indicaciones al paciente</span><input class="form-control form-control-sm" placeholder="Ej. Tomar después de alimentos" data-ne-rx="instructions" value="${escapeAttr(m.instructions)}"></label>
           ${renderQuickFieldSuggestions('instructions')}
         </div>
         <label class="ne-rx-field ne-rx-private-notes"><span>Notas médicas privadas <small>Opcional · no se imprimen</small></span><input class="form-control form-control-sm" placeholder="Sólo visibles en el expediente" data-ne-rx="private_notes" value="${escapeAttr(m.private_notes)}"></label>
-        ${Number(m.medication_schema_version)===2 ? rxStructuredRegimenHtml(m) : `<div class="rx-regimen-convert"><p>Esta pauta conserva frecuencia y duración como texto heredado. No se interpretará automáticamente.</p><button type="button" class="btn btn-outline-primary btn-sm" data-ne-rx-convert>Convertir a pauta estructurada</button></div>`}
+        ${Number(m.medication_schema_version)===2 ? '' : `<div class="rx-regimen-convert"><p>Pauta heredada. La conversión es opcional y requiere confirmar frecuencia y duración.</p><button type="button" class="btn btn-link btn-sm" data-ne-rx-convert>Convertir a pauta estructurada</button></div>`}
         <div class="ne-rx-actions">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-ne-rx-cancel>Cancelar</button>
           <button type="button" class="btn btn-primary btn-sm" data-ne-rx-collapse>Agregar medicamento</button>
@@ -39196,6 +39250,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     rxGuardModal?.querySelector('.modal-body')?.scrollTo({ top: 0 });
     if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(1,false);
   };
+  const rxMarkStructuredValidationError = (message = '') => {
+    const text=normalizeQuickToken(message);let selector='';
+    if(text.includes('intervalo minimo'))selector='[data-ne-rx-regimen="administration.minimum_interval.value"]';
+    else if(text.includes('indicacion')||text.includes('cuando debe utilizarse')||text.includes('motivo'))selector='[data-ne-rx-regimen="administration.indication"]';
+    else if(text.includes('cantidad'))selector='[data-ne-rx="quantity"]';
+    else if(text.includes('termina el tratamiento')||text.includes('duracion'))selector='[data-ne-rx-regimen="duration.mode"]';
+    const field=selector?els.rxGrid?.querySelector(selector):null;
+    if(field){field.classList.add('is-invalid');field.setAttribute('aria-invalid','true');field.focus({preventScroll:true});}
+  };
   const rxLoadAvailableDraft = async () => {
     const scope = await rxCanonicalScope();
     const query = scope.ctx.encounter_key ? `?encounter_key=${encodeURIComponent(scope.ctx.encounter_key)}` : '';
@@ -39283,7 +39346,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     } catch (error) {
       if (rxPreviewHtml) rxPreviewHtml.innerHTML = '';
       if (rxPresentationStatus) rxPresentationStatus.textContent = `No se pudo actualizar la vista previa (${error.message}).`;
-      if(!rxHandleProgressError(error))setRxFeedback(`No se pudo previsualizar la receta (${error.message}).`, 'error');
+      if(!rxHandleProgressError(error)){
+        rxMarkStructuredValidationError(error.message);
+        setRxFeedback(`No se pudo previsualizar la receta (${error.message}).`, 'error');
+      }
     }
     finally {
       rxWriteBusy = false; rxPreview.disabled = false;
@@ -39687,6 +39753,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     }
   });
   els.rxGrid?.addEventListener('input', (e) => {
+    e.target.classList?.remove('is-invalid');e.target.removeAttribute?.('aria-invalid');
     const activeRow = e.target.closest('.ne-rx-row');
     const fieldInput = e.target.closest('[data-ne-rx]');
     const regimenInput = e.target.closest('[data-ne-rx-regimen],[data-ne-rx-regimen-toggle]');
@@ -39695,12 +39762,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         const fieldName = String(fieldInput.getAttribute('data-ne-rx') || '').trim();
         const nextValue = normalizeRecetaText(fieldInput.value);
         writeRowControlledState(activeRow, { [fieldName]: nextValue });
+        if(activeRow.dataset.neRxSchema==='2'&&fieldName==='duration'&&nextValue){
+          const mode=activeRow.querySelector('[data-ne-rx-regimen="duration.mode"]');
+          if(mode&&!mode.value){mode.value='DEFINED_DURATION';syncRxRegimenVisibility(activeRow);}
+        }
       }
       syncRowControlledStateFromInputs(activeRow);
       updateRxRowSummary(activeRow);
       if (regimenInput) {
-        const repeat=activeRow.querySelector('[data-ne-rx-regimen="administration.repeat_mode"]')?.value||'';
-        if(repeat!=='REPEATABLE')activeRow.querySelectorAll('[data-ne-rx-regimen-toggle]').forEach(input=>{input.checked=false;});
         syncRxRegimenVisibility(activeRow);applyQuantityModeForRow(activeRow);rxReviewedFingerprint='';
       }
     }
@@ -39759,8 +39828,6 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   els.rxGrid?.addEventListener('change', (e) => {
     const row=e.target.closest('.ne-rx-row');
     if(!row||!e.target.matches('[data-ne-rx-regimen],[data-ne-rx-regimen-toggle]'))return;
-    const repeat=row.querySelector('[data-ne-rx-regimen="administration.repeat_mode"]')?.value||'';
-    if(repeat!=='REPEATABLE')row.querySelectorAll('[data-ne-rx-regimen-toggle]').forEach(input=>{input.checked=false;});
     syncRxRegimenVisibility(row);applyQuantityModeForRow(row);rxReviewedFingerprint='';
   });
   // Safari/blur race guard: commit chip value on mousedown before focusout collapses quick chips.

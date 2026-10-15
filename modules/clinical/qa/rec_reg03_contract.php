@@ -91,7 +91,8 @@ reg03(str_contains($js,'Convertir a pauta estructurada')
 reg03(str_contains($js,'La receta combina pautas heredadas y estructuradas'),'REG03_MIXED_DRAFT_FAIL_CLOSED');
 reg03(str_contains($js,"if (row.dataset.neRxSchema === '2')")
     && str_contains($js,"quantity_mode:'manual'")
-    && str_contains($js,'Cantidad finita indicada por el médico'),'REG03_19_20');
+    && str_contains($js,'Indica la cantidad total que debe dispensarse.')
+    && !str_contains($js,'Cantidad finita indicada por el médico'),'REG03_19_20');
 reg03(str_contains($js,'cloneStructuredRegimen(item.regimen)')
     && str_contains($js,'cloneStructuredRegimen(item?.regimen)'),'REG03_09_10_11');
 
