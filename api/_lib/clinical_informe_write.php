@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_informe_binding.php';
 require_once __DIR__ . '/clinical_informe_render.php';
 require_once __DIR__ . '/clinical_informe_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 require_once __DIR__ . '/clinical_nota_encounter_source.php';
 
 /** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
@@ -34,6 +35,9 @@ function clinical_informe_write(PDO $pdo, array $doctor, string $patientId, arra
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('INFORME_INTENT_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'INFORME_PHYSICIAN_SIGN_OR_EMIT'
+    );
     if ($intent === 'issued' && trim((string)($payload['content']['reason'] ?? '')) === '')
         throw new InvalidArgumentException('INFORME_REASON_REQUIRED');
     $draftRef = trim((string)($body['draft_ref'] ?? ''));

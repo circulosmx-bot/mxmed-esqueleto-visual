@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_encounter_multipart_adapter.php';
 require_once __DIR__ . '/clinical_consent_signature_binding.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 /** Final emission requires two signatures verified against the server's current projection. */
 function clinical_consent_assert_emission_signatures(array $consent, array $statuses): void
@@ -121,6 +122,11 @@ function clinical_consent_create(PDO $pdo, array $doctor, string $patientId, arr
     if (!in_array($intent, ['draft', 'granted'], true)
         || ($payload['status'] ?? null) !== $intent) {
         throw new InvalidArgumentException('CONSENT_INTENT_INVALID');
+    }
+    $doctorSignature = is_array($payload['signatures']['doctor'] ?? null)
+        ? $payload['signatures']['doctor'] : [];
+    if ($intent === 'granted' || trim((string)($doctorSignature['image_data'] ?? '')) !== '') {
+        clinical_professional_authority_assert($doctor, 'CONSENT_PHYSICIAN_SIGN');
     }
     $key = clinical_idempotency_key_validate($idempotencyKey);
     clinical_encounter_integrity_assert_schema_ready($pdo);

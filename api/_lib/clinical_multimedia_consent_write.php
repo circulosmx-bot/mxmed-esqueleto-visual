@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_professional_authority.php';
+
 require_once __DIR__ . '/clinical_multimedia_consent_render.php';
 require_once __DIR__ . '/clinical_multimedia_consent_binding.php';
 require_once __DIR__ . '/clinical_multimedia_qr.php';
@@ -18,6 +20,9 @@ function clinical_multimedia_consent_write(PDO $pdo, array $doctor, string $pati
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'generated'], true))
         throw new InvalidArgumentException('MULTIMEDIA_STATUS_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'MULTIMEDIA_PHYSICIAN_SIGN_OR_EMIT'
+    );
     if (!clinical_legal_document_presentation_valid($payload))
         throw new InvalidArgumentException('MULTIMEDIA_PRESENTATION_INVALID');
     if (!is_array($payload['consent'] ?? null))

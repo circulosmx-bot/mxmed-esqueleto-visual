@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_professional_authority.php';
+
 require_once __DIR__ . '/clinical_prescription_binding.php';
 require_once __DIR__ . '/clinical_prescription_v2.php';
 
@@ -111,12 +113,18 @@ function clinical_prescription_qr_claim(PDO $pdo, array $body, array $entry, str
 function clinical_prescription_qr_route(PDO $pdo, string $method, array $segments): void
 {
     $action = (string)($segments[2] ?? '');
+    if ($method === 'POST' && !clinical_require_state_change_origin('prescription-qr-sessions')) return;
     $desktop = ($method === 'POST' && count($segments) === 1)
         || ($method === 'GET' && $action === 'status')
         || ($method === 'POST' && in_array($action, ['cancel', 'invalidate'], true));
     $doctor = $desktop ? clinical_require_doctor_context('prescription-qr-sessions') : null;
     if ($desktop && $doctor === null) return;
     if ($method === 'POST' && count($segments) === 1) {
+        if (clinical_professional_authority_decision($doctor, 'PRESCRIPTION_REMOTE_SIGN')['allowed'] !== true) {
+            clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar la receta.'],403);
+            return;
+        }
         $body = clinical_read_json_body();
         $data = is_array($body['data'] ?? null) ? $body['data'] : [];
         $uuid = trim((string)($data['document_uuid'] ?? ''));
@@ -212,6 +220,13 @@ function clinical_prescription_qr_route(PDO $pdo, string $method, array $segment
         return;
     }
     if ($method === 'POST' && in_array($action, ['review', 'signature'], true)) {
+        if ($action === 'signature' && clinical_professional_authority_decision([
+            'doctor_id'=>(string)$session['doctor_id'], 'user_id'=>(string)$session['actor_user_id'],
+        ], 'PRESCRIPTION_REMOTE_SIGN')['allowed'] !== true) {
+            clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar la receta.'],403);
+            return;
+        }
         $pdo->beginTransaction();
         try {
             $locked = clinical_prescription_qr_row($pdo, $token, true);

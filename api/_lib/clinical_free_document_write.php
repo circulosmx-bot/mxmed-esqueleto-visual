@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_free_document.php';
 require_once __DIR__ . '/clinical_free_document_binding.php';
 require_once __DIR__ . '/clinical_free_document_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 /** Save content, apply a version-bound physician signature, or emit the same draft UUID. */
 function clinical_free_document_write(PDO $pdo, array $doctor, string $patientId, array $body, string $idempotencyKey): array
@@ -11,6 +12,9 @@ function clinical_free_document_write(PDO $pdo, array $doctor, string $patientId
     $action = (string)($body['free_action'] ?? 'save');
     if (!in_array($action, ['save','apply_signature','emit'], true))
         throw new InvalidArgumentException('FREE_DOCUMENT_ACTION_INVALID');
+    if ($action !== 'save') {
+        clinical_professional_authority_assert($doctor, 'PROFESSIONAL_DOCUMENT_' . strtoupper($action));
+    }
     $payload = clinical_free_document_normalize($body, $pdo, $doctor, $patientId);
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
     $expectedVersion = $body['expected_version'] ?? null;

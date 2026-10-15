@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_interconsulta_binding.php';
 require_once __DIR__ . '/clinical_interconsulta_render.php';
 require_once __DIR__ . '/clinical_interconsulta_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 require_once __DIR__ . '/clinical_nota_encounter_source.php';
 
 /** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
@@ -34,6 +35,9 @@ function clinical_interconsulta_write(PDO $pdo, array $doctor, string $patientId
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('INTERCONSULTA_INTENT_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'INTERCONSULTA_PHYSICIAN_SIGN_OR_EMIT'
+    );
     $recipient = (array)($payload['recipient'] ?? []);
     if (!in_array((string)($recipient['mode'] ?? ''), ['doctor', 'service'], true)
         || (string)($recipient['source'] ?? '') !== 'manual')

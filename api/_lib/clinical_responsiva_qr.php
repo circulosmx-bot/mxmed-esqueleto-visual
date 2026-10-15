@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_professional_authority.php';
+
 require_once __DIR__ . '/clinical_responsiva_binding.php';
 require_once __DIR__ . '/clinical_responsiva_render.php';
 
@@ -134,6 +136,12 @@ function clinical_responsiva_qr_route(PDO $pdo, string $method, array $segments)
         $uuid = trim((string)($data['document_uuid'] ?? ''));
         $version = (int)($data['document_version'] ?? 0);
         $role = (string)($data['role'] ?? '');
+        if ($role === 'doctor'
+            && clinical_professional_authority_decision($doctor, 'PROFESSIONAL_DOCUMENT_REMOTE_SIGN')['allowed'] !== true) {
+            clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar el documento.'],403);
+            return;
+        }
         $document = clinical_responsiva_qr_document($pdo, $uuid);
         $payload = is_array($document) ? json_decode((string)$document['payload_json'], true) : null;
         if (($body['ok'] ?? false) !== true || !in_array($role, ['signer', 'doctor'], true)

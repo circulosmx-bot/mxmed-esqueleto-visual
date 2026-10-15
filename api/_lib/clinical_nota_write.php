@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_nota_binding.php';
 require_once __DIR__ . '/clinical_nota_render.php';
 require_once __DIR__ . '/clinical_nota_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 require_once __DIR__ . '/clinical_nota_encounter_source.php';
 
 /** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
@@ -34,6 +35,9 @@ function clinical_nota_write(PDO $pdo, array $doctor, string $patientId, array $
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('NOTA_INTENT_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'NOTA_PHYSICIAN_SIGN_OR_EMIT'
+    );
     $types = ['consulta_inicial', 'nota_evolucion', 'nota_subsecuente'];
     if (!in_array((string)($payload['note']['type'] ?? ''), $types, true))
         throw new InvalidArgumentException('NOTA_TYPE_INVALID');

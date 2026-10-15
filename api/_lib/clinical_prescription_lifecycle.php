@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_prescription_v2.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 function clinical_prescription_lifecycle_reason(array $body): array
 {
@@ -79,6 +80,7 @@ function clinical_prescription_lifecycle_source(PDO $pdo, array $doctor, string 
 function clinical_prescription_lifecycle_void(PDO $pdo, array $doctor, string $patientId,
     string $uuid, array $body): array
 {
+    clinical_professional_authority_assert($doctor, 'PRESCRIPTION_VOID');
     [$code,$detail,$note] = clinical_prescription_lifecycle_reason($body);
     $pdo->beginTransaction();
     try {
@@ -116,6 +118,7 @@ function clinical_prescription_lifecycle_void(PDO $pdo, array $doctor, string $p
 function clinical_prescription_lifecycle_reissue(PDO $pdo, array $doctor, string $patientId,
     string $uuid, array $body): array
 {
+    clinical_professional_authority_assert($doctor, 'PRESCRIPTION_REISSUE');
     [$code,$detail,$note] = clinical_prescription_lifecycle_reason($body);
     $pdo->beginTransaction();
     try {

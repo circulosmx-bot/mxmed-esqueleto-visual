@@ -2,6 +2,8 @@
 
 Status: **COMPLETE AUDIT / REMEDIATION REQUIRED**
 
+Containment status (2026-10-15): the anonymous legacy route family and the reviewed unverified prescription, physician-consent, and versioned professional-document transitions were contained by `CLIN-AUTH02A_URGENT_CONTAINMENT.md`. The broader professional-operation contract remains pending CLIN-AUTH02B.
+
 Audited source: `8951aeac5d8b46bf3ea91b54aeb827325d2e7b77`
 
 Audit date: 2026-10-15

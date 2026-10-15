@@ -19,6 +19,7 @@ require_once __DIR__ . '/../_lib/clinical_study_contract.php';
 require_once __DIR__ . '/../_lib/clinical_portable_order.php';
 require_once __DIR__ . '/../_lib/clinical_study_catalog_read.php';
 require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
+require_once __DIR__ . '/../_lib/clinical_professional_authority.php';
 require_once __DIR__ . '/../../modules/agenda/services/HealthcareStudyProviderMatchingService.php';
 
 clinical_m6_observability_request_started_at();
@@ -557,26 +558,42 @@ function clinical_cors_allowed_origin(?string $origin): ?string
     $allowlist = [
         'http://127.0.0.1:8092',
         'http://localhost:8092',
+        'https://127.0.0.1:8092',
+        'https://localhost:8092',
+        'http://127.0.0.1:8091',
+        'http://localhost:8091',
+        'https://127.0.0.1:8091',
+        'https://localhost:8091',
+        'http://127.0.0.1:8443',
+        'http://localhost:8443',
+        'https://127.0.0.1:8443',
+        'https://localhost:8443',
     ];
     if (in_array($origin, $allowlist, true)) {
         return $origin;
     }
 
-    if (!clinical_is_local_or_dev()) {
-        return null;
-    }
-
     $parts = parse_url($origin);
-    if (!is_array($parts)) {
+    if (!is_array($parts) || isset($parts['user']) || isset($parts['pass'])
+        || isset($parts['query']) || isset($parts['fragment'])
+        || trim((string)($parts['path'] ?? '')) !== '') {
         return null;
     }
     $scheme = strtolower((string)($parts['scheme'] ?? ''));
     $host = strtolower((string)($parts['host'] ?? ''));
-    $port = (int)($parts['port'] ?? 0);
-    if ($scheme !== 'http' && $scheme !== 'https') {
+    $originPort = (int)($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+    if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
         return null;
     }
-    if (($host !== '127.0.0.1' && $host !== 'localhost') || $port <= 0) {
+
+    $requestHost = strtolower((string)parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST));
+    $requestPort = (int)parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_PORT);
+    $requestScheme = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    if (!in_array($requestScheme, ['http', 'https'], true)) {
+        $requestScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    }
+    if ($requestPort <= 0) $requestPort = $requestScheme === 'https' ? 443 : 80;
+    if ($scheme !== $requestScheme || $host !== $requestHost || $originPort !== $requestPort) {
         return null;
     }
     return $origin;
@@ -595,6 +612,57 @@ function clinical_apply_cors_headers(?string $origin): void
     header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Accept, Authorization, X-Requested-With, X-User-Id');
     header('Access-Control-Max-Age: 600');
+}
+
+function clinical_require_state_change_origin(string $route): bool
+{
+    $origin = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
+    if ($origin === '' || clinical_cors_allowed_origin($origin) !== null) return true;
+    clinical_send_response(['ok'=>false,'error'=>'forbidden','message'=>'origen no autorizado',
+        'data'=>null,'meta'=>['route'=>$route]],403);
+    return false;
+}
+
+function clinical_require_professional_qr_transition(
+    PDO $pdo,
+    string $route,
+    string $table,
+    string $method,
+    array $segments
+): bool {
+    if ($method !== 'POST') return true;
+    if (!clinical_require_state_change_origin($route)) return false;
+
+    if (count($segments) === 1) {
+        if (in_array($route, ['responsiva-qr-sessions','multimedia-qr-sessions'], true)) return true;
+        $doctor = clinical_require_doctor_context($route);
+        if ($doctor === null) return false;
+        if (clinical_professional_authority_decision($doctor, 'PROFESSIONAL_DOCUMENT_REMOTE_SIGN')['allowed'] === true) {
+            return true;
+        }
+        clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+            'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar el documento.',
+            'data'=>null,'meta'=>['route'=>$route]],403);
+        return false;
+    }
+
+    if (($segments[2] ?? '') !== 'signature') return true;
+    $token = trim(rawurldecode((string)($segments[1] ?? '')));
+    if (preg_match('/^[a-f0-9]{64}$/D', $token) !== 1) return true;
+    $stmt = $pdo->prepare("SELECT doctor_id,actor_user_id,role FROM {$table} WHERE token=? LIMIT 1");
+    $stmt->execute([$token]);
+    $session = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!is_array($session) || (string)$session['role'] !== 'doctor') return true;
+    if (clinical_professional_authority_decision([
+        'doctor_id'=>(string)$session['doctor_id'],
+        'user_id'=>(string)$session['actor_user_id'],
+    ], 'PROFESSIONAL_DOCUMENT_REMOTE_SIGN')['allowed'] === true) {
+        return true;
+    }
+    clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+        'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar el documento.',
+        'data'=>null,'meta'=>['route'=>$route]],403);
+    return false;
 }
 
 function clinical_debug_enabled(): bool
@@ -3610,6 +3678,19 @@ function clinical_case_get_by_id(PDO $pdo, int $caseId): ?array
     return (is_array($row) && $row !== []) ? $row : null;
 }
 
+/** Resolve a case internally, then expose it only inside the authenticated doctor/patient scope. */
+function clinical_require_case_scope(PDO $pdo, array $doctorContext, int $caseId, string $route): ?array
+{
+    $case = clinical_case_get_by_id($pdo, $caseId);
+    $patientId = is_array($case) ? trim((string)($case['patient_id'] ?? '')) : '';
+    if ($patientId === '' || !clinical_require_doctor_patient_scope(
+        $pdo, (string)$doctorContext['doctor_id'], $patientId, $route
+    )) {
+        return null;
+    }
+    return $case;
+}
+
 function clinical_cases_create(PDO $pdo, string $patientId, string $title): array
 {
     $pdo->beginTransaction();
@@ -3709,6 +3790,60 @@ function clinical_cases_rename(PDO $pdo, int $caseId, string $title): ?array
 function clinical_case_item_type_allowed(string $itemType): bool
 {
     return in_array($itemType, ['encounter', 'document', 'appointment'], true);
+}
+
+function clinical_case_item_matches_scope(PDO $pdo, array $case, array $doctorContext,
+    string $itemType, string $itemRef): bool
+{
+    $patientId = trim((string)($case['patient_id'] ?? ''));
+    $doctorId = trim((string)($doctorContext['doctor_id'] ?? ''));
+    if ($patientId === '' || $doctorId === '' || $itemRef === '') return false;
+
+    if ($itemType === 'appointment') {
+        $appointmentId = str_starts_with($itemRef, 'appt:') ? substr($itemRef, 5) : $itemRef;
+        return $appointmentId !== ''
+            && clinical_appointment_matches_encounter_owner($pdo, $appointmentId, $doctorId, $patientId);
+    }
+    if ($itemType === 'encounter') {
+        $resolved = clinical_resolve_encounter_key($pdo, $itemRef);
+        $encounter = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+        return ($resolved['ok'] ?? false) === true
+            && trim((string)($encounter['patient_id'] ?? '')) === $patientId
+            && trim((string)($encounter['doctor_id'] ?? '')) === $doctorId;
+    }
+    if ($itemType === 'document') {
+        $tokenClause = preg_match('/^\d+$/D', $itemRef) === 1 ? 'd.id=:token' : 'd.document_uuid=:token';
+        $stmt = $pdo->prepare("SELECT d.id,d.patient_id,d.created_by_user_id,d.encounter_id,
+            d.encounter_ref_id,d.appointment_id FROM clinical_documents d WHERE {$tokenClause} LIMIT 1");
+        $stmt->execute(['token'=>$itemRef]);
+        $document = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($document) || trim((string)$document['patient_id']) !== $patientId) return false;
+
+        $encounterId = (int)($document['encounter_ref_id'] ?? 0);
+        if ($encounterId <= 0 && preg_match('/^\d+$/D', trim((string)($document['encounter_id'] ?? ''))) === 1) {
+            $encounterId = (int)$document['encounter_id'];
+        }
+        if ($encounterId > 0) {
+            $encounter = $pdo->prepare('SELECT COUNT(*) FROM clinical_encounters
+                WHERE encounter_id=:encounter AND doctor_id=:doctor AND patient_id=:patient');
+            $encounter->execute(['encounter'=>$encounterId,'doctor'=>$doctorId,'patient'=>$patientId]);
+            return (int)$encounter->fetchColumn() === 1;
+        }
+
+        $appointmentId = trim((string)($document['appointment_id'] ?? ''));
+        if ($appointmentId !== '') {
+            return clinical_appointment_matches_encounter_owner($pdo, $appointmentId, $doctorId, $patientId);
+        }
+
+        $creator = trim((string)($document['created_by_user_id'] ?? ''));
+        if ($creator === '') return false;
+        $membership = $pdo->prepare("SELECT COUNT(*) FROM auth_account_memberships
+            WHERE account_id=:account AND profile_doctor_id=:doctor AND status='active'
+              AND scope_code IN ('profile','profile_doctor')");
+        $membership->execute(['account'=>$creator,'doctor'=>$doctorId]);
+        return (int)$membership->fetchColumn() === 1;
+    }
+    return false;
 }
 
 function clinical_case_item_find_owner_case(PDO $pdo, string $patientId, string $itemType, string $itemRef): ?int
@@ -4955,6 +5090,10 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('patients/{patient_id}/history');
+        if ($doctorContext === null) return;
+        if ($method === 'PUT' && !clinical_require_state_change_origin('patients/{patient_id}/history')) return;
+
         $patientId = trim((string)$segments[1]);
         if ($patientId === '') {
             clinical_send_response([
@@ -4969,6 +5108,8 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
+            if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId,
+                'patients/{patient_id}/history')) return;
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
                     'ok' => false,
@@ -5123,6 +5264,10 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('patients/{patient_id}/physical-exam');
+        if ($doctorContext === null) return;
+        if ($method === 'PUT' && !clinical_require_state_change_origin('patients/{patient_id}/physical-exam')) return;
+
         $patientId = trim((string)$segments[1]);
         if ($patientId === '') {
             clinical_send_response([
@@ -5137,6 +5282,8 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
+            if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId,
+                'patients/{patient_id}/physical-exam')) return;
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
                     'ok' => false,
@@ -6134,6 +6281,9 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('patients/{patient_id}/cases/active');
+        if ($doctorContext === null) return;
+
         $patientId = trim((string)$segments[1]);
         if ($patientId === '') {
             clinical_send_response([
@@ -6148,6 +6298,8 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
+            if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId,
+                'patients/{patient_id}/cases/active')) return;
             clinical_cases_ensure_schema($pdo);
             $active = clinical_cases_active_fetch($pdo, $patientId);
         } catch (Throwable $e) {
@@ -6770,6 +6922,10 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('patients/{patient_id}/cases');
+        if ($doctorContext === null) return;
+        if ($method === 'POST' && !clinical_require_state_change_origin('patients/{patient_id}/cases')) return;
+
         $patientId = trim((string)$segments[1]);
         if ($patientId === '') {
             clinical_send_response([
@@ -6784,6 +6940,8 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
+            if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId,
+                'patients/{patient_id}/cases')) return;
             clinical_cases_ensure_schema($pdo);
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
@@ -6877,6 +7035,9 @@ try {
     }
 
     if (($segments[0] ?? '') === 'cases' && count($segments) === 2 && $method === 'PATCH') {
+        $doctorContext = clinical_require_doctor_context('cases/{case_id}');
+        if ($doctorContext === null) return;
+        if (!clinical_require_state_change_origin('cases/{case_id}')) return;
         $caseId = (int)trim((string)$segments[1]);
         if ($caseId <= 0) {
             clinical_send_response([
@@ -6886,6 +7047,16 @@ try {
                 'data' => null,
                 'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
             ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            if (clinical_require_case_scope($pdo, $doctorContext, $caseId, 'cases/{case_id}') === null) return;
+        } catch (Throwable) {
+            clinical_send_response(['ok'=>false,'error'=>'server_error','message'=>'clinical case unavailable',
+                'data'=>null,'meta'=>['method'=>'PATCH','route'=>'cases/{case_id}']],500);
             return;
         }
 
@@ -6965,6 +7136,10 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('cases/{case_id}/activate');
+        if ($doctorContext === null) return;
+        if (!clinical_require_state_change_origin('cases/{case_id}/activate')) return;
+
         $caseId = (int)trim((string)$segments[1]);
         if ($caseId <= 0) {
             clinical_send_response([
@@ -6974,6 +7149,16 @@ try {
                 'data' => null,
                 'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/activate'],
             ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            if (clinical_require_case_scope($pdo, $doctorContext, $caseId, 'cases/{case_id}/activate') === null) return;
+        } catch (Throwable) {
+            clinical_send_response(['ok'=>false,'error'=>'server_error','message'=>'clinical case unavailable',
+                'data'=>null,'meta'=>['method'=>'POST','route'=>'cases/{case_id}/activate']],500);
             return;
         }
 
@@ -7026,6 +7211,10 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('cases/{case_id}/items');
+        if ($doctorContext === null) return;
+        if ($method === 'POST' && !clinical_require_state_change_origin('cases/{case_id}/items')) return;
+
         $caseId = (int)trim((string)$segments[1]);
         if ($caseId <= 0) {
             clinical_send_response([
@@ -7035,6 +7224,16 @@ try {
                 'data' => null,
                 'meta' => ['method' => $method, 'route' => 'cases/{case_id}/items'],
             ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            if (clinical_require_case_scope($pdo, $doctorContext, $caseId, 'cases/{case_id}/items') === null) return;
+        } catch (Throwable) {
+            clinical_send_response(['ok'=>false,'error'=>'server_error','message'=>'clinical case unavailable',
+                'data'=>null,'meta'=>['method'=>$method,'route'=>'cases/{case_id}/items']],500);
             return;
         }
 
@@ -7080,7 +7279,16 @@ try {
                     ], 404);
                     return;
                 }
-                $items = clinical_case_items_list_fetch($pdo, $caseId, $limit);
+                $items = array_values(array_filter(
+                    clinical_case_items_list_fetch($pdo, $caseId, $limit),
+                    static fn(array $item): bool => clinical_case_item_matches_scope(
+                        $pdo,
+                        $existingCase,
+                        $doctorContext,
+                        strtolower(trim((string)($item['item_type'] ?? ''))),
+                        trim((string)($item['item_ref'] ?? ''))
+                    )
+                ));
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -7141,6 +7349,12 @@ try {
                     'data' => null,
                     'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
                 ], 404);
+                return;
+            }
+            if (!clinical_case_item_matches_scope($pdo, $existingCase, $doctorContext, $itemType, $itemRef)) {
+                clinical_send_response(['ok'=>false,'error'=>['code'=>'not_found','message'=>'elemento no encontrado'],
+                    'message'=>'','data'=>null,
+                    'meta'=>['method'=>'POST','route'=>'cases/{case_id}/items']],404);
                 return;
             }
             $ownerCaseId = clinical_case_item_find_owner_case(
@@ -7932,49 +8146,73 @@ try {
         return;
     }
 
+    $professionalQrTables = [
+        'responsiva-qr-sessions'=>'clinical_responsiva_qr_sessions',
+        'multimedia-qr-sessions'=>'clinical_multimedia_qr_sessions',
+        'certificado-qr-sessions'=>'clinical_certificado_qr_sessions',
+        'nota-qr-sessions'=>'clinical_nota_qr_sessions',
+        'free-document-qr-sessions'=>'clinical_free_document_qr_sessions',
+        'prescription-qr-sessions'=>'clinical_prescription_qr_sessions',
+        'alta-qr-sessions'=>'clinical_alta_qr_sessions',
+        'informe-qr-sessions'=>'clinical_informe_qr_sessions',
+        'interconsulta-qr-sessions'=>'clinical_interconsulta_qr_sessions',
+    ];
+    $professionalQrRoute = (string)($segments[0] ?? '');
+    $professionalQrPdo = null;
+    if (isset($professionalQrTables[$professionalQrRoute])) {
+        $professionalQrPdo = clinical_documents_pdo();
+        if (!clinical_require_professional_qr_transition(
+            $professionalQrPdo,
+            $professionalQrRoute,
+            $professionalQrTables[$professionalQrRoute],
+            $method,
+            $segments
+        )) return;
+    }
+
     if (($segments[0] ?? '') === 'responsiva-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_responsiva_qr.php';
-        clinical_responsiva_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_responsiva_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'multimedia-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_multimedia_qr.php';
-        clinical_multimedia_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_multimedia_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'certificado-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_certificado_qr.php';
-        clinical_certificado_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_certificado_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'nota-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_nota_qr.php';
-        clinical_nota_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_nota_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'free-document-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_free_document_qr.php';
-        clinical_free_document_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_free_document_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'prescription-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_prescription_qr.php';
-        clinical_prescription_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_prescription_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'alta-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_alta_qr.php';
-        clinical_alta_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_alta_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'informe-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_informe_qr.php';
-        clinical_informe_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_informe_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
     if (($segments[0] ?? '') === 'interconsulta-qr-sessions') {
         require_once __DIR__ . '/../_lib/clinical_interconsulta_qr.php';
-        clinical_interconsulta_qr_route(clinical_documents_pdo(), $method, $segments);
+        clinical_interconsulta_qr_route($professionalQrPdo, $method, $segments);
         return;
     }
 
@@ -8109,14 +8347,23 @@ try {
             $isConsentRemoteSignatureContext = strpos($noteContextNorm, 'consentimiento_firma_remota') === 0;
             $consentQrSession = null;
             if ($isConsentRemoteSignatureContext) {
+                if (!clinical_require_state_change_origin('note-capture-tokens')) return;
                 // Consent QR sessions are limited to one active review window.
                 $expiresAt = gmdate('Y-m-d H:i:s', time() + min($expiresInSec, 900));
                 try {
                     $consentQrSession = clinical_consent_qr_prepare($body, $captureDoctorContext,
                         $patientId, $noteContextNorm);
+                    if (($consentQrSession['role'] ?? '') === 'doctor') {
+                        clinical_professional_authority_assert($captureDoctorContext, 'CONSENT_PHYSICIAN_REMOTE_SIGN');
+                    }
                     if (!clinical_consent_qr_draft_current($pdo, $consentQrSession)) {
                         throw new InvalidArgumentException('CONSENT_QR_DRAFT_STALE');
                     }
+                } catch (ClinicalProfessionalAuthorityException $error) {
+                    clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                        'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar el consentimiento.',
+                        'data'=>null],$error->httpStatus());
+                    return;
                 } catch (InvalidArgumentException $error) {
                     clinical_send_response(['ok' => false, 'error' => $error->getMessage(),
                         'message' => 'Guarda los anexos y revisa el consentimiento antes de generar el QR.',
@@ -8464,6 +8711,7 @@ try {
                 ], 400);
                 return;
             }
+            if (!clinical_require_state_change_origin('note-capture-tokens/{token}/signature')) return;
             $bodyResult = clinical_read_json_body();
             if (($bodyResult['ok'] ?? false) !== true) {
                 clinical_send_response([
@@ -8677,6 +8925,16 @@ try {
                 || !clinical_consent_qr_draft_current($pdo, $qrSession)) {
                 clinical_send_response(['ok' => false, 'error' => 'CONSENT_QR_STALE',
                     'message' => 'El consentimiento cambió o no fue revisado. Solicita un QR nuevo.'], 409);
+                return;
+            }
+            if ((string)$qrSession['role'] === 'doctor'
+                && clinical_professional_authority_decision([
+                    'doctor_id'=>(string)$qrSession['doctor_id'],
+                    'user_id'=>(string)$qrSession['actor_user_id'],
+                ], 'CONSENT_PHYSICIAN_REMOTE_SIGN')['allowed'] !== true) {
+                clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                    'message'=>'No se pudo verificar la autoridad profesional de la cuenta para firmar el consentimiento.',
+                    'data'=>null],403);
                 return;
             }
             $bodyResult = clinical_read_json_body();
@@ -9126,8 +9384,10 @@ try {
 
     if (($segments[0] ?? '') === 'doctors') {
         $scopedDoctorId=trim(rawurldecode((string)($segments[1]??'')));
-        $doctorAuthorityRoute=($segments[2]??'')==='prescription-templates'
-            ? 'doctors/{doctor_id}/prescription-templates' : 'doctors/{doctor_id}/documents';
+        $isPrescriptionRoute=($segments[2]??'')==='prescription-templates'
+            || (($segments[2]??'')==='patients' && ($segments[4]??'')==='prescriptions');
+        $doctorAuthorityRoute=$isPrescriptionRoute
+            ? 'doctors/{doctor_id}/prescriptions' : 'doctors/{doctor_id}/documents';
         $scopedDoctorContext=clinical_require_doctor_context($doctorAuthorityRoute);
         if($scopedDoctorContext===null)return;
         if($scopedDoctorId===''||!hash_equals($scopedDoctorContext['doctor_id'],$scopedDoctorId)){
@@ -9642,6 +9902,7 @@ try {
             $lifecycleUuid = count($segments) >= 7 ? trim(rawurldecode((string)$segments[5])) : '';
             $lifecycleAction = count($segments) === 7 ? (string)$segments[6] : '';
             $routeName = 'doctors/{doctor_id}/patients/{patient_id}/prescriptions' . ($action !== '' ? '/'.$action : '');
+            if ($method === 'POST' && !clinical_require_state_change_origin($routeName)) return;
             try {
                 $pdo = clinical_documents_pdo();
                 if ($patientId === '' || !clinical_patient_exists($pdo,$patientId)
@@ -9730,6 +9991,10 @@ try {
             } catch (ClinicalIdempotencyException $e) {
                 clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->getMessage(),
                     'meta'=>['route'=>$routeName]],$e->httpStatus);return;
+            } catch (ClinicalProfessionalAuthorityException $e) {
+                clinical_send_response(['ok'=>false,'error'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                    'message'=>'No se pudo verificar la autoridad profesional de la cuenta para esta acción.',
+                    'meta'=>['route'=>$routeName]],$e->httpStatus());return;
             } catch (InvalidArgumentException $e) {
                 clinical_send_response(['ok'=>false,'error'=>$e->getMessage(),'message'=>$e->getMessage(),
                     'meta'=>['route'=>$routeName]],422);return;
@@ -9740,6 +10005,7 @@ try {
             }
         }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
+            if (!clinical_require_state_change_origin('doctors/{doctor_id}/patients/{patient_id}/documents')) return;
             clinical_m6_observability_route('C04_PATIENT_DOCUMENT', 'CREATE_DOCUMENT', 'PATIENT_LEVEL_C04');
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
@@ -10033,6 +10299,13 @@ try {
                 return;
             } catch (ClinicalM6CohortConfigException $e) {
                 clinical_m6_send_cohort_config_invalid($meta);
+                return;
+            } catch (ClinicalProfessionalAuthorityException $e) {
+                clinical_send_response(['ok'=>false,
+                    'error'=>['code'=>ClinicalProfessionalAuthorityException::ERROR_CODE,
+                        'message'=>'No se pudo verificar la autoridad profesional de la cuenta para esta acción.'],
+                    'message'=>'No se pudo verificar la autoridad profesional de la cuenta para esta acción.',
+                    'data'=>null,'meta'=>$meta],$e->httpStatus());
                 return;
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());

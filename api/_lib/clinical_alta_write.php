@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_alta_render.php';
 require_once __DIR__ . '/clinical_alta_binding.php';
 require_once __DIR__ . '/clinical_alta_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 /** Canonical Alta draft and finalization with exact-version physician signature authority. */
 function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $body, string $idempotencyKey): array
@@ -18,6 +19,9 @@ function clinical_alta_write(PDO $pdo, array $doctor, string $patientId, array $
         throw new InvalidArgumentException('ALTA_PRESENTATION_INVALID');
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true)) throw new InvalidArgumentException('ALTA_INTENT_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'ALTA_PHYSICIAN_SIGN_OR_EMIT'
+    );
     if (!in_array((string)($payload['alta']['type'] ?? ''),
         ['mejoria', 'voluntaria', 'administrativa', 'referencia'], true))
         throw new InvalidArgumentException('ALTA_TYPE_INVALID');

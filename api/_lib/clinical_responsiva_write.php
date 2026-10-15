@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_responsiva_binding.php';
 require_once __DIR__ . '/clinical_responsiva_render.php';
 require_once __DIR__ . '/clinical_responsiva_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 /** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
 function clinical_responsiva_qr_entry_unchanged($previous, $incoming): bool
@@ -32,6 +33,9 @@ function clinical_responsiva_write(PDO $pdo, array $doctor, string $patientId, a
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('RESPONSIVA_INTENT_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'RESPONSIVA_PHYSICIAN_SIGN_OR_EMIT'
+    );
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
     $expectedVersion = (int)($body['expected_version'] ?? 0);
     if ($draftRef !== '' && (preg_match('/^[0-9a-f-]{36}$/i', $draftRef) !== 1 || $expectedVersion < 1))

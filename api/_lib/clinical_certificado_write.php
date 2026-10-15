@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_certificado_binding.php';
 require_once __DIR__ . '/clinical_certificado_render.php';
 require_once __DIR__ . '/clinical_certificado_qr.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 /** Preserve an existing QR artifact exactly, regardless of JSON object key order. */
 function clinical_certificado_qr_entry_unchanged($previous, $incoming): bool
@@ -33,6 +34,9 @@ function clinical_certificado_write(PDO $pdo, array $doctor, string $patientId, 
     $intent = (string)($payload['status'] ?? '');
     if (!in_array($intent, ['draft', 'issued'], true))
         throw new InvalidArgumentException('CERTIFICADO_INTENT_INVALID');
+    clinical_professional_authority_assert_document_transition(
+        $doctor, $payload, $intent, 'CERTIFICADO_PHYSICIAN_SIGN_OR_EMIT'
+    );
     $certificateType = (string)($payload['certificate']['type'] ?? '');
     if (!in_array($certificateType, ['certificado_general', 'constancia_atencion', 'reposo_medico',
         'aptitud_fisica', 'actividad_deportiva', 'valoracion_preoperatoria'], true))

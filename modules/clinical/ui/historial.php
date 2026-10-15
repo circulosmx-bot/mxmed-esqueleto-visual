@@ -30,6 +30,29 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function clinical_ui_api_headers(string $url, bool $jsonBody = false): string
+{
+    $headers = "Accept: application/json\r\nUser-Agent: MXMed\r\n";
+    if ($jsonBody) {
+        $headers .= "Content-Type: application/json\r\n";
+    }
+
+    $requestHost = strtolower((string)parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST));
+    $targetHost = strtolower((string)parse_url($url, PHP_URL_HOST));
+    $loopbackHosts = ['localhost', '127.0.0.1'];
+    $sameAuthorityHost = $requestHost !== '' && $targetHost !== ''
+        && ($requestHost === $targetHost
+            || (in_array($requestHost, $loopbackHosts, true)
+                && in_array($targetHost, $loopbackHosts, true)));
+
+    if ($sameAuthorityHost
+        && isset($_COOKIE['__Host-mxmed_session'])
+        && preg_match('/^[A-Za-z0-9_-]{43,64}$/D', (string)$_COOKIE['__Host-mxmed_session']) === 1) {
+        $headers .= 'Cookie: __Host-mxmed_session=' . $_COOKIE['__Host-mxmed_session'] . "\r\n";
+    }
+    return $headers;
+}
+
 function appointment_id_from_encounter_key(string $encounterKey): string
 {
     $value = trim($encounterKey);
@@ -746,7 +769,7 @@ function fetch_http_json(string $url, int $timeoutSeconds = 4, int $maxAttempts 
                 'method' => 'GET',
                 'timeout' => $timeoutSeconds,
                 'ignore_errors' => true,
-                'header' => "Accept: application/json\r\nUser-Agent: MXMed\r\n",
+                'header' => clinical_ui_api_headers($url),
             ],
         ]);
 
@@ -1176,7 +1199,7 @@ if ($patientId === '' && $encounterKey !== '') {
             'method' => 'GET',
             'timeout' => 8,
             'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
+            'header' => clinical_ui_api_headers($resolveUrl),
         ],
     ]);
     $resolveRaw = @file_get_contents($resolveUrl, false, $resolveContext);
@@ -1222,7 +1245,7 @@ if ($patientId === '' && $encounterKey !== '') {
             'method' => 'GET',
             'timeout' => 8,
             'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
+            'header' => clinical_ui_api_headers($resolveUrl),
         ],
     ]);
     $resolveRaw = @file_get_contents($resolveUrl, false, $resolveContext);
@@ -1358,7 +1381,7 @@ if ($patientId !== '' && $patientId !== 'demo') {
             'method' => 'GET',
             'timeout' => 8,
             'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
+            'header' => clinical_ui_api_headers($activeEncounterUrl),
         ],
     ]);
     $activeEncounterRaw = @file_get_contents($activeEncounterUrl, false, $activeEncounterContext);
@@ -1388,7 +1411,7 @@ if ($focusCaseId !== '' && $patientId !== '') {
             'method' => 'GET',
             'timeout' => 8,
             'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
+            'header' => clinical_ui_api_headers($caseItemsUrl),
         ],
     ]);
     $caseItemsRaw = @file_get_contents($caseItemsUrl, false, $caseItemsContext);
@@ -1437,7 +1460,7 @@ if ($patientId !== '') {
             'method' => 'GET',
             'timeout' => 8,
             'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
+            'header' => clinical_ui_api_headers($caseUrl),
         ],
     ]);
     $caseRaw = @file_get_contents($caseUrl, false, $caseContext);
@@ -1540,7 +1563,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'method' => 'POST',
                     'timeout' => 8,
                     'ignore_errors' => true,
-                    'header' => "Accept: application/json\r\nContent-Type: application/json\r\n",
+                    'header' => clinical_ui_api_headers($assignUrl, true),
                     'content' => $assignPayload,
                 ],
             ]);

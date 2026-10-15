@@ -6,6 +6,7 @@ require_once __DIR__ . '/clinical_portable_order.php';
 require_once __DIR__ . '/clinical_legal_document_presentation.php';
 require_once __DIR__ . '/clinical_prescription_binding.php';
 require_once __DIR__ . '/clinical_professional_presentation.php';
+require_once __DIR__ . '/clinical_professional_authority.php';
 
 final class ClinicalPrescriptionRegimenException extends InvalidArgumentException
 {
@@ -670,6 +671,8 @@ function clinical_prescription_v2_write(PDO $pdo, array $doctor, string $patient
 {
     $intent = (string)($body['intent'] ?? '');
     if (!in_array($intent, ['draft','apply_signature','finalize'], true)) throw new InvalidArgumentException('PRESCRIPTION_INTENT_INVALID');
+    if ($intent === 'apply_signature') clinical_professional_authority_assert($doctor, 'PRESCRIPTION_SIGN');
+    if ($intent === 'finalize') clinical_professional_authority_assert($doctor, 'PRESCRIPTION_EMIT');
     $draftRef = trim((string)($body['draft_ref'] ?? ''));
     $expected = (int)($body['expected_version'] ?? 0);
     if ($intent !== 'draft' && $draftRef === '') throw new InvalidArgumentException('PRESCRIPTION_DRAFT_REQUIRED');

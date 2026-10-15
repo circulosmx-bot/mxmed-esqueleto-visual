@@ -48,6 +48,29 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function clinical_ui_api_headers(string $url, bool $jsonBody = false): string
+{
+    $headers = "Accept: application/json\r\n";
+    if ($jsonBody) {
+        $headers .= "Content-Type: application/json\r\n";
+    }
+
+    $requestHost = strtolower((string)parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST));
+    $targetHost = strtolower((string)parse_url($url, PHP_URL_HOST));
+    $loopbackHosts = ['localhost', '127.0.0.1'];
+    $sameAuthorityHost = $requestHost !== '' && $targetHost !== ''
+        && ($requestHost === $targetHost
+            || (in_array($requestHost, $loopbackHosts, true)
+                && in_array($targetHost, $loopbackHosts, true)));
+
+    if ($sameAuthorityHost
+        && isset($_COOKIE['__Host-mxmed_session'])
+        && preg_match('/^[A-Za-z0-9_-]{43,64}$/D', (string)$_COOKIE['__Host-mxmed_session']) === 1) {
+        $headers .= 'Cookie: __Host-mxmed_session=' . $_COOKIE['__Host-mxmed_session'] . "\r\n";
+    }
+    return $headers;
+}
+
 function render_embed_css(bool $embed): void
 {
     if (!$embed) {
@@ -66,7 +89,7 @@ function http_get_json(string $url, int $timeoutSeconds = 8): ?array
             'method' => 'GET',
             'timeout' => $timeoutSeconds,
             'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
+            'header' => clinical_ui_api_headers($url),
         ],
     ]);
     $raw = @file_get_contents($url, false, $context);
@@ -199,7 +222,7 @@ if ($encounterKey !== '') {
                 'method' => 'GET',
                 'timeout' => 8,
                 'ignore_errors' => true,
-                'header' => "Accept: application/json\r\n",
+                'header' => clinical_ui_api_headers($url),
             ],
         ]);
 
@@ -341,7 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $encounter !== null) {
                     'method' => 'POST',
                     'timeout' => 8,
                     'ignore_errors' => true,
-                    'header' => "Accept: application/json\r\nContent-Type: application/json\r\n",
+                    'header' => clinical_ui_api_headers($postUrl, true),
                     'content' => $postPayload,
                 ],
             ]);
