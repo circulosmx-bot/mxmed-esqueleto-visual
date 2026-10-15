@@ -360,6 +360,29 @@ Profile-level revoke affects only that profile. Optional workspace revoke applie
 
 Every assignment mutation and business action records real actor attribution and full traceability.
 
+### ROLE-POL01 — ratified physician-profile team policy
+
+The Director ratifies one owner and at most two non-owner delegated seats per physician profile:
+
+```text
+PROFILE_OWNER_LIMIT=1
+NON_OWNER_COLLABORATOR_SEAT_LIMIT=2
+ADMINISTRATOR_CONSUMES_NON_OWNER_SEAT=true
+ADMINISTRATOR_ADDS_EXTRA_SEAT=false
+MANDATORY_ADMINISTRATOR_COLLABORATOR_SPLIT=false
+FLEXIBLE_AUTHORIZED_PERMISSIONS=true
+```
+
+The permitted conceptual compositions are owner only; owner plus one delegated user; or owner plus two delegated users. When both delegated seats are used, valid role combinations include `owner + collaborator + collaborator`, `owner + administrator + collaborator`, and `owner + administrator + administrator`. `owner`, `administrator`, and `collaborator` remain the canonical Identity role codes. Administrator is a broader authorized permission bundle within the same two-seat non-owner quota: it does not create a third delegated seat, become another owner, or establish a required administrator/collaborator split.
+
+Flexible delegation remains bounded by the applicable server-side authorization contracts for profile administration, Agenda, professional contacts, billing, clinical assistance, professional clinical acts, and Identity governance. Membership role, ownership, administrative permission, and commercial entitlement do not establish medical professional authority. Any future clinical delegation requires an explicit clinical capability and professional-eligibility policy; non-qualified users may not independently diagnose, finalize clinical notes or consent, order, prescribe, sign, or emit merely because they occupy a team seat.
+
+Internal `DIRECTOR`, `MASTER_ADMIN`, and `ADVISOR` governance relationships and their individual grants/delegations remain on the IW01/GOV03A platform plane. They do not consume physician-profile seats or automatically grant profile ownership, profile administration, patient access, clinical authority, or signature authority. Dual-duty people require separate assignments and effective contexts.
+
+This amendment records product policy only. Runtime seat enforcement is not yet implemented. A later authorized implementation must enforce the limit atomically at invitation, acceptance, role transition, suspension/reactivation, revocation, and concurrent acceptance boundaries without creating a second membership or permission engine. It must first resolve how pending invitations, suspended memberships, revoked memberships, expired invitations, concurrent invite/accept races, commercial-plan applicability, non-physician entity types, the legacy Agenda quota of three, and future granular-capability UX count or interact. No answer to those questions is implied here.
+
+Traceability: this amendment specializes the practice-operator and ownership rules in sections 8 and 10, preserves the internal-plane separation in section 13 and `iw01-internal-governance-foundation.md`, and reuses the DEC-011A–DEC-011E Identity/governance foundations and GOV03A role-transition controls. It does not change Agenda enforcement, memberships, database enums, APIs, migrations, or runtime authorization.
+
 ## 11. AI practice operator
 
 AI is a recognized non-human practice actor, not an implemented feature. Future implementation requires separate authorization and entitlement reconciliation.
