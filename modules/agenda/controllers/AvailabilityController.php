@@ -153,7 +153,9 @@ class AvailabilityController
         $consultorioId = $params['consultorio_id'] ?? null;
         $date = $params['date'] ?? null;
 
-        if ($this->pdo) {
+        // Canonical delegated callers already resolved the exact profile. Legacy
+        // alias bootstrap performs DDL and must not run inside their audit transaction.
+        if ($this->pdo && ($this->actorContext['canonical_profile_scope'] ?? false) !== true) {
             try {
                 $doctorId = DoctorIdentity\resolveCanonicalDoctorId($this->pdo, $doctorId);
             } catch (\Throwable $e) {

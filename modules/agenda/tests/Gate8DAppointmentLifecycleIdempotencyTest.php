@@ -303,6 +303,12 @@ $manifestGroups = [
     '/tmp/mxmed-activity08-gate8d-preflight-v2/gate8b-security-before.sha256',
     '/tmp/mxmed-activity08-gate8d-preflight-v2/gate8c-availability-before.sha256',
 ];
+// Historical delivery manifests lived in /tmp and are not regression fixtures.
+// Explicit semantic mode retains every state-machine/idempotency and versioned
+// protected-file assertion; it never manufactures historical manifest evidence.
+if(in_array('--semantic-regression',$argv??[],true)) {
+    $manifestGroups=[];echo "HISTORICAL_TMP_MANIFESTS=NOT_REQUIRED_SEMANTIC_REGRESSION\n";
+}
 foreach ($manifestGroups as $manifestPath) {
     $manifestLines = file($manifestPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     gate8dAssert(is_array($manifestLines), 'preflight manifest is readable');

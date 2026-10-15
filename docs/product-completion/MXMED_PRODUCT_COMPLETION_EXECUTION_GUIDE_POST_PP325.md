@@ -407,6 +407,10 @@ The Director ratifies Q01/Q02/Q03/Q04/Q12 from OP-POL02: a pending email invitat
 
 This phase does not activate invitations, operator acceptance, module actions or the OPERADORES panel outside that disposable CLI composition. Canonical clinical/private-shell consumers deny non-medical provenance; comprehensive HTTP denial across legacy consumers is still a release gate. OP-IMP02 must complete that gate, legacy cutover, real composition/dispatch and separately authorized schema rollout before wiring the existing Safari UI. Q05–Q11 and professional governance remain bounded as documented; no medical authority, subscription product or real membership is created here.
 
+### OP-IMP02 — functional isolated OPERADORES and Agenda slice
+
+The [OP-IMP02 runbook](../identity/OP-IMP02_ISOLATED_OPERATORS_RUNBOOK.md) records the functional owner panel, canonical invitation/acceptance HTTP, encrypted recipient-only local outbox and the five independent Agenda consumers in a new synthetic HTTPS instance. It reuses OP-IMP01 authority and existing appointment writers, with profile locking, current grants, entitlement and canonical audit in one transaction. A server allowlist denies all other modules/aliases and serves a bounded operator workspace instead of medical shell hydration. Chromium/WebKit responsive QA and actual HTTPS denial gates apply to that isolated composition only. Normal-local/QA05 and real accounts remain unchanged; real activation, migration, legacy cutover and email delivery need separate authorization and renewed HTTP gates in the target composition.
+
 ## 11. AI practice operator
 
 AI is a recognized non-human practice actor, not an implemented feature. Future implementation requires separate authorization and entitlement reconciliation.

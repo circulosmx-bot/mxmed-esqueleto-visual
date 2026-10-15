@@ -29,8 +29,10 @@ final class ValkeySessionStoreAdapter implements SessionStorePort, AtomicSession
         if ($this->client instanceof NormalLocalValkeyClient && $this->prefix !== 'mxmed:local:session:') throw new \InvalidArgumentException('invalid_session_store_configuration');
         $productive = preg_match('/^mxmed:(stg|prd):session:$/D', $this->prefix) === 1;
         $preview = $this->prefix === 'mxmed:gate4d:preview:session:';
+        $operatorQa = $this->prefix === 'mxmed:op02:session:' && $this->client instanceof PreviewValkeyClient;
+        if ($operatorQa) \Identity\Operators\OperatorQaConfiguration::assertEnabled();
         $normalLocal = $this->prefix === 'mxmed:local:session:' && $this->client instanceof NormalLocalValkeyClient;
-        if ((!$productive && !$preview && !$normalLocal) || $this->maximumTransactionAttempts < 1 || $this->maximumTransactionAttempts > 100 || $this->retryWaitMicroseconds < 0 || $this->retryWaitMicroseconds > 100000) {
+        if ((!$productive && !$preview && !$normalLocal && !$operatorQa) || $this->maximumTransactionAttempts < 1 || $this->maximumTransactionAttempts > 100 || $this->retryWaitMicroseconds < 0 || $this->retryWaitMicroseconds > 100000) {
             throw new \InvalidArgumentException('invalid_session_store_configuration');
         }
         if ($productive && !$this->client instanceof TransactionalValkeySessionClientPort) throw new SessionStoreUnavailableException('transactional_session_store_required');

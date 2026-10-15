@@ -79,7 +79,7 @@ $metadata=[
     'PHYSICIAN_CREDENTIAL_REVOKED'=>['credential_type'=>'SPECIALTY','previous_lifecycle_status'=>'ACTIVE','new_lifecycle_status'=>'REVOKED'],
 ];
 $rows=CanonicalAuditPolicyRegistry::canonicalRows();
-check(count($rows)===51 && count(CanonicalAuditEventType::all())===51,'51 events/policies including OP-IMP01');
+check(count($rows)===52 && count(CanonicalAuditEventType::all())===52,'52 events/policies including OP-IMP02');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
 check(array_slice(CanonicalAuditEventType::all(),38,5)===array_keys($metadata),'exactly five new events');
 // OP-IMP01 extends only invitation metadata in these historical rows. Keep the

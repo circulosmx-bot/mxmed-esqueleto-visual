@@ -240,8 +240,10 @@ class AppointmentWriteController
     }
 
     public function cancel(string $appointmentId): array
+    { return $this->cancelFromPayload($appointmentId,$this->getPayload()); }
+
+    public function cancelFromPayload(string $appointmentId,array $payload): array
     {
-        $payload = $this->getPayload();
         if (!isset($payload['motivo_code']) && isset($payload['reason_code'])) {
             $payload['motivo_code'] = $payload['reason_code'];
         }
@@ -605,8 +607,10 @@ class AppointmentWriteController
     }
 
     public function reschedule(string $appointmentId): array
+    { return $this->rescheduleFromPayload($appointmentId,$this->getPayload()); }
+
+    public function rescheduleFromPayload(string $appointmentId,array $payload): array
     {
-        $payload = $this->getPayload();
         $payload = $this->normalizeActorPayload($payload);
 
         $errors = $this->validateReschedule($appointmentId, $payload);

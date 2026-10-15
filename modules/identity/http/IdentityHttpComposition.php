@@ -95,12 +95,26 @@ final class IdentityHttpComposition
         $autoload = dirname(__DIR__, 3).'/vendor/autoload.php';
         if (is_file($autoload)) require_once $autoload;
         self::registerAutoloader();
+        if (\Identity\Operators\OperatorQaConfiguration::requested()) return self::isolatedOperators();
         $selector = IdentityHttpCompositionSelector::fromProcessEnvironment();
         return $selector->select(
             static fn(): self => self::preview(),
             static fn(string $environment): self => self::productive(ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment)),
             static fn(): self => self::normalLocal(NormalLocalIdentityConfiguration::fromProcessEnvironment())
         );
+    }
+
+    /** OP-IMP02 only: fixed separate DB user, Valkey, prefix, origin and inert sink. */
+    private static function isolatedOperators(): self
+    {
+        \Identity\Operators\OperatorQaConfiguration::assertEnabled();
+        $pdo=new PDO('mysql:host=127.0.0.1;port=3306;dbname='.\Identity\Operators\OperatorQaConfiguration::DATABASE.';charset=utf8mb4',
+            (string)getenv('MXMED_DB_USER'),(string)getenv('MXMED_DB_PASS'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
+        \Identity\Operators\OperatorQaConfiguration::assertEnabled($pdo);
+        $clock=new SystemClock();$valkey=new PreviewValkeyClient('127.0.0.1',6387);
+        $store=new \Identity\Adapters\ValkeySessionStoreAdapter($valkey,'mxmed:op02:session:',$clock);
+        return self::build($pdo,(string)getenv('MXMED_PREVIEW_PEPPER'),new PreviewIdentityNotificationAdapter((string)getenv('MXMED_PREVIEW_NOTIFICATION_FILE')),
+            $store,'local',\Identity\Operators\OperatorQaConfiguration::ORIGIN,$clock);
     }
 
     public static function preview(): self

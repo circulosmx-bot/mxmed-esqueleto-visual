@@ -103,7 +103,18 @@ $changed = [];
 exec('cd ' . escapeshellarg($root) . ' && git diff --name-only d5856957ff573278957814a5a6f53d5e1fab40d6', $changed, $gitStatus);
 $forbidden = array_filter($changed, static fn(string $path): bool => str_contains($path, '/db/migrations/')
     || str_starts_with($path, 'modules/identity/') || str_ends_with($path, '.sql'));
-auth02a($gitStatus === 0 && $forbidden === [], 'AUTH02A_29');
+if (in_array('--security-regression', $argv ?? [], true)) {
+    // The original delivery forbade ALL Identity/SQL changes. Later authorized
+    // Identity phases legitimately supersede that delivery-only assertion.
+    // Regression mode still locks every production clinical guard to OP-IMP01.
+    $guardPaths=['api/clinical','api/_lib','api/clinical-documents.php','modules/clinical',
+        ':(exclude)modules/clinical/qa/clin_auth02a_contract.php'];
+    exec('cd '.escapeshellarg($root).' && git diff --quiet aa7184c8c49b171f89a969226acbb605e94a0eb6 -- '
+        .implode(' ',array_map('escapeshellarg',$guardPaths)), $guardOutput, $guardDiff);
+    auth02a($guardDiff === 0, 'AUTH02A_29', 'PASS_PRODUCTION_CLINICAL_GUARDS_UNCHANGED');
+} else {
+    auth02a($gitStatus === 0 && $forbidden === [], 'AUTH02A_29');
+}
 auth02a(!str_contains($authority, 'getenv(') && !str_contains($authority, 'role_code')
     && str_contains($authority, "return ['allowed'=>false"), 'AUTH02A_30');
 

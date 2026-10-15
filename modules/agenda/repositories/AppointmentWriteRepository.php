@@ -98,16 +98,17 @@ class AppointmentWriteRepository
             ])), JSON_THROW_ON_ERROR);
         }
 
-        $this->pdo->beginTransaction();
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) $this->pdo->beginTransaction();
         try {
             $this->insert($this->appointmentsTable, $appointmentData);
             $this->appendEvent($appointmentId, $payload, $createdAt);
-            $this->pdo->commit(); // commit within the try scope after all inserts succeed
+            if ($ownsTransaction) $this->pdo->commit(); // commit within the try scope after all inserts succeed
         } catch (PDOException $e) {
-            $this->pdo->rollBack();
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         } catch (RuntimeException $e) {
-            $this->pdo->rollBack();
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         }
 
@@ -263,7 +264,8 @@ class AppointmentWriteRepository
         $columns = $this->getColumns($this->appointmentsTable);
         $statusExists = in_array('status', $columns, true);
 
-        $this->pdo->beginTransaction();
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) $this->pdo->beginTransaction();
         try {
             $updatePayload = [
                 'start_at' => $payload['to_start_at'],
@@ -283,12 +285,12 @@ class AppointmentWriteRepository
                 'to_status' => $confirmationReset ? 'tentative' : ($normalizedCurrentStatus !== '' ? $normalizedCurrentStatus : null),
                 'reason' => $rescheduleStatusReason,
             ]);
-            $this->pdo->commit();
+            if ($ownsTransaction) $this->pdo->commit();
         } catch (PDOException $e) {
-            $this->pdo->rollBack();
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         } catch (RuntimeException $e) {
-            $this->pdo->rollBack();
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         }
 
@@ -441,7 +443,8 @@ class AppointmentWriteRepository
         $applyLateCancelFlag = $this->resolveOptionalBoolean($payload['apply_late_cancel_flag'] ?? null);
         $cancelFlagType = $this->normalizeCancelFlagType($payload['cancel_flag_type'] ?? null);
 
-        $this->pdo->beginTransaction();
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) $this->pdo->beginTransaction();
         try {
             $this->updateCancelFields($pkColumn, $appointmentId, 'canceled', $cancelledAt);
             $eventId = $this->appendCancelEvent($appointmentId, $payload, $current);
@@ -458,12 +461,12 @@ class AppointmentWriteRepository
                 $current,
                 $cancelFlagType
             );
-            $this->pdo->commit();
+            if ($ownsTransaction) $this->pdo->commit();
         } catch (PDOException $e) {
-            $this->pdo->rollBack();
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         } catch (RuntimeException $e) {
-            $this->pdo->rollBack();
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         }
 

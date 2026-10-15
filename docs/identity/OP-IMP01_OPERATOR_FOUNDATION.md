@@ -1,5 +1,7 @@
 # OP-IMP01 — fundamento canónico de operadores no médicos
 
+**Actualización OP-IMP02:** el servicio se extrae a ProfileOperatorService y se reutiliza también en una [composición HTTP aislada con panel/Agenda funcional](OP-IMP02_ISOLATED_OPERATORS_RUNBOOK.md). El factory CLI y sus pruebas se conservan. Las afirmaciones de esta entrega OP-IMP01 son históricas; no se habilita aceptación real en normal-local/productivo.
+
 2026-10-15. Baseline publicado: `a18cc367da33c7a7cc07a45808a7fc53569eaf47`, rama `ux/consultation-step2-vitals-r1`. Implementación y ensayo **exclusivamente desechables**. Ninguna migración, invitación, asignación, sesión o grant real se instala mediante esta entrega. No hay endpoint de invitación/aceptación ni panel nuevo en Safari.
 
 ## Decisiones ratificadas y precedencia
