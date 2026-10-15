@@ -88,7 +88,9 @@ reg03(str_contains($js,"newStructuredPrescriptionMedication")
     && str_contains($js,"pattern: 'SCHEDULED'") && str_contains($js,"duration: { mode: ''"),'REG03_EDITOR_DEFAULTS');
 reg03(str_contains($js,'Convertir a pauta estructurada')
     && str_contains($js,'legacy_frequency_reference'),'REG03_EXPLICIT_LEGACY_CONVERSION');
-reg03(str_contains($js,'La receta combina pautas heredadas y estructuradas'),'REG03_MIXED_DRAFT_FAIL_CLOSED');
+reg03(!str_contains($js,'La receta combina pautas heredadas y estructuradas')
+    && str_contains($js,'mixed?{medication_schema_version:2}')
+    && str_contains($js,'mixed?{medication_schema_version:1}'),'REG04C_MIXED_DRAFT_BOUND_V2');
 reg03(str_contains($js,"if (row.dataset.neRxSchema === '2')")
     && str_contains($js,"quantity_mode:'manual'")
     && str_contains($js,'Indica la cantidad total que debe dispensarse.')

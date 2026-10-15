@@ -347,7 +347,7 @@ function clinical_prescription_regimen_quantity(string $quantity, int $position)
     if ($quantity === '' || !preg_match('/(?:^|\D)[1-9][0-9]*(?:\.\d+)?(?:\D|$)/u', $quantity)
         || in_array($folded, ['ilimitado','infinito','indefinido','sin límite','sin limite','unlimited','infinite','undefined'], true))
         clinical_prescription_regimen_error('PRESCRIPTION_QUANTITY_REQUIRED', $position,
-            'captura una cantidad finita a dispensar.');
+            'indica la cantidad del medicamento.');
 }
 
 /** The V2 payload is the only authoring and rendering authority for new prescriptions. */
@@ -459,6 +459,22 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
     $raw = $prescription['items'] ?? null;
     if (!is_array($raw) || !array_is_list($raw) || count($raw) > 100)
         throw new InvalidArgumentException('PRESCRIPTION_ITEMS_INVALID');
+    $itemSchemas = [];
+    if ($schemaVersion === 2) {
+        foreach ($raw as $entry) {
+            if (!is_array($entry)) throw new InvalidArgumentException('PRESCRIPTION_ITEM_INVALID');
+            $hasRegimen = is_array($entry['regimen'] ?? null);
+            $itemSchema = $entry['medication_schema_version'] ?? ($hasRegimen ? 2 : null);
+            if (!in_array($itemSchema, [1,2], true) || ($itemSchema === 2) !== $hasRegimen)
+                throw new ClinicalPrescriptionRegimenException('PRESCRIPTION_MEDICATION_ITEM_SCHEMA_INVALID',
+                    'La representación del medicamento no es válida.');
+            $itemSchemas[] = $itemSchema;
+        }
+    } else $itemSchemas = array_fill(0, count($raw), 1);
+    if ($schemaVersion === 2 && $raw !== [] && !in_array(2, $itemSchemas, true))
+        throw new ClinicalPrescriptionRegimenException('PRESCRIPTION_MEDICATION_ITEM_SCHEMA_INVALID',
+            'La representación del medicamento no es válida.');
+    $mixedSchema = $schemaVersion === 2 && in_array(1, $itemSchemas, true) && in_array(2, $itemSchemas, true);
     $items = []; $ids = [];
     foreach ($raw as $index => $entry) {
         if (!is_array($entry)) throw new InvalidArgumentException('PRESCRIPTION_ITEM_INVALID');
@@ -467,8 +483,10 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
         if ($item['item_id'] === '' || !preg_match('/^[a-zA-Z0-9_-]+$/D', $item['item_id']) || isset($ids[$item['item_id']]))
             throw new InvalidArgumentException('PRESCRIPTION_ITEM_ID_INVALID');
         $ids[$item['item_id']] = true;
+        $itemSchema = $itemSchemas[$index];
         if ($schemaVersion === 2) clinical_prescription_regimen_exact_keys($entry,
-            ['item_id','name','presentation','dose','route','frequency','duration','quantity','instructions','private_notes','regimen'],
+            array_merge(['item_id','medication_schema_version','name','presentation','dose','route','frequency','duration','quantity','instructions','private_notes'],
+                $itemSchema === 2 ? ['regimen'] : []),
             $index + 1);
         elseif (array_key_exists('regimen', $entry)) clinical_prescription_regimen_error(
             'PRESCRIPTION_MEDICATION_SCHEMA_DOWNGRADE', $index + 1,
@@ -479,7 +497,7 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
                 ? clinical_prescription_regimen_text($entry[$field] ?? '', $limit, $index + 1)
                 : clinical_prescription_v2_text($entry[$field] ?? '', $limit);
         }
-        if ($schemaVersion === 2) {
+        if ($itemSchema === 2) {
             if ($final) {
                 foreach (['name'=>'captura el nombre del medicamento.','presentation'=>'captura la presentación.',
                     'dose'=>'captura la dosis.','route'=>'captura la vía de administración.'] as $field=>$message) {
@@ -510,6 +528,7 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
                 $item['duration'] = '';
             }
         }
+        if ($mixedSchema) $item['medication_schema_version'] = $itemSchema;
         if ($final && $item['name'] === '') throw new InvalidArgumentException('PRESCRIPTION_MEDICATION_NAME_REQUIRED');
         $items[] = $item;
     }

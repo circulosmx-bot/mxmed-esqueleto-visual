@@ -6,8 +6,10 @@
     const items=Array.isArray(prescription.items)?prescription.items:[];
     const hasRegimen=items.some(item=>item&&Object.prototype.hasOwnProperty.call(item,'regimen'));
     if(schema===2){
-      if(items.some(item=>!item||!item.regimen||typeof item.regimen!=='object'||Array.isArray(item.regimen)))
+      if(items.some(item=>{const has=!!item?.regimen&&typeof item.regimen==='object'&&!Array.isArray(item.regimen);
+        const itemSchema=item?.medication_schema_version??(has?2:null);return ![1,2].includes(itemSchema)||(itemSchema===2)!==has;}))
         throw new Error('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
+      if(items.length&&!hasRegimen)throw new Error('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
       return 2;
     }
     if(schema!==1||hasRegimen)throw new Error('PRESCRIPTION_FINGERPRINT_SCHEMA_DOWNGRADE');
@@ -34,11 +36,14 @@
     const fpVersion=fingerprintVersion(body);
     const p=body?.payload||{}, patient=p.patient_snapshot||{}, doctor=p.physician_snapshot||{};
     const professional=p.professional_context||{}, consultorio=professional.consultorio||{};
-    const diagnosis=p.diagnostic_context||{}, items=(p.prescription?.items||[]).map(item=>{
+    const diagnosis=p.diagnostic_context||{},sourceItems=p.prescription?.items||[];
+    const mixed=fpVersion===2&&sourceItems.some(item=>item?.regimen)&&sourceItems.some(item=>!item?.regimen);
+    const items=sourceItems.map(item=>{
       const result={};
       for(const key of ['name','presentation','dose','route','frequency','duration','quantity','instructions'])
         result[key]=clean(item?.[key]);
-      if(fpVersion===2)result.regimen=regimenProjection(item?.regimen);
+      if(mixed)result.medication_schema_version=item?.regimen?2:1;
+      if(fpVersion===2&&item?.regimen)result.regimen=regimenProjection(item.regimen);
       return result;
     });
     const presentationV2=p.presentation?.version===2;

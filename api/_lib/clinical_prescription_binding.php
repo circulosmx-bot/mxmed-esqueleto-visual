@@ -12,10 +12,18 @@ function clinical_prescription_fingerprint_version(array $body): int
         if (is_array($item) && array_key_exists('regimen', $item)) $hasRegimen = true;
     }
     if ($schema === 2) {
+        $hasStructuredItem = false;
         foreach ((array)($prescription['items'] ?? []) as $item) {
-            if (!is_array($item) || !is_array($item['regimen'] ?? null))
+            if (!is_array($item))
                 throw new InvalidArgumentException('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
+            $hasItemRegimen = is_array($item['regimen'] ?? null);
+            $itemSchema = $item['medication_schema_version'] ?? ($hasItemRegimen ? 2 : null);
+            if (!in_array($itemSchema, [1,2], true) || ($itemSchema === 2) !== $hasItemRegimen)
+                throw new InvalidArgumentException('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
+            $hasStructuredItem = $hasStructuredItem || $itemSchema === 2;
         }
+        if (($prescription['items'] ?? []) !== [] && !$hasStructuredItem)
+            throw new InvalidArgumentException('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
         return 2;
     }
     if ($schema !== 1 || $hasRegimen) throw new InvalidArgumentException('PRESCRIPTION_FINGERPRINT_SCHEMA_DOWNGRADE');
@@ -61,13 +69,18 @@ function clinical_prescription_binding_projection(array $body): array
     $diagnosis = (array)($p['diagnostic_context'] ?? []);
     $c = 'clinical_consent_binding_clean';
     $items = [];
-    foreach ((array)($p['prescription']['items'] ?? []) as $item) {
+    $sourceItems = (array)($p['prescription']['items'] ?? []);
+    $mixed = $fingerprintVersion === 2
+        && array_filter($sourceItems, static fn(mixed $item): bool => is_array($item) && is_array($item['regimen'] ?? null)) !== []
+        && array_filter($sourceItems, static fn(mixed $item): bool => is_array($item) && !is_array($item['regimen'] ?? null)) !== [];
+    foreach ($sourceItems as $item) {
         $item = (array)$item;
         $value = [];
         foreach (['name','presentation','dose','route','frequency','duration','quantity','instructions'] as $key)
             $value[$key] = $c($item[$key] ?? '');
-        if ($fingerprintVersion === 2) $value['regimen'] = clinical_prescription_binding_regimen_projection(
-            (array)($item['regimen'] ?? []));
+        if ($mixed) $value['medication_schema_version'] = is_array($item['regimen'] ?? null) ? 2 : 1;
+        if ($fingerprintVersion === 2 && is_array($item['regimen'] ?? null))
+            $value['regimen'] = clinical_prescription_binding_regimen_projection((array)$item['regimen']);
         $items[] = $value;
     }
     $presentation = (array)($p['presentation'] ?? []);

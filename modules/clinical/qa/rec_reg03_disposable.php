@@ -42,6 +42,10 @@ function item(string $id='reg03_1'):array{return['item_id'=>$id,'name'=>'Medicam
         'minimum_interval'=>['value'=>6,'unit'=>'HOUR'],'maximum_dose_per_period'=>['value'=>3,'unit'=>'tabletas','period'=>['value'=>24,'unit'=>'HOUR']],
         'maximum_administrations_per_period'=>['count'=>3,'period'=>['value'=>24,'unit'=>'HOUR']]],
         'duration'=>['mode'=>'UNTIL_REASSESSMENT']]];}
+function legacyItem(string $id='reg04c_legacy'):array{return['medication_schema_version'=>1,'item_id'=>$id,
+    'name'=>'Medicamento heredado QA','presentation'=>'Tabletas','dose'=>'1 tableta','route'=>'Oral',
+    'frequency'=>'Según pauta histórica','duration'=>'Duración histórica','quantity'=>'10 tabletas',
+    'instructions'=>'Con agua','private_notes'=>'privada heredada QA'];}
 
 $doctor=['doctor_id'=>'1','user_id'=>'review-user'];$patient='review-patient';
 $before=(int)$pdo->query('SELECT COUNT(*) FROM clinical_documents')->fetchColumn();
@@ -71,6 +75,50 @@ $deleteBody=body($patient,[$edited]);$deleteBody['draft_ref']=$two['document_uui
 clinical_prescription_v2_write($pdo,$doctor,$patient,$deleteBody,'reg03-delete-'.bin2hex(random_bytes(5)));
 $one=fetchDoc($pdo,$two['document_uuid']);qa(count($one['payload']['prescription']['items'])===1,'REG03_11_DELETE');
 qa($one['encounter_ref_id']===null,'REG03_27_PATIENT_LEVEL_SCOPE');
+
+$mixedStructured=item('reg04c_structured');$mixedStructured['medication_schema_version']=2;
+$mixedBody=body($patient,[legacyItem(),$mixedStructured]);
+$mixedCreate=clinical_prescription_v2_write($pdo,$doctor,$patient,$mixedBody,'reg04c-mixed-'.bin2hex(random_bytes(5)));
+$mixedDoc=fetchDoc($pdo,(string)$mixedCreate['document_uuid']);$mixedItems=$mixedDoc['payload']['prescription']['items'];
+qa(count($mixedItems)===2&&$mixedItems[0]['medication_schema_version']===1
+    &&$mixedItems[0]['frequency']==='Según pauta histórica'&&$mixedItems[0]['duration']==='Duración histórica'
+    &&!isset($mixedItems[0]['regimen'])&&$mixedItems[1]['medication_schema_version']===2
+    &&$mixedItems[1]['regimen']['administration']['pattern']==='AS_NEEDED','REG04C_MIXED_DRAFT_ROUNDTRIP');
+$mixedEdit=$mixedItems;$mixedEdit[0]['dose']='2 tabletas';
+$mixedEdit[]=legacyItem('reg04c_legacy_copy');
+$mixedUpdate=body($patient,$mixedEdit);$mixedUpdate['draft_ref']=$mixedDoc['document_uuid'];
+$mixedUpdate['expected_version']=(int)$mixedDoc['version'];
+clinical_prescription_v2_write($pdo,$doctor,$patient,$mixedUpdate,'reg04c-mixed-edit-'.bin2hex(random_bytes(5)));
+$mixedEdited=fetchDoc($pdo,$mixedDoc['document_uuid']);
+qa(count($mixedEdited['payload']['prescription']['items'])===3
+    &&$mixedEdited['payload']['prescription']['items'][0]['dose']==='2 tabletas','REG04C_MIXED_EDIT_DUPLICATE');
+array_pop($mixedEdit);$mixedDelete=body($patient,$mixedEdit);$mixedDelete['draft_ref']=$mixedDoc['document_uuid'];
+$mixedDelete['expected_version']=(int)$mixedEdited['version'];
+clinical_prescription_v2_write($pdo,$doctor,$patient,$mixedDelete,'reg04c-mixed-delete-'.bin2hex(random_bytes(5)));
+$mixedFinal=fetchDoc($pdo,$mixedDoc['document_uuid']);
+qa(count($mixedFinal['payload']['prescription']['items'])===2,'REG04C_MIXED_DELETE');
+$finalMixed=clinical_prescription_v2_normalize($pdo,$doctor,$patient,$mixedDelete,true);
+qa($finalMixed['prescription']['items'][0]['frequency']==='Según pauta histórica'
+    &&$finalMixed['prescription']['items'][1]['regimen']['administration']['pattern']==='AS_NEEDED',
+    'REG04C_MIXED_FINAL_VALIDATION');
+$invalidMixed=$mixedDelete;$invalidMixed['payload']['prescription']['items'][1]['quantity']='';
+try{clinical_prescription_v2_normalize($pdo,$doctor,$patient,$invalidMixed,true);$mixedRejected=false;}
+catch(ClinicalPrescriptionRegimenException $e){$mixedRejected=$e->errorCode==='PRESCRIPTION_QUANTITY_REQUIRED';}
+qa($mixedRejected,'REG04C_MIXED_INVALID_FINAL_REJECTED');
+
+$pdo->prepare("UPDATE clinical_documents SET status='generated',generated_at=UTC_TIMESTAMP() WHERE id=?")
+    ->execute([(int)$mixedFinal['id']]);
+$mixedOriginalHash=hash('sha256',$mixedFinal['payload_json']);
+$mixedReissue=clinical_prescription_lifecycle_reissue($pdo,$doctor,$patient,$mixedFinal['document_uuid'],[
+    'reason_code'=>'error_en_dosis_o_indicaciones','reason_detail'=>'','explanatory_note'=>'QA mixta']);
+$mixedReplacement=fetchDoc($pdo,(string)$mixedReissue['document']['document_id']);
+qa($mixedReplacement['payload']['prescription']['items'][0]['medication_schema_version']===1
+    &&$mixedReplacement['payload']['prescription']['items'][0]['frequency']==='Según pauta histórica'
+    &&!isset($mixedReplacement['payload']['prescription']['items'][0]['regimen'])
+    &&$mixedReplacement['payload']['prescription']['items'][1]['medication_schema_version']===2
+    &&isset($mixedReplacement['payload']['prescription']['items'][1]['regimen']), 'REG04C_MIXED_REISSUE_PRESERVED');
+$mixedOriginal=fetchDoc($pdo,$mixedFinal['document_uuid']);
+qa(hash_equals($mixedOriginalHash,hash('sha256',$mixedOriginal['payload_json'])),'REG04C_MIXED_ISSUED_IMMUTABLE');
 
 $enc=clinical_prescription_v2_write($pdo,$doctor,$patient,body($patient,[item('enc_1')],'enc:1001'),'reg03-enc-'.bin2hex(random_bytes(5)));
 $encDoc=fetchDoc($pdo,(string)$enc['document_uuid']);qa((int)$encDoc['encounter_ref_id']===1001,'REG03_28_EXACT_ENCOUNTER');

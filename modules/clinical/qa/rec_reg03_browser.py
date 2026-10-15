@@ -33,7 +33,8 @@ with sync_playwright() as pw:
     templates=[
       {'uuid':'33333333-3333-4333-8333-333333333333','template_name':'Pauta V2 QA','content':{'content_schema_version':2,'medications':[V2_MED]},'status':'active','version':1,'created_at':'2026-10-14 10:00:00','updated_at':'2026-10-14 10:00:00'},
       {'uuid':'22222222-2222-4222-8222-222222222222','template_name':'Pauta continua QA','content':{'content_schema_version':2,'medications':[CONT_MED]},'status':'active','version':1,'created_at':'2026-10-14 10:00:00','updated_at':'2026-10-14 10:00:00'},
-      {'uuid':'11111111-1111-4111-8111-111111111111','template_name':'Pauta heredada QA','content':{'medications':[V1_MED]},'status':'active','version':1,'created_at':'2026-10-13 10:00:00','updated_at':'2026-10-13 10:00:00'}]
+      {'uuid':'11111111-1111-4111-8111-111111111111','template_name':'Pauta heredada QA','content':{'medications':[V1_MED]},'status':'active','version':1,'created_at':'2026-10-13 10:00:00','updated_at':'2026-10-13 10:00:00'},
+      {'uuid':'66666666-6666-4666-8666-666666666666','template_name':'Pauta mixta QA','content':{'content_schema_version':2,'medications':[{'medication_schema_version':1,**V1_MED},{'medication_schema_version':2,**V2_MED}]},'status':'active','version':1,'created_at':'2026-10-14 12:00:00','updated_at':'2026-10-14 12:00:00'}]
     shell=(REPO/'private-app.php').read_text().split('?>',1)[1]
     shell=shell.replace('class="mxmed-auth-checking"','').replace('<script src="/assets/js/core/private-session.js?v=identity-session02b"></script>','')
     shell=shell.replace('<?= $privateBootstrapJson ?>',json.dumps({'authenticated':True,'account':{'id':'review-user'},'professional':{'doctor_id':'1','display_name':'Dra. QA'}}))
@@ -61,10 +62,15 @@ with sync_playwright() as pw:
         if '/prescriptions/preview' in url and req.method=='POST':
             state['preview_requests']+=1
             payload=json.loads(req.post_data or '{}');writes.append(payload)
-            regimen=payload.get('payload',{}).get('prescription',{}).get('items',[{}])[0].get('regimen',{})
-            duration=regimen.get('duration',{})
-            if not duration.get('mode') or (duration.get('mode')=='DEFINED_DURATION' and not duration.get('value')):
-                route.fulfill(status=400,content_type='application/json',body=json.dumps({'ok':False,'message':'Captura la duración del tratamiento.'}));return
+            items=payload.get('payload',{}).get('prescription',{}).get('items',[])
+            for index,item in enumerate(items,1):
+                if not str(item.get('quantity','')).strip():
+                    route.fulfill(status=400,content_type='application/json',body=json.dumps({'ok':False,'message':f'Medicamento {index}: indica la cantidad del medicamento.'}));return
+                regimen=item.get('regimen')
+                if regimen:
+                    duration=regimen.get('duration',{})
+                    if not duration.get('mode') or (duration.get('mode')=='DEFINED_DURATION' and not duration.get('value')):
+                        route.fulfill(status=400,content_type='application/json',body=json.dumps({'ok':False,'message':f'Medicamento {index}: captura la duración del tratamiento.'}));return
             route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'html':'<article data-reg03-preview>Vista previa estructurada QA</article>'}}));return
         if '/prescriptions' in url and req.method=='POST':
             payload=json.loads(req.post_data or '{}');writes.append(payload);state['saved_draft']=payload['payload']
@@ -121,42 +127,30 @@ with sync_playwright() as pw:
     check('REG04_MODE_RETURN_PRESERVES_SCHEDULED',row.locator('[data-ne-rx="frequency"]').input_value()=='Cada 12 horas')
     row.locator('[data-ne-rx="quantity"]').fill('')
     duration_select.select_option('CONTINUOUS')
-    check('REG04A_05_07_CONTINUOUS_STAGE2',row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
+    check('REG04C_02_CONTINUOUS_QUANTITY_VISIBLE',not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
+        and row.locator('[data-ne-rx="quantity"]').input_value()==''
         and row.locator('[data-rx-regimen-section="continuous"]').inner_text()=='Sin fecha de finalización predeterminada.')
-    page.locator('#ne_rx_add').evaluate('e=>e.click()');second=page.locator('#ne_rx_grid .ne-rx-row').nth(1)
-    second.locator('[data-ne-rx="name"]').fill('Medicamento continuo B');second.locator('[data-ne-rx="presentation"]').fill('Cápsulas')
-    second.locator('[data-ne-rx="dose"]').fill('1 cápsula');second.locator('[data-ne-rx="route"]').fill('Vía oral')
-    second.locator('[data-ne-rx="frequency"]').fill('Cada 24 horas')
-    second.locator('[data-ne-rx-regimen="duration.mode"]').select_option('CONTINUOUS')
     previews_before=state['preview_requests'];page.locator('[data-rx-host-next]').click()
-    expect(page.locator('#ne_rx_continuous_quantity')).to_be_visible()
-    completions=page.locator('[data-rx-continuous-quantity-input]');quantity_completion=completions.first
-    check('REG04A_08_10_COMPLETION_GATE',quantity_completion.input_value()=='' and state['preview_requests']==previews_before
-        and page.locator('.ne-rx-preview-workspace').is_hidden())
-    check('REG04A_13_MULTIPLE_CONTINUOUS',completions.count()==2 and completions.nth(1).input_value()=='')
-    check('REG04B_02_04_APPROVED_COPY',page.get_by_text('Cantidad total del medicamento',exact=True).count()==2
-        and page.get_by_text('Indica la cantidad que deberá adquirir el paciente con esta receta.',exact=True).is_visible()
-        and page.get_by_role('button',name='CONFIRMAR Y VER RECETA',exact=True).is_visible())
-    check('REG04B_05_06_STAGE3_PLACEHOLDERS',completions.first.get_attribute('placeholder')=='Ej. 20 tabletas'
-        and completions.nth(1).get_attribute('placeholder')=='Ej. 20 cápsulas')
-    for width,height in [(1440,900),(1366,768),(820,1180)]:
-        page.set_viewport_size({'width':width,'height':height});page.locator('#ne_rx_continuous_quantity').scroll_into_view_if_needed()
-        check(f'REG04A_QA_{width}_{height}',page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'))
-        page.screenshot(path=str(OUT/f'continuous-completion-{ENGINE}-{width}x{height}.png'),full_page=True)
-    page.set_viewport_size({'width':1440,'height':900})
-    quantity_completion.fill('30 tabletas');completions.nth(1).fill('60 cápsulas');page.locator('[data-rx-continuous-quantity-confirm]').click()
+    expect(page.locator('#ne_rx_feedback')).to_contain_text('indica la cantidad del medicamento')
+    check('REG04C_08_MISSING_QUANTITY_BLOCKS',state['preview_requests']==previews_before+1
+        and page.locator('[data-rx-editor-workspace]').get_attribute('data-rx-stage')=='2'
+        and row.locator('[data-ne-rx="quantity"]').get_attribute('aria-invalid')=='true')
+    check('REG04C_10_STAGE3_QUANTITY_REMOVED',page.locator('#ne_rx_continuous_quantity').count()==0
+        and page.get_by_role('button',name='CONFIRMAR Y VER RECETA',exact=True).count()==0)
+    row.locator('[data-ne-rx="quantity"]').fill('30 tabletas');page.locator('[data-rx-host-next]').click()
     expect(page.locator('.ne-rx-preview-workspace')).to_be_visible();expect(page.locator('#ne_rx_preview_html')).to_contain_text('Vista previa estructurada QA')
-    check('REG04A_11_12_CANONICAL_QUANTITY',state['saved_draft']['prescription']['items'][0]['quantity']=='30 tabletas'
-        and state['saved_draft']['prescription']['items'][1]['quantity']=='60 cápsulas'
-        and writes[-1]['payload']['prescription']['items'][0]['quantity']=='30 tabletas')
-    page.locator('[data-rx-host-prev]').click();row=page.locator('#ne_rx_grid .ne-rx-row').first
-    check('REG04A_15_BACK_NAVIGATION',row.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas'
-        and row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
+    check('REG04C_09_DIRECT_PREVIEW',page.locator('[data-rx-editor-workspace]').get_attribute('data-rx-stage')=='3')
+    for width,height in [(1440,900),(1366,768),(820,1180)]:
+        page.set_viewport_size({'width':width,'height':height});page.locator('.ne-rx-preview-workspace').scroll_into_view_if_needed()
+        check(f'REG04C_QA_{width}_{height}',page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'))
+        page.screenshot(path=str(OUT/f'reg04c-preview-{ENGINE}-{width}x{height}.png'),full_page=True)
+    page.set_viewport_size({'width':1440,'height':900});page.locator('[data-rx-host-prev]').click();row=page.locator('#ne_rx_grid .ne-rx-row').first
+    check('REG04C_CONTINUOUS_BACK_NAVIGATION',row.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas'
+        and not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
     row.locator('[data-ne-rx-regimen="duration.mode"]').select_option('DEFINED_DURATION')
-    check('REG04A_16_CONTINUOUS_TO_DEFINED',not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
+    check('REG04C_CONTINUOUS_TO_DEFINED',not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
         and row.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas')
     row.locator('[data-ne-rx="duration"]').fill('7 días')
-    page.locator('#ne_rx_grid .ne-rx-row').nth(1).locator('[data-ne-rx-del]').evaluate('e=>e.click()')
     for mode,label in [('CONTINUOUS','Tratamiento continuo'),('UNTIL_REASSESSMENT','Hasta nueva valoración médica'),('PHYSICIAN_DEFINED','Duración personalizada')]:
         row.locator('[data-ne-rx-regimen="duration.mode"]').select_option(mode)
         check('REG04_DURATION_'+mode,row.locator('[data-ne-rx="duration"]').input_value()==label)
@@ -168,6 +162,7 @@ with sync_playwright() as pw:
       schemas:[...document.querySelectorAll('#ne_rx_grid .ne-rx-row')].map(e=>e.dataset.neRxSchema),
       sections:[...document.querySelectorAll('#ne_rx_grid [data-rx-regimen-section]')].map(e=>[e.dataset.rxRegimenSection,e.hidden])})""")
     check('BROWSER_PRN_CONDITIONAL',conditional['rows']==1 and ['prn',False] in conditional['sections'] and ['scheduled-frequency',True] in conditional['sections'])
+    check('REG04C_03_PRN_QUANTITY_VISIBLE',not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
     row.locator('[data-ne-rx-regimen="administration.indication"]').fill('En caso de dolor intenso')
     row.locator('[data-ne-rx-regimen="administration.repeat_mode"]').select_option('SINGLE_ADMINISTRATION')
     check('REG04_12_SINGLE_PRN',row.locator('[data-rx-regimen-section="prn-interval"]').evaluate('e=>e.hidden'))
@@ -179,11 +174,12 @@ with sync_playwright() as pw:
         and not row.locator('[data-rx-regimen-section="max-administrations"]').evaluate('e=>e.hidden'))
     row.locator('[data-ne-rx-regimen-toggle="max-dose"]').uncheck();row.locator('[data-ne-rx-regimen-toggle="max-administrations"]').uncheck()
     row.locator('[data-ne-rx="duration"]').fill('')
-    page.locator('[data-rx-host-next]').click();expect(page.locator('#ne_rx_feedback')).to_contain_text('Captura la duración del tratamiento')
+    page.locator('[data-rx-host-next]').click();expect(page.locator('#ne_rx_feedback')).to_contain_text('captura la duración del tratamiento')
     check('BROWSER_SPANISH_VALIDATION',True)
     row.locator('[data-ne-rx-regimen="duration.mode"]').select_option('UNTIL_DATE')
     row.locator('[data-ne-rx-regimen="duration.date"]').fill('2026-10-20')
     check('BROWSER_UNTIL_DATE_CONDITIONAL',not page.locator('#ne_rx_grid [data-rx-regimen-section="until-date"]').evaluate('e=>e.hidden'))
+    check('REG04C_01_04_05_ALL_REGIMENS_QUANTITY',not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
     check('BROWSER_MANUAL_QUANTITY',row.locator('[data-ne-rx="quantity"]').get_attribute('placeholder')=='Ej. 20 tabletas')
     page.locator('[data-rx-host-save]').click();expect(page.locator('#ne_rx_feedback')).to_contain_text('Borrador guardado')
     check('BROWSER_DRAFT_SCHEMA_V2',state['saved_draft']['prescription']['medication_schema_version']==2 and state['saved_draft']['prescription']['items'][0]['regimen']['administration']['pattern']=='AS_NEEDED')
@@ -209,6 +205,21 @@ with sync_playwright() as pw:
     page.locator('#rx_tpl_selector_list [data-rx-tpl-action="use"]').click();page.locator('[data-rx-tpl-action="confirm-use"]').click()
     legacy=page.locator('#ne_rx_grid .ne-rx-row').first
     check('BROWSER_V1_NO_INFERENCE',legacy.get_attribute('data-ne-rx-schema')=='1' and legacy.locator('[data-ne-rx="frequency"]').input_value()=='Según pauta histórica')
+    page.locator('#ne_rx_add').evaluate('e=>e.click()');structured=page.locator('#ne_rx_grid .ne-rx-row').nth(1)
+    structured.locator('[data-ne-rx="name"]').fill('Medicamento mixto V2');structured.locator('[data-ne-rx="presentation"]').fill('Tabletas')
+    structured.locator('[data-ne-rx="dose"]').fill('1 tableta');structured.locator('[data-ne-rx="route"]').fill('Oral')
+    structured.locator('[data-ne-rx="frequency"]').fill('Cada 12 horas');structured.locator('[data-ne-rx="duration"]').fill('7 días')
+    structured.locator('[data-ne-rx="quantity"]').fill('14 tabletas')
+    page.locator('[data-rx-host-save]').click();expect(page.locator('#ne_rx_feedback')).to_contain_text('Borrador guardado')
+    mixed_items=state['saved_draft']['prescription']['items']
+    check('REG04C_11_12_MIXED_DRAFT',state['saved_draft']['prescription']['medication_schema_version']==2
+        and mixed_items[0]['medication_schema_version']==1 and mixed_items[0]['frequency']=='Según pauta histórica'
+        and 'regimen' not in mixed_items[0] and mixed_items[1]['medication_schema_version']==2
+        and mixed_items[1]['regimen']['administration']['pattern']=='SCHEDULED')
+    page.locator('[data-rx-host-next]').click();expect(page.locator('[data-reg03-preview]')).to_be_visible()
+    check('REG04C_MIXED_DIRECT_PREVIEW',page.locator('[data-rx-editor-workspace]').get_attribute('data-rx-stage')=='3')
+    page.locator('[data-rx-host-prev]').click();legacy=page.locator('#ne_rx_grid .ne-rx-row').first
+    page.locator('#ne_rx_grid .ne-rx-row').nth(1).locator('[data-ne-rx-del]').evaluate('e=>e.click()')
     legacy.locator('[data-ne-rx-edit]').click()
     expect(legacy.get_by_text('Convertir a pauta estructurada')).to_be_visible()
     legacy.get_by_text('Convertir a pauta estructurada').click();converted=page.locator('#ne_rx_grid .ne-rx-row').first
@@ -228,10 +239,18 @@ with sync_playwright() as pw:
     page.locator('[data-rx-host-prev]').click();page.locator('#ne_rx_use_template').click();page.locator('#rx_tpl_search').fill('Pauta continua')
     page.locator('#rx_tpl_selector_list [data-rx-tpl-action="use"]').click();page.locator('[data-rx-tpl-action="confirm-use"]').click()
     continuous_template=page.locator('#ne_rx_grid .ne-rx-row').first
-    check('REG04A_18_TEMPLATE_REVIEW',continuous_template.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
-    page.locator('[data-rx-host-next]').click();expect(page.locator('#ne_rx_continuous_quantity')).to_be_visible()
-    check('REG04A_18_TEMPLATE_QUANTITY_NOT_SILENT',page.locator('[data-rx-continuous-quantity-input]').input_value()=='30 tabletas'
-        and page.locator('[data-rx-host-next]').is_disabled())
+    check('REG04C_CONTINUOUS_TEMPLATE_STAGE2',not continuous_template.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
+        and continuous_template.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas')
+    page.locator('[data-rx-host-next]').click();expect(page.locator('[data-reg03-preview]')).to_be_visible()
+    page.locator('[data-rx-host-prev]').click();page.locator('#ne_rx_use_template').click();page.locator('#rx_tpl_search').fill('Pauta mixta')
+    page.locator('#rx_tpl_selector_list [data-rx-tpl-action="use"]').click();page.locator('[data-rx-tpl-action="confirm-use"]').click()
+    mixed_template_rows=page.locator('#ne_rx_grid .ne-rx-row')
+    check('REG04C_14_MIXED_TEMPLATE',mixed_template_rows.count()==2
+        and mixed_template_rows.nth(0).get_attribute('data-ne-rx-schema')=='1'
+        and mixed_template_rows.nth(0).locator('[data-ne-rx="frequency"]').input_value()=='Según pauta histórica'
+        and mixed_template_rows.nth(1).get_attribute('data-ne-rx-schema')=='2'
+        and mixed_template_rows.nth(1).locator('[data-ne-rx-regimen="administration.indication"]').input_value()=='En caso de dolor intenso')
+    page.locator('[data-rx-host-next]').click();expect(page.locator('[data-reg03-preview]')).to_be_visible()
     check('BROWSER_NO_JS_ERRORS',not errors)
     browser.close()
     print(f'REC_REG03_BROWSER_{ENGINE.upper()}=PASS',flush=True)
