@@ -58,14 +58,14 @@ $invalid=body($patientId);
 $invalid['payload']['prescription']['items'][0]['regimen']['administration']=[
     'pattern'=>'AS_NEEDED','indication'=>'','repeat_mode'=>'REPEATABLE',
     'minimum_interval'=>['value'=>6,'unit'=>'HOUR']];
-try {
-    clinical_prescription_v2_write($pdo,$doctor,$patientId,$invalid,'rec-reg02-invalid-'.bin2hex(random_bytes(5)));
-    throw new RuntimeException('FAIL invalid write accepted');
-} catch (ClinicalPrescriptionRegimenException $error) {
-    qa($error->errorCode==='PRESCRIPTION_PRN_INDICATION_REQUIRED','REG02_DISPOSABLE_INVALID_REJECTED');
-}
-qa((int)$pdo->query('SELECT COUNT(*) FROM clinical_documents')->fetchColumn()===$before,
-    'REG02_DISPOSABLE_INVALID_ATOMIC');
+$incomplete=clinical_prescription_v2_write($pdo,$doctor,$patientId,$invalid,
+    'rec-reg02-incomplete-'.bin2hex(random_bytes(5)));
+$incompleteDraft=document($pdo,(string)$incomplete['document_uuid']);
+qa($incompleteDraft['status']==='draft'
+    && $incompleteDraft['payload']['prescription']['items'][0]['frequency']===''
+    && $incompleteDraft['payload']['prescription']['items'][0]['duration']==='',
+    'REG02_DISPOSABLE_INCOMPLETE_DRAFT_ACCEPTED');
+$before=(int)$pdo->query('SELECT COUNT(*) FROM clinical_documents')->fetchColumn();
 
 $request=body($patientId);
 $created=clinical_prescription_v2_write($pdo,$doctor,$patientId,$request,'rec-reg02-valid-'.bin2hex(random_bytes(5)));

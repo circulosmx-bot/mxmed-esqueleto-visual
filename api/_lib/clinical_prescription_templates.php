@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_prescription_v2.php';
+
 final class ClinicalPrescriptionTemplateException extends RuntimeException
 {
     public function __construct(public readonly string $reason, public readonly int $httpStatus)
@@ -23,6 +25,43 @@ function clinical_prescription_template_string(mixed $value, int $limit): string
     return trim($value);
 }
 
+function clinical_prescription_template_v2_medication(array $medication, int $position): array
+{
+    $schema = $medication['medication_schema_version'] ?? null;
+    if (!is_int($schema) || !in_array($schema, [1,2], true))
+        throw new ClinicalPrescriptionTemplateException('invalid_medication_schema', 400);
+    $allowed = array_merge(['medication_schema_version'], clinical_prescription_template_medication_fields(),
+        $schema === 2 ? ['regimen'] : []);
+    foreach (array_keys($medication) as $key) {
+        if (!in_array($key, $allowed, true))
+            throw new ClinicalPrescriptionTemplateException('unsupported_medication_field', 400);
+    }
+    $clean = ['medication_schema_version'=>$schema];
+    foreach (clinical_prescription_template_medication_fields() as $field)
+        $clean[$field] = clinical_prescription_template_string($medication[$field] ?? '',
+            $field === 'instructions' ? 4000 : 1000);
+    if ($clean['name'] === '') throw new ClinicalPrescriptionTemplateException('medication_name_required', 400);
+    if ($schema === 1) return $clean;
+    foreach (['presentation','dose','route'] as $field) {
+        if ($clean[$field] === '') throw new ClinicalPrescriptionTemplateException('structured_medication_incomplete', 400);
+    }
+    try {
+        clinical_prescription_regimen_quantity($clean['quantity'], $position);
+        if (!is_array($medication['regimen'] ?? null) || array_is_list($medication['regimen']))
+            throw new ClinicalPrescriptionTemplateException('structured_regimen_required', 400);
+        $clean['regimen'] = clinical_prescription_regimen_normalize($medication['regimen'], $position, null);
+        $projection = clinical_prescription_regimen_format($clean['regimen']);
+        foreach (['frequency','duration'] as $field) {
+            if ($clean[$field] !== '' && $clean[$field] !== $projection[$field])
+                throw new ClinicalPrescriptionTemplateException('regimen_projection_conflict', 400);
+            $clean[$field] = $projection[$field];
+        }
+    } catch (ClinicalPrescriptionRegimenException $error) {
+        throw new ClinicalPrescriptionTemplateException('invalid_structured_regimen', 400);
+    }
+    return $clean;
+}
+
 /** Explicit recursive copy boundary. Unknown fields fail closed. */
 function clinical_prescription_template_validate(array $body): array
 {
@@ -36,8 +75,12 @@ function clinical_prescription_template_validate(array $body): array
     if (!is_string($name) || trim($name) === '' || mb_strlen(trim($name)) > 160 || !is_array($content)) {
         throw new ClinicalPrescriptionTemplateException('invalid_template', 400);
     }
+    $contentSchema = $content['content_schema_version'] ?? 1;
+    if (!is_int($contentSchema) || !in_array($contentSchema, [1,2], true))
+        throw new ClinicalPrescriptionTemplateException('invalid_content_schema', 400);
     foreach (array_keys($content) as $key) {
-        if (!in_array($key, ['medications','diagnostic_context','observations','professional_header'], true)) {
+        if (!in_array($key, ['content_schema_version','medications','diagnostic_context','observations','professional_header'], true)
+            || ($key === 'content_schema_version' && $contentSchema !== 2)) {
             throw new ClinicalPrescriptionTemplateException('unsupported_content_field', 400);
         }
     }
@@ -46,8 +89,12 @@ function clinical_prescription_template_validate(array $body): array
         throw new ClinicalPrescriptionTemplateException('invalid_medications', 400);
     }
     $cleanMedications = [];
-    foreach ($medications as $medication) {
+    foreach ($medications as $index => $medication) {
         if (!is_array($medication)) throw new ClinicalPrescriptionTemplateException('invalid_medication', 400);
+        if ($contentSchema === 2) {
+            $cleanMedications[] = clinical_prescription_template_v2_medication($medication, $index + 1);
+            continue;
+        }
         foreach (array_keys($medication) as $key) {
             if (!in_array($key, clinical_prescription_template_medication_fields(), true)) {
                 throw new ClinicalPrescriptionTemplateException('unsupported_medication_field', 400);
@@ -60,7 +107,8 @@ function clinical_prescription_template_validate(array $body): array
         if ($clean['name'] === '') throw new ClinicalPrescriptionTemplateException('medication_name_required', 400);
         $cleanMedications[] = $clean;
     }
-    $cleanContent = ['medications' => $cleanMedications];
+    $cleanContent = array_merge($contentSchema === 2 ? ['content_schema_version'=>2] : [],
+        ['medications' => $cleanMedications]);
     if (array_key_exists('diagnostic_context', $content)) {
         $diagnostic = $content['diagnostic_context'];
         if (!is_array($diagnostic) || array_diff(array_keys($diagnostic), ['mode','text'])) {

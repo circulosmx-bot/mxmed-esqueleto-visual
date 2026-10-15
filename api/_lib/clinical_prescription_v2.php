@@ -70,7 +70,7 @@ function clinical_prescription_regimen_date(string $value, int $position): strin
     return $value;
 }
 
-function clinical_prescription_regimen_normalize(array $raw, int $position, string $issueDate): array
+function clinical_prescription_regimen_normalize(array $raw, int $position, ?string $issueDate): array
 {
     clinical_prescription_regimen_exact_keys($raw, ['administration','duration'], $position);
     $administration = $raw['administration'] ?? null;
@@ -164,7 +164,7 @@ function clinical_prescription_regimen_normalize(array $raw, int $position, stri
     } elseif ($mode === 'UNTIL_DATE') {
         clinical_prescription_regimen_exact_keys($duration, ['mode','date'], $position);
         $date = clinical_prescription_regimen_date((string)($duration['date'] ?? ''), $position);
-        if ($date < $issueDate) clinical_prescription_regimen_error('PRESCRIPTION_DURATION_DATE_PRECEDES_ISSUE',
+        if ($issueDate !== null && $date < $issueDate) clinical_prescription_regimen_error('PRESCRIPTION_DURATION_DATE_PRECEDES_ISSUE',
             $position, 'la fecha de término no puede ser anterior a la fecha de emisión.');
         $normalizedDuration['date'] = $date;
     } elseif ($mode === 'PHYSICIAN_DEFINED') {
@@ -177,6 +177,118 @@ function clinical_prescription_regimen_normalize(array $raw, int $position, stri
         clinical_prescription_regimen_exact_keys($duration, ['mode'], $position);
     }
     return ['administration'=>$normalizedAdministration,'duration'=>$normalizedDuration];
+}
+
+function clinical_prescription_regimen_draft_number(mixed $value, int $position, string $message): string
+{
+    if ($value === null || $value === '') return '';
+    return clinical_prescription_regimen_positive_number($value, $position, $message);
+}
+
+function clinical_prescription_regimen_draft_interval(mixed $raw, int $position, string $message,
+    array $units = ['MINUTE','HOUR','DAY']): array
+{
+    if ($raw === null) return ['value'=>'','unit'=>''];
+    if (!is_array($raw) || array_is_list($raw))
+        clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_INTERVAL_INVALID', $position, $message);
+    clinical_prescription_regimen_exact_keys($raw, ['value','unit'], $position);
+    $value = clinical_prescription_regimen_draft_number($raw['value'] ?? '', $position, $message);
+    $unit = $raw['unit'] ?? '';
+    if (!is_string($unit) || ($unit !== '' && !in_array($unit, $units, true)))
+        clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_INTERVAL_INVALID', $position, $message);
+    return ['value'=>$value,'unit'=>$unit];
+}
+
+/** Preserve a known, possibly incomplete V2 shape for editable drafts without making it issuable. */
+function clinical_prescription_regimen_draft_normalize(array $raw, int $position): array
+{
+    clinical_prescription_regimen_exact_keys($raw, ['administration','duration'], $position);
+    $administration = $raw['administration'] ?? [];
+    $duration = $raw['duration'] ?? [];
+    if (!is_array($administration) || array_is_list($administration)
+        || !is_array($duration) || array_is_list($duration))
+        clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_INVALID', $position,
+            'la pauta estructurada no tiene un formato válido.');
+    $pattern = $administration['pattern'] ?? '';
+    if (!is_string($pattern) || ($pattern !== ''
+        && !in_array($pattern, ['SCHEDULED','AS_NEEDED','PHYSICIAN_DEFINED'], true)))
+        clinical_prescription_regimen_error('PRESCRIPTION_ADMINISTRATION_REQUIRED', $position,
+            'selecciona cómo debe administrarse.');
+    $a = ['pattern'=>$pattern];
+    if ($pattern === 'SCHEDULED' || $pattern === 'PHYSICIAN_DEFINED' || $pattern === '') {
+        clinical_prescription_regimen_exact_keys($administration, ['pattern','instruction'], $position);
+        $a['instruction'] = clinical_prescription_regimen_text($administration['instruction'] ?? '',
+            $pattern === 'PHYSICIAN_DEFINED' ? 1000 : 500, $position);
+    } else {
+        clinical_prescription_regimen_exact_keys($administration, ['pattern','indication','repeat_mode',
+            'minimum_interval','maximum_dose_per_period','maximum_administrations_per_period'], $position);
+        $a['indication'] = clinical_prescription_regimen_text($administration['indication'] ?? '', 500, $position);
+        $repeat = $administration['repeat_mode'] ?? '';
+        if (!is_string($repeat) || ($repeat !== '' && !in_array($repeat,
+            ['SINGLE_ADMINISTRATION','REPEATABLE'], true))) clinical_prescription_regimen_error(
+                'PRESCRIPTION_PRN_REPEAT_MODE_REQUIRED', $position,
+                'indica si es una administración única o repetible.');
+        $a['repeat_mode'] = $repeat;
+        $hasMinimum = array_key_exists('minimum_interval', $administration);
+        $hasMaxDose = array_key_exists('maximum_dose_per_period', $administration);
+        $hasMaxAdministrations = array_key_exists('maximum_administrations_per_period', $administration);
+        if ($repeat === 'SINGLE_ADMINISTRATION' && ($hasMinimum || $hasMaxDose || $hasMaxAdministrations))
+            clinical_prescription_regimen_error('PRESCRIPTION_PRN_LIMIT_CONTRADICTION', $position,
+                'una administración única no puede incluir límites de repetición.');
+        if ($repeat === 'REPEATABLE' || $hasMinimum) $a['minimum_interval'] =
+            clinical_prescription_regimen_draft_interval($administration['minimum_interval'] ?? null,
+                $position, 'captura un intervalo mínimo válido.');
+        if ($hasMaxDose) {
+            $maximum = $administration['maximum_dose_per_period'];
+            if (!is_array($maximum) || array_is_list($maximum)) clinical_prescription_regimen_error(
+                'PRESCRIPTION_PRN_MAXIMUM_INVALID', $position, 'captura un máximo de dosis válido.');
+            clinical_prescription_regimen_exact_keys($maximum, ['value','unit','period'], $position);
+            $a['maximum_dose_per_period'] = [
+                'value'=>clinical_prescription_regimen_draft_number($maximum['value'] ?? '', $position,
+                    'captura un máximo de dosis válido.'),
+                'unit'=>clinical_prescription_regimen_text($maximum['unit'] ?? '', 80, $position),
+                'period'=>clinical_prescription_regimen_draft_interval($maximum['period'] ?? null, $position,
+                    'captura el periodo del máximo de dosis.', ['HOUR','DAY'])];
+        }
+        if ($hasMaxAdministrations) {
+            $maximum = $administration['maximum_administrations_per_period'];
+            if (!is_array($maximum) || array_is_list($maximum)) clinical_prescription_regimen_error(
+                'PRESCRIPTION_PRN_MAXIMUM_INVALID', $position, 'captura un máximo de administraciones válido.');
+            clinical_prescription_regimen_exact_keys($maximum, ['count','period'], $position);
+            $count = $maximum['count'] ?? null;
+            if ($count !== null && $count !== '' && (!is_int($count) || $count < 1))
+                clinical_prescription_regimen_error('PRESCRIPTION_PRN_MAXIMUM_INVALID', $position,
+                    'captura un número máximo de administraciones válido.');
+            $a['maximum_administrations_per_period'] = ['count'=>$count === '' || $count === null ? 0 : $count,
+                'period'=>clinical_prescription_regimen_draft_interval($maximum['period'] ?? null, $position,
+                    'captura el periodo del máximo de administraciones.', ['HOUR','DAY'])];
+        }
+    }
+    $mode = $duration['mode'] ?? '';
+    if (!is_string($mode) || ($mode !== '' && !in_array($mode, ['DEFINED_DURATION','CONTINUOUS',
+        'UNTIL_REASSESSMENT','UNTIL_DATE','PHYSICIAN_DEFINED'], true))) clinical_prescription_regimen_error(
+            'PRESCRIPTION_DURATION_REQUIRED', $position, 'selecciona cómo termina el tratamiento.');
+    $d = ['mode'=>$mode];
+    if ($mode === 'DEFINED_DURATION' || $mode === '') {
+        clinical_prescription_regimen_exact_keys($duration, ['mode','value','unit'], $position);
+        $d['value'] = clinical_prescription_regimen_draft_number($duration['value'] ?? '', $position,
+            'captura una duración positiva.');
+        $unit = $duration['unit'] ?? '';
+        if (!is_string($unit) || ($unit !== '' && !in_array($unit, ['DAY','WEEK','MONTH'], true)))
+            clinical_prescription_regimen_error('PRESCRIPTION_DURATION_UNIT_INVALID', $position,
+                'selecciona una unidad de duración válida.');
+        $d['unit'] = $unit;
+    } elseif ($mode === 'UNTIL_DATE') {
+        clinical_prescription_regimen_exact_keys($duration, ['mode','date'], $position);
+        $date = $duration['date'] ?? '';
+        if (!is_string($date)) clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_DATE_INVALID', $position,
+            'captura una fecha de término válida.');
+        $d['date'] = $date === '' ? '' : clinical_prescription_regimen_date($date, $position);
+    } elseif ($mode === 'PHYSICIAN_DEFINED') {
+        clinical_prescription_regimen_exact_keys($duration, ['mode','instruction'], $position);
+        $d['instruction'] = clinical_prescription_regimen_text($duration['instruction'] ?? '', 1000, $position);
+    } else clinical_prescription_regimen_exact_keys($duration, ['mode'], $position);
+    return ['administration'=>$a,'duration'=>$d];
 }
 
 function clinical_prescription_regimen_period(array $period): string
@@ -368,22 +480,34 @@ function clinical_prescription_v2_normalize(PDO $pdo, array $doctor, string $pat
                 : clinical_prescription_v2_text($entry[$field] ?? '', $limit);
         }
         if ($schemaVersion === 2) {
-            foreach (['name'=>'captura el nombre del medicamento.','presentation'=>'captura la presentación.',
-                'dose'=>'captura la dosis.','route'=>'captura la vía de administración.'] as $field=>$message) {
-                if ($item[$field] === '') clinical_prescription_regimen_error(
-                    'PRESCRIPTION_MEDICATION_' . strtoupper($field) . '_REQUIRED', $index + 1, $message);
+            if ($final) {
+                foreach (['name'=>'captura el nombre del medicamento.','presentation'=>'captura la presentación.',
+                    'dose'=>'captura la dosis.','route'=>'captura la vía de administración.'] as $field=>$message) {
+                    if ($item[$field] === '') clinical_prescription_regimen_error(
+                        'PRESCRIPTION_MEDICATION_' . strtoupper($field) . '_REQUIRED', $index + 1, $message);
+                }
             }
-            clinical_prescription_regimen_quantity($item['quantity'], $index + 1);
+            if ($final || $item['quantity'] !== '') clinical_prescription_regimen_quantity($item['quantity'], $index + 1);
             if (!is_array($entry['regimen'] ?? null) || array_is_list($entry['regimen']))
                 clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_REQUIRED', $index + 1,
                     'captura el régimen de administración y duración.');
-            $item['regimen'] = clinical_prescription_regimen_normalize($entry['regimen'], $index + 1, $issueDate);
-            $projection = clinical_prescription_regimen_format($item['regimen']);
-            foreach (['frequency','duration'] as $field) {
-                if ($item[$field] !== '' && $item[$field] !== $projection[$field])
-                    clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_PROJECTION_CONFLICT', $index + 1,
-                        'la proyección de ' . ($field === 'frequency' ? 'frecuencia' : 'duración') . ' contradice el régimen.');
-                $item[$field] = $projection[$field];
+            $item['regimen'] = $final
+                ? clinical_prescription_regimen_normalize($entry['regimen'], $index + 1, $issueDate)
+                : clinical_prescription_regimen_draft_normalize($entry['regimen'], $index + 1);
+            try {
+                $completeRegimen = clinical_prescription_regimen_normalize($item['regimen'], $index + 1, $issueDate);
+                $projection = clinical_prescription_regimen_format($completeRegimen);
+                foreach (['frequency','duration'] as $field) {
+                    if ($item[$field] !== '' && $item[$field] !== $projection[$field])
+                        clinical_prescription_regimen_error('PRESCRIPTION_REGIMEN_PROJECTION_CONFLICT', $index + 1,
+                            'la proyección de ' . ($field === 'frequency' ? 'frecuencia' : 'duración') . ' contradice el régimen.');
+                    $item[$field] = $projection[$field];
+                }
+                $item['regimen'] = $completeRegimen;
+            } catch (ClinicalPrescriptionRegimenException $error) {
+                if ($final) throw $error;
+                $item['frequency'] = '';
+                $item['duration'] = '';
             }
         }
         if ($final && $item['name'] === '') throw new InvalidArgumentException('PRESCRIPTION_MEDICATION_NAME_REQUIRED');

@@ -35499,6 +35499,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     return [ta, fc, fr, t, s, d].join(' · ');
   };
 
+  const emptyStructuredRegimen = () => ({
+    administration: { pattern: 'SCHEDULED', instruction: '' },
+    duration: { mode: '', value: '', unit: '' }
+  });
+  const cloneStructuredRegimen = (value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    try { return JSON.parse(JSON.stringify(value)); } catch (_) { return null; }
+  };
   const normalizePrescriptionMedication = (item = {}, fallbackUid = '') => {
     const uid = String(item?.uid || fallbackUid || `rxm_${Date.now()}`).trim() || `rxm_${Date.now()}`;
     const source = String(item?.source || '').trim() || 'manual';
@@ -35509,6 +35517,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (quantityMode && !safeMeta.quantity_mode) safeMeta.quantity_mode = quantityMode;
     if (quantityValue && !safeMeta.quantity_value) safeMeta.quantity_value = quantityValue;
     if (quantityUnit && !safeMeta.quantity_unit) safeMeta.quantity_unit = quantityUnit;
+    const regimen = cloneStructuredRegimen(item?.regimen);
+    const medicationSchemaVersion = Number(item?.medication_schema_version || (regimen ? 2 : 1)) === 2 ? 2 : 1;
     return {
       uid,
       source: ['catalog', 'manual', 'doctor_memory'].includes(source) ? source : 'manual',
@@ -35526,9 +35536,16 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       quantity_unit: quantityUnit,
       instructions: String(item?.instructions || item?.indicaciones || '').trim(),
       private_notes: String(item?.private_notes || '').trim(),
+      medication_schema_version: medicationSchemaVersion,
+      regimen: medicationSchemaVersion === 2 ? (regimen || emptyStructuredRegimen()) : null,
+      legacy_frequency_reference: String(item?.legacy_frequency_reference || '').trim(),
+      legacy_duration_reference: String(item?.legacy_duration_reference || '').trim(),
       meta: safeMeta
     };
   };
+  const newStructuredPrescriptionMedication = (fallbackUid = '') => normalizePrescriptionMedication({
+    medication_schema_version: 2, regimen: emptyStructuredRegimen()
+  }, fallbackUid);
   const hasPrescriptionMedicationContent = (item = {}) => {
     const fields = ['name', 'presentation', 'dose', 'route', 'frequency', 'duration', 'quantity', 'instructions', 'private_notes'];
     return fields.some((key) => String(item?.[key] || '').trim() !== '');
@@ -37058,7 +37075,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const rx = getRxDraft(patientKey);
     const meds = Array.isArray(rx.medications) ? rx.medications : [];
     if (!meds.length) {
-      const first = normalizePrescriptionMedication({}, 'rxm_1');
+      const first = newStructuredPrescriptionMedication('rxm_1');
       first.__existing = false;
       els.rxGrid.innerHTML = rxRowHtml(0, first);
     } else {
@@ -37068,6 +37085,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     hydrateRxDiagnosticContext(rx);
     Array.from(els.rxGrid.querySelectorAll('.ne-rx-row')).forEach((row) => {
       syncRowControlledStateFromInputs(row);
+      syncRxRegimenVisibility(row);
       applyMedicationAdministrationContextToRow(row, 'hydrate');
       updateRxRowSummary(row);
       const isExisting = row.getAttribute('data-ne-rx-existing') === '1';
@@ -37096,7 +37114,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     setRxOpenDocumentAction('');
   };
 
-  const escapeAttr = (value) => String(value || '').replace(/\"/g, '&quot;');
+  const escapeAttr = (value) => String(value || '')
+    .replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const escapeHtmlLite = (value) => String(value || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -37603,6 +37622,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const meta = parseRowMeta(row);
     const quantityInput = row.querySelector('[data-ne-rx="quantity"]');
     if (!quantityInput) return;
+    if (row.dataset.neRxSchema === '2') {
+      quantityInput.placeholder = 'Cantidad finita indicada por el médico';
+      writeRowMeta(row, { ...meta, quantity_mode:'manual',
+        quantity_value:normalizeRecetaText(quantityInput.value), quantity_unit:'' });
+      return;
+    }
     let normalizedPattern = rxNormalizeAdministrationPattern(patternKey);
     if (!normalizedPattern) {
       normalizedPattern = rxNormalizeAdministrationPattern(
@@ -37670,8 +37695,84 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (els.rxDxMode) els.rxDxMode.value = mode;
     if (els.rxDxText) els.rxDxText.value = text;
   };
+  const rxSelected = (value, expected) => String(value || '') === expected ? ' selected' : '';
+  const rxChecked = (value) => value ? ' checked' : '';
+  const rxRegimenValue = (regimen, path, fallback = '') => {
+    let current = regimen;
+    for (const key of path.split('.')) current = current && typeof current === 'object' ? current[key] : undefined;
+    return current == null ? fallback : current;
+  };
+  const rxStructuredRegimenHtml = (m) => {
+    const regimen = m.regimen || emptyStructuredRegimen();
+    const admin = regimen.administration || {}, duration = regimen.duration || {};
+    const maxDose = admin.maximum_dose_per_period || {}, maxDosePeriod = maxDose.period || {};
+    const maxAdministrations = admin.maximum_administrations_per_period || {}, maxAdminPeriod = maxAdministrations.period || {};
+    const interval = admin.minimum_interval || {};
+    const legacyReference = [m.legacy_frequency_reference ? `Frecuencia anterior: ${m.legacy_frequency_reference}` : '',
+      m.legacy_duration_reference ? `Duración anterior: ${m.legacy_duration_reference}` : ''].filter(Boolean).join(' · ');
+    return `<section class="rx-regimen" data-rx-regimen-controls>
+      <div class="rx-regimen__notice${legacyReference ? '' : ' d-none'}" data-rx-legacy-reference>${escapeHtmlLite(legacyReference)}</div>
+      <div class="rx-regimen__grid">
+        <label class="ne-rx-field"><span>Forma de administración</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.pattern">
+          <option value="SCHEDULED"${rxSelected(admin.pattern,'SCHEDULED')}>Programada</option>
+          <option value="AS_NEEDED"${rxSelected(admin.pattern,'AS_NEEDED')}>Según necesidad</option>
+          <option value="PHYSICIAN_DEFINED"${rxSelected(admin.pattern,'PHYSICIAN_DEFINED')}>Pauta personalizada</option>
+        </select></label>
+        <label class="ne-rx-field" data-rx-regimen-section="scheduled"><span>Horario o frecuencia indicada</span><input class="form-control form-control-sm" data-ne-rx-regimen="administration.instruction" maxlength="500" placeholder="Ej. Cada 8 horas" value="${escapeAttr(rxRegimenValue(regimen,'administration.instruction'))}"></label>
+        <label class="ne-rx-field" data-rx-regimen-section="physician-administration"><span>Instrucción personalizada para el paciente</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="administration.instruction" maxlength="1000" rows="2" placeholder="Describe la pauta completa">${escapeHtmlLite(rxRegimenValue(regimen,'administration.instruction'))}</textarea></label>
+        <div class="rx-regimen__conditional" data-rx-regimen-section="prn">
+          <label class="ne-rx-field"><span>Motivo para usar según necesidad</span><input class="form-control form-control-sm" data-ne-rx-regimen="administration.indication" maxlength="500" placeholder="Ej. En caso de dolor" value="${escapeAttr(rxRegimenValue(regimen,'administration.indication'))}"></label>
+          <label class="ne-rx-field"><span>Repetición</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.repeat_mode"><option value="">Selecciona</option><option value="SINGLE_ADMINISTRATION"${rxSelected(admin.repeat_mode,'SINGLE_ADMINISTRATION')}>Administración única</option><option value="REPEATABLE"${rxSelected(admin.repeat_mode,'REPEATABLE')}>Puede repetirse</option></select></label>
+          <div class="rx-regimen__inline" data-rx-regimen-section="prn-interval"><label class="ne-rx-field"><span>Intervalo mínimo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.minimum_interval.value" value="${escapeAttr(interval.value)}"></label><label class="ne-rx-field"><span>Unidad</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.minimum_interval.unit"><option value="">Selecciona</option><option value="MINUTE"${rxSelected(interval.unit,'MINUTE')}>Minutos</option><option value="HOUR"${rxSelected(interval.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(interval.unit,'DAY')}>Días</option></select></label></div>
+          <label class="form-check rx-regimen__toggle"><input class="form-check-input" type="checkbox" data-ne-rx-regimen-toggle="max-dose"${rxChecked(admin.maximum_dose_per_period)}><span class="form-check-label">Agregar máximo de dosis por periodo</span></label>
+          <div class="rx-regimen__limit" data-rx-regimen-section="max-dose"><label class="ne-rx-field"><span>Máximo de dosis</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_dose_per_period.value" value="${escapeAttr(maxDose.value)}"></label><label class="ne-rx-field"><span>Unidad exacta</span><input class="form-control form-control-sm" maxlength="80" data-ne-rx-regimen="administration.maximum_dose_per_period.unit" placeholder="Ej. tabletas" value="${escapeAttr(maxDose.unit)}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_dose_per_period.period.value" value="${escapeAttr(maxDosePeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_dose_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxDosePeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxDosePeriod.unit,'DAY')}>Días</option></select></label></div>
+          <label class="form-check rx-regimen__toggle"><input class="form-check-input" type="checkbox" data-ne-rx-regimen-toggle="max-administrations"${rxChecked(admin.maximum_administrations_per_period)}><span class="form-check-label">Agregar máximo de administraciones por periodo</span></label>
+          <div class="rx-regimen__limit" data-rx-regimen-section="max-administrations"><label class="ne-rx-field"><span>Máximo de administraciones</span><input class="form-control form-control-sm" type="number" min="1" step="1" data-ne-rx-regimen="administration.maximum_administrations_per_period.count" value="${escapeAttr(maxAdministrations.count || '')}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.value" value="${escapeAttr(maxAdminPeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxAdminPeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxAdminPeriod.unit,'DAY')}>Días</option></select></label></div>
+        </div>
+        <label class="ne-rx-field"><span>Cómo termina el tratamiento</span><select class="form-select form-select-sm" data-ne-rx-regimen="duration.mode"><option value="">Selecciona</option><option value="DEFINED_DURATION"${rxSelected(duration.mode,'DEFINED_DURATION')}>Duración definida</option><option value="CONTINUOUS"${rxSelected(duration.mode,'CONTINUOUS')}>Tratamiento continuo</option><option value="UNTIL_REASSESSMENT"${rxSelected(duration.mode,'UNTIL_REASSESSMENT')}>Hasta nueva valoración médica</option><option value="UNTIL_DATE"${rxSelected(duration.mode,'UNTIL_DATE')}>Hasta una fecha determinada</option><option value="PHYSICIAN_DEFINED"${rxSelected(duration.mode,'PHYSICIAN_DEFINED')}>Duración personalizada</option></select></label>
+        <div class="rx-regimen__inline" data-rx-regimen-section="defined-duration"><label class="ne-rx-field"><span>Duración</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="duration.value" value="${escapeAttr(duration.value)}"></label><label class="ne-rx-field"><span>Unidad</span><select class="form-select form-select-sm" data-ne-rx-regimen="duration.unit"><option value="">Selecciona</option><option value="DAY"${rxSelected(duration.unit,'DAY')}>Días</option><option value="WEEK"${rxSelected(duration.unit,'WEEK')}>Semanas</option><option value="MONTH"${rxSelected(duration.unit,'MONTH')}>Meses</option></select></label></div>
+        <label class="ne-rx-field" data-rx-regimen-section="until-date"><span>Fecha de término</span><input class="form-control form-control-sm" type="date" data-ne-rx-regimen="duration.date" value="${escapeAttr(duration.date)}"></label>
+        <label class="ne-rx-field" data-rx-regimen-section="physician-duration"><span>Condición de término indicada</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="duration.instruction" maxlength="1000" rows="2" placeholder="Describe cuándo termina el tratamiento">${escapeHtmlLite(duration.instruction || '')}</textarea></label>
+        <p class="rx-regimen__open-note" data-rx-regimen-section="open-duration">La cantidad a dispensar sigue siendo manual y finita.</p>
+      </div>
+    </section>`;
+  };
+  const syncRxRegimenVisibility = (row) => {
+    if (!row || row.dataset.neRxSchema !== '2') return;
+    const pattern = row.querySelector('[data-ne-rx-regimen="administration.pattern"]')?.value || '';
+    const repeat = row.querySelector('[data-ne-rx-regimen="administration.repeat_mode"]')?.value || '';
+    const mode = row.querySelector('[data-ne-rx-regimen="duration.mode"]')?.value || '';
+    const maxDose = row.querySelector('[data-ne-rx-regimen-toggle="max-dose"]')?.checked === true;
+    const maxAdministrations = row.querySelector('[data-ne-rx-regimen-toggle="max-administrations"]')?.checked === true;
+    const show = (name, visible) => row.querySelectorAll(`[data-rx-regimen-section="${name}"]`).forEach(el=>el.hidden=!visible);
+    show('scheduled',pattern==='SCHEDULED'); show('physician-administration',pattern==='PHYSICIAN_DEFINED');
+    show('prn',pattern==='AS_NEEDED'); show('prn-interval',pattern==='AS_NEEDED'&&repeat==='REPEATABLE');
+    show('max-dose',pattern==='AS_NEEDED'&&repeat==='REPEATABLE'&&maxDose);
+    show('max-administrations',pattern==='AS_NEEDED'&&repeat==='REPEATABLE'&&maxAdministrations);
+    show('defined-duration',mode==='DEFINED_DURATION'); show('until-date',mode==='UNTIL_DATE');
+    show('physician-duration',mode==='PHYSICIAN_DEFINED');
+    show('open-duration',['CONTINUOUS','UNTIL_REASSESSMENT','UNTIL_DATE','PHYSICIAN_DEFINED'].includes(mode));
+  };
+  const rxRegimenSet = (target, path, value) => {
+    const keys=path.split('.');let current=target;
+    keys.forEach((key,index)=>{if(index===keys.length-1)current[key]=value;else current=current[key]||(current[key]={});});
+  };
+  const readRxRegimenFromRow = (row) => {
+    const regimen={administration:{},duration:{}};
+    row.querySelectorAll('[data-ne-rx-regimen]').forEach(input=>{
+      if(input.closest('[hidden]'))return;
+      const path=input.dataset.neRxRegimen;let value=String(input.value||'').trim();
+      if(path.endsWith('.count')&&value!=='')value=Number.parseInt(value,10);
+      rxRegimenSet(regimen,path,value);
+    });
+    if(regimen.administration.pattern==='AS_NEEDED'&&regimen.administration.repeat_mode==='REPEATABLE'){
+      if(!row.querySelector('[data-ne-rx-regimen-toggle="max-dose"]')?.checked)delete regimen.administration.maximum_dose_per_period;
+      if(!row.querySelector('[data-ne-rx-regimen-toggle="max-administrations"]')?.checked)delete regimen.administration.maximum_administrations_per_period;
+    }
+    return regimen;
+  };
   const rxRowHtml = (idx, m) => `
-    <div class="ne-rx-row" data-ne-rx-row="${idx}" data-ne-rx-state="expanded" data-ne-rx-existing="${m.__existing ? '1' : '0'}" data-ne-rx-uid="${escapeAttr(m.uid || `rxm_${idx + 1}`)}" data-ne-rx-source="${escapeAttr(m.source || 'manual')}" data-ne-rx-catalog-id="${escapeAttr(m.catalog_id || '')}" data-ne-rx-memory-id="${escapeAttr(m.doctor_memory_id || '')}" data-ne-rx-meta="${escapeAttr(JSON.stringify(m.meta || {}))}">
+    <div class="ne-rx-row" data-ne-rx-row="${idx}" data-ne-rx-state="expanded" data-ne-rx-existing="${m.__existing ? '1' : '0'}" data-ne-rx-schema="${Number(m.medication_schema_version)===2?'2':'1'}" data-ne-rx-uid="${escapeAttr(m.uid || `rxm_${idx + 1}`)}" data-ne-rx-source="${escapeAttr(m.source || 'manual')}" data-ne-rx-catalog-id="${escapeAttr(m.catalog_id || '')}" data-ne-rx-memory-id="${escapeAttr(m.doctor_memory_id || '')}" data-ne-rx-meta="${escapeAttr(JSON.stringify(m.meta || {}))}">
       <div class="ne-rx-summary d-none" data-role="rx-row-summary">
         <div class="ne-rx-summary-main" data-role="rx-summary-main">Medicamento pendiente</div>
         <div class="ne-rx-summary-meta" data-role="rx-summary-meta"></div>
@@ -37697,11 +37798,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           <label class="ne-rx-field"><span>Vía</span><input class="form-control form-control-sm" placeholder="Ej. Oral" data-ne-rx="route" value="${escapeAttr(m.route)}"></label>
           ${renderQuickFieldSuggestions('route')}
         </div>
-        <div class="ne-rx-field-wrap" data-rx-field-wrap="frequency">
+        <div class="ne-rx-field-wrap${Number(m.medication_schema_version)===2?' d-none':''}" data-rx-field-wrap="frequency">
           <label class="ne-rx-field"><span>Frecuencia</span><input class="form-control form-control-sm" placeholder="Ej. Cada 8 horas" data-ne-rx="frequency" value="${escapeAttr(m.frequency)}"></label>
           ${renderQuickFieldSuggestions('frequency')}
         </div>
-        <div class="ne-rx-field-wrap" data-rx-field-wrap="duration">
+        <div class="ne-rx-field-wrap${Number(m.medication_schema_version)===2?' d-none':''}" data-rx-field-wrap="duration">
           <label class="ne-rx-field"><span>Duración</span><input class="form-control form-control-sm" placeholder="Ej. 7 días" data-ne-rx="duration" value="${escapeAttr(m.duration)}"></label>
           ${renderQuickFieldSuggestions('duration')}
         </div>
@@ -37711,6 +37812,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           ${renderQuickFieldSuggestions('instructions')}
         </div>
         <label class="ne-rx-field ne-rx-private-notes"><span>Notas médicas privadas <small>Opcional · no se imprimen</small></span><input class="form-control form-control-sm" placeholder="Sólo visibles en el expediente" data-ne-rx="private_notes" value="${escapeAttr(m.private_notes)}"></label>
+        ${Number(m.medication_schema_version)===2 ? rxStructuredRegimenHtml(m) : `<div class="rx-regimen-convert"><p>Esta pauta conserva frecuencia y duración como texto heredado. No se interpretará automáticamente.</p><button type="button" class="btn btn-outline-primary btn-sm" data-ne-rx-convert>Convertir a pauta estructurada</button></div>`}
         <div class="ne-rx-actions">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-ne-rx-cancel>Cancelar</button>
           <button type="button" class="btn btn-primary btn-sm" data-ne-rx-collapse>Agregar medicamento</button>
@@ -37725,8 +37827,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const presentation = get('presentation');
     const instructions = get('instructions');
     const route = get('route');
-    const frequency = get('frequency');
-    const duration = get('duration');
+    let frequency = get('frequency');
+    let duration = get('duration');
+    if(row.dataset.neRxSchema==='2'){
+      const regimen=readRxRegimenFromRow(row),admin=regimen.administration||{},end=regimen.duration||{};
+      frequency=admin.pattern==='SCHEDULED'?(admin.instruction||'Programada'):
+        admin.pattern==='AS_NEEDED'?`Según necesidad${admin.indication?`: ${admin.indication}`:''}`:
+        admin.pattern==='PHYSICIAN_DEFINED'?(admin.instruction||'Pauta personalizada'):'';
+      duration=({DEFINED_DURATION:end.value&&end.unit?`${end.value} ${end.unit==='DAY'?'días':end.unit==='WEEK'?'semanas':'meses'}`:'Duración definida',CONTINUOUS:'Tratamiento continuo',UNTIL_REASSESSMENT:'Hasta nueva valoración médica',UNTIL_DATE:end.date?`Hasta ${end.date}`:'Hasta una fecha',PHYSICIAN_DEFINED:end.instruction||'Duración personalizada'})[end.mode]||'Duración pendiente';
+    }
     const main = [name || 'Medicamento sin nombre', presentation].filter(Boolean).join(' ');
     const note = instructions ? ` — ${instructions}` : '';
     const secondary = [
@@ -37791,6 +37900,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         quantity_unit: normalizeRecetaText(rowMeta?.quantity_unit),
         instructions: get('instructions'),
         private_notes: get('private_notes'),
+        medication_schema_version: r.dataset.neRxSchema === '2' ? 2 : 1,
+        regimen: r.dataset.neRxSchema === '2' ? readRxRegimenFromRow(r) : null,
         meta: rowMeta
       }, `rxm_${index + 1}`);
     }).filter((m) => hasPrescriptionMedicationContent(m));
@@ -38546,6 +38657,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         quantity_unit: normalizeRecetaText(item?.quantity_unit || item?.meta?.quantity_unit),
         instructions: normalizeRecetaText(item?.instructions),
         private_notes: normalizeRecetaText(item?.private_notes),
+        medication_schema_version: Number(item?.medication_schema_version) === 2 ? 2 : 1,
+        regimen: Number(item?.medication_schema_version) === 2 ? cloneStructuredRegimen(item?.regimen) : null,
         meta: (item?.meta && typeof item.meta === 'object') ? { ...item.meta } : {}
       }))
       .filter((item) => item.name !== '');
@@ -38805,12 +38918,18 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.rxTemplateStatus.classList.toggle('text-success', tone === 'success');
     els.rxTemplateStatus.classList.toggle('text-danger', tone === 'error');
   };
-  const rxTemplateSafeMedication = (item = {}) => Object.fromEntries(
-    rxTemplateMedicationFields.map((field) => [field, normalizeRecetaText(item?.[field])])
-  );
+  const rxTemplateSafeMedication = (item = {}) => {
+    const clean=Object.fromEntries(rxTemplateMedicationFields.map((field)=>[field,normalizeRecetaText(item?.[field])]));
+    const schema=Number(item?.medication_schema_version||(item?.regimen?2:1))===2?2:1;
+    return {...clean,medication_schema_version:schema,
+      ...(schema===2?{regimen:cloneStructuredRegimen(item?.regimen)||emptyStructuredRegimen()}: {})};
+  };
   const rxTemplateCurrentMedications = () => mapValidPrescriptionItems(collectRxModal()).map(rxTemplateSafeMedication);
   const rxTemplateContentFromCurrent = ({ diagnostic = false, observations = false, professionalHeader = false } = {}) => {
-    const content = { medications: rxTemplateCurrentMedications() };
+    const medications=rxTemplateCurrentMedications();
+    const versioned=medications.some(item=>item.medication_schema_version===2);
+    const content = { ...(versioned?{content_schema_version:2}:{}),
+      medications:versioned?medications:medications.map(({medication_schema_version,regimen,...item})=>item) };
     if (diagnostic) content.diagnostic_context = collectRxDiagnosticContext();
     if (observations) content.observations = normalizeRecetaText(rxObservations?.value);
     if (professionalHeader) content.professional_header = rxPresentationMode();
@@ -38833,6 +38952,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     els.rxGrid.innerHTML = medications.map((item,index)=>rxRowHtml(index,item)).join('');
     Array.from(els.rxGrid.querySelectorAll('.ne-rx-row')).forEach((row)=>{
       syncRowControlledStateFromInputs(row);
+      syncRxRegimenVisibility(row);
       applyMedicationAdministrationContextToRow(row,'template');
       updateRxRowSummary(row); setRxRowState(row,'collapsed');
     });
@@ -38858,29 +38978,43 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     };
     const focusFirst = () => window.requestAnimationFrame(()=>rxTemplateBody.querySelector('input,button,select,textarea')?.focus());
     const medicationEditorRow = (item = {}, index = 0) => {
-      const row=document.createElement('fieldset');row.className='rx-template-medication';row.dataset.rxTplMedication=String(index);
+      const hasExisting=Object.keys(item||{}).length>0;
+      const model=hasExisting?{...rxTemplateSafeMedication(item),
+        legacy_frequency_reference:normalizeRecetaText(item?.legacy_frequency_reference),
+        legacy_duration_reference:normalizeRecetaText(item?.legacy_duration_reference)}:
+        newStructuredPrescriptionMedication(`tpl_${index+1}`);
+      const row=document.createElement('fieldset');row.className='rx-template-medication';row.dataset.rxTplMedication=String(index);row.dataset.neRxSchema=String(model.medication_schema_version);
       const legend=document.createElement('legend');legend.textContent=`Medicamento ${index + 1}`;
       const remove=rxTemplateButton('Eliminar','remove-medication','btn-link text-danger');remove.dataset.index=String(index);
       const head=document.createElement('div');head.className='rx-template-medication__head';head.append(legend,remove);row.append(head);
       const grid=document.createElement('div');grid.className='rx-template-medication__grid';
       rxTemplateMedicationFields.forEach((field)=>{
+        if(model.medication_schema_version===2&&(field==='frequency'||field==='duration'))return;
         const label=document.createElement('label');label.className='ci-template-editor__field';
         const span=document.createElement('span');span.className='form-label';span.textContent=rxTemplateMedicationLabels[field];
         const input=document.createElement(field==='instructions'?'textarea':'input');
         if(field!=='instructions')input.type='text';else input.rows=2;
-        input.className='form-control';input.dataset.rxTplField=field;input.value=String(item?.[field]||'');
+        input.className='form-control';input.dataset.rxTplField=field;input.value=String(model?.[field]||'');
         if(field==='name')input.required=true;label.append(span,input);grid.append(label);
       });
-      row.append(grid);return row;
+      row.append(grid);
+      if(model.medication_schema_version===2){const holder=document.createElement('div');holder.innerHTML=rxStructuredRegimenHtml(model);row.append(holder.firstElementChild);syncRxRegimenVisibility(row);}
+      else {const conversion=document.createElement('div');conversion.className='rx-regimen-convert';conversion.innerHTML='<p>Plantilla heredada: frecuencia y duración permanecen como texto.</p>';conversion.append(rxTemplateButton('Convertir a pauta estructurada','convert-medication'));row.append(conversion);}
+      return row;
     };
     const collectEditor = () => {
       const form=rxTemplateBody.querySelector('#rx_template_editor_form');
       if(!form?.reportValidity())return null;
-      const medications=[...form.querySelectorAll('[data-rx-tpl-medication]')].map((row)=>Object.fromEntries(
-        rxTemplateMedicationFields.map((field)=>[field,row.querySelector(`[data-rx-tpl-field="${field}"]`)?.value?.trim()||''])
-      )).filter((item)=>item.name);
+      const medications=[...form.querySelectorAll('[data-rx-tpl-medication]')].map((row)=>{
+        const item=Object.fromEntries(rxTemplateMedicationFields.map((field)=>[field,row.querySelector(`[data-rx-tpl-field="${field}"]`)?.value?.trim()||'']));
+        item.medication_schema_version=row.dataset.neRxSchema==='2'?2:1;
+        if(item.medication_schema_version===2)item.regimen=readRxRegimenFromRow(row);
+        return item;
+      }).filter((item)=>item.name);
       if(!medications.length){ paragraph('Agrega al menos un medicamento con nombre.','alert alert-danger mt-3');return null; }
-      const content={medications};
+      const versioned=form.dataset.rxTplContentSchema==='2'||medications.some(item=>item.medication_schema_version===2);
+      const content={...(versioned?{content_schema_version:2}:{}),medications:versioned?medications:
+        medications.map(({medication_schema_version,regimen,...item})=>item)};
       const dxText=form.elements.namedItem('diagnostic_text')?.value?.trim()||'';
       const dxMode=form.elements.namedItem('diagnostic_mode')?.value||'';
       if(dxText||dxMode)content.diagnostic_context={mode:dxMode||'sin_diagnostico',text:dxText};
@@ -38894,12 +39028,12 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       editing=record;clear(record?'EDITAR PLANTILLA':'NUEVA PLANTILLA');
       paragraph('Contenido reutilizable privado. No incluye paciente, consulta, seguridad clínica, firma ni notas privadas.');
       const content=record?.content||{};
-      const form=document.createElement('form');form.id='rx_template_editor_form';form.className='ci-template-editor';
+      const form=document.createElement('form');form.id='rx_template_editor_form';form.className='ci-template-editor';form.dataset.rxTplContentSchema=String(content.content_schema_version===2?2:1);
       const name=document.createElement('label');name.className='ci-template-editor__field';
       name.innerHTML='<span class="form-label fw-semibold">Nombre de la plantilla</span>';
       const nameInput=document.createElement('input');nameInput.className='form-control';nameInput.name='template_name';nameInput.maxLength=160;nameInput.required=true;nameInput.value=record?.template_name||'';name.append(nameInput);form.append(name);
       const meds=document.createElement('div');meds.id='rx_tpl_editor_medications';meds.className='rx-template-medications';
-      const initial=content.medications?.length?content.medications:(rxTemplateCurrentMedications().length?rxTemplateCurrentMedications():[{}]);
+      const initial=content.medications?.length?content.medications:(rxTemplateCurrentMedications().length?rxTemplateCurrentMedications():[newStructuredPrescriptionMedication('tpl_1')]);
       initial.forEach((item,index)=>meds.append(medicationEditorRow(item,index)));form.append(meds);
       form.append(rxTemplateButton('+ Agregar medicamento','add-medication','btn-outline-primary'));
       const extras=document.createElement('div');extras.className='rx-template-editor-extras';
@@ -38978,6 +39112,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(action==='create'){renderEditor();return;}
         if(action==='edit'&&record){renderEditor(await rxTemplateRequest(`/${encodeURIComponent(record.uuid)}`));return;}
         if(action==='add-medication'){event.preventDefault();const box=rxTemplateBody.querySelector('#rx_tpl_editor_medications');box.append(medicationEditorRow({},box.children.length));return;}
+        if(action==='convert-medication'){
+          const row=button.closest('[data-rx-tpl-medication]');if(!row)return;
+          const legacy=Object.fromEntries(rxTemplateMedicationFields.map(field=>[field,row.querySelector(`[data-rx-tpl-field="${field}"]`)?.value?.trim()||'']));
+          const model={...legacy,medication_schema_version:2,regimen:emptyStructuredRegimen(),frequency:'',duration:'',
+            legacy_frequency_reference:legacy.frequency,legacy_duration_reference:legacy.duration};
+          row.replaceWith(medicationEditorRow(model,Number(row.dataset.rxTplMedication)||0));return;
+        }
         if(action==='remove-medication'){button.closest('[data-rx-tpl-medication]')?.remove();return;}
         if(action==='save-editor'){
           const payload=collectEditor();if(!payload)return;busy=true;
@@ -39010,24 +39151,35 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         if(trigger){event.preventDefault();event.stopPropagation();trigger.nextElementSibling.hidden=true;trigger.setAttribute('aria-expanded','false');trigger.focus();}
       }
     };
-    const onHidden=()=>{rxTemplateModal.removeEventListener('click',onClick);rxTemplateModal.removeEventListener('keydown',onKeydown,true);rxTemplateModal.removeEventListener('hidden.bs.modal',onHidden);rxTemplateModal.style.zIndex='';returnFocus?.focus?.();};
+    const onInput=(event)=>{const row=event.target.closest('[data-rx-tpl-medication]');if(row&&event.target.matches('[data-ne-rx-regimen],[data-ne-rx-regimen-toggle]'))syncRxRegimenVisibility(row);};
+    const onHidden=()=>{rxTemplateModal.removeEventListener('click',onClick);rxTemplateModal.removeEventListener('input',onInput);rxTemplateModal.removeEventListener('change',onInput);rxTemplateModal.removeEventListener('keydown',onKeydown,true);rxTemplateModal.removeEventListener('hidden.bs.modal',onHidden);rxTemplateModal.style.zIndex='';returnFocus?.focus?.();};
     rxTemplateModal.addEventListener('click',onClick);rxTemplateModal.addEventListener('keydown',onKeydown,true);rxTemplateModal.addEventListener('hidden.bs.modal',onHidden);
+    rxTemplateModal.addEventListener('input',onInput);rxTemplateModal.addEventListener('change',onInput);
     modal.show();rxTemplateModal.style.zIndex='1240';
     if(initialView==='save')renderSaveCurrent();else await renderLibrary();
   };
   els.rxUseTemplate?.addEventListener('click',()=>void openRxTemplateFlow('library'));
   els.rxSaveTemplate?.addEventListener('click',()=>void openRxTemplateFlow('save'));
+  const rxCanonicalPrescription = () => {
+    const medications=collectRxModal();
+    const structured=medications.filter(item=>Number(item.medication_schema_version)===2).length;
+    if(structured>0&&structured<medications.length)throw new Error('La receta combina pautas heredadas y estructuradas. Convierte o elimina las pautas heredadas antes de guardar.');
+    const schema=structured>0?2:1;
+    const items=medications.map((item,index)=>{
+      const common={item_id:/^[a-zA-Z0-9_-]+$/.test(item.uid)?item.uid:`item_${index+1}`,
+        name:item.name,presentation:item.presentation,dose:item.dose,route:item.route,quantity:item.quantity,
+        instructions:item.instructions,private_notes:item.private_notes};
+      return schema===2?{...common,regimen:cloneStructuredRegimen(item.regimen)}:
+        {...common,frequency:item.frequency,duration:item.duration};
+    });
+    return {...(schema===2?{medication_schema_version:2}:{}),items,observaciones:rxObservations?.value||''};
+  };
   const rxCanonicalBody = (scope) => ({
     document_type: 'prescription',
     context: { patient_id: scope.patientId, ...(!rxServerDraft?.is_reissue && scope.ctx.encounter_key ? { encounter_key: scope.ctx.encounter_key } : {}) },
     payload: {
       contract_version: 2,
-      prescription: { items: collectRxModal().map((item, index) => ({
-        item_id: /^[a-zA-Z0-9_-]+$/.test(item.uid) ? item.uid : `item_${index + 1}`,
-        name: item.name, presentation: item.presentation, dose: item.dose, route: item.route,
-        frequency: item.frequency, duration: item.duration, quantity: item.quantity,
-        instructions: item.instructions, private_notes: item.private_notes
-      })), observaciones: rxObservations?.value || '' },
+      prescription: rxCanonicalPrescription(),
       diagnostic_context: collectRxDiagnosticContext(),
       presentation: { version: 2, professional_header: rxPresentationMode() }
     }
@@ -39135,6 +39287,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     }
     finally {
       rxWriteBusy = false; rxPreview.disabled = false;
+      if (hostNext) hostNext.disabled = false;
       if (rxPresentationRefreshQueued && !rxReview?.classList.contains('d-none')) {
         rxPresentationRefreshQueued = false;
         void rxRefreshPreview();
@@ -39379,12 +39532,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   els.rxAdd?.addEventListener('click', () => {
     if (!els.rxGrid) return;
     const idx = els.rxGrid.querySelectorAll('.ne-rx-row').length;
-    const rowModel = normalizePrescriptionMedication({}, `rxm_${idx + 1}`);
+    const rowModel = newStructuredPrescriptionMedication(`rxm_${idx + 1}`);
     rowModel.__existing = false;
     els.rxGrid.insertAdjacentHTML('beforeend', rxRowHtml(idx, rowModel));
     const row = els.rxGrid.querySelectorAll('.ne-rx-row')[idx];
     if (row) {
       syncRowControlledStateFromInputs(row);
+      syncRxRegimenVisibility(row);
       applyMedicationAdministrationContextToRow(row, 'add');
       updateRxRowSummary(row);
       setRxRowState(row, 'expanded');
@@ -39437,8 +39591,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const del = e.target.closest('[data-ne-rx-del]');
     const dup = e.target.closest('[data-ne-rx-dup]');
     const edit = e.target.closest('[data-ne-rx-edit]');
+    const convert = e.target.closest('[data-ne-rx-convert]');
     const collapse = e.target.closest('[data-ne-rx-collapse]');
     const cancel = e.target.closest('[data-ne-rx-cancel]');
+    if (convert) {
+      const row=convert.closest('.ne-rx-row');if(!row)return;
+      const uid=String(row.dataset.neRxUid||'').trim();
+      const legacy=collectRxModal().find(item=>item.uid===uid)||normalizePrescriptionMedication({},uid);
+      const converted=normalizePrescriptionMedication({...legacy,medication_schema_version:2,
+        regimen:emptyStructuredRegimen(),frequency:'',duration:'',
+        legacy_frequency_reference:legacy.frequency,legacy_duration_reference:legacy.duration,__existing:true},uid);
+      row.insertAdjacentHTML('afterend',rxRowHtml(Number(row.dataset.neRxRow)||0,converted));
+      const replacement=row.nextElementSibling;row.remove();
+      if(replacement){syncRowControlledStateFromInputs(replacement);syncRxRegimenVisibility(replacement);
+        applyQuantityModeForRow(replacement);setRxRowState(replacement,'expanded');}
+      setRxFeedback('Confirma la administración y la duración antes de continuar.','muted');
+      rxReviewedFingerprint='';resetPrescriptionAnalysisDraft();refreshRxRowsVisuals();return;
+    }
     if (edit) {
       const row = edit.closest('.ne-rx-row');
       if (!row) return;
@@ -39469,7 +39638,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       } else {
         row.remove();
         if (!els.rxGrid?.querySelector('.ne-rx-row')) {
-          const first = normalizePrescriptionMedication({}, 'rxm_1');
+          const first = newStructuredPrescriptionMedication('rxm_1');
           first.__existing = false;
           els.rxGrid.innerHTML = rxRowHtml(0, first);
           setRxRowState(els.rxGrid.querySelector('.ne-rx-row'), 'expanded');
@@ -39494,6 +39663,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const inserted = els.rxGrid.querySelectorAll('.ne-rx-row')[idx];
       if (inserted) {
         inserted.setAttribute('data-ne-rx-existing', '1');
+        syncRxRegimenVisibility(inserted);
         updateRxRowSummary(inserted);
         setRxRowState(inserted, 'collapsed');
       }
@@ -39506,7 +39676,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const rows = els.rxGrid ? els.rxGrid.querySelectorAll('.ne-rx-row') : [];
       del.closest('.ne-rx-row')?.remove();
       if (rows.length === 1 && els.rxGrid) {
-        const first = normalizePrescriptionMedication({}, 'rxm_1');
+        const first = newStructuredPrescriptionMedication('rxm_1');
         first.__existing = false;
         els.rxGrid.innerHTML = rxRowHtml(0, first);
         setRxRowState(els.rxGrid.querySelector('.ne-rx-row'), 'expanded');
@@ -39519,6 +39689,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   els.rxGrid?.addEventListener('input', (e) => {
     const activeRow = e.target.closest('.ne-rx-row');
     const fieldInput = e.target.closest('[data-ne-rx]');
+    const regimenInput = e.target.closest('[data-ne-rx-regimen],[data-ne-rx-regimen-toggle]');
     if (activeRow) {
       if (fieldInput) {
         const fieldName = String(fieldInput.getAttribute('data-ne-rx') || '').trim();
@@ -39527,6 +39698,11 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       }
       syncRowControlledStateFromInputs(activeRow);
       updateRxRowSummary(activeRow);
+      if (regimenInput) {
+        const repeat=activeRow.querySelector('[data-ne-rx-regimen="administration.repeat_mode"]')?.value||'';
+        if(repeat!=='REPEATABLE')activeRow.querySelectorAll('[data-ne-rx-regimen-toggle]').forEach(input=>{input.checked=false;});
+        syncRxRegimenVisibility(activeRow);applyQuantityModeForRow(activeRow);rxReviewedFingerprint='';
+      }
     }
     const nameInput = e.target.closest('[data-ne-rx="name"]');
     if (nameInput) {
@@ -39579,6 +39755,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     resetPrescriptionAnalysisDraft();
     updateRxAnalysisActionState();
     refreshRxRowsVisuals();
+  });
+  els.rxGrid?.addEventListener('change', (e) => {
+    const row=e.target.closest('.ne-rx-row');
+    if(!row||!e.target.matches('[data-ne-rx-regimen],[data-ne-rx-regimen-toggle]'))return;
+    const repeat=row.querySelector('[data-ne-rx-regimen="administration.repeat_mode"]')?.value||'';
+    if(repeat!=='REPEATABLE')row.querySelectorAll('[data-ne-rx-regimen-toggle]').forEach(input=>{input.checked=false;});
+    syncRxRegimenVisibility(row);applyQuantityModeForRow(row);rxReviewedFingerprint='';
   });
   // Safari/blur race guard: commit chip value on mousedown before focusout collapses quick chips.
   els.rxGrid?.addEventListener('mousedown', (e) => {
