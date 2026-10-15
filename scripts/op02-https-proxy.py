@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Loopback-only TLS front door for the persistent OP02 environment."""
+import os
 import argparse
 import http.client
 import http.server
@@ -7,7 +8,9 @@ import ssl
 
 HOP = {'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade'}
 CANONICAL_SESSION_COOKIE = '__Host-mxmed_session'
-QA_SESSION_COOKIE = '__Host-mxmed_op02_session'
+REHEARSAL = os.environ.get('MXMED_OP_UI03_REHEARSAL') == '1'
+QA_SESSION_COOKIE = '__Host-mxmed_opui03_session' if REHEARSAL else '__Host-mxmed_op02_session'
+HOST = '127.0.0.1:8446' if REHEARSAL else '127.0.0.1:8445'
 
 def backend_cookie_header(raw):
     mapped=[]
@@ -22,7 +25,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     server_version = 'MXMEDOP02TLS'
     def log_message(self, *_): pass
     def run(self):
-        if self.headers.get_all('Host') != ['127.0.0.1:8445']:
+        if self.headers.get_all('Host') != [HOST]:
             self.send_error(421); return
         lengths = self.headers.get_all('Content-Length') or []
         if self.headers.get('Transfer-Encoding') or len(lengths) > 1:
@@ -36,8 +39,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         connection = http.client.HTTPConnection('127.0.0.1', self.server.backend_port, timeout=30)
         excluded = HOP | {v.strip().lower() for v in self.headers.get('Connection','').split(',')}
         headers = {k:v for k,v in self.headers.items() if k.lower() not in excluded and k.lower() not in {'host','content-length'} and not k.lower().startswith('x-forwarded-')}
-        if 'Cookie' in headers: headers['Cookie']=backend_cookie_header(headers['Cookie'])
-        headers.update({'Host':'127.0.0.1:8445','Connection':'close'})
+        # HTTP header names are case-insensitive (including HTTP/2 browser tooling).
+        cookie_keys=[key for key in headers if key.lower()=='cookie']
+        if cookie_keys:
+            raw='; '.join(headers.pop(key) for key in cookie_keys)
+            headers['Cookie']=backend_cookie_header(raw)
+        headers.update({'Host':HOST,'Connection':'close'})
         try:
             connection.request(self.command,self.path,body=body,headers=headers)
             response=connection.getresponse(); payload=response.read()
@@ -61,6 +68,6 @@ class Server(http.server.ThreadingHTTPServer):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--cert',required=True);parser.add_argument('--key',required=True);parser.add_argument('--backend-port',type=int,default=8094)
-    args=parser.parse_args(); server=Server(('127.0.0.1',8445),Handler,args.backend_port)
+    args=parser.parse_args(); server=Server(('127.0.0.1',8446 if REHEARSAL else 8445),Handler,args.backend_port)
     context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);context.minimum_version=ssl.TLSVersion.TLSv1_2;context.load_cert_chain(args.cert,args.key)
     server.socket=context.wrap_socket(server.socket,server_side=True);server.serve_forever()

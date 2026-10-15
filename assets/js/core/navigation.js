@@ -474,7 +474,9 @@ $(document).on('click', '.mx-hb-account-menu [data-account-panel]', function(ev)
 /* ===== Restaurar estado previo ===== */
 $(function(){
   // Forzar mostrar Actividad (RESUMEN) al recargar
-  let lastPanel = 'p-resumen';
+  let lastPanel = document.body.dataset.operatorComposition === 'canonical'
+    ? (document.getElementById(location.hash.slice(1))?.id || (document.getElementById('p-ag-operadores') ? 'p-ag-operadores' : document.getElementById('p-ag-admin') ? 'p-ag-admin' : 'p-operator-inbox'))
+    : 'p-resumen';
   localStorage.setItem('mxmed_last_panel', lastPanel);
   localStorage.removeItem('mxmed_menu_group');
   showPanel(lastPanel);
@@ -603,6 +605,7 @@ $(function(){
 // Cargar panel Manejo hospitalario (JS) sin tocar el HTML base.
 (function(){
   try{
+    if(document.body.dataset.operatorComposition === 'canonical') return;
     const src = 'assets/js/manejo-hospitalario.js';
     const exists = Array.from(document.scripts || []).some(s => (s.getAttribute('src') || '').includes('manejo-hospitalario.js'));
     if(exists) return;

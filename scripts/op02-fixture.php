@@ -6,7 +6,7 @@ Identity\Http\IdentityHttpComposition::registerAutoloader();
 Identity\Operators\OperatorQaConfiguration::assertEnabled();
 // Schema installation is CLI-only with the local migration administrator, never
 // the HTTP runtime user. No global MySQL option or SUPER grant is changed.
-$p=new PDO('mysql:host=127.0.0.1;port=3306;dbname='.Identity\Operators\OperatorQaConfiguration::DATABASE.';charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+$p=new PDO('mysql:host=127.0.0.1;port=3306;dbname='.Identity\Operators\OperatorQaConfiguration::database().';charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 if((int)$p->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='auth_accounts'")->fetchColumn()>0
     &&(int)$p->query('SELECT COUNT(*) FROM auth_accounts')->fetchColumn()>0){echo "OP02_FIXTURE=EXISTS\n";exit;}
 $root=dirname(__DIR__);

@@ -225,7 +225,13 @@
   }
 
   function applyAuthenticated(payload) {
-    const marker = String(payload.application_access.context.account.id || '') + ':' + String(payload.csrf_token || '');
+    const context = payload.application_access.context;
+    // The isolated administrative composition supplies an opaque, server-bound
+    // session identity. A new CSRF nonce alone is not a session rotation.
+    const scopedMarker = context.workspace === 'agenda_operators'
+      && /^[a-f0-9]{64}$/.test(String(context.request_session_marker || ''))
+      ? context.request_session_marker : String(payload.csrf_token || '');
+    const marker = String(context.account.id || '') + ':' + scopedMarker;
     if (sessionMarker && marker !== sessionMarker) generation += 1;
     sessionMarker = marker;
     manager.context = payload.application_access.context;

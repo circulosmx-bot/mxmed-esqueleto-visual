@@ -47,7 +47,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
     public static function isolated(\Identity\Http\IdentityHttpComposition $identity, CanonicalAuditWriter $audit, IsolatedInvitationOutbox $outbox): self
     {
         OperatorQaConfiguration::assertEnabled($identity->pdo());
-        return new self($identity->pdo(),$identity->sessions(),$identity->csrf(),$audit,$outbox,new \Identity\Contracts\SystemClock(),OperatorQaConfiguration::ORIGIN);
+        return new self($identity->pdo(),$identity->sessions(),$identity->csrf(),$audit,$outbox,new \Identity\Contracts\SystemClock(),OperatorQaConfiguration::origin());
     }
 
     /** All mutation inputs pass canonical Identity session + authenticated CSRF.

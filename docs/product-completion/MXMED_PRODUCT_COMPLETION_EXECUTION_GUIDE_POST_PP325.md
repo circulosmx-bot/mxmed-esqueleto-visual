@@ -1521,3 +1521,7 @@ PLATFORM_BACKOFFICE_IMPLEMENTATION_AUTHORIZED=false
 GIT_PROMOTION_AUTHORIZED=false
 NEXT_REQUIRED_ACTION=C3_ISOLATED_PHYSICAL_VALKEY_VALIDATION
 ```
+
+### OP-UI03 — original application UI integration
+
+The Director rejected OP02’s standalone visual shell. [OP-UI03](../identity/OP-UI03_ORIGINAL_UI_INTEGRATION.md) routes the isolated composition through `private-app.php`, shares the original sidebar/Operators/Agenda/calendar/modals, and binds them to the existing canonical OP01/OP02 services. The rejected parallel page is retired. Normal templates retain their rendered DOM and initialization order; clinical authority, real memberships and migration activation remain unchanged. Mutation QA uses a separate disposable UI03 schema; persistent OP02/QA05 are preserved. Automated browser evidence is distinct from Director Safari acceptance and from an authenticated normal-local visual comparison.

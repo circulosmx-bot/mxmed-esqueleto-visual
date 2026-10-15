@@ -20,6 +20,16 @@ final class OperatorQaHttp
         $writer=new CanonicalAuditWriter(CanonicalAuditPolicyRegistry::canonical(),new CanonicalAuditMetadataSanitizer(),new TrustedAuditContextValidator(),new RandomAuditUuidProvider(),new SystemAuditUtcClock(),new HmacSha256AuditIpHasher(new EnvironmentAuditSecretProvider()),new CoarseAuditUserAgentSummarizer(),new IsolatedOperatorAuditTransaction($this->pdo),new CanonicalAuditSealer(new CanonicalAuditSerializer()),new AuditV1PhysicalMapper());
         $this->operators=ProfileOperatorService::isolated($this->identity,$writer,$this->outbox);
     }
+    /** Presentation context only. Never resolves or grants clinical authority. */
+    public function privateContext(array $state): array
+    {
+        $record=$this->identity->sessions()->validate($this->session())->record();
+        if($record===null) self::deny(401);
+        return ['workspace'=>'agenda_operators','request_session_marker'=>hash_hmac('sha256','op-ui03-presentation-session:'.(string)$record->tokenDigest(),(string)getenv('MXMED_PREVIEW_PEPPER')),'account'=>['id'=>$state['account_id'],'display_name'=>$state['alias']],
+            'professional'=>['doctor_id'=>$state['profile']['id']??'', 'display_name'=>$state['profile']['name']??'Invitaciones',
+                'role'=>$state['owner']?'owner':'operator','scope'=>'profile'],
+            'operator'=>$state,'capabilities'=>[],'session'=>['idle_expires_at'=>$record->expiresAt()->format(DATE_ATOM),'absolute_expires_at'=>$record->absoluteExpiresAt()->format(DATE_ATOM)]];
+    }
     public static function json(array $data,int $status=200): never
     {http_response_code($status);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_THROW_ON_ERROR);exit;}
     public static function deny(int $status=403): never
@@ -28,7 +38,7 @@ final class OperatorQaHttp
     {
         $token=(string)($_COOKIE['__Host-mxmed_session']??'');$d=$this->identity->sessions()->validate($token);
         if(!$d->allowed())self::deny(401);
-        $origin=(string)($_SERVER['HTTP_ORIGIN']??'');if($origin!==''&&$origin!==OperatorQaConfiguration::ORIGIN)self::deny();
+        $origin=(string)($_SERVER['HTTP_ORIGIN']??'');if($origin!==''&&$origin!==OperatorQaConfiguration::origin())self::deny();
         return $token;
     }
     public function csrf(string $session): string
@@ -36,7 +46,7 @@ final class OperatorQaHttp
         $csrf=(string)($_SERVER['HTTP_X_CSRF_TOKEN']??'');$d=$this->identity->sessions()->validate($session);
         if(!$d->allowed())self::deny(401);
         if(!$this->identity->csrf()->validAuthenticated($csrf,$d->record()->tokenDigest()))self::deny();
-        if(!in_array($_SERVER['REQUEST_METHOD'],['GET','HEAD'],true)&&($_SERVER['HTTP_ORIGIN']??'')!==OperatorQaConfiguration::ORIGIN)self::deny();
+        if(!in_array($_SERVER['REQUEST_METHOD'],['GET','HEAD'],true)&&($_SERVER['HTTP_ORIGIN']??'')!==OperatorQaConfiguration::origin())self::deny();
         return $csrf;
     }
     public function body(): array
@@ -54,7 +64,7 @@ final class OperatorQaHttp
         $session=$this->session();$state=$this->operators->snapshot($session);$method=$_SERVER['REQUEST_METHOD'];
         if($path==='/api/identity/index.php/current-session'&&$method==='GET'){
             $d=$this->identity->sessions()->validate($session);
-            self::json(['authenticated'=>true,'state'=>'AUTHENTICATED','account_status'=>'active','application_access'=>['allowed'=>true,'reason'=>'isolated_bounded_operator_workspace','context'=>['workspace'=>'agenda_operators']],
+            self::json(['authenticated'=>true,'state'=>'AUTHENTICATED','account_status'=>'active','application_access'=>['allowed'=>true,'reason'=>'isolated_bounded_operator_workspace','context'=>$this->privateContext($state)],
                 'csrf_token'=>$this->identity->csrf()->issueAuthenticated($d->record()->tokenDigest()),'idle_expires_at'=>$d->record()->expiresAt()->format(DATE_ATOM),'absolute_expires_at'=>$d->record()->absoluteExpiresAt()->format(DATE_ATOM)]);
         }
         $csrf=$this->csrf($session);
@@ -81,7 +91,7 @@ final class OperatorQaHttp
                 $s=$this->pdo->prepare("SELECT i.profile_doctor_id FROM auth_profile_operator_invitations i JOIN auth_accounts a ON a.email_normalized=i.email_normalized WHERE i.invitation_id=? AND a.account_id=? AND a.status='active' AND a.email_verified_at IS NOT NULL");$s->execute([$input['invitation_id']??'',$d->context()->accountId()]);$profile=$s->fetchColumn();if(!is_string($profile))self::deny();
             }else{$profile=$this->profile($state,$input);if(!$state['owner'])self::deny();}
             $input['reason']=in_array($action,['accept','reject'],true)?'INVITEE_DECISION':'OWNER_REQUEST';
-            self::json(['ok'=>true,'data'=>$this->operators->command($session,$csrf,OperatorQaConfiguration::ORIGIN,$profile,(string)($body['command_id']??''),$action,$input)]);
+            self::json(['ok'=>true,'data'=>$this->operators->command($session,$csrf,OperatorQaConfiguration::origin(),$profile,(string)($body['command_id']??''),$action,$input)]);
         }
         if($path==='/api/profile-operators/index.php/open-invitation'&&$method==='POST'){
             $body=$this->body();$d=$this->identity->sessions()->validate($session);$id=(string)($body['invitation_id']??'');
@@ -105,7 +115,7 @@ final class OperatorQaHttp
         elseif(preg_match('~^appointments/([A-Za-z0-9_-]+)/cancel$~D',$suffix,$m)&&$method==='POST'){$cap='agenda.appointments.cancel';$id=$m[1];}
         elseif($suffix==='availability'&&$method==='GET')$cap='agenda.availability.read';
         else self::deny(); // Includes ALL legacy operators/migration/lifecycle/settings aliases.
-        $result=$this->operators->executeAgenda($session,$csrf,OperatorQaConfiguration::ORIGIN,$profile,$cap,(int)($_SERVER['HTTP_X_GRANT_REVISION']??-1),function(array $actor)use($profile,$input,$method,$cap,$id):array{
+        $result=$this->operators->executeAgenda($session,$csrf,OperatorQaConfiguration::origin(),$profile,$cap,(int)($_SERVER['HTTP_X_GRANT_REVISION']??-1),function(array $actor)use($profile,$input,$method,$cap,$id):array{
             require_once dirname(__DIR__,2).'/agenda/controllers/AppointmentWriteController.php';
             require_once dirname(__DIR__,2).'/agenda/helpers/db_helpers.php';
             require_once dirname(__DIR__,2).'/agenda/controllers/AvailabilityController.php';
@@ -116,14 +126,22 @@ final class OperatorQaHttp
                 if(!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$from)||!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$to)||$to<=$from||strtotime($to)-strtotime($from)>32*86400)throw new \DomainException('invalid_range');
                 $rows=(new \Agenda\Repositories\AppointmentsRepository($this->pdo))->listByRange($from,$to,$profile,null,200);
                 // No contact, clinical reason, flags, diagnosis or record hydration.
-                $rows=array_map(fn($r)=>array_intersect_key($r,array_flip(['appointment_id','consultorio_id','start_at','end_at','modality','status'])),$rows);
+                $display=$this->pdo->prepare("SELECT p.display_name FROM patients_patients p JOIN patients_doctor_links l ON l.patient_id=p.patient_id WHERE p.patient_id=? AND l.doctor_id=? AND l.status='active' AND p.status='active'");
+                $rows=array_map(function($r)use($display,$profile){
+                    $display->execute([$r['patient_id']??'',$profile]);$name=$display->fetchColumn();
+                    return array_intersect_key($r,array_flip(['appointment_id','consultorio_id','start_at','end_at','modality','status']))
+                        +['patient_name'=>is_string($name)?$name:'Paciente'];
+                },$rows);
                 return ['ok'=>true,'data'=>$rows];
             }
             if($cap==='agenda.availability.read'){
                 $office=(string)($_GET['consultorio_id']??'');$this->office($profile,$office);
                 $c=new \Agenda\Controllers\AvailabilityController($this->pdo);$c->setActorContext($context);$r=$c->index(['doctor_id'=>$profile,'consultorio_id'=>$office,'date'=>$_GET['date']??'','slot_minutes'=>30]);
                 if(($r['ok']??false)!==true)return $r;
-                return ['ok'=>true,'data'=>array_intersect_key($r['data']??[],array_flip(['slots','windows','date','consultorio_id','slot_minutes','available_slots','availability']))];
+                $data=array_intersect_key($r['data']??[],array_flip(['slots','windows','date','consultorio_id','slot_minutes','available_slots','availability']));
+                $s=$this->pdo->prepare("SELECT override_id,start_at,end_at,consultorio_id FROM agenda_availability_overrides WHERE doctor_id=? AND consultorio_id=? AND type='close' AND start_at < DATE_ADD(?,INTERVAL 1 DAY) AND end_at > ? AND is_active=1");
+                $s->execute([$profile,$office,$_GET['date']??'',$_GET['date']??'']);$data['closed_windows']=$s->fetchAll();
+                return ['ok'=>true,'data'=>$data];
             }
             $writer=new \Agenda\Controllers\AppointmentWriteController($this->pdo);$writer->setActorContext($context);
             $common=['actor_role'=>$context['actor_role'],'actor_id'=>$actor['account_id'],'created_by_role'=>$context['actor_role'],'created_by_id'=>$actor['account_id'],'channel_origin'=>'operator_workspace','doctor_id'=>$profile,'notify_patient'=>false,'contact_method'=>'none'];

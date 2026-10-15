@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Real HTTPS security QA; synthetic OP02 DB only, no token/credential output."""
-import datetime, hashlib, http.cookiejar, importlib.util, json, pathlib, ssl, subprocess, urllib.request, urllib.error, uuid
+import os, datetime, hashlib, http.cookiejar, importlib.util, json, pathlib, ssl, subprocess, urllib.request, urllib.error, uuid
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-SUPPORT=pathlib.Path.home()/'Library/Application Support/MXMED/op02-admin'
-BASE='https://127.0.0.1:8445';DB='mxmed_gate4d_preview_op02'
+REHEARSAL=os.environ.get('MXMED_OP_UI03_REHEARSAL')=='1'
+SUPPORT=pathlib.Path.home()/'Library/Application Support/MXMED'/('opui03-rehearsal' if REHEARSAL else 'op02-admin')
+BASE='https://127.0.0.1:8446' if REHEARSAL else 'https://127.0.0.1:8445';DB='mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'
 CREDS=json.loads((SUPPORT/'credentials.json').read_text());RESULTS={};MATRIX=[]
 spec=importlib.util.spec_from_file_location('op02env',ROOT/'scripts/op02-env.py');envmod=importlib.util.module_from_spec(spec);spec.loader.exec_module(envmod)
 BEFORE=envmod.snapshot_normal()
@@ -91,9 +92,10 @@ def run():
         owner.cmd('grants',{'membership_id':ma['membership_id'],'expected_revision':3,'capabilities':ALL});a.state()
         check(a.request('POST','/api/agenda/index.php/appointments/op02-appointment-1/cancel',{'expected_start_at':start})[0]==403,'cross physician resource');check(a.request('GET','/api/agenda/index.php/appointments?doctor_id=op02-other')[0]==403,'profile switching')
         forged=payload|{'doctor_id':'op02-other'};check(a.request('POST','/api/agenda/index.php/appointments',forged)[0]==403,'forged body scope');check(a.request('POST','/api/agenda/index.php/appointments',payload|{'patient_id':'p_op02patient0002'},{'Idempotency-Key':str(uuid.uuid4())})[0]==403,'cross physician booking subject');passed(33,'cross_profile_server_scope')
-        status,_,html=a.request('GET','/private-app.php');check(status==200 and 'mxmed-private-bootstrap' not in html and 'OP02_PRIVATE_CANARY' not in html and 'clinical_record' not in html and '/assets/js/app.js' not in html,'bounded shell')
+        status,_,html=a.request('GET','/private-app.php');check(status==200 and 'id="mmSidebar"' in html and 'id="ag_calendar"' in html and 'id="p-expediente"' not in html and 'OP02_PRIVATE_CANARY' not in html and 'clinical_record' not in html and '/assets/js/app.js' not in html,'bounded shell')
         bootstrap=a.state();check('notes_admin' not in json.dumps(bootstrap) and 'birthdate' not in json.dumps(bootstrap),'minimal hydration');passed(34,'bounded_shell_no_clinical_hydration')
         aliases=['/api/agenda/index.php/operators','/api/agenda/index.php/operators/migration/apply','/api/agenda/index.php/operators/legacy/pause','/api/agenda/index.php/operators/legacy/reactivate','/api/agenda/index.php/operators/legacy/restore','/api/agenda/index.php/appointments/'+appointment+'/confirm','/api/agenda/index.php/appointments/'+appointment+'/no_show','/api/agenda/index.php/appointments/'+appointment+'/no-show','/api/agenda/index.php/waitlist','/modules/agenda/controllers/OperatorsController.php','/private-app.php/alternate','/api/_lib/clinical_documents.php','/api/media/index.php','/api/profiles/index.php/private/doctor-contact-points']
+        aliases+=['/assets/js/app.js','/partials/private-app/agenda.php','/partials/private-app/operators.php','/partials/private-app/operator-inbox.php','/modules/identity/operators/operator-workspace.php']
         # All existing PHP API entry files, including alternate dispatch/download adapters.
         aliases+=['/'+str(p.relative_to(ROOT)) for p in (ROOT/'api').rglob('*.php') if p.name!='mxmed-db.config.php']
         for path in sorted(set(aliases)):
@@ -121,7 +123,7 @@ def run():
         owner.cmd('revoke',{'membership_id':mb['membership_id'],'expected_revision':3});check(owner.overview()['available']==1,'revocation frees');check(appointments(b)[0]==403,'revoked no action');passed(17,'revoke_frees_seat')
         check(sql('SELECT COUNT(*) FROM auth_operator_invitation_outbox WHERE ciphertext IS NOT NULL;')=='0','closed tokens no longer retained in outbox')
         passed(45,'local_encrypted_outbox_no_mail_provider')
-        listeners=subprocess.run(['lsof','-nP','-iTCP:8445','-iTCP:8094','-iTCP:6387','-sTCP:LISTEN'],capture_output=True,text=True,check=True).stdout
+        listeners=subprocess.run(['lsof','-nP',*[('-iTCP:'+str(p)) for p in envmod.PORTS.values()],'-sTCP:LISTEN'],capture_output=True,text=True,check=True).stdout
         check('*:' not in listeners and '127.0.0.1' in listeners,'loopback listeners');passed(46,'loopback_actual_listeners')
         # Retain the original physical SQL concurrency + dual-approval owner transition gates.
         regression=subprocess.run(['php',str(ROOT/'modules/identity/tests/OperatorFoundationTest.php')],capture_output=True,text=True)
@@ -136,4 +138,6 @@ def run():
         evidence=SUPPORT/'evidence';evidence.mkdir(mode=0o700,exist_ok=True)
         (evidence/'http-qa.json').write_text(json.dumps({'results':RESULTS,'denial_matrix':MATRIX},indent=2)+'\n')
 
-if __name__=='__main__':run()
+if __name__=='__main__':
+    if not REHEARSAL:raise SystemExit('Mutation QA requires MXMED_OP_UI03_REHEARSAL=1; persistent OP02 review data must be preserved.')
+    run()

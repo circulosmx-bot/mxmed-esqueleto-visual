@@ -4,6 +4,10 @@ Fecha: 2026-10-15. Baseline: `aa7184c8c49b171f89a969226acbb605e94a0eb6`, rama `u
 
 **Entrega funcional exclusivamente aislada.** No habilita operadores reales en normal-local, staging o producción. Conserva [OP-POL02](OP-POL02_NONMEDICAL_OPERATOR_IMPLEMENTATION_READINESS.md), las reglas Q01–Q04/Q12 de [OP-IMP01](OP-IMP01_OPERATOR_FOUNDATION.md) y la contención [CLIN-AUTH02A](../clinical/CLIN-AUTH02A_URGENT_CONTAINMENT.md).
 
+## Corrección OP-UI03
+
+La revisión física del Director rechazó la interfaz independiente de esta entrega. [OP-UI03](OP-UI03_ORIGINAL_UI_INTEGRATION.md) sustituye su shell/formularios por los componentes originales de `private-app.php`. La infraestructura canónica y las pruebas HTTP se conservan. Las instrucciones y capturas históricas de OP02 no acreditan aceptación visual. El estado persistente OP02 no se reinicia; las pruebas destructivas usan una base UI03 separada.
+
 ## Abrir la instancia verificada
 
 URL: **https://127.0.0.1:8445/private-app.php#p-ag-operadores**. Acceso: **https://127.0.0.1:8445/public/identity/acceso.php**.
@@ -20,7 +24,7 @@ El titular encuentra **OPERADORES** en la misma URL/ancla privada `p-ag-operador
 
 El invitado inicia sesión en Identity, abre **Mis invitaciones**, ve el perfil y permisos exactos y acepta o rechaza. No se muestra ni se copia un token. Abrir el mensaje entrega su secreto una sola vez; si se cierra sin responder, el titular debe reexpedir. La oferta anterior no puede aceptar permisos de la nueva.
 
-El operador recibe una proyección de Agenda con navegación acotada, no el HTML/bootstrap médico completo. CREATE sin READ puede crear y recibir la referencia de su propia cita sin consultar la lista. RESCHEDULE/CANCEL sin READ tienen un formulario de referencia/horario para una tarea facilitada por el titular; el servidor comprueba el recurso real, su perfil y versión. Ninguno de esos permisos implica otros.
+El operador recibe una proyección de Agenda con navegación acotada, no el HTML/bootstrap médico completo. CREATE sin READ puede crear y recibir la referencia de su propia cita sin consultar la lista. El formulario independiente de referencia/horario de OP02 fue retirado por OP-UI03; RESCHEDULE/CANCEL sin READ conservan únicamente su contrato HTTP independiente, sin implicar acceso al listado; el servidor comprueba el recurso real, su perfil y versión. Ninguno de esos permisos implica otros.
 
 ## Recursos y procedimientos
 
@@ -114,13 +118,13 @@ CanonicalAuditWriter, sealer, mapper y eventos OP-IMP01 se reutilizan. El evento
 ## Evidencia ejecutada
 
 ```sh
-# Requiere fixture OP02 vacío; muta sólo datos sintéticos OP02.
-python3 scripts/op02-env.py reset
-python3 scripts/op02-env.py start
-python3 scripts/op02-http-qa.py
+# OP-UI03: las pruebas mutantes usan únicamente el fixture UI03 desechable.
+MXMED_OP_UI03_REHEARSAL=1 python3 scripts/op02-env.py reset
+MXMED_OP_UI03_REHEARSAL=1 python3 scripts/op02-env.py start
+MXMED_OP_UI03_REHEARSAL=1 python3 scripts/op02-http-qa.py
 
 # Seis casos, reinicia sólo OP02 entre casos; conserva evidencia.
-python3 scripts/op02-browser-qa.py --reset-between-cases
+python3 scripts/op-ui03-browser-qa.py
 ```
 
 - **OP02_01–48: PASS.** HTTP real con cookies Identity/Valkey, cinco grants independientes, cupo/lifecycle, outbox, replay/oferta, revocación inmediata y scope; no son assertions de navegación.
