@@ -18,6 +18,14 @@ require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.ph
 require_once __DIR__ . '/../../modules/agenda/controllers/AmbiguousPatientReconciliationController.php';
 require_once __DIR__ . '/../../modules/agenda/repositories/OperatorsRepository.php';
 require_once __DIR__ . '/../../modules/agenda/composition/AgendaAuthorityCompositionRoot.php';
+require_once __DIR__ . '/../../modules/agenda/security/AgendaActorAuthorityResolver.php';
+require_once __DIR__ . '/../../modules/agenda/security/AgendaAuthorizationTarget.php';
+require_once __DIR__ . '/../../modules/agenda/security/AgendaAuthorityResolution.php';
+require_once __DIR__ . '/../../modules/agenda/security/AgendaServerAuthorityContext.php';
+require_once __DIR__ . '/../../modules/agenda/security/ClientAuthorityClaims.php';
+require_once __DIR__ . '/../../modules/agenda/security/OperatorBinding.php';
+require_once __DIR__ . '/../../modules/agenda/security/PrivateAgendaRoutePolicy.php';
+require_once __DIR__ . '/../../modules/agenda/http/Qa05AgendaAuthorityGate.php';
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php';
 require_once __DIR__ . '/../../modules/identity/http/PrivateApplicationAccessResolver.php';
@@ -41,6 +49,7 @@ use Agenda\Controllers\PublicAppointmentsController;
 use Agenda\Controllers\PublicOtpController;
 use Agenda\Controllers\AmbiguousPatientReconciliationController;
 use Agenda\Repositories\OperatorsRepository;
+use Agenda\Http\Qa05AgendaAuthorityGate;
 
 $cut01aAgendaConfig = require __DIR__ . '/../../modules/agenda/config/agenda.php';
 $cut01aCanonicalActorAuthorityEnabled = AgendaAuthorityCompositionRoot::canonicalActorAuthorityEnabled($cut01aAgendaConfig);
@@ -963,7 +972,9 @@ try {
     $actorRoleContext = ['role' => 'doctor', 'source' => 'fallback'];
     if (is_private_agenda_route($segments) && !is_public_agenda_route($segments)) {
         $payloadForRole = read_json_body();
-        $effectiveActorResult = resolveEffectiveAgendaActor($segments, (string)$method, $_GET, $payloadForRole);
+        $effectiveActorResult = Qa05AgendaAuthorityGate::enabled()
+            ? Qa05AgendaAuthorityGate::authorize($segments, (string)$method, $_GET, $payloadForRole, $_COOKIE, $_SERVER)
+            : resolveEffectiveAgendaActor($segments, (string)$method, $_GET, $payloadForRole);
         $contextResult = [
             'ok' => (bool)($effectiveActorResult['ok'] ?? false),
             'status' => (int)($effectiveActorResult['status'] ?? 0),

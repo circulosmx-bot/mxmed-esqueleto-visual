@@ -319,7 +319,18 @@
     }
     controllers.add(controller);
     try {
-      const response = await nativeFetch(input, Object.assign({}, init || {}, { signal: controller.signal }));
+      const guardedInit = Object.assign({}, init || {}, { signal: controller.signal });
+      try {
+        const raw = typeof input === 'string' ? input : input.url;
+        const url = new URL(raw, window.location.href);
+        const method = String(guardedInit.method || (typeof input !== 'string' ? input.method : 'GET') || 'GET').toUpperCase();
+        if (url.origin === window.location.origin && url.pathname.startsWith('/api/agenda/') && !['GET', 'HEAD'].includes(method)) {
+          const headers = new Headers(guardedInit.headers || (typeof input !== 'string' ? input.headers : undefined));
+          headers.set('X-CSRF-Token', manager.csrfToken);
+          guardedInit.headers = headers;
+        }
+      } catch (_) {}
+      const response = await nativeFetch(input, guardedInit);
       if (requestGeneration !== generation || locked) throw new DOMException('Stale private response', 'AbortError');
       if (response.status === 401) await handleResourceUnauthorized(requestGeneration);
       if (response.status === 403) window.dispatchEvent(new CustomEvent('mxmed:authorization-denied', { detail: { input } }));

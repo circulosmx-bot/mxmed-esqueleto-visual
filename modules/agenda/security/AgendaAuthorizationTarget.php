@@ -24,7 +24,7 @@ final class AgendaAuthorizationTarget
         $this->action = (new SafeIdentifier($this->action))->value();
         $this->correlationId = (new SafeIdentifier($this->correlationId))->value();
         $this->requestId = (new SafeIdentifier($this->requestId))->value();
-        if (!in_array($this->method, ['GET', 'POST', 'PATCH', 'DELETE'], true)) throw new \InvalidArgumentException('unsupported_agenda_method');
+        if (!in_array($this->method, ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], true)) throw new \InvalidArgumentException('unsupported_agenda_method');
     }
 
     public function resource(): string { return $this->resource; }
