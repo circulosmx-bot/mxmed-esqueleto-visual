@@ -8785,17 +8785,18 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                         </div>
                         <div id="ne_rx_review" class="d-none">
                           <h6>Vista previa de receta</h6>
-                          <div class="small text-muted mb-2">Revisa el documento completo antes de firmarlo.</div>
-                          <fieldset class="ne-rx-presentation" id="ne_rx_presentation">
-                            <legend>PRESENTACIÓN DEL DOCUMENTO</legend>
-                            <div class="ne-rx-presentation-options" role="radiogroup" aria-label="Presentación del encabezado profesional">
-                              <label><input type="radio" name="ne_rx_professional_header" value="hidden"><span>SIN ENCABEZADO</span></label>
-                              <label><input type="radio" name="ne_rx_professional_header" value="data_only"><span>SÓLO DATOS PROFESIONALES</span></label>
-                              <label><input type="radio" name="ne_rx_professional_header" value="logo_and_data" checked><span>LOGOTIPO Y DATOS PROFESIONALES</span></label>
-                            </div>
-                            <div class="small ne-rx-presentation-status" id="ne_rx_presentation_status" role="status" aria-live="polite"></div>
-                          </fieldset>
-                          <div id="ne_rx_preview_html" class="doc-base-sheet-frame"></div>
+                          <div class="ne-rx-preview-workspace">
+                            <fieldset class="ne-rx-presentation" id="ne_rx_presentation">
+                              <legend>Formato de encabezado</legend>
+                              <div class="ne-rx-presentation-options" role="radiogroup" aria-label="Formato del encabezado profesional">
+                                <label><input type="radio" name="ne_rx_professional_header" value="logo_and_data" checked><span><span class="material-symbols-outlined" aria-hidden="true">image</span>Logotipo y datos</span></label>
+                                <label><input type="radio" name="ne_rx_professional_header" value="data_only"><span><span class="material-symbols-outlined" aria-hidden="true">person</span>Sólo datos</span></label>
+                                <label><input type="radio" name="ne_rx_professional_header" value="hidden"><span><span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>Sin encabezado</span></label>
+                              </div>
+                              <div class="small ne-rx-presentation-status" id="ne_rx_presentation_status" role="status" aria-live="polite"></div>
+                            </fieldset>
+                            <div id="ne_rx_preview_html" class="doc-base-sheet-frame"></div>
+                          </div>
                           <div class="d-flex justify-content-end gap-2 mt-3 rx-engine-actions">
                             <button type="button" class="btn btn-outline-secondary" id="ne_rx_back_to_capture">Volver a editar</button>
                             <button type="button" class="btn btn-primary" id="ne_rx_save">Continuar a firmas</button>

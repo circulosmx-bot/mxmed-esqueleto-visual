@@ -23275,14 +23275,20 @@ button.mx-signature-remote{
 .rx-editor-embedded-body .ne-rx-added-head #ne_rx_add:hover,.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add:active{background:var(--rx-primary-action)!important;border-color:var(--rx-primary-action)!important;color:#fff!important}
 .rx-editor-embedded-body .ne-rx-added-head #ne_rx_add:focus-visible{outline:3px solid #78d7df;outline-offset:2px;box-shadow:0 0 0 1px #fff}
 .rx-editor-embedded-body .rx-medication-composition:has(.ne-rx-row[data-ne-rx-state="expanded"]) .ne-rx-added-head{display:none!important}
-.ne-rx-presentation{margin:0 0 10px;padding:10px;border:1px solid #b9dce2;border-radius:9px;background:#f8fcfd}
-.ne-rx-presentation legend{float:none;width:auto;margin:0 0 7px;padding:0;color:#07536e;font-size:.78rem;font-weight:800;letter-spacing:.05em}
-.ne-rx-presentation-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.ne-rx-preview-workspace{position:relative;display:grid;grid-template-columns:210px minmax(0,1fr);align-items:start;gap:24px;margin-top:7px;padding:18px;border:1px solid #d6e4ea;border-radius:10px;background:#eef4f6;overflow:auto}
+.rx-editor-embedded-body .ne-rx-preview-workspace .doc-base-sheet-frame{min-width:0;padding:0;border:0;background:transparent}
+.ne-rx-presentation{align-self:start;width:210px;margin:18px 0 0;padding:14px;border:1px solid #c9d9df;border-radius:10px;background:#fff;box-shadow:0 5px 15px #173e501c}
+.ne-rx-presentation legend{float:none;width:auto;margin:0 0 9px;padding:0;color:#07536e;font-size:.82rem;font-weight:800;letter-spacing:0}
+.ne-rx-presentation-options{display:grid;grid-template-columns:1fr;gap:6px}
 .ne-rx-presentation-options label{position:relative;margin:0;cursor:pointer}
 .ne-rx-presentation-options input{position:absolute;inline-size:1px;block-size:1px;opacity:0}
-.ne-rx-presentation-options span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:7px 9px;border:1px solid #9cbfcb;border-radius:8px;background:#fff;color:#244b60;font-size:.72rem;font-weight:750;line-height:1.2;text-align:center}
-.ne-rx-presentation-options input:checked+span{border-color:#008fa4;background:#008fa4;color:#fff;box-shadow:0 1px 3px #006b7b2b}
+.ne-rx-presentation-options>label>span{display:grid;grid-template-columns:16px 20px 1fr;align-items:center;gap:7px;min-height:36px;padding:5px 8px;border:1px solid #b8cbd3;border-radius:7px;background:#fff;color:#244b60;font-size:.76rem;font-weight:750;line-height:1.2;text-align:left}
+.ne-rx-presentation-options>label>span::before{content:'';display:block;width:16px;height:16px;border:2px solid #7797a5;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px #fff}
+.ne-rx-presentation-options .material-symbols-outlined{font-size:19px;font-weight:500;line-height:1}
+.ne-rx-presentation-options input:checked+span{border-color:#008fa4;background:#e9f9fa;color:#07536e;box-shadow:inset 3px 0 0 #008fa4}
+.ne-rx-presentation-options input:checked+span::before{border-color:#008fa4;background:#008fa4}
 .ne-rx-presentation-options input:focus-visible+span{outline:3px solid #78d7df;outline-offset:2px}
-.ne-rx-presentation-status{min-height:1.2em;margin-top:6px;color:#526976}
+.ne-rx-presentation-status{min-height:1.2em;margin-top:7px;color:#526976;font-size:.7rem;line-height:1.25}
 .ne-rx-preview-loading{padding:28px;text-align:center;color:#526976}
-@media(max-width:850px){.rx-editor-embedded-body .ne-rx-added-head{align-items:stretch;flex-direction:column}.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add{align-self:flex-start;white-space:normal}.ne-rx-presentation-options{grid-template-columns:1fr}.ne-rx-presentation-options span{justify-content:flex-start;text-align:left}}
+@media(max-width:950px){.ne-rx-preview-workspace{grid-template-columns:1fr;gap:12px;padding:12px}.ne-rx-presentation{width:min(210px,100%);margin:0}.rx-editor-embedded-body .ne-rx-preview-workspace .doc-base-sheet-frame{width:100%}}
+@media(max-width:850px){.rx-editor-embedded-body .ne-rx-added-head{align-items:stretch;flex-direction:column}.rx-editor-embedded-body .ne-rx-added-head #ne_rx_add{align-self:flex-start;white-space:normal}}

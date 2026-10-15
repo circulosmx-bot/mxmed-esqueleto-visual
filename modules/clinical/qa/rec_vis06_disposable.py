@@ -56,7 +56,7 @@ with sync_playwright() as pw:
                 route.fulfill(status=503,content_type='application/json',body=json.dumps({'ok':False,'message':'preview_qa_failure'}));return
             logo='<img data-qa-logo src="/assets/mexico-medico.svg" alt="Logo médico">' if mode=='logo_and_data' else ''
             header='' if mode=='hidden' else f'<header data-qa-professional><strong>Leticia Muñoz Romo</strong>{logo}</header>'
-            html=f'<article data-qa-preview>{header}<h2>RECETA MÉDICA</h2><p>Marina Solís Vega</p><p>{payload["payload"]["prescription"]["items"][0]["name"]}</p>{"<p>Firma médica aplicada</p>" if signed else ""}</article>'
+            html=f'<article data-qa-preview class="rx-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe"><div class="doc-base-sheet-inner doc-base-body">{header}<h2>RECETA MÉDICA</h2><p>Marina Solís Vega</p><p>{payload["payload"]["prescription"]["items"][0]["name"]}</p>{"<p>Firma médica aplicada</p>" if signed else ""}</div></article>'
             route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'html':html,'payload':payload.get('payload')}}));return
         if '/prescription-qr-sessions' in url:
             qr_requests.append((req.method,url))
@@ -197,12 +197,41 @@ with sync_playwright() as pw:
     check('PREVIEW_FAILURE_FAILS_CLOSED',page.locator('#ne_rx_preview_html').inner_html()=='' and page.locator('[data-rx-host-next]').is_disabled())
     page.locator('input[name="ne_rx_professional_header"][value="logo_and_data"]').check()
     expect(page.locator('[data-qa-logo]')).to_be_visible()
+    check('SELECTOR_EXCLUDED_FROM_DOCUMENT_HTML',page.locator('#ne_rx_preview_html #ne_rx_presentation').count()==0
+          and 'Formato de encabezado' not in page.locator('#ne_rx_preview_html').inner_html())
+    desktop_geometry=page.evaluate("""()=>{const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};return {
+      workspace:rect('.ne-rx-preview-workspace'),card:rect('#ne_rx_presentation'),paper:rect('#ne_rx_preview_html [data-qa-preview]'),
+      options:[...document.querySelectorAll('.ne-rx-presentation-options>label>span')].map(e=>rect('.ne-rx-presentation-options>label:nth-child('+([...e.parentElement.parentElement.children].indexOf(e.parentElement)+1)+')>span')),
+      columns:getComputedStyle(document.querySelector('.ne-rx-preview-workspace')).gridTemplateColumns
+    }}""")
+    check('1440_900_SELECTOR_COMPACT',209 <= desktop_geometry['card']['width'] <= 212
+          and all(36 <= item['height'] <= 40 for item in desktop_geometry['options']))
+    check('1440_900_SELECTOR_LEFT_OF_PAPER',desktop_geometry['card']['right'] < desktop_geometry['paper']['left']
+          and desktop_geometry['card']['top'] < desktop_geometry['paper']['bottom'])
+    check('1440_900_NO_DOCUMENT_OVERLAP',desktop_geometry['card']['right'] <= desktop_geometry['paper']['left'])
+    check('1440_900_PAPER_READABLE',desktop_geometry['paper']['width'] >= 800)
+    selected_style=page.locator('input[name="ne_rx_professional_header"][value="logo_and_data"]+span').evaluate("e=>({background:getComputedStyle(e).backgroundColor,border:getComputedStyle(e).borderTopColor})")
+    check('SELECTED_STATE_TURQUOISE',selected_style=={'background':'rgb(233, 249, 250)','border':'rgb(0, 143, 164)'})
+    page.locator('input[name="ne_rx_professional_header"][value="logo_and_data"]').focus()
+    page.keyboard.press('ArrowDown')
+    expect(page.locator('input[name="ne_rx_professional_header"][value="data_only"]')).to_be_checked()
+    expect(page.locator('[data-qa-logo]')).to_have_count(0)
+    check('PRESENTATION_KEYBOARD_NAVIGATION',True)
+    page.locator('input[name="ne_rx_professional_header"][value="logo_and_data"]').check()
+    expect(page.locator('[data-qa-logo]')).to_be_visible()
     page.screenshot(path=str(OUT/'h-stage3-preview-1440x900.png'))
     for width,height,label in [(1366,768,'1366_768'),(820,1180,'820_1180')]:
         page.set_viewport_size({'width':width,'height':height})
         check(label+'_STAGE3_FIT',page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'))
         check(label+'_STAGE3_SELECTOR_VISIBLE',page.locator('#ne_rx_presentation').is_visible()
               and page.locator('input[name="ne_rx_professional_header"]').count()==3)
+        geometry=page.evaluate("""()=>{const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};return {
+          card:rect('#ne_rx_presentation'),paper:rect('#ne_rx_preview_html [data-qa-preview]'),
+          columns:getComputedStyle(document.querySelector('.ne-rx-preview-workspace')).gridTemplateColumns
+        }}""")
+        check(label+'_STAGE3_NO_OVERLAP',geometry['card']['right'] <= geometry['paper']['left'] if width>950 else geometry['card']['bottom'] <= geometry['paper']['top'])
+        check(label+'_STAGE3_LAYOUT',(' ' in geometry['columns']) if width>950 else (' ' not in geometry['columns']))
+        check(label+'_STAGE3_PAPER_READABLE',geometry['paper']['width'] >= (800 if width>950 else 650))
         page.locator('#ne_rx_presentation').scroll_into_view_if_needed()
         page.screenshot(path=str(OUT/f'h-stage3-preview-{width}x{height}.png'))
     page.set_viewport_size({'width':1440,'height':900})
