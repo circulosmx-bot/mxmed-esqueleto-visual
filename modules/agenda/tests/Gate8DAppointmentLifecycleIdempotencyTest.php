@@ -279,9 +279,9 @@ gate8dAssert($plan->failureAction() === 'rollback' && $plan->rollbackRequired() 
 // 83-94: byte-equivalence y preservación de gates previos.
 $root = dirname(__DIR__, 3);
 $protected = [
-    'api/agenda/index.php' => '3aaf635fe62c588f3168948f347274be2684c2fa28eccc844a0d66430276e3b1',
+    'api/agenda/index.php' => '436954c3459828faadcf98ee4e1639f0450d6490202c10815423fed3233d8557',
     'modules/agenda/tests/Gate8ACanonicalContractsTest.php' => 'efae63a8e5e353288a24e60770e0f7128df89c75411b6e6541c2daeda2637ecd',
-    'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '32623b79c7362d9ac07a8169b88ef24d37060e43c074eb6b9a81c20389394556',
+    'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '7a247ac3b82acaa647d49ff7bfd14df541415f586bb7c2e75b5e8f929e13f16c',
     'modules/agenda/contracts/ActorAuthorityContract.php' => 'b0332df721d4af0ebd38ad0ff1f9abf6cf5d8d3b6b3a418b892506bff3720a3b',
     'modules/agenda/contracts/AppointmentLifecycleContract.php' => 'b7a264a584ecb806437cb67b8d212985ac9e8f9a76b2eb7ac39340de663f2d3a',
     'modules/agenda/contracts/AuditEventContract.php' => '6afe5618f2c14ae57fb71b4910dd58a9f0e7ffb3b14c73c883ffd0a56824b70d',

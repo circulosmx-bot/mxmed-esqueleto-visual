@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS `doctor_contact_points` (
   `visibility_plan_min` VARCHAR(32) DEFAULT NULL,
   `status` VARCHAR(32) NOT NULL DEFAULT 'active',
   `sort_order` INT UNSIGNED NOT NULL DEFAULT 100,
+  `emergency_position` TINYINT UNSIGNED DEFAULT NULL,
 
   `source` VARCHAR(64) NOT NULL DEFAULT 'manual',
   `metadata_json` JSON DEFAULT NULL,
@@ -50,10 +51,22 @@ CREATE TABLE IF NOT EXISTS `doctor_contact_points` (
       END
     ) STORED,
 
+  `active_emergency_position` TINYINT
+    GENERATED ALWAYS AS (
+      CASE
+        WHEN `deleted_at` IS NULL AND `type` = 'emergency_phone'
+          THEN `emergency_position`
+        ELSE NULL
+      END
+    ) STORED,
+
   PRIMARY KEY (`contact_point_id`),
 
   UNIQUE KEY `uniq_dcp_active_value`
     (`doctor_id`, `type`, `active_normalized_value`),
+
+  UNIQUE KEY `uq_dcp_active_emergency_position`
+    (`doctor_id`, `active_emergency_position`),
 
   KEY `idx_dcp_doctor_status_scope`
     (`doctor_id`, `status`, `scope`, `sort_order`),
@@ -65,7 +78,20 @@ CREATE TABLE IF NOT EXISTS `doctor_contact_points` (
     (`doctor_id`, `consultorio_id`),
 
   KEY `idx_dcp_deleted`
-    (`doctor_id`, `deleted_at`)
+    (`doctor_id`, `deleted_at`),
+
+  CONSTRAINT `chk_dcp_emergency_scope`
+    CHECK (
+      (`type` = 'emergency_phone'
+        AND `consultorio_id` IS NULL
+        AND `emergency_position` IN (1, 2))
+      OR
+      (`type` <> 'emergency_phone' AND `emergency_position` IS NULL)
+    ),
+
+  CONSTRAINT `fk_dcp_doctor`
+    FOREIGN KEY (`doctor_id`) REFERENCES `profiles_doctors` (`doctor_id`)
+    ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;

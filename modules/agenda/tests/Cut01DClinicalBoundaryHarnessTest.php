@@ -148,7 +148,7 @@ cut01dClinicalAssert($readiness === [
 
 $protected = [
     'modules/agenda/services/ClinicalEncounterBridge.php' => 'faa3dda72331a8e2402b63c16ea655f77c362eb21abc32e8767a242e989eee10',
-    'modules/agenda/tests/Gate8DAppointmentLifecycleIdempotencyTest.php' => 'ae024a823c7654f55c7aa43ebdb736918244662890746163e8102224f8fc0279',
+    'modules/agenda/tests/Gate8DAppointmentLifecycleIdempotencyTest.php' => '0ed205051bd28f675a73e060d6d691818051b42686d50c149f795f434310695a',
     'modules/patients/tests/Gate8GPatientIdentityPersistenceMigrationTest.php' => '4e4f47e17ae7a2cb67c1c6bc1a21cae6127189c333c850c2ca5ac84791e97261',
     'modules/platform/contracts/AuditTrailPort.php' => '96b422a0833f8b5865619586c076ff0fb75b96c6b879fb6b8c501a2ef91aa21c',
     'modules/patients/identity/persistence/PatientIdentityPersistencePort.php' => '4a1fd1b522d53bece58c3927a32cb3b18af84093e3992389ea88804824248fb9',

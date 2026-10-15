@@ -88,7 +88,8 @@ final class PublicProfileController
         $consultorios = $this->mapConsultorios(
             $consultorioRows,
             $scheduleRows,
-            $consultorioPublicVisibility
+            $consultorioPublicVisibility,
+            (array)($publicContact['emergency_phones'] ?? [])
         );
         if (!(bool)($planContract['plan']['is_paid'] ?? false)) {
             // Repository order defines the primary office used throughout the public profile.
@@ -273,7 +274,7 @@ final class PublicProfileController
         ];
     }
 
-    private function mapConsultorios(array $rows, array $scheduleRows, array $publicVisibility): array
+    private function mapConsultorios(array $rows, array $scheduleRows, array $publicVisibility, array $publicEmergencyPhones = []): array
     {
         $scheduleByConsultorio = $this->groupScheduleByConsultorio($scheduleRows);
         $mapped = [];
@@ -312,7 +313,7 @@ final class PublicProfileController
                 'municipality' => $this->firstNonEmpty($row['municipio'] ?? null),
                 'postal_code' => $this->firstNonEmpty($row['cp'] ?? null),
                 'phone_public' => $showPhone ? $publicContact['phone'] : null,
-                'emergency_phone_public' => $showPhone ? $publicContact['emergency_phone'] : null,
+                'emergency_phone_public' => $publicEmergencyPhones[0] ?? null,
                 'whatsapp_public' => $showWhatsapp ? $publicContact['whatsapp'] : null,
                 'lat' => $hasConfirmedCoords ? ($mapPayload['lat'] ?? null) : null,
                 'lng' => $hasConfirmedCoords ? ($mapPayload['lng'] ?? null) : null,
@@ -335,7 +336,7 @@ final class PublicProfileController
                 continue;
             }
             $contact = $this->extractPublicConsultorioContact($row);
-            if ($contact['phone'] !== null || $contact['emergency_phone'] !== null || $contact['whatsapp'] !== null) {
+            if ($contact['phone'] !== null || $contact['whatsapp'] !== null) {
                 return true;
             }
         }
@@ -344,10 +345,11 @@ final class PublicProfileController
 
     /**
      * Consultorio phone fields are administrator-managed public sede data.
-     * Project the first regular phone, emergency phone, and WhatsApp.
+     * Project the first regular phone and WhatsApp. Emergency contacts have a
+     * separate physician-scoped authority and never come from legacy JSON.
      * Raw JSON remains outside the public DTO.
      *
-     * @return array{phone:?string,emergency_phone:?string,whatsapp:?string}
+     * @return array{phone:?string,whatsapp:?string}
      */
     private function extractPublicConsultorioContact(array $row): array
     {
@@ -366,23 +368,8 @@ final class PublicProfileController
             }
         }
 
-        $emergencyPhone = null;
-        $rawEmergencyPhones = $row['urgencias_json'] ?? null;
-        if (is_string($rawEmergencyPhones)) {
-            $rawEmergencyPhones = json_decode($rawEmergencyPhones, true);
-        }
-        if (is_array($rawEmergencyPhones)) {
-            foreach ($rawEmergencyPhones as $candidate) {
-                $emergencyPhone = $this->sanitizePublicConsultorioPhone($candidate);
-                if ($emergencyPhone !== null) {
-                    break;
-                }
-            }
-        }
-
         return [
             'phone' => $phone,
-            'emergency_phone' => $emergencyPhone,
             'whatsapp' => $this->sanitizePublicConsultorioPhone($row['whatsapp'] ?? null),
         ];
     }
@@ -1573,6 +1560,7 @@ final class PublicProfileController
             'phone' => null,
             'whatsapp' => null,
             'email' => null,
+            'emergency_phones' => [],
             'has_public_contact' => false,
             'has_public_phone' => false,
             'has_public_whatsapp' => false,
@@ -1590,7 +1578,7 @@ final class PublicProfileController
             }
 
             $type = strtolower(trim((string)($row['type'] ?? '')));
-            if (!in_array($type, ['phone', 'whatsapp', 'email'], true)) {
+            if (!in_array($type, ['phone', 'whatsapp', 'email', 'emergency_phone'], true)) {
                 continue;
             }
             if (!$this->isPublicContactRow($row)) {
@@ -1602,7 +1590,9 @@ final class PublicProfileController
                 continue;
             }
 
-            if ($type === 'phone' && $contact['phone'] === null) {
+            if ($type === 'emergency_phone') {
+                if (count($contact['emergency_phones']) < 2) $contact['emergency_phones'][] = $value;
+            } elseif ($type === 'phone' && $contact['phone'] === null) {
                 $contact['phone'] = $value;
                 $contact['has_public_phone'] = true;
             } elseif ($type === 'whatsapp' && $contact['whatsapp'] === null) {

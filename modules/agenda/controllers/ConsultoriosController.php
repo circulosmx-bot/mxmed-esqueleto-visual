@@ -2,16 +2,21 @@
 namespace Agenda\Controllers;
 
 use Agenda\Repositories\ConsultoriosRepository;
+use Profiles\Repositories\DoctorContactPointsRepository;
+use Profiles\Services\PhysicianEmergencyContactsService;
 use PDOException;
 use function Agenda\Helpers\ConsultorioMap\buildConsultorioPublicMapPayload;
 
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
 require_once __DIR__ . '/../helpers/consultorio_map.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
+require_once __DIR__ . '/../../profiles/repositories/DoctorContactPointsRepository.php';
+require_once __DIR__ . '/../../profiles/services/PhysicianEmergencyContactsService.php';
 
 class ConsultoriosController
 {
     private ?ConsultoriosRepository $repository = null;
+    private ?PhysicianEmergencyContactsService $emergencyContacts = null;
     private ?string $dbError = null;
     private array $actorContext = [];
     private array $contextWarnings = [];
@@ -21,6 +26,7 @@ class ConsultoriosController
         try {
             $pdo = mxmed_pdo();
             $this->repository = new ConsultoriosRepository($pdo);
+            $this->emergencyContacts = new PhysicianEmergencyContactsService($pdo, new DoctorContactPointsRepository($pdo));
         } catch (\RuntimeException $e) {
             $this->dbError = $e->getMessage();
         }
@@ -56,6 +62,7 @@ class ConsultoriosController
                 $data = array_map([$this, 'normalizeRow'], $rows);
             }
             $presentationState = $this->repository->documentPresentationState($doctorId, $rows ?? null);
+            $emergencyState = $this->emergencyContacts?->state($doctorId) ?? ['phones' => [], 'fingerprint' => hash('sha256', ''), 'count' => 0];
         } catch (\RuntimeException $e) {
             if ($e->getMessage() === 'consultorios table not ready') {
                 return $this->error('db_not_ready', 'consultorios table not ready');
@@ -77,8 +84,67 @@ class ConsultoriosController
                 'presentation_order_configured' => $presentationState['configured'],
                 'presentation_order' => $presentationState['order'],
                 'presentation_order_fingerprint' => $presentationState['fingerprint'],
+                'emergency_contacts' => $emergencyState['phones'],
+                'emergency_contacts_fingerprint' => $emergencyState['fingerprint'],
             ],
         ];
+    }
+
+    public function updateEmergencyContacts(array $payload = [])
+    {
+        $this->contextWarnings = [];
+        if ($this->dbError || $this->emergencyContacts === null) return $this->error('db_not_ready', 'emergency contacts not ready');
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
+        $phones = $payload['emergency_contacts'] ?? null;
+        $fingerprint = strtolower(trim((string)($payload['expected_fingerprint'] ?? '')));
+        if (!is_array($phones)) return $this->error('invalid_params', 'emergency_contacts array is required');
+        try {
+            $state = $this->emergencyContacts->replacePrivateSet((string)$doctorScope['doctor_id'], array_values($phones), $fingerprint);
+        } catch (\RuntimeException $e) {
+            return match ($e->getMessage()) {
+                'stale_emergency_contacts' => $this->error('conflict', 'emergency contacts changed; reload required'),
+                'emergency_contact_profile_not_found' => $this->error('forbidden', 'physician profile required'),
+                'invalid_emergency_contacts' => $this->error('invalid_params', 'invalid emergency contacts'),
+                default => $this->error('db_error', 'database error'),
+            };
+        } catch (\PDOException) {
+            return $this->error('db_error', 'database error');
+        }
+        return ['ok'=>true,'error'=>null,'message'=>'emergency contacts updated','data'=>[
+            'emergency_contacts'=>$state['phones'],
+            'emergency_contacts_fingerprint'=>$state['fingerprint'],
+        ],'meta'=>(object)['doctor_id_effective'=>(string)$doctorScope['doctor_id'],'auth_mode'=>trim((string)($this->actorContext['mode']??''))]];
+    }
+
+    public function updateEmergencyContactPublication(array $payload = [])
+    {
+        $this->contextWarnings = [];
+        if ($this->dbError || $this->emergencyContacts === null) return $this->error('db_not_ready', 'emergency contacts not ready');
+        $doctorScope = $this->resolveDoctorScope(trim((string)($payload['doctor_id'] ?? '')), true);
+        if (!$doctorScope['ok']) return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
+        if (!array_key_exists('publish', $payload) || !is_bool($payload['publish'])) return $this->error('invalid_params', 'publish boolean is required');
+        try {
+            $state = $this->emergencyContacts->setPublicProfilePublication(
+                (string)$doctorScope['doctor_id'],
+                $payload['publish'],
+                trim((string)($payload['expected_fingerprint'] ?? ''))
+            );
+        } catch (\RuntimeException $e) {
+            return match ($e->getMessage()) {
+                'stale_emergency_contacts' => $this->error('conflict', 'emergency contacts changed; reload required'),
+                'invalid_emergency_contacts' => $this->error('invalid_params', 'valid emergency contacts and fingerprint are required'),
+                'emergency_contact_profile_not_found' => $this->error('forbidden', 'physician profile required'),
+                default => $this->error('db_error', 'database error'),
+            };
+        } catch (\PDOException) {
+            return $this->error('db_error', 'database error');
+        }
+        return ['ok'=>true,'error'=>null,'message'=>'emergency contact publication updated','data'=>[
+            'emergency_contacts_fingerprint'=>$state['fingerprint'],
+            'published'=>$payload['publish'],
+        ],'meta'=>(object)['doctor_id_effective'=>(string)$doctorScope['doctor_id']]];
     }
 
     public function reorder(array $payload = [])
@@ -151,6 +217,9 @@ class ConsultoriosController
         if (array_key_exists('document_is_primary', $payload)
             || array_key_exists('document_display_order', $payload)) {
             return $this->error('invalid_params', 'use canonical consultorio reorder operation');
+        }
+        if (array_key_exists('urgencias', $payload)) {
+            return $this->error('invalid_params', 'use canonical physician emergency contacts operation');
         }
 
         $cleanText = static function ($value): ?string {
@@ -226,6 +295,13 @@ class ConsultoriosController
             }
             return null;
         };
+        $cleanTriState = static function ($value, bool $isSet): ?int {
+            if (!$isSet || $value === null || $value === '') return null;
+            if (is_bool($value)) return $value ? 1 : 0;
+            if (is_int($value) && ($value === 0 || $value === 1)) return $value;
+            if (is_string($value) && in_array(trim($value), ['0', '1'], true)) return (int)trim($value);
+            throw new \InvalidArgumentException('invalid_tristate');
+        };
 
         $documentPrimaryIsSet = array_key_exists('document_is_primary', $payload);
         $documentPublicationIsSet = array_key_exists('document_publication_enabled', $payload);
@@ -261,6 +337,14 @@ class ConsultoriosController
         $lngIsSet = array_key_exists('lng', $payload);
         $geocodeSourceIsSet = array_key_exists('geocode_source', $payload);
         $geocodeUpdatedAtIsSet = array_key_exists('geocode_updated_at', $payload);
+        $localParkingIsSet = array_key_exists('local_parking', $payload);
+        $accessibleIsSet = array_key_exists('accessible', $payload);
+        try {
+            $localParking = $cleanTriState($payload['local_parking'] ?? null, $localParkingIsSet);
+            $accessible = $cleanTriState($payload['accessible'] ?? null, $accessibleIsSet);
+        } catch (\InvalidArgumentException) {
+            return $this->error('invalid_params', 'amenities must be null, 0 or 1');
+        }
 
         $record = [
             'doctor_id' => $doctorId,
@@ -295,6 +379,10 @@ class ConsultoriosController
                 ? json_encode($cleanArray($payload['urgencias'] ?? []), JSON_UNESCAPED_UNICODE)
                 : null,
             'urgencias_json_is_set' => $urgenciasIsSet ? 1 : 0,
+            'local_parking' => $localParking,
+            'local_parking_is_set' => $localParkingIsSet ? 1 : 0,
+            'accessible' => $accessible,
+            'accessible_is_set' => $accessibleIsSet ? 1 : 0,
             'logo_url' => array_key_exists('logo_url', $payload) ? $cleanText($payload['logo_url']) : null,
             'logo_url_is_set' => array_key_exists('logo_url', $payload) ? 1 : 0,
             'foto_url' => array_key_exists('foto_url', $payload) ? $cleanText($payload['foto_url']) : null,
@@ -424,7 +512,8 @@ class ConsultoriosController
             'estado' => trim((string)($row['estado'] ?? '')),
             'telefonos' => $toList($row['telefonos_json'] ?? null),
             'whatsapp' => trim((string)($row['whatsapp'] ?? '')),
-            'urgencias' => $toList($row['urgencias_json'] ?? null),
+            'local_parking' => ($row['local_parking'] ?? null) === null ? null : (int)$row['local_parking'],
+            'accessible' => ($row['accessible'] ?? null) === null ? null : (int)$row['accessible'],
             'logo_url' => trim((string)($row['logo_url'] ?? '')),
             'foto_url' => trim((string)($row['foto_url'] ?? '')),
             'lat' => $lat,

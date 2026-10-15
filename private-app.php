@@ -1647,12 +1647,15 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
                   </div>
 
-                  <div class="col-12 d-flex justify-content-start gap-4 align-items-center cons-flags" data-cons-location-amenities>
-
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-estac"/><label class="form-check-label" for="cons-estac">Cuenta con estacionamiento <span class="material-symbols-outlined align-middle" aria-hidden="true">local_parking</span></label></div>
-
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-acces"/><label class="form-check-label" for="cons-acces">Accesibilidad para personas con discapacidad <span class="material-symbols-outlined align-middle" aria-hidden="true">accessible</span></label></div>
-
+                  <div class="col-12 d-flex flex-wrap justify-content-start gap-3 align-items-end cons-flags" data-cons-location-amenities>
+                    <div>
+                      <label class="form-label" for="cons-estac">Cuenta con estacionamiento <span class="material-symbols-outlined align-middle" aria-hidden="true">local_parking</span></label>
+                      <select class="form-select form-select-sm" id="cons-estac" aria-label="Disponibilidad de estacionamiento"><option value="">Sin especificar</option><option value="1">Sí</option><option value="0">No</option></select>
+                    </div>
+                    <div>
+                      <label class="form-label" for="cons-acces">Accesibilidad para personas con discapacidad <span class="material-symbols-outlined align-middle" aria-hidden="true">accessible</span></label>
+                      <select class="form-select form-select-sm" id="cons-acces" aria-label="Accesibilidad para personas con discapacidad"><option value="">Sin especificar</option><option value="1">Sí</option><option value="0">No</option></select>
+                    </div>
                   </div>
 
                   <!-- Grupo médico: después del domicilio y ubicación -->
@@ -1735,6 +1738,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                   <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><div class="save-wrap"><input id="cons-urg1" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
                   <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><div class="save-wrap"><input id="cons-urg2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
+
+                  <div class="col-12"><div class="form-text">Estos teléfonos de urgencias son compartidos por todos tus consultorios y permanecen privados hasta una publicación explícita autorizada.</div></div>
 
                   <div class="col-12">
 
@@ -11662,7 +11667,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/perfil/formacion.js"></script>
 
 <script src="assets/js/perfil/consultorio/consultorio-ordering.js?v=cons-vis01"></script>
-<script src="assets/js/perfil/consultorio/multisede.js?v=cons-vis01"></script>
+<script src="assets/js/perfil/consultorio/multisede.js?v=cons-imp02b"></script>
 
 <script src="assets/js/title-fix.js"></script>
 

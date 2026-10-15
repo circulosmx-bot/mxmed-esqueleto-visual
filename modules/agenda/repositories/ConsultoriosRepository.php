@@ -27,6 +27,8 @@ class ConsultoriosRepository
             'document_display_order',
             'document_publication_enabled',
             'document_primary_slot',
+            'local_parking',
+            'accessible',
         ];
         if (!$this->tableExists('consultorios')) {
             throw new RuntimeException('schema_not_ready');
@@ -264,6 +266,8 @@ class ConsultoriosRepository
         $telefonosIsSet = (int)($payload['telefonos_json_is_set'] ?? 1);
         $whatsappIsSet = (int)($payload['whatsapp_is_set'] ?? 1);
         $urgenciasIsSet = (int)($payload['urgencias_json_is_set'] ?? 1);
+        $localParkingIsSet = (int)($payload['local_parking_is_set'] ?? 0);
+        $accessibleIsSet = (int)($payload['accessible_is_set'] ?? 0);
         $logoUrlIsSet = (int)($payload['logo_url_is_set'] ?? 1);
         $fotoUrlIsSet = (int)($payload['foto_url_is_set'] ?? 1);
         $latIsSet = (int)($payload['lat_is_set'] ?? 1);
@@ -273,12 +277,12 @@ class ConsultoriosRepository
         $sql = 'INSERT INTO consultorios (
             doctor_id, consultorio_id, group_id, titulo, grupo_nombre,
             calle, num_ext, num_int, cp, colonia, municipio, estado,
-            telefonos_json, whatsapp, urgencias_json, logo_url, foto_url,
+            telefonos_json, whatsapp, urgencias_json, local_parking, `accessible`, logo_url, foto_url,
             lat, lng, geocode_source, geocode_updated_at, updated_at
         ) VALUES (
             :doctor_id, :consultorio_id, :group_id, :titulo, :grupo_nombre,
             :calle, :num_ext, :num_int, :cp, :colonia, :municipio, :estado,
-            :telefonos_json, :whatsapp, :urgencias_json, :logo_url, :foto_url,
+            :telefonos_json, :whatsapp, :urgencias_json, :local_parking, :accessible, :logo_url, :foto_url,
             :lat, :lng, :geocode_source,
             CASE
                 WHEN :geocode_updated_at_is_set = 1 THEN :geocode_updated_at
@@ -301,6 +305,8 @@ class ConsultoriosRepository
             telefonos_json = CASE WHEN :telefonos_json_is_set = 1 THEN VALUES(telefonos_json) ELSE telefonos_json END,
             whatsapp = CASE WHEN :whatsapp_is_set = 1 THEN VALUES(whatsapp) ELSE whatsapp END,
             urgencias_json = CASE WHEN :urgencias_json_is_set = 1 THEN VALUES(urgencias_json) ELSE urgencias_json END,
+            local_parking = CASE WHEN :local_parking_is_set = 1 THEN VALUES(local_parking) ELSE local_parking END,
+            `accessible` = CASE WHEN :accessible_is_set = 1 THEN VALUES(`accessible`) ELSE `accessible` END,
             logo_url = CASE WHEN :logo_url_is_set = 1 THEN VALUES(logo_url) ELSE logo_url END,
             foto_url = CASE WHEN :foto_url_is_set = 1 THEN VALUES(foto_url) ELSE foto_url END,
             lat = CASE
@@ -364,6 +370,8 @@ class ConsultoriosRepository
             'telefonos_json' => $payload['telefonos_json'] ?? null,
             'whatsapp' => $payload['whatsapp'] ?? null,
             'urgencias_json' => $payload['urgencias_json'] ?? null,
+            'local_parking' => $payload['local_parking'] ?? null,
+            'accessible' => $payload['accessible'] ?? null,
             'logo_url' => $payload['logo_url'] ?? null,
             'foto_url' => $payload['foto_url'] ?? null,
             'lat' => $payload['lat'] ?? null,
@@ -383,6 +391,8 @@ class ConsultoriosRepository
             'telefonos_json_is_set' => $telefonosIsSet,
             'whatsapp_is_set' => $whatsappIsSet,
             'urgencias_json_is_set' => $urgenciasIsSet,
+            'local_parking_is_set' => $localParkingIsSet,
+            'accessible_is_set' => $accessibleIsSet,
             'logo_url_is_set' => $logoUrlIsSet,
             'foto_url_is_set' => $fotoUrlIsSet,
             'lat_is_set' => $latIsSet,

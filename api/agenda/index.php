@@ -1190,6 +1190,10 @@ try {
             }
             if ($method === 'GET') {
                 $response = $consultorios->index($_GET);
+            } elseif ($method === 'PUT' && ($segments[1] ?? '') === 'emergency-contacts' && ($segments[2] ?? '') === 'publication') {
+                $response = $consultorios->updateEmergencyContactPublication(read_json_body());
+            } elseif ($method === 'PUT' && ($segments[1] ?? '') === 'emergency-contacts' && ($segments[2] ?? '') === '') {
+                $response = $consultorios->updateEmergencyContacts(read_json_body());
             } elseif ($method === 'PUT' && ($segments[1] ?? '') === 'reorder') {
                 $response = $consultorios->reorder(read_json_body());
             } elseif ($method === 'PUT') {

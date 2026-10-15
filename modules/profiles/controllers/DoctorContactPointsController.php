@@ -241,6 +241,9 @@ final class DoctorContactPointsController
         if (!is_array($current)) {
             return $this->error('contact_point_not_found', 'contact point not found', $authMode);
         }
+        if (($current['type'] ?? '') === 'emergency_phone') {
+            return $this->error('forbidden', 'emergency contacts are managed by consultorio administration', $authMode);
+        }
 
         $prepared = $this->prepareUpdatePayload($payload, $current);
         if (!empty($prepared['unknown_fields'])) {
@@ -340,6 +343,10 @@ final class DoctorContactPointsController
         }
 
         try {
+            $current = $this->repository->findById($doctorId, $contactPointId);
+            if (is_array($current) && ($current['type'] ?? '') === 'emergency_phone') {
+                return $this->error('forbidden', 'emergency contacts are managed by consultorio administration', $authMode);
+            }
             $deleted = $this->repository->softDeleteForDoctor($doctorId, $contactPointId);
         } catch (RuntimeException $e) {
             if ($e->getMessage() === 'doctor_contact_points table not ready') {

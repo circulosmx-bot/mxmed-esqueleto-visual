@@ -211,7 +211,6 @@ final class PublicProfileRepository
             'municipio',
             'estado',
             'telefonos_json',
-            'urgencias_json',
             'whatsapp',
             'lat',
             'lng',
@@ -305,7 +304,7 @@ final class PublicProfileRepository
                 AND `use_for_security` = 0
                 AND `use_for_platform_admin` = 0
                 AND `scope` IN (\'public\', \'public_profile\')
-                AND `type` IN (\'phone\', \'whatsapp\', \'email\')
+                AND `type` IN (\'phone\', \'whatsapp\', \'email\', \'emergency_phone\')
                 AND TRIM(`value`) <> \'\'
               ORDER BY `sort_order` ASC, `contact_point_id` ASC',
             implode(', ', $selected)

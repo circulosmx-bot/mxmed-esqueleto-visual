@@ -32,6 +32,7 @@ final class DoctorContactPointsRepository
         'visibility_plan_min',
         'status',
         'sort_order',
+        'emergency_position',
         'source',
         'metadata_json',
         'created_at',
@@ -430,7 +431,7 @@ final class DoctorContactPointsRepository
             return strtolower($value);
         }
 
-        if ($type === 'phone' || $type === 'whatsapp') {
+        if ($type === 'phone' || $type === 'whatsapp' || $type === 'emergency_phone') {
             $compact = preg_replace('/[\s\-\(\)]/', '', $value);
             $compact = is_string($compact) ? $compact : '';
             if (str_starts_with($compact, '+')) {
@@ -490,6 +491,7 @@ final class DoctorContactPointsRepository
             'visibility_plan_min' => $this->toNullableText($row['visibility_plan_min'] ?? null),
             'status' => $this->toText($row['status'] ?? null),
             'sort_order' => (int)($row['sort_order'] ?? 100),
+            'emergency_position' => isset($row['emergency_position']) ? (int)$row['emergency_position'] : null,
             'source' => $this->toText($row['source'] ?? null),
             'metadata_json' => $this->decodeJsonObject($row['metadata_json'] ?? null),
             'created_at' => $this->toNullableText($row['created_at'] ?? null),

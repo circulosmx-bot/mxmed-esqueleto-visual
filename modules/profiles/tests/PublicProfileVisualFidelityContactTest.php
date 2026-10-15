@@ -35,10 +35,10 @@ $starRow = [
     'estado' => 'Aguascalientes',
 ];
 $contact = $extractContact->invoke($controller, $starRow);
-pdb04eAssert($contact === ['phone' => '(449) 123 4567', 'emergency_phone' => '449 098 7654', 'whatsapp' => '+52 449 765 4321'], 'consultorio phone and WhatsApp are bounded and preserve readable formatting');
+pdb04eAssert($contact === ['phone' => '(449) 123 4567', 'whatsapp' => '+52 449 765 4321'], 'consultorio phone and WhatsApp are bounded and legacy emergency JSON is excluded');
 
 $paidVisibility = ['show_phone' => true, 'show_whatsapp' => true, 'show_map_gps' => false];
-$paidPanels = $mapConsultorios->invoke($controller, [$starRow], [], $paidVisibility);
+$paidPanels = $mapConsultorios->invoke($controller, [$starRow], [], $paidVisibility, ['+524490987654']);
 pdb04eAssert(($paidPanels[0]['phone_public'] ?? null) === '(449) 123 4567', 'paid consultorio explicitly projects public phone');
 pdb04eAssert(($paidPanels[0]['whatsapp_public'] ?? null) === '+52 449 765 4321', 'paid consultorio explicitly projects public WhatsApp');
 pdb04eAssert(!array_key_exists('telefonos_json', $paidPanels[0]) && !array_key_exists('whatsapp', $paidPanels[0]), 'raw contact columns are absent from public DTO');
@@ -51,20 +51,20 @@ $unsafe = $extractContact->invoke($controller, [
     'telefonos_json' => '["javascript:alert(1)", "123"]',
     'whatsapp' => 'https://evil.example/path',
 ]);
-pdb04eAssert($unsafe === ['phone' => null, 'emergency_phone' => null, 'whatsapp' => null], 'unsafe arbitrary contact values are rejected');
+pdb04eAssert($unsafe === ['phone' => null, 'whatsapp' => null], 'unsafe arbitrary contact values are rejected');
 
 foreach (['basic', 'standard', 'optimum', 'professional'] as $paidPlan) {
     $contract = PublicProfilePlanCapabilities::build($paidPlan, ['has_public_profile' => true]);
     pdb04eAssert(($contract['plan']['is_paid'] ?? false) === true && ($contract['plan']['is_active'] ?? false) === true, $paidPlan . ' is an active paid plan');
 }
-pdb04eAssert($paidPanels[0]['emergency_phone_public'] === '449 098 7654', 'emergency number is projected independently of WhatsApp');
-pdb04eAssert($freePanels[0]['emergency_phone_public'] === null, 'emergency phone respects phone visibility');
+pdb04eAssert($paidPanels[0]['emergency_phone_public'] === '+524490987654', 'explicit canonical emergency publication is projected independently of ordinary phone visibility');
+pdb04eAssert($freePanels[0]['emergency_phone_public'] === null, 'no canonical emergency publication yields no public emergency phone');
 $otherRow = array_replace($starRow, ['consultorio_id' => '3', 'telefonos_json' => '["449 555 1234"]', 'urgencias_json' => null]);
-$panels = $mapConsultorios->invoke($controller, [$starRow, $otherRow], [], $paidVisibility);
-pdb04eAssert($panels[1]['phone_public'] === '449 555 1234' && $panels[1]['emergency_phone_public'] === null, 'each office keeps its phone and absent emergency never borrows another number');
+$panels = $mapConsultorios->invoke($controller, [$starRow, $otherRow], [], $paidVisibility, ['+524490987654']);
+pdb04eAssert($panels[1]['phone_public'] === '449 555 1234' && $panels[1]['emergency_phone_public'] === '+524490987654', 'office phone stays local while canonical emergency contact is shared');
 foreach (['', 'bad json', '["123"]', '[]'] as $emptyEmergency) {
     $result = $extractContact->invoke($controller, array_replace($starRow, ['urgencias_json' => $emptyEmergency]));
-    pdb04eAssert($result['emergency_phone'] === null, 'missing or invalid emergency number is omitted');
+    pdb04eAssert(!array_key_exists('emergency_phone', $result), 'legacy emergency number is never projected');
 }
 
 $freeContract = PublicProfilePlanCapabilities::build('free', ['has_public_profile' => true]);

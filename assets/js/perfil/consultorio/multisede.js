@@ -3527,6 +3527,9 @@ function mxClearHorarioInputs(inputs){
     const deferredSaveQueue = new Map();
     let consultorioHydratedOnce = false;
     let restorePrimaryOnNormalOpen = false;
+    let emergencyContacts = [];
+    let emergencyContactsFingerprint = '';
+    let emergencySaveTimer = 0;
 
     const clean = (value)=> String(value ?? '').trim();
     const resolveDoctorId = ()=> clean(resolveActiveDoctorId());
@@ -3541,6 +3544,18 @@ function mxClearHorarioInputs(inputs){
     };
     const getWhatsappField = (pane)=>{
       return getField(pane, 'input[id^="cons-wa"]');
+    };
+    const emergencyFields = (pane)=> [
+      getField(pane, '[id^="cons-urg1"]'),
+      getField(pane, '[id^="cons-urg2"]')
+    ];
+    const syncEmergencyFields = (phones)=>{
+      emergencyContacts = Array.isArray(phones) ? phones.slice(0, 2).map(clean) : [];
+      root.querySelectorAll('.tab-pane[id^="sede"]').forEach((pane)=>{
+        emergencyFields(pane).forEach((field, index)=>{
+          if(field) field.value = emergencyContacts[index] || '';
+        });
+      });
     };
     const paneExists = (idx)=>{
       const pane = getPaneByIndex(idx);
@@ -4020,8 +4035,10 @@ function mxClearHorarioInputs(inputs){
       const tel1 = clean(getField(pane, '[id^="cons-tel1"]')?.value || '');
       const tel2 = clean(getField(pane, '[id^="cons-tel2"]')?.value || '');
       const tel3 = clean(getField(pane, '[id^="cons-tel3"]')?.value || '');
-      const urg1 = clean(getField(pane, '[id^="cons-urg1"]')?.value || '');
-      const urg2 = clean(getField(pane, '[id^="cons-urg2"]')?.value || '');
+      const triStateValue = (field)=> {
+        const value = clean(field?.value || '');
+        return value === '' ? null : Number(value);
+      };
       const payload = {
         doctor_id: resolveDoctorId(),
         consultorio_id: String(idx),
@@ -4039,7 +4056,8 @@ function mxClearHorarioInputs(inputs){
         estado: clean(getField(pane, '[id^="estado"]')?.value || ''),
         telefonos: [tel1, tel2, tel3].filter(Boolean),
         whatsapp: clean(getWhatsappField(pane)?.value || ''),
-        urgencias: [urg1, urg2].filter(Boolean),
+        local_parking: triStateValue(getField(pane, '[id^="cons-estac"]')),
+        accessible: triStateValue(getField(pane, '[id^="cons-acces"]')),
         document_publication_enabled: !!getField(pane, '[id^="cons-document-publication"]')?.checked,
         logo_url: logoFromInput || logoPreviewValue,
         foto_url: fotoFromInput || fotoPreviewValue
@@ -4078,8 +4096,9 @@ function mxClearHorarioInputs(inputs){
         safeLogoUrl,
         safeFotoUrl,
         ...(Array.isArray(payload.telefonos) ? payload.telefonos : []),
-        ...(Array.isArray(payload.urgencias) ? payload.urgencias : [])
       ].some((value)=> clean(value) !== '')
+      || payload.local_parking !== null
+      || payload.accessible !== null
       || payload.document_publication_enabled === true
       || (
         Number.isFinite(Number(payload?.lat))
@@ -4163,6 +4182,35 @@ function mxClearHorarioInputs(inputs){
         status: resp.status,
         json
       };
+    };
+    const saveEmergencyContacts = async ()=>{
+      const doctorId = resolveDoctorId();
+      if(!doctorId || !emergencyContactsFingerprint) return;
+      const resp = await fetch('/api/agenda/index.php/consultorios/emergency-contacts', {
+        method: 'PUT',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          doctor_id: doctorId,
+          emergency_contacts: emergencyContacts.filter(Boolean),
+          expected_fingerprint: emergencyContactsFingerprint
+        })
+      });
+      const json = await resp.json().catch(()=> null);
+      if(resp.ok && json?.ok){
+        emergencyContactsFingerprint = clean(json?.data?.emergency_contacts_fingerprint || '');
+        syncEmergencyFields(json?.data?.emergency_contacts || []);
+        return;
+      }
+      if(resp.status === 409 || json?.error === 'conflict'){
+        const fresh = await apiGetConsultorios(doctorId);
+        emergencyContactsFingerprint = clean(fresh?.meta?.emergency_contacts_fingerprint || '');
+        syncEmergencyFields(fresh?.meta?.emergency_contacts || []);
+      }
+    };
+    const queueEmergencySave = ()=>{
+      if(emergencySaveTimer) window.clearTimeout(emergencySaveTimer);
+      emergencySaveTimer = window.setTimeout(()=> saveEmergencyContacts().catch(()=> null), 420);
     };
     const persistMapCoordsNow = async (idx, reason = 'map_confirm_manual')=>{
       const consultorioIndex = Number(idx || 1) || 1;
@@ -4586,9 +4634,9 @@ function mxClearHorarioInputs(inputs){
       setValue(getField(pane, '[id^="cons-tel2"]'), tels[1] || '');
       setValue(getField(pane, '[id^="cons-tel3"]'), tels[2] || '');
       setValue(getWhatsappField(pane), row?.whatsapp || '');
-      const urgs = Array.isArray(row?.urgencias) ? row.urgencias : [];
-      setValue(getField(pane, '[id^="cons-urg1"]'), urgs[0] || '');
-      setValue(getField(pane, '[id^="cons-urg2"]'), urgs[1] || '');
+      syncEmergencyFields(emergencyContacts);
+      setValue(getField(pane, '[id^="cons-estac"]'), row?.local_parking === null || row?.local_parking === undefined ? '' : String(Number(row.local_parking)));
+      setValue(getField(pane, '[id^="cons-acces"]'), row?.accessible === null || row?.accessible === undefined ? '' : String(Number(row.accessible)));
       const documentPublication = getField(pane, '[id^="cons-document-publication"]');
       if(documentPublication instanceof HTMLInputElement) documentPublication.checked = row?.document_publication_enabled === true;
       applyPreview(pane, '.logo-slot-preview img, .mf-upload[data-type="logo"] .mf-prev img', row?.logo_url || '');
@@ -4791,6 +4839,8 @@ function mxClearHorarioInputs(inputs){
       try{
         const json = await apiGetConsultorios(doctorId);
         const rows = Array.isArray(json?.data) ? json.data : [];
+        emergencyContactsFingerprint = clean(json?.meta?.emergency_contacts_fingerprint || '');
+        syncEmergencyFields(json?.meta?.emergency_contacts || []);
         const selectedTarget = clean(root.querySelector('.mm-tabs-embed .nav-link.active[data-bs-target^="#sede"]')?.getAttribute('data-bs-target') || '#sede1');
         try{
           false && console.warn('MXM CONSULTORIO DEBUG:', {
@@ -4866,6 +4916,12 @@ function mxClearHorarioInputs(inputs){
       if(!pane) return;
       if(!target.matches('input, select, textarea')) return;
       const targetId = clean(target.id || '');
+      if(targetId.startsWith('cons-urg1') || targetId.startsWith('cons-urg2')){
+        emergencyContacts = emergencyFields(pane).map((field)=> clean(field?.value || ''));
+        syncEmergencyFields(emergencyContacts);
+        queueEmergencySave();
+        return;
+      }
       if(targetId.startsWith('cons-titulo')){
         const idx = parsePaneIndex(pane);
         updateConsultorioTabLabel(idx, target.value || '');
@@ -4904,6 +4960,7 @@ function mxClearHorarioInputs(inputs){
       const pane = target.closest('.tab-pane[id^="sede"]');
       if(!pane) return;
       const targetId = clean(target.id || '');
+      if(targetId.startsWith('cons-urg1') || targetId.startsWith('cons-urg2')) return;
       if(
         targetId.startsWith('cons-grupo-si')
         || targetId.startsWith('cons-grupo-no')
@@ -5023,6 +5080,7 @@ function mxClearHorarioInputs(inputs){
     root.addEventListener('mx:consultorio-pane-created', (event)=>{
       const idx = Number(event?.detail?.index || 0);
       if(!Number.isFinite(idx) || idx <= 1) return;
+      syncEmergencyFields(emergencyContacts);
       try{
         false && console.warn('MXM CONSULTORIO DEBUG:', {
           event: 'pane_created_event_received',
