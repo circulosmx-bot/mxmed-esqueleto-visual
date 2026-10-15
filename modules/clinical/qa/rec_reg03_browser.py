@@ -21,14 +21,18 @@ V2_MED={'medication_schema_version':2,'name':'Medicamento V2 QA','presentation':
     'instructions':'Tomar con agua','regimen':V2_REGIMEN}
 V1_MED={'name':'Medicamento heredado','presentation':'Tabletas','dose':'1 tableta','route':'Oral','frequency':'Según pauta histórica',
     'duration':'Duración histórica','quantity':'10 tabletas','instructions':'Con agua'}
+CONT_MED={'medication_schema_version':2,'name':'Tratamiento continuo QA','presentation':'Tabletas','dose':'1 tableta','route':'Vía oral',
+    'frequency':'Cada 24 horas','duration':'Tratamiento continuo','quantity':'30 tabletas','instructions':'Tomar con agua',
+    'regimen':{'administration':{'pattern':'SCHEDULED','instruction':'Cada 24 horas'},'duration':{'mode':'CONTINUOUS'}}}
 
 with sync_playwright() as pw:
     browser=getattr(pw,ENGINE).launch()
     page=browser.new_page(viewport={'width':1440,'height':900},extra_http_headers={'Cookie':'PHPSESSID=step3-head-neck-qa'})
-    errors=[];writes=[];state={'saved_draft':None}
+    errors=[];writes=[];state={'saved_draft':None,'preview_requests':0}
     page.on('pageerror',lambda error:errors.append(str(error)))
     templates=[
       {'uuid':'33333333-3333-4333-8333-333333333333','template_name':'Pauta V2 QA','content':{'content_schema_version':2,'medications':[V2_MED]},'status':'active','version':1,'created_at':'2026-10-14 10:00:00','updated_at':'2026-10-14 10:00:00'},
+      {'uuid':'22222222-2222-4222-8222-222222222222','template_name':'Pauta continua QA','content':{'content_schema_version':2,'medications':[CONT_MED]},'status':'active','version':1,'created_at':'2026-10-14 10:00:00','updated_at':'2026-10-14 10:00:00'},
       {'uuid':'11111111-1111-4111-8111-111111111111','template_name':'Pauta heredada QA','content':{'medications':[V1_MED]},'status':'active','version':1,'created_at':'2026-10-13 10:00:00','updated_at':'2026-10-13 10:00:00'}]
     shell=(REPO/'private-app.php').read_text().split('?>',1)[1]
     shell=shell.replace('class="mxmed-auth-checking"','').replace('<script src="/assets/js/core/private-session.js?v=identity-session02b"></script>','')
@@ -55,6 +59,7 @@ with sync_playwright() as pw:
             drafts=[] if state['saved_draft'] is None else [{'document_uuid':'55555555-5555-4555-8555-555555555555','version':1,'payload':state['saved_draft']}]
             route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'drafts':drafts}}));return
         if '/prescriptions/preview' in url and req.method=='POST':
+            state['preview_requests']+=1
             payload=json.loads(req.post_data or '{}');writes.append(payload)
             regimen=payload.get('payload',{}).get('prescription',{}).get('items',[{}])[0].get('regimen',{})
             duration=regimen.get('duration',{})
@@ -96,11 +101,49 @@ with sync_playwright() as pw:
     page.locator('[data-rx-host-save]').click();expect(page.locator('#ne_rx_feedback')).to_contain_text('Borrador guardado')
     check('REG04_SCHEDULED_CHIPS_CANONICAL',state['saved_draft']['prescription']['items'][0]['regimen']=={
       'administration':{'pattern':'SCHEDULED','instruction':'Cada 12 horas'},'duration':{'mode':'DEFINED_DURATION','value':'7','unit':'DAY'}})
+    frequency_select=row.locator('[data-ne-rx-regimen="administration.pattern"]');duration_select=row.locator('[data-ne-rx-regimen="duration.mode"]')
+    check('REG04A_01_02_SELECTOR_PARITY',frequency_select.evaluate('e=>e.className')==duration_select.evaluate('e=>e.className')
+        and abs(frequency_select.bounding_box()['width']-duration_select.bounding_box()['width'])<2)
     row.locator('[data-ne-rx-regimen="administration.pattern"]').select_option('PHYSICIAN_DEFINED')
-    row.locator('[data-ne-rx-regimen="administration.instruction"]').fill('Pauta personalizada QA')
+    custom=row.locator('[data-ne-rx-regimen="administration.instruction"]');initial_height=custom.bounding_box()['height']
+    custom.fill('Línea uno\nLínea dos\nLínea tres\nLínea cuatro')
+    check('REG04A_03_04_CUSTOM_AUTOEXPAND',initial_height<=62 and custom.bounding_box()['height']>initial_height)
     check('REG04_13_CUSTOM_SCHEDULE',row.locator('[data-rx-regimen-section="physician-administration"]').evaluate('e=>!e.hidden'))
     row.locator('[data-ne-rx-regimen="administration.pattern"]').select_option('SCHEDULED')
     check('REG04_MODE_RETURN_PRESERVES_SCHEDULED',row.locator('[data-ne-rx="frequency"]').input_value()=='Cada 12 horas')
+    row.locator('[data-ne-rx="quantity"]').fill('')
+    duration_select.select_option('CONTINUOUS')
+    check('REG04A_05_07_CONTINUOUS_STAGE2',row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
+        and row.locator('[data-rx-regimen-section="continuous"]').inner_text()=='Sin fecha de finalización predeterminada.')
+    page.locator('#ne_rx_add').evaluate('e=>e.click()');second=page.locator('#ne_rx_grid .ne-rx-row').nth(1)
+    second.locator('[data-ne-rx="name"]').fill('Medicamento continuo B');second.locator('[data-ne-rx="presentation"]').fill('Cápsulas')
+    second.locator('[data-ne-rx="dose"]').fill('1 cápsula');second.locator('[data-ne-rx="route"]').fill('Vía oral')
+    second.locator('[data-ne-rx="frequency"]').fill('Cada 24 horas')
+    second.locator('[data-ne-rx-regimen="duration.mode"]').select_option('CONTINUOUS')
+    previews_before=state['preview_requests'];page.locator('[data-rx-host-next]').click()
+    expect(page.locator('#ne_rx_continuous_quantity')).to_be_visible()
+    completions=page.locator('[data-rx-continuous-quantity-input]');quantity_completion=completions.first
+    check('REG04A_08_10_COMPLETION_GATE',quantity_completion.input_value()=='' and state['preview_requests']==previews_before
+        and page.locator('.ne-rx-preview-workspace').is_hidden())
+    check('REG04A_13_MULTIPLE_CONTINUOUS',completions.count()==2 and completions.nth(1).input_value()=='')
+    for width,height in [(1440,900),(1366,768),(820,1180)]:
+        page.set_viewport_size({'width':width,'height':height});page.locator('#ne_rx_continuous_quantity').scroll_into_view_if_needed()
+        check(f'REG04A_QA_{width}_{height}',page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'))
+        page.screenshot(path=str(OUT/f'continuous-completion-{ENGINE}-{width}x{height}.png'),full_page=True)
+    page.set_viewport_size({'width':1440,'height':900})
+    quantity_completion.fill('30 tabletas');completions.nth(1).fill('60 cápsulas');page.locator('[data-rx-continuous-quantity-confirm]').click()
+    expect(page.locator('.ne-rx-preview-workspace')).to_be_visible();expect(page.locator('#ne_rx_preview_html')).to_contain_text('Vista previa estructurada QA')
+    check('REG04A_11_12_CANONICAL_QUANTITY',state['saved_draft']['prescription']['items'][0]['quantity']=='30 tabletas'
+        and state['saved_draft']['prescription']['items'][1]['quantity']=='60 cápsulas'
+        and writes[-1]['payload']['prescription']['items'][0]['quantity']=='30 tabletas')
+    page.locator('[data-rx-host-prev]').click();row=page.locator('#ne_rx_grid .ne-rx-row').first
+    check('REG04A_15_BACK_NAVIGATION',row.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas'
+        and row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
+    row.locator('[data-ne-rx-regimen="duration.mode"]').select_option('DEFINED_DURATION')
+    check('REG04A_16_CONTINUOUS_TO_DEFINED',not row.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden')
+        and row.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas')
+    row.locator('[data-ne-rx="duration"]').fill('7 días')
+    page.locator('#ne_rx_grid .ne-rx-row').nth(1).locator('[data-ne-rx-del]').evaluate('e=>e.click()')
     for mode,label in [('CONTINUOUS','Tratamiento continuo'),('UNTIL_REASSESSMENT','Hasta nueva valoración médica'),('PHYSICIAN_DEFINED','Duración personalizada')]:
         row.locator('[data-ne-rx-regimen="duration.mode"]').select_option(mode)
         check('REG04_DURATION_'+mode,row.locator('[data-ne-rx="duration"]').input_value()==label)
@@ -142,7 +185,7 @@ with sync_playwright() as pw:
     check('BROWSER_DRAFT_EXACT_RESUME',resumed.locator('[data-ne-rx-regimen="administration.indication"]').input_value()=='En caso de dolor intenso'
         and resumed.locator('[data-ne-rx-regimen="administration.minimum_interval.value"]').input_value()=='8'
         and resumed.locator('[data-ne-rx-regimen="duration.date"]').input_value()=='2026-10-20'
-        and resumed.locator('[data-ne-rx="quantity"]').input_value()=='14 tabletas')
+        and resumed.locator('[data-ne-rx="quantity"]').input_value()=='30 tabletas')
     page.locator('#ne_rx_save_template').click();page.locator('#rx_template_save_current [name="template_name"]').fill('Guardada V2 QA')
     page.locator('#modalPrescriptionTemplateFlow [data-rx-tpl-action="save-current"]').click();expect(page.locator('#modalPrescriptionTemplateFlow')).to_be_hidden()
     saved_template=writes[-1]
@@ -169,6 +212,13 @@ with sync_playwright() as pw:
         and applied.locator('[data-ne-rx-regimen="duration.date"]').input_value()=='2026-10-20')
     page.locator('[data-rx-host-next]').click();expect(page.locator('[data-reg03-preview]')).to_be_visible()
     check('BROWSER_STAGE3_USABLE',page.locator('[data-rx-editor-workspace]').get_attribute('data-rx-stage')=='3' and page.locator('#ne_rx_sign').is_hidden())
+    page.locator('[data-rx-host-prev]').click();page.locator('#ne_rx_use_template').click();page.locator('#rx_tpl_search').fill('Pauta continua')
+    page.locator('#rx_tpl_selector_list [data-rx-tpl-action="use"]').click();page.locator('[data-rx-tpl-action="confirm-use"]').click()
+    continuous_template=page.locator('#ne_rx_grid .ne-rx-row').first
+    check('REG04A_18_TEMPLATE_REVIEW',continuous_template.locator('[data-rx-stage2-quantity]').evaluate('e=>e.hidden'))
+    page.locator('[data-rx-host-next]').click();expect(page.locator('#ne_rx_continuous_quantity')).to_be_visible()
+    check('REG04A_18_TEMPLATE_QUANTITY_NOT_SILENT',page.locator('[data-rx-continuous-quantity-input]').input_value()=='30 tabletas'
+        and page.locator('[data-rx-host-next]').is_disabled())
     check('BROWSER_NO_JS_ERRORS',not errors)
     browser.close()
     print(f'REC_REG03_BROWSER_{ENGINE.upper()}=PASS',flush=True)

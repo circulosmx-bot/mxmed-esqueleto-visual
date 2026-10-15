@@ -8785,6 +8785,17 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                         </div>
                         <div id="ne_rx_review" class="d-none">
                           <h6>Vista previa de receta</h6>
+                          <section class="rx-continuous-quantity d-none" id="ne_rx_continuous_quantity" aria-labelledby="ne_rx_continuous_quantity_title">
+                            <div>
+                              <h6 id="ne_rx_continuous_quantity_title">Completa la cantidad antes de la vista previa</h6>
+                              <p>Los tratamientos continuos requieren una cantidad finita indicada por el médico para esta receta.</p>
+                            </div>
+                            <div class="rx-continuous-quantity__items" data-rx-continuous-quantity-items></div>
+                            <div class="rx-continuous-quantity__actions">
+                              <p class="small" data-rx-continuous-quantity-status role="status" aria-live="polite"></p>
+                              <button type="button" class="btn btn-primary" data-rx-continuous-quantity-confirm>Confirmar cantidades y generar vista previa</button>
+                            </div>
+                          </section>
                           <div class="ne-rx-preview-workspace">
                             <fieldset class="ne-rx-presentation" id="ne_rx_presentation">
                               <legend>Formato de encabezado</legend>

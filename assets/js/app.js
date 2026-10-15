@@ -37752,8 +37752,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         <div class="rx-regimen-context__limit" data-rx-regimen-section="max-administrations"><label class="ne-rx-field"><span>Máximo de administraciones</span><input class="form-control form-control-sm" type="number" min="1" step="1" data-ne-rx-regimen="administration.maximum_administrations_per_period.count" value="${escapeAttr(maxAdministrations.count||'')}"></label><label class="ne-rx-field"><span>Periodo</span><input class="form-control form-control-sm" type="number" min="0.01" step="any" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.value" value="${escapeAttr(maxAdminPeriod.value)}"></label><label class="ne-rx-field"><span>Unidad del periodo</span><select class="form-select form-select-sm" data-ne-rx-regimen="administration.maximum_administrations_per_period.period.unit"><option value="">Selecciona</option><option value="HOUR"${rxSelected(maxAdminPeriod.unit,'HOUR')}>Horas</option><option value="DAY"${rxSelected(maxAdminPeriod.unit,'DAY')}>Días</option></select></label></div>
       </div>
       <label class="ne-rx-field" data-rx-regimen-section="physician-administration"><span>Pauta personalizada para el paciente</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="administration.instruction" maxlength="1000" rows="2" placeholder="Describe la pauta completa">${escapeHtmlLite(admin.instruction||'')}</textarea></label>
-      <p class="rx-regimen-context__status" data-rx-regimen-section="continuous">Tratamiento continuo, sin fecha de término predeterminada.</p>
-      <p class="rx-regimen-context__status" data-rx-regimen-section="reassessment">El tratamiento continúa hasta una nueva valoración médica.</p>
+      <p class="rx-regimen-context__status" data-rx-regimen-section="continuous">Sin fecha de finalización predeterminada.</p>
+      <p class="rx-regimen-context__status" data-rx-regimen-section="reassessment">Hasta nueva valoración médica.</p>
       <label class="ne-rx-field" data-rx-regimen-section="until-date"><span>Fecha de término</span><input class="form-control form-control-sm" type="date" data-ne-rx-regimen="duration.date" value="${escapeAttr(duration.date)}"></label>
       <label class="ne-rx-field" data-rx-regimen-section="physician-duration"><span>Condición de término indicada</span><textarea class="form-control form-control-sm" data-ne-rx-regimen="duration.instruction" maxlength="1000" rows="2" placeholder="Describe cuándo termina el tratamiento">${escapeHtmlLite(duration.instruction||'')}</textarea></label>
     </div>`;
@@ -37764,6 +37764,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const pattern = row.querySelector('[data-ne-rx-regimen="administration.pattern"]')?.value || '';
     const repeat = row.querySelector('[data-ne-rx-regimen="administration.repeat_mode"]')?.value || '';
     const mode = row.querySelector('[data-ne-rx-regimen="duration.mode"]')?.value || '';
+    const previousMode=row.dataset.rxDurationMode||'';
     const maxDose = row.querySelector('[data-ne-rx-regimen-toggle="max-dose"]')?.checked === true;
     const maxAdministrations = row.querySelector('[data-ne-rx-regimen-toggle="max-administrations"]')?.checked === true;
     const show = (name, visible) => row.querySelectorAll(`[data-rx-regimen-section="${name}"]`).forEach(el=>el.hidden=!visible);
@@ -37796,6 +37797,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     show('defined-duration',mode==='DEFINED_DURATION'||mode===''); show('until-date',mode==='UNTIL_DATE');
     show('physician-duration',mode==='PHYSICIAN_DEFINED');
     show('continuous',mode==='CONTINUOUS');show('reassessment',mode==='UNTIL_REASSESSMENT');
+    row.querySelectorAll('textarea[data-ne-rx-regimen]').forEach(textarea=>{
+      if(textarea.closest('[data-rx-regimen-section]')?.hidden)return;
+      textarea.style.height='58px';textarea.style.height=`${Math.max(58,textarea.scrollHeight)}px`;
+    });
+    const quantityField=row.querySelector('[data-rx-stage2-quantity]');
+    const quantitySummary=row.querySelector('[data-rx-continuous-quantity-summary]');
+    const quantityValue=normalizeRecetaText(row.querySelector('[data-ne-rx="quantity"]')?.value);
+    const continuous=mode==='CONTINUOUS';
+    if(quantityField)quantityField.hidden=continuous;
+    if(quantitySummary){
+      quantitySummary.hidden=!continuous;
+      const value=quantitySummary.querySelector('[data-rx-continuous-quantity-value]');
+      if(value)value.textContent=quantityValue?`Cantidad para esta receta: ${quantityValue}`:'Cantidad pendiente para esta receta';
+    }
+    if(previousMode&&previousMode!==mode&&mode==='CONTINUOUS')row.dataset.rxContinuousQuantityReview='required';
+    if(mode!=='CONTINUOUS')delete row.dataset.rxContinuousQuantityReview;
+    row.dataset.rxDurationMode=mode;
   };
   const rxRegimenSet = (target, path, value) => {
     const keys=path.split('.');let current=target;
@@ -37860,7 +37878,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           ${renderQuickFieldSuggestions('duration')}
         </div>`}
         ${Number(m.medication_schema_version)===2?rxStructuredContextHtml(m):''}
-        <label class="ne-rx-field ne-rx-quantity"><span>Cantidad</span><input class="form-control form-control-sm" placeholder="Ej. 20 tabletas" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"><small>Indica la cantidad total que debe dispensarse.</small></label>
+        <label class="ne-rx-field ne-rx-quantity" data-rx-stage2-quantity><span>Cantidad</span><input class="form-control form-control-sm" placeholder="Ej. 20 tabletas" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"><small>Indica la cantidad total que debe dispensarse.</small></label>
+        <div class="rx-continuous-quantity-summary" data-rx-continuous-quantity-summary hidden><span data-rx-continuous-quantity-value>${m.quantity?`Cantidad para esta receta: ${escapeHtmlLite(m.quantity)}`:'Cantidad pendiente para esta receta'}</span><button type="button" class="btn btn-link btn-sm" data-rx-continuous-quantity-open>Revisar en vista previa</button></div>
         <div class="ne-rx-field-wrap ne-rx-field-wrap-wide" data-rx-field-wrap="instructions">
           <label class="ne-rx-field"><span>Indicaciones al paciente</span><input class="form-control form-control-sm" placeholder="Ej. Tomar después de alimentos" data-ne-rx="instructions" value="${escapeAttr(m.instructions)}"></label>
           ${renderQuickFieldSuggestions('instructions')}
@@ -38906,6 +38925,10 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   const rxBackToCapture = document.getElementById('ne_rx_back_to_capture');
   const rxPresentation = document.getElementById('ne_rx_presentation');
   const rxPresentationStatus = document.getElementById('ne_rx_presentation_status');
+  const rxContinuousQuantity = document.getElementById('ne_rx_continuous_quantity');
+  const rxContinuousQuantityItems = rxContinuousQuantity?.querySelector('[data-rx-continuous-quantity-items]');
+  const rxContinuousQuantityStatus = rxContinuousQuantity?.querySelector('[data-rx-continuous-quantity-status]');
+  const rxContinuousQuantityConfirm = rxContinuousQuantity?.querySelector('[data-rx-continuous-quantity-confirm]');
   let rxPresentationRefreshQueued = false;
   const rxPresentationMode = () => rxPresentation?.querySelector('input[name="ne_rx_professional_header"]:checked')?.value || 'logo_and_data';
   const rxSetPresentationMode = value => {
@@ -39005,6 +39028,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (!medications.length) throw new Error('La plantilla no contiene medicamentos utilizables.');
     els.rxGrid.innerHTML = medications.map((item,index)=>rxRowHtml(index,item)).join('');
     Array.from(els.rxGrid.querySelectorAll('.ne-rx-row')).forEach((row)=>{
+      if(row.querySelector('[data-ne-rx-regimen="duration.mode"]')?.value==='CONTINUOUS')row.dataset.rxContinuousQuantityReview='required';
       syncRowControlledStateFromInputs(row);
       syncRxRegimenVisibility(row);
       applyMedicationAdministrationContextToRow(row,'template');
@@ -39238,6 +39262,52 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       presentation: { version: 2, professional_header: rxPresentationMode() }
     }
   });
+  const rxContinuousRowsNeedingReview = () => Array.from(els.rxGrid?.querySelectorAll('.ne-rx-row[data-ne-rx-schema="2"]')||[]).filter(row=>{
+    const mode=row.querySelector('[data-ne-rx-regimen="duration.mode"]')?.value||'';
+    const quantity=normalizeRecetaText(row.querySelector('[data-ne-rx="quantity"]')?.value);
+    return mode==='CONTINUOUS'&&(!quantity||row.dataset.rxContinuousQuantityReview==='required');
+  });
+  const rxSetContinuousCompletionVisible = visible => {
+    rxContinuousQuantity?.classList.toggle('d-none',!visible);
+    rxReview?.querySelector('.ne-rx-preview-workspace')?.classList.toggle('d-none',visible);
+    rxReview?.querySelector('.rx-engine-actions')?.classList.toggle('d-none',visible);
+    if(visible&&rxPreviewHtml)rxPreviewHtml.innerHTML='';
+    if(visible&&rxPresentationStatus)rxPresentationStatus.textContent='Completa las cantidades para generar una vista previa vigente.';
+  };
+  const rxOpenContinuousQuantityCompletion = rows => {
+    if(!rxContinuousQuantityItems)return false;
+    rxContinuousQuantityItems.innerHTML=rows.map((row,index)=>{
+      const uid=String(row.dataset.neRxUid||`rxm_${index+1}`);
+      const name=normalizeRecetaText(row.querySelector('[data-ne-rx="name"]')?.value)||`Medicamento ${index+1}`;
+      const presentation=normalizeRecetaText(row.querySelector('[data-ne-rx="presentation"]')?.value);
+      const quantity=normalizeRecetaText(row.querySelector('[data-ne-rx="quantity"]')?.value);
+      return `<label class="rx-continuous-quantity__item"><span><strong>${escapeHtmlLite(name)}</strong>${presentation?`<small>${escapeHtmlLite(presentation)}</small>`:''}</span><span>Cantidad a entregar con esta receta</span><input class="form-control" data-rx-continuous-quantity-input="${escapeAttr(uid)}" value="${escapeAttr(quantity)}" placeholder="Ej. 30 tabletas" autocomplete="off"></label>`;
+    }).join('');
+    if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent='';
+    rxReviewedFingerprint='';
+    rxCapture?.classList.add('d-none');rxReview?.classList.remove('d-none');
+    rxSetContinuousCompletionVisible(true);
+    if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(3);
+    const hostNext=document.querySelector('[data-rx-host-next]');if(hostNext)hostNext.disabled=true;
+    rxContinuousQuantityItems.querySelector('input')?.focus({preventScroll:true});
+    return true;
+  };
+  const rxPersistCurrentDraft = async ({announce=true}={}) => {
+    const scope=await rxCanonicalScope();
+    const body={...rxCanonicalBody(scope),intent:'draft',
+      ...(rxServerDraft?{draft_ref:rxServerDraft.document_uuid,expected_version:rxServerDraft.version}:{})};
+    const data=await rxRequest(scope.url,'POST',body),doc=data.document;
+    rxServerDraft={document_uuid:doc.document_id,version:doc.version,payload:doc.content?.payload,
+      is_reissue:rxServerDraft?.is_reissue===true,source_event_datetime:rxServerDraft?.source_event_datetime||'',
+      corrects_prescription_uuid:rxServerDraft?.corrects_prescription_uuid||''};
+    if(rxDraftStatus)rxDraftStatus.textContent=rxServerDraft.is_reissue
+      ?`Corrección de receta del ${String(rxServerDraft.source_event_datetime||'').slice(0,10)} · borrador guardado · versión ${doc.version}`
+      :`Borrador guardado · versión ${doc.version}`;
+    setRxDraft(scope.ctx.patient_id,collectRxModal(),{diagnostic_context:collectRxDiagnosticContext()});
+    rxGuardStored=rxGuardReadStored(scope.ctx.patient_id);rxGuardBaseline=rxGuardSnapshot();
+    if(announce)setRxFeedback('Borrador guardado en el expediente.','success');
+    return doc;
+  };
   const rxShowCapture = () => {
     rxReview?.classList.add('d-none');
     document.getElementById('ne_rx_sign')?.classList.add('d-none');
@@ -39247,6 +39317,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (els.rxSave) els.rxSave.disabled = false;
     if (rxBackToCapture) rxBackToCapture.disabled = false;
     if (rxReviewStatus) rxReviewStatus.textContent = '';
+    rxSetContinuousCompletionVisible(false);
     rxGuardModal?.querySelector('.modal-body')?.scrollTo({ top: 0 });
     if(window.mxmedPrescriptionHost?.isEmbedded())window.mxmedPrescriptionHost.setStage(1,false);
   };
@@ -39297,26 +39368,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if (rxWriteBusy) return;
     rxWriteBusy = true; rxSaveDraft.disabled = true;
     try {
-      const scope = await rxCanonicalScope();
-      const body = { ...rxCanonicalBody(scope), intent: 'draft',
-        ...(rxServerDraft ? { draft_ref: rxServerDraft.document_uuid, expected_version: rxServerDraft.version } : {}) };
-      const data = await rxRequest(scope.url, 'POST', body);
-      const doc = data.document;
-      rxServerDraft = { document_uuid: doc.document_id, version: doc.version, payload: doc.content?.payload,
-        is_reissue: rxServerDraft?.is_reissue === true,
-        source_event_datetime: rxServerDraft?.source_event_datetime || '',
-        corrects_prescription_uuid: rxServerDraft?.corrects_prescription_uuid || '' };
-      if (rxDraftStatus) rxDraftStatus.textContent = rxServerDraft.is_reissue
-        ? `Corrección de receta del ${String(rxServerDraft.source_event_datetime || '').slice(0,10)} · borrador guardado · versión ${doc.version}`
-        : `Borrador guardado · versión ${doc.version}`;
-      setRxDraft(scope.ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
-      rxGuardStored = rxGuardReadStored(scope.ctx.patient_id); rxGuardBaseline = rxGuardSnapshot();
-      setRxFeedback('Borrador guardado en el expediente.', 'success');
+      await rxPersistCurrentDraft();
     } catch (error) { setRxFeedback(`No se pudo guardar el borrador (${error.message}).`, 'error'); }
     finally { rxWriteBusy = false; rxSaveDraft.disabled = false; }
   });
   const rxRefreshPreview = async ({ enterReview = false } = {}) => {
     if (rxWriteBusy) return;
+    const pendingContinuous=rxContinuousRowsNeedingReview();
+    if(enterReview&&pendingContinuous.length){rxOpenContinuousQuantityCompletion(pendingContinuous);return;}
     rxWriteBusy = true; rxPreview.disabled = true;
     const requestedMode = rxPresentationMode();
     const hostNext = document.querySelector('[data-rx-host-next]');
@@ -39334,6 +39393,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         return;
       }
       if (rxPreviewHtml) rxPreviewHtml.innerHTML = data.html || '';
+      rxSetContinuousCompletionVisible(false);
       rxReviewedFingerprint = JSON.stringify(body);
       if (enterReview) {
         rxCapture?.classList.add('d-none'); rxReview?.classList.remove('d-none');
@@ -39346,6 +39406,8 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     } catch (error) {
       if (rxPreviewHtml) rxPreviewHtml.innerHTML = '';
       if (rxPresentationStatus) rxPresentationStatus.textContent = `No se pudo actualizar la vista previa (${error.message}).`;
+      if(rxContinuousQuantity&&!rxContinuousQuantity.classList.contains('d-none')&&rxContinuousQuantityStatus)
+        rxContinuousQuantityStatus.textContent=`No se pudo validar la receta (${error.message}).`;
       if(!rxHandleProgressError(error)){
         rxMarkStructuredValidationError(error.message);
         setRxFeedback(`No se pudo previsualizar la receta (${error.message}).`, 'error');
@@ -39353,7 +39415,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     }
     finally {
       rxWriteBusy = false; rxPreview.disabled = false;
-      if (hostNext) hostNext.disabled = false;
+      if (hostNext) hostNext.disabled = !!(rxContinuousQuantity&&!rxContinuousQuantity.classList.contains('d-none'));
       if (rxPresentationRefreshQueued && !rxReview?.classList.contains('d-none')) {
         rxPresentationRefreshQueued = false;
         void rxRefreshPreview();
@@ -39361,6 +39423,35 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     }
   };
   rxPreview?.addEventListener('click', () => void rxRefreshPreview({ enterReview: true }));
+  rxContinuousQuantityConfirm?.addEventListener('click',async()=>{
+    if(rxWriteBusy)return;
+    const fields=Array.from(rxContinuousQuantityItems?.querySelectorAll('[data-rx-continuous-quantity-input]')||[]);
+    let firstInvalid=null;
+    fields.forEach(field=>{
+      field.classList.remove('is-invalid');field.removeAttribute('aria-invalid');
+      if(!normalizeRecetaText(field.value)){field.classList.add('is-invalid');field.setAttribute('aria-invalid','true');firstInvalid??=field;}
+    });
+    if(firstInvalid){
+      if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent='Indica la cantidad a entregar con esta receta.';
+      firstInvalid.focus();return;
+    }
+    fields.forEach(field=>{
+      const row=Array.from(els.rxGrid?.querySelectorAll('.ne-rx-row')||[]).find(candidate=>candidate.dataset.neRxUid===field.dataset.rxContinuousQuantityInput);
+      const input=row?.querySelector('[data-ne-rx="quantity"]');if(!row||!input)return;
+      input.value=normalizeRecetaText(field.value);row.dataset.rxContinuousQuantityReview='confirmed';
+      const meta=parseRowMeta(row);writeRowMeta(row,{...meta,quantity_mode:'manual',quantity_value:input.value,quantity_unit:''});
+      syncRowControlledStateFromInputs(row);syncRxRegimenVisibility(row);updateRxRowSummary(row);
+    });
+    rxWriteBusy=true;rxContinuousQuantityConfirm.disabled=true;
+    if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent='Guardando cantidades y validando la receta…';
+    try{
+      await rxPersistCurrentDraft({announce:false});
+      rxWriteBusy=false;rxContinuousQuantityConfirm.disabled=false;
+      await rxRefreshPreview({enterReview:true});
+    }catch(error){
+      if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent=`No se pudieron confirmar las cantidades (${error.message}).`;
+    }finally{rxWriteBusy=false;rxContinuousQuantityConfirm.disabled=false;}
+  });
   rxPresentation?.addEventListener('change', event => {
     if (!event.target.matches('input[name="ne_rx_professional_header"]') || rxReview?.classList.contains('d-none')) return;
     if (rxWriteBusy) {
@@ -39772,6 +39863,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if (regimenInput) {
         syncRxRegimenVisibility(activeRow);applyQuantityModeForRow(activeRow);rxReviewedFingerprint='';
       }
+      if(e.target.matches('textarea[data-ne-rx-regimen]')){
+        e.target.style.height='auto';e.target.style.height=`${e.target.scrollHeight}px`;
+      }
     }
     const nameInput = e.target.closest('[data-ne-rx="name"]');
     if (nameInput) {
@@ -39829,6 +39923,13 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     const row=e.target.closest('.ne-rx-row');
     if(!row||!e.target.matches('[data-ne-rx-regimen],[data-ne-rx-regimen-toggle]'))return;
     syncRxRegimenVisibility(row);applyQuantityModeForRow(row);rxReviewedFingerprint='';
+  });
+  els.rxGrid?.addEventListener('click',e=>{
+    if(!e.target.closest('[data-rx-continuous-quantity-open]'))return;
+    const rows=rxContinuousRowsNeedingReview();
+    const own=e.target.closest('.ne-rx-row');
+    if(own&&!rows.includes(own))rows.push(own);
+    rxOpenContinuousQuantityCompletion(rows);
   });
   // Safari/blur race guard: commit chip value on mousedown before focusout collapses quick chips.
   els.rxGrid?.addEventListener('mousedown', (e) => {
