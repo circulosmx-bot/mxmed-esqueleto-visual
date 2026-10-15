@@ -37619,13 +37619,22 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       quantity: formatQuantityValue(quantityValue, quantityUnit)
     };
   };
+  const rxQuantityPlaceholder = presentation => {
+    const value=normalizeQuickToken(presentation||'');
+    if(/\b(tableta|tabletas|comprimido|comprimidos)\b/.test(value))return 'Ej. 20 tabletas';
+    if(/\b(capsula|capsulas)\b/.test(value))return 'Ej. 20 cápsulas';
+    if(/\b(ampolleta|ampolletas|ampolla|ampollas)\b/.test(value))return 'Ej. 2 ampolletas';
+    if(/\b(frasco|frascos)\b/.test(value))return 'Ej. 1 frasco';
+    if(/\b(solucion|suspension)\b/.test(value)&&(/\bml\b/.test(value)||/\b(iv|intravenosa|inyectable|oral)\b/.test(value)))return 'Ej. cantidad en ml';
+    return 'Indica cantidad y unidad';
+  };
   const applyQuantityModeForRow = (row, patternKey = '', options = {}) => {
     if (!row) return;
     const meta = parseRowMeta(row);
     const quantityInput = row.querySelector('[data-ne-rx="quantity"]');
     if (!quantityInput) return;
     if (row.dataset.neRxSchema === '2') {
-      quantityInput.placeholder = 'Ej. 20 tabletas';
+      quantityInput.placeholder = rxQuantityPlaceholder(row.querySelector('[data-ne-rx="presentation"]')?.value);
       writeRowMeta(row, { ...meta, quantity_mode:'manual',
         quantity_value:normalizeRecetaText(quantityInput.value), quantity_unit:'' });
       return;
@@ -37878,7 +37887,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           ${renderQuickFieldSuggestions('duration')}
         </div>`}
         ${Number(m.medication_schema_version)===2?rxStructuredContextHtml(m):''}
-        <label class="ne-rx-field ne-rx-quantity" data-rx-stage2-quantity><span>Cantidad</span><input class="form-control form-control-sm" placeholder="Ej. 20 tabletas" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"><small>Indica la cantidad total que debe dispensarse.</small></label>
+        <label class="ne-rx-field ne-rx-quantity" data-rx-stage2-quantity><span>Cantidad</span><input class="form-control form-control-sm" placeholder="${escapeAttr(rxQuantityPlaceholder(m.presentation))}" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}"><small>Indica la cantidad total que debe dispensarse.</small></label>
         <div class="rx-continuous-quantity-summary" data-rx-continuous-quantity-summary hidden><span data-rx-continuous-quantity-value>${m.quantity?`Cantidad para esta receta: ${escapeHtmlLite(m.quantity)}`:'Cantidad pendiente para esta receta'}</span><button type="button" class="btn btn-link btn-sm" data-rx-continuous-quantity-open>Revisar en vista previa</button></div>
         <div class="ne-rx-field-wrap ne-rx-field-wrap-wide" data-rx-field-wrap="instructions">
           <label class="ne-rx-field"><span>Indicaciones al paciente</span><input class="form-control form-control-sm" placeholder="Ej. Tomar después de alimentos" data-ne-rx="instructions" value="${escapeAttr(m.instructions)}"></label>
@@ -39281,7 +39290,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const name=normalizeRecetaText(row.querySelector('[data-ne-rx="name"]')?.value)||`Medicamento ${index+1}`;
       const presentation=normalizeRecetaText(row.querySelector('[data-ne-rx="presentation"]')?.value);
       const quantity=normalizeRecetaText(row.querySelector('[data-ne-rx="quantity"]')?.value);
-      return `<label class="rx-continuous-quantity__item"><span><strong>${escapeHtmlLite(name)}</strong>${presentation?`<small>${escapeHtmlLite(presentation)}</small>`:''}</span><span>Cantidad a entregar con esta receta</span><input class="form-control" data-rx-continuous-quantity-input="${escapeAttr(uid)}" value="${escapeAttr(quantity)}" placeholder="Ej. 30 tabletas" autocomplete="off"></label>`;
+      return `<label class="rx-continuous-quantity__item"><span><strong>${escapeHtmlLite(name)}</strong>${presentation?`<small>${escapeHtmlLite(presentation)}</small>`:''}</span><span>Cantidad total del medicamento</span><input class="form-control" data-rx-continuous-quantity-input="${escapeAttr(uid)}" value="${escapeAttr(quantity)}" placeholder="${escapeAttr(rxQuantityPlaceholder(presentation))}" autocomplete="off"></label>`;
     }).join('');
     if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent='';
     rxReviewedFingerprint='';
@@ -39432,7 +39441,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       if(!normalizeRecetaText(field.value)){field.classList.add('is-invalid');field.setAttribute('aria-invalid','true');firstInvalid??=field;}
     });
     if(firstInvalid){
-      if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent='Indica la cantidad a entregar con esta receta.';
+      if(rxContinuousQuantityStatus)rxContinuousQuantityStatus.textContent='Indica la cantidad total del medicamento.';
       firstInvalid.focus();return;
     }
     fields.forEach(field=>{

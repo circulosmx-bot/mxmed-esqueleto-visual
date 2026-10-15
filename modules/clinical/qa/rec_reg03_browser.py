@@ -90,7 +90,15 @@ with sync_playwright() as pw:
     check('REG04_01_COMPACT_FOUR_ROWS',same('name','presentation') and same('dose','route','frequency','duration')
         and same('quantity','instructions') and boxes['private']['y']>boxes['quantity']['y'])
     check('REG04_DEFAULT_CONTEXT_HIDDEN',page.locator('#ne_rx_grid [data-rx-regimen-context]').evaluate('e=>getComputedStyle(e).display==="none"'))
-    row.locator('[data-ne-rx="name"]').fill('Medicamento V2 QA');row.locator('[data-ne-rx="presentation"]').fill('Tabletas 10 mg')
+    quantity=row.locator('[data-ne-rx="quantity"]');presentation=row.locator('[data-ne-rx="presentation"]')
+    check('REG04B_01_STAGE2_LABEL',row.locator('[data-rx-stage2-quantity]>span').inner_text()=='Cantidad')
+    check('REG04B_08_NEUTRAL_PLACEHOLDER',quantity.get_attribute('placeholder')=='Indica cantidad y unidad')
+    presentation.fill('Tabletas 10 mg');check('REG04B_05_TABLET_PLACEHOLDER',quantity.get_attribute('placeholder')=='Ej. 20 tabletas')
+    presentation.fill('Cápsulas 20 mg');check('REG04B_06_CAPSULE_PLACEHOLDER',quantity.get_attribute('placeholder')=='Ej. 20 cápsulas')
+    presentation.fill('Solución IV 200 mg/100 ml');check('REG04B_07_IV_PLACEHOLDER','tableta' not in quantity.get_attribute('placeholder').lower()
+        and quantity.get_attribute('placeholder')=='Ej. cantidad en ml')
+    presentation.fill('Presentación especial');check('REG04B_09_PLACEHOLDER_ONLY',quantity.get_attribute('placeholder')=='Indica cantidad y unidad' and quantity.input_value()=='')
+    row.locator('[data-ne-rx="name"]').fill('Medicamento V2 QA');presentation.fill('Tabletas 10 mg')
     expect(row.get_by_role('button',name='1 tableta',exact=True)).to_be_visible();row.get_by_role('button',name='1 tableta',exact=True).click()
     expect(row.get_by_role('button',name='Vía oral',exact=True)).to_be_visible();row.get_by_role('button',name='Vía oral',exact=True).click()
     row.get_by_role('button',name='Cada 12 horas',exact=True).click();row.get_by_role('button',name='7 días',exact=True).click()
@@ -126,6 +134,11 @@ with sync_playwright() as pw:
     check('REG04A_08_10_COMPLETION_GATE',quantity_completion.input_value()=='' and state['preview_requests']==previews_before
         and page.locator('.ne-rx-preview-workspace').is_hidden())
     check('REG04A_13_MULTIPLE_CONTINUOUS',completions.count()==2 and completions.nth(1).input_value()=='')
+    check('REG04B_02_04_APPROVED_COPY',page.get_by_text('Cantidad total del medicamento',exact=True).count()==2
+        and page.get_by_text('Indica la cantidad que deberá adquirir el paciente con esta receta.',exact=True).is_visible()
+        and page.get_by_role('button',name='CONFIRMAR Y VER RECETA',exact=True).is_visible())
+    check('REG04B_05_06_STAGE3_PLACEHOLDERS',completions.first.get_attribute('placeholder')=='Ej. 20 tabletas'
+        and completions.nth(1).get_attribute('placeholder')=='Ej. 20 cápsulas')
     for width,height in [(1440,900),(1366,768),(820,1180)]:
         page.set_viewport_size({'width':width,'height':height});page.locator('#ne_rx_continuous_quantity').scroll_into_view_if_needed()
         check(f'REG04A_QA_{width}_{height}',page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'))

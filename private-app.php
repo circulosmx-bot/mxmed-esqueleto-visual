@@ -8788,12 +8788,12 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                           <section class="rx-continuous-quantity d-none" id="ne_rx_continuous_quantity" aria-labelledby="ne_rx_continuous_quantity_title">
                             <div>
                               <h6 id="ne_rx_continuous_quantity_title">Completa la cantidad antes de la vista previa</h6>
-                              <p>Los tratamientos continuos requieren una cantidad finita indicada por el médico para esta receta.</p>
+                              <p>Indica la cantidad que deberá adquirir el paciente con esta receta.</p>
                             </div>
                             <div class="rx-continuous-quantity__items" data-rx-continuous-quantity-items></div>
                             <div class="rx-continuous-quantity__actions">
                               <p class="small" data-rx-continuous-quantity-status role="status" aria-live="polite"></p>
-                              <button type="button" class="btn btn-primary" data-rx-continuous-quantity-confirm>Confirmar cantidades y generar vista previa</button>
+                              <button type="button" class="btn btn-primary" data-rx-continuous-quantity-confirm>CONFIRMAR Y VER RECETA</button>
                             </div>
                           </section>
                           <div class="ne-rx-preview-workspace">
