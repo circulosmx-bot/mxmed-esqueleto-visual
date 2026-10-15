@@ -1,0 +1,9 @@
+DROP TRIGGER IF EXISTS `auth_governance_events_no_delete`;
+DROP TRIGGER IF EXISTS `auth_governance_events_no_update`;
+DROP TABLE IF EXISTS `auth_governance_events`;
+DROP TABLE IF EXISTS `auth_external_trust_anchor_evidence`;
+DROP TABLE IF EXISTS `auth_governance_case_endorsements`;
+DROP TABLE IF EXISTS `auth_staff_mfa_proofs`;
+DROP TABLE IF EXISTS `auth_staff_mfa_challenges`;
+DROP TABLE IF EXISTS `auth_staff_mfa_factors`;
+DROP TABLE IF EXISTS `auth_governance_cases`;

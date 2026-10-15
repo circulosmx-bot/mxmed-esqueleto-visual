@@ -14,6 +14,7 @@ use Identity\Contracts\ProfileOwnershipApprovalEvidence;
 use Identity\Contracts\ProfileOwnershipApprovalPort;
 use Identity\Contracts\ProfileOwnershipStepUpEvidence;
 use Identity\Contracts\ProfileOwnershipStepUpPort;
+use Identity\Contracts\ProfileRoleChangeFinalizationPort;
 use Identity\Contracts\SessionState;
 use Identity\Contracts\SystemClock;
 use Identity\Repositories\AccountMembershipRepository;
@@ -32,6 +33,7 @@ final class ProfileMembershipRoleChangeService
         private ProfileOwnershipStepUpPort $stepUp,
         private ProfileMembershipRoleChangeAuditPort $audit,
         private Clock $clock = new SystemClock(),
+        private ?ProfileRoleChangeFinalizationPort $finalization = null,
     ) {
         if (!$memberships->usesConnection($pdo)) throw new \InvalidArgumentException('profile_role_change_connection_mismatch');
     }
@@ -68,6 +70,7 @@ final class ProfileMembershipRoleChangeService
                 $approval->approverAccountId,$approval->approverAccountIds,$stepUp->auditReference,'APPROVED','VERIFIED','SUCCESS',$this->clock->now()
             );
             $this->audit->append($this->pdo,$record);
+            if($this->finalization!==null)$this->finalization->finalize($this->pdo,$request,$record);
             if(!$this->pdo->commit())throw new \RuntimeException('profile_role_change_commit_failed');
             return ['membership_id'=>$request->membershipId,'account_id'=>$request->targetAccountId,
                 'profile_doctor_id'=>$request->profileDoctorId,'role_code'=>MembershipRole::OWNER,

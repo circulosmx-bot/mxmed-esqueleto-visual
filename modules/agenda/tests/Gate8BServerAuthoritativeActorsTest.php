@@ -197,6 +197,9 @@ $operatorConsultorioGet = $resolver->resolve($identity, $collaborator, $profile,
 gate8bAssert($operatorConsultorioGet->allowed(), 'consultorios GET allows valid operator');
 $operatorConsultorioPut = $resolver->resolve($identity, $owner, $profile, gate8bTarget('consultorios', method: 'PUT'), $validBinding);
 gate8bAssert(!$operatorConsultorioPut->allowed() && $operatorConsultorioPut->reasonCode() === 'operator_route_denied', 'consultorios PUT rejects operator');
+$collaboratorConsultorioPut = $resolver->resolve($identity, $collaborator, $profile, gate8bTarget('consultorios', method: 'PUT'));
+gate8bAssert(!$collaboratorConsultorioPut->allowed() && $collaboratorConsultorioPut->reasonCode() === 'role_denied', 'collaborator consultorios PUT denied');
+gate8bAssert($resolver->resolve($identity, $owner, $profile, gate8bTarget('consultorios', method: 'PUT'))->allowed(), 'owner consultorios PUT allows');
 foreach (['GET', 'PUT'] as $method) {
     $operatorSchedule = $resolver->resolve($identity, $owner, $profile, gate8bTarget('schedule', method: $method), $validBinding);
     gate8bAssert(!$operatorSchedule->allowed() && $operatorSchedule->reasonCode() === 'operator_route_denied', 'schedule ' . $method . ' rejects operator');

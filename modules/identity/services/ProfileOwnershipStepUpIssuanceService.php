@@ -64,7 +64,7 @@ final class ProfileOwnershipStepUpIssuanceService
                 'membership_id'=>$request->membershipId,'profile_doctor_id'=>$request->profileDoctorId,
                 'now'=>$now->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u')]);
             if((int)$dual->fetchColumn()!==2)throw new \RuntimeException('profile_ownership_step_up_dual_approval_required');
-            $proof=OneTimeTokenCodec::issue();$stepUpId=OneTimeTokenCodec::id('stepup_');$expires=$now->modify('+5 minutes');
+            $proof='stepup_'.OneTimeTokenCodec::issue();$stepUpId=OneTimeTokenCodec::id('stepup_');$expires=$now->modify('+5 minutes');
             $this->proofs->issue($stepUpId,OneTimeTokenCodec::hash($proof),$request,$actor->accountId(),
                 (string)$session->sessionId(),$actor->principal()->credentialVersion(),$now,$expires);
             if(!$this->pdo->commit())throw new \RuntimeException('profile_ownership_step_up_commit_failed');

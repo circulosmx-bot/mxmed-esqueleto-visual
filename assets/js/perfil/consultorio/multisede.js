@@ -44,6 +44,20 @@ function mxClearHorarioInputs(inputs){
 
 (function(){
   const CONSULTORIO_MAP_DEBUG = false;
+  const administrativeDeniedMessage = 'No tienes permisos para modificar este consultorio. Esta acción requiere acceso de propietario o administrador.';
+  const showAdministrativeDenied = ()=>{
+    const feedback = document.querySelector('[data-cons-admin-feedback]');
+    if(!feedback) return;
+    feedback.textContent = administrativeDeniedMessage;
+    feedback.classList.remove('d-none');
+    feedback.focus?.({ preventScroll:true });
+  };
+  const clearAdministrativeDenied = ()=>{
+    const feedback = document.querySelector('[data-cons-admin-feedback]');
+    if(!feedback) return;
+    feedback.textContent = '';
+    feedback.classList.add('d-none');
+  };
   try{
     false && console.warn('MXM CONSULTORIO DEBUG:', {
       event: 'multisede_module_loaded',
@@ -4166,6 +4180,8 @@ function mxClearHorarioInputs(inputs){
         body: JSON.stringify(payload || {})
       });
       const json = await resp.json().catch(()=> null);
+      if(resp.status === 403) showAdministrativeDenied();
+      else if(resp.ok && json?.ok === true) clearAdministrativeDenied();
       try{
         false && console.warn('MXM CONSULTORIO DEBUG:', {
           event: 'api_save_consultorio_response',
@@ -4198,8 +4214,13 @@ function mxClearHorarioInputs(inputs){
       });
       const json = await resp.json().catch(()=> null);
       if(resp.ok && json?.ok){
+        clearAdministrativeDenied();
         emergencyContactsFingerprint = clean(json?.data?.emergency_contacts_fingerprint || '');
         syncEmergencyFields(json?.data?.emergency_contacts || []);
+        return;
+      }
+      if(resp.status === 403){
+        showAdministrativeDenied();
         return;
       }
       if(resp.status === 409 || json?.error === 'conflict'){

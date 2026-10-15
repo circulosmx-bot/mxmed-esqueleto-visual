@@ -1571,6 +1571,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
               </div>
               <button type="button" class="btn btn-outline-primary btn-sm" data-cons-save-order>Guardar orden actual</button>
             </div>
+            <div class="alert alert-danger mt-2 mb-3 d-none" data-cons-admin-feedback role="alert" aria-live="assertive"></div>
 
             <!-- Leaflet CSS/JS (para mapa interactivo; si falla, queda el iframe) -->
 
@@ -11666,6 +11667,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/perfil/visibility-help.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
 
+<script src="assets/js/perfil/consultorio/administrative-feedback.js?v=identity-gov03a"></script>
 <script src="assets/js/perfil/consultorio/consultorio-ordering.js?v=cons-vis01"></script>
 <script src="assets/js/perfil/consultorio/multisede.js?v=cons-imp02b"></script>
 
