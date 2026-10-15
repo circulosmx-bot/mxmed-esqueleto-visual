@@ -75,6 +75,8 @@
         is_primary:office?.is_primary===true,
         display_order:office?.display_order==null?null:(Number(office.display_order)||0)
       }))};
+      if(clean(footer.public_profile?.url))result.professional_presentation.public_profile={
+        url:clean(footer.public_profile.url),source:clean(footer.public_profile?.source)};
     }
     if(fpVersion===2){result.fingerprint_version=2;result.medication_schema_version=2;}
     return result;

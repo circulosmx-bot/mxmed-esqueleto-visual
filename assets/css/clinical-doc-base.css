@@ -8,6 +8,14 @@
  * 3) Migrate styles incrementally by document.
  */
 
+@font-face {
+  font-family: "Asap";
+  src: url("/assets/fonts/mxmed-admin/asap-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 :root {
   --doc-font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
   --doc-page-width-letter: 8.5in;
@@ -66,6 +74,67 @@
 .rx-doc-sheet .rx-doc-item { margin-bottom: .8rem; break-inside: avoid; }
 .rx-doc-sheet .rx-doc-item-meta { margin-top: .2rem; line-height: 1.45; }
 .rx-doc-sheet .rx-doc-sign-line { border-bottom: 1px solid #263746; height: 3.5rem; }
+.rx-doc-sheet .clinical-doc-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.rx-doc-sheet .clinical-doc-head-logo-slot {
+  display: grid;
+  width: 128px;
+  min-width: 128px;
+  height: 64px;
+  place-items: center;
+}
+.rx-doc-sheet .clinical-doc-head-logo-slot img {
+  display: block;
+  max-width: 128px;
+  max-height: 64px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.rx-doc-sheet .clinical-doc-head-main { min-width: 0; }
+.rx-doc-sheet .rx-doc-physician-name {
+  margin: 0 0 3px;
+  overflow-wrap: anywhere;
+  font-family: "Asap", "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: 1.32rem;
+  font-weight: 500;
+  line-height: 1.08;
+  color: #123d59;
+}
+.rx-doc-sheet .rx-doc-physician-professional {
+  margin-top: 1px;
+  font-family: "Asap", "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: .88rem;
+  font-weight: 600;
+  line-height: 1.24;
+  color: #123d59;
+}
+.rx-doc-sheet .rx-doc-physician-license {
+  margin-top: 1px;
+  font-family: "Asap", "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: .76rem;
+  font-weight: 400;
+  line-height: 1.28;
+  color: #3f5564;
+}
+.rx-doc-sheet .rx-doc-patient-meta {
+  padding: 9px 11px;
+  border-left: 3px solid rgba(10, 153, 166, .58);
+  background: #f7fbfc;
+  color: #273b47;
+  font-size: .86rem;
+  line-height: 1.38;
+}
+.rx-doc-sheet .rx-doc-patient-name {
+  margin-bottom: 1px;
+  font-size: .96rem;
+  font-weight: 650;
+  color: #123d59;
+}
+.rx-doc-sheet .rx-doc-patient-detail { font-weight: 450; }
 .rx-doc-professional-footer {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr);
@@ -84,6 +153,35 @@
 .rx-doc-professional-location-name { color: var(--doc-ink-secondary); font-weight: 700; }
 .rx-doc-professional-location-address,
 .rx-doc-professional-location-phones { white-space: normal; }
+.rx-doc-public-profile {
+  grid-column: 2;
+  align-self: end;
+  justify-self: end;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: #123d59;
+  text-decoration: none;
+  break-inside: avoid;
+}
+.rx-doc-public-profile-qr {
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  overflow: hidden;
+}
+.rx-doc-public-profile-qr :is(canvas,img) {
+  display: block !important;
+  width: 92px !important;
+  height: 92px !important;
+}
+.rx-doc-public-profile-caption {
+  font-family: "Asap", "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: .63rem;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
 /* A document preview is read at page width on desktop and reflows on tablets.
  * Its height is never scaled to the viewport, so the clinical body stays legible
  * and the surrounding application owns vertical scrolling. */
@@ -99,7 +197,9 @@
     padding: 28px 24px;
     min-height: 0;
   }
-  .rx-doc-professional-footer { grid-template-columns: minmax(0, 1fr); }
+  .rx-doc-sheet .clinical-doc-head-logo-slot { width: 104px; min-width: 104px; height: 54px; }
+  .rx-doc-sheet .clinical-doc-head-logo-slot img { max-width: 104px; max-height: 54px; }
+  .rx-doc-professional-footer { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
 }
 
 .doc-base-body {

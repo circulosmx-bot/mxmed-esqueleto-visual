@@ -134,6 +134,13 @@ function clinical_prescription_binding_projection(array $body): array
         $projection['version'] = 2;
         $projection['professional_context']['consultorio'] = ['name'=>'', 'address'=>''];
         $projection['professional_presentation'] = ['version'=>2, 'offices'=>$offices];
+        $publicProfile = (array)($footer['public_profile'] ?? []);
+        if (trim((string)($publicProfile['url'] ?? '')) !== '') {
+            $projection['professional_presentation']['public_profile'] = [
+                'url'=>$c($publicProfile['url'] ?? ''),
+                'source'=>$c($publicProfile['source'] ?? ''),
+            ];
+        }
     }
     if ($fingerprintVersion === 2) {
         $projection['fingerprint_version'] = 2;

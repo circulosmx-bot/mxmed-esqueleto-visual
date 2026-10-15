@@ -57,5 +57,7 @@ $payload['professional_context']['logo_url'] = '';
 std03(!str_contains(clinical_prescription_v2_render($payload), '<img'), 'HEADER02 missing logo has no broken image');
 $payload['presentation']['professional_header'] = 'hidden';
 $hidden = clinical_prescription_v2_render($payload);
-std03(!str_contains($hidden, 'clinical-doc-head'), 'HEADER05 hidden professional header respected');
+std03(!str_contains($hidden, 'clinical-doc-head') && !str_contains($hidden, 'doc-base-signature')
+    && !str_contains($hidden, 'Dra. Médica QA') && !str_contains($hidden, 'QA-123')
+    && !str_contains($hidden, 'QA-456'), 'HEADER05 hidden mode removes all physician identity');
 

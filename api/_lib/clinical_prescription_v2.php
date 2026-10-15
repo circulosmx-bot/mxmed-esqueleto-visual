@@ -592,10 +592,11 @@ function clinical_prescription_v2_render(array $payload): string
         $html .= '<header class="clinical-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe">';
         if ($presentationMode === 'logo_and_data' && clinical_prescription_v2_published_logo_url($logo))
             $html .= '<div class="clinical-doc-head-logo-slot"><img src="'.$h($logo).'" alt="Logo médico"></div>';
-        $html .= '<div class="clinical-doc-head-main"><div class="clinical-doc-doctor-name">'.$h($doctor['full_name'] ?? '').'</div>';
+        $html .= '<div class="clinical-doc-head-main"><div class="clinical-doc-doctor-name rx-doc-physician-name">'.$h($doctor['full_name'] ?? '').'</div>';
         foreach (['designation'=>'','specialty'=>'','license'=>'Cédula profesional: ',
             'specialty_license'=>'Cédula de especialidad: '] as $key=>$prefix) {
-            if (!empty($doctor[$key])) $html .= '<div class="clinical-doc-doctor-site">'.$h($prefix.$doctor[$key]).'</div>';
+            if (!empty($doctor[$key])) $html .= '<div class="clinical-doc-doctor-site '.
+                (in_array($key,['designation','specialty'],true)?'rx-doc-physician-professional':'rx-doc-physician-license').'">'.$h($prefix.$doctor[$key]).'</div>';
         }
         $usesAuthorizedFooter = (int)($payload['professional_presentation']['version'] ?? 0) >= 2;
         $place = $usesAuthorizedFooter ? [] : (array)($professional['consultorio'] ?? []);
@@ -604,9 +605,9 @@ function clinical_prescription_v2_render(array $payload): string
         $html .= '</div></header>';
     }
     $html .= '<div class="doc-base-title-block-wrap"><section class="doc-base-title-block"><div class="doc-base-title">RECETA MÉDICA</div></section></div>';
-    $html .= '<div class="doc-base-patient-block-wrap"><section class="doc-base-patient-meta"><div><strong>Paciente:</strong> '.$h($patient['full_name'] ?? '').'</div>'
-        .'<div><strong>Edad:</strong> '.$h($patient['age'] ?? '').' · <strong>Sexo:</strong> '.$h($patient['sex'] ?? '').'</div>'
-        .'<div><strong>Fecha:</strong> '.$h($payload['issue_date'] ?? '').'</div></section></div>';
+    $html .= '<div class="doc-base-patient-block-wrap"><section class="doc-base-patient-meta rx-doc-patient-meta"><div class="rx-doc-patient-name"><strong>Paciente:</strong> '.$h($patient['full_name'] ?? '').'</div>'
+        .'<div class="rx-doc-patient-detail"><strong>Edad:</strong> '.$h($patient['age'] ?? '').' · <strong>Sexo:</strong> '.$h($patient['sex'] ?? '').'</div>'
+        .'<div class="rx-doc-patient-detail"><strong>Fecha:</strong> '.$h($payload['issue_date'] ?? '').'</div></section></div>';
     $diagnosis = (array)($payload['diagnostic_context'] ?? []);
     if (!empty($diagnosis['text'])) $html .= '<section class="doc-base-section"><div class="doc-base-section-title">Contexto clínico</div><div class="doc-base-text">'.$h($diagnosis['text']).'</div></section>';
     $html .= '<div class="doc-base-body-block"><section class="doc-base-section"><div class="doc-base-section-title">Medicamentos</div><ol class="rx-doc-list">';
@@ -623,15 +624,23 @@ function clinical_prescription_v2_render(array $payload): string
     $html .= '</ol></section>';
     $observations = (string)($payload['prescription']['observaciones'] ?? '');
     if ($observations !== '') $html .= '<section class="doc-base-section"><div class="doc-base-section-title">Observaciones</div><div class="doc-base-text">'.nl2br($h($observations)).'</div></section>';
-    $html .= '<section class="doc-base-signature doc-base-print-safe"><div class="doc-base-section-title">Médico responsable</div>';
-    $signed = (array)($payload['signatures']['doctor'] ?? []);
-    if (!empty($signed['image_data'])) $html .= '<img class="doc-base-signature-image" src="'.$h($signed['image_data']).'" alt="Firma del médico responsable">';
-    else $html .= '<div class="rx-doc-sign-line"></div>';
-    $html .= '<div class="doc-base-signature-meta">'.$h($doctor['full_name'] ?? '').'</div>';
-    if (!empty($doctor['license'])) $html .= '<div class="doc-base-signature-meta">Cédula profesional: '.$h($doctor['license']).'</div>';
-    $html .= '</section></div>';
+    if ($presentationMode !== 'hidden') {
+        $html .= '<section class="doc-base-signature doc-base-print-safe"><div class="doc-base-section-title">Médico responsable</div>';
+        $signed = (array)($payload['signatures']['doctor'] ?? []);
+        if (!empty($signed['image_data'])) $html .= '<img class="doc-base-signature-image" src="'.$h($signed['image_data']).'" alt="Firma del médico responsable">';
+        else $html .= '<div class="rx-doc-sign-line"></div>';
+        $html .= '<div class="doc-base-signature-meta">'.$h($doctor['full_name'] ?? '').'</div>';
+        if (!empty($doctor['license'])) $html .= '<div class="doc-base-signature-meta">Cédula profesional: '.$h($doctor['license']).'</div>';
+        $html .= '</section>';
+    }
+    $html .= '</div>';
     $offices = (array)($payload['professional_presentation']['offices'] ?? []);
-    if ($offices !== []) {
+    $publicProfile = (array)($payload['professional_presentation']['public_profile'] ?? []);
+    $publicProfileUrl = trim((string)($publicProfile['url'] ?? ''));
+    $publicProfileParts = $publicProfileUrl === '' ? false : parse_url($publicProfileUrl);
+    if (!is_array($publicProfileParts) || strtolower((string)($publicProfileParts['scheme'] ?? '')) !== 'https'
+        || trim((string)($publicProfileParts['host'] ?? '')) === '') $publicProfileUrl = '';
+    if ($presentationMode !== 'hidden' && ($offices !== [] || $publicProfileUrl !== '')) {
         $html .= '<div class="doc-base-flex-spacer" aria-hidden="true"></div>'
             . '<footer class="rx-doc-professional-footer doc-base-print-safe"><div class="rx-doc-professional-locations">';
         foreach (array_slice($offices, 0, 3) as $office) {
@@ -647,7 +656,11 @@ function clinical_prescription_v2_render(array $payload): string
             if ($phones !== []) $html .= '<div class="rx-doc-professional-location-phones">Tel. '.$h(implode(' · ', $phones)).'</div>';
             $html .= '</div>';
         }
-        $html .= '</div></footer>';
+        $html .= '</div>';
+        if ($publicProfileUrl !== '') $html .= '<a class="rx-doc-public-profile" href="'.$h($publicProfileUrl).'" target="_blank" rel="noopener">'
+            .'<span class="rx-doc-public-profile-qr qr-code" data-rx-public-profile-qr="'.$h($publicProfileUrl).'" aria-label="Código QR para agendar una cita"></span>'
+            .'<span class="rx-doc-public-profile-caption">AGENDA UNA CITA</span></a>';
+        $html .= '</footer>';
     }
     $html .= '</div></article>';
     return $html;

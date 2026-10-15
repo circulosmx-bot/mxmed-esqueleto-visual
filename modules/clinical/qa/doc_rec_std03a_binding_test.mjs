@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const root=path.resolve(here,'../../..');
@@ -36,4 +37,13 @@ assert.equal(await binding.hash(body),'7f0e6e322dd15f9f80bb842c4782b5954f4c692c9
 const changed=structuredClone(body);
 changed.payload.professional_presentation.offices[0].address+=' cambio';
 assert.notEqual(await binding.hash(changed),await binding.hash(body));
+body.payload.professional_presentation.public_profile={url:'https://mxmed.example.test/medicos/dra-prueba',source:'active_canonical_profile_route'};
+const profileHash=await binding.hash(body);
+const phpHash=execFileSync('php',['-r',`require 'api/_lib/clinical_prescription_binding.php';$b=json_decode(stream_get_contents(STDIN),true,512,JSON_THROW_ON_ERROR);echo clinical_prescription_binding_fingerprint($b);`],
+  {cwd:root,input:JSON.stringify(body),encoding:'utf8'});
+assert.equal(profileHash,phpHash);
+const profileChanged=structuredClone(body);
+profileChanged.payload.professional_presentation.public_profile.url='https://mxmed.example.test/medicos/otra';
+assert.notEqual(await binding.hash(profileChanged),profileHash);
+console.log('REC_PREVIEW01_PUBLIC_PROFILE_BINDING=PASS');
 console.log('DOC_REC_STD03A_BINDING_JS=PASS');

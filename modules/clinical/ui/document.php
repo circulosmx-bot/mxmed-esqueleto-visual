@@ -1828,6 +1828,10 @@ if (!$embed) {
     }, true);
   })();
 </script>
+<?php if ($isPrescriptionV2): ?>
+<script src="/assets/vendor/qrcodejs/qrcode.min.js"></script>
+<script src="/assets/js/clinical/prescription-document-presentation.js?v=rec-preview01"></script>
+<?php endif; ?>
 <?php if ($embed): ?>
 <?php clinical_embed_end(); ?>
 <?php else: ?>

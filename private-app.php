@@ -11596,6 +11596,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 </div>
 
 <script src="assets/vendor/qrcodejs/qrcode.min.js"></script>
+<script src="assets/js/clinical/prescription-document-presentation.js?v=rec-preview01"></script>
 <script src="assets/js/physician-signature.js?v=sig03a"></script>
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
