@@ -974,7 +974,7 @@ if (!$embed) {
 }
 ?>
 <?php if ($isPrescriptionV2 || $isMultimediaConsentDoc || $isFreeDoc || $isInformeDoc || $isNotaDoc || $isAltaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
-<link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
+<link rel="stylesheet" href="/assets/css/clinical-doc-base.css?v=rec-preview01">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=resp-imp01a">
 <?php endif; ?>
 <style>

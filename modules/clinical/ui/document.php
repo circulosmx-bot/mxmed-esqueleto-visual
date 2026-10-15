@@ -1040,7 +1040,7 @@ if (!$embed) {
 </style>
 <?php endif; ?>
 <?php if ($isPrescriptionV2 || $isFreeDoc || ($isInformeDoc && (int)($payload['informe_snapshot']['version'] ?? 0) === 1)): ?>
-<link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
+<link rel="stylesheet" href="/assets/css/clinical-doc-base.css?v=rec-preview01">
 <link rel="stylesheet" href="/assets/css/clinical/responsiva-document.css?v=inf-imp01">
 <?php endif; ?>
 <?php if ($isFreeDoc): ?>

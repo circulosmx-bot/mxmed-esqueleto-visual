@@ -300,7 +300,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <link rel="stylesheet" href="assets/css/clinical/expediente-panel-geometry.css?v=ux-align02">
 <link rel="stylesheet" href="assets/css/clinical/expediente-panel-title-typography.css?v=ux-title01">
 <link rel="stylesheet" href="assets/css/clinical/floating-qa-widget-visibility.css?v=dev-widget04">
-<link rel="stylesheet" href="assets/css/clinical-doc-base.css">
+<link rel="stylesheet" href="assets/css/clinical-doc-base.css?v=rec-preview01">
 <link rel="stylesheet" href="assets/css/clinical/responsiva-document.css?v=resp-ux02">
 <link rel="stylesheet" href="assets/css/clinical/example-field-help.css?v=free-doc03">
 <link rel="stylesheet" href="assets/css/clinical/document-select-affordance.css?v=doc-ux-reg01">
