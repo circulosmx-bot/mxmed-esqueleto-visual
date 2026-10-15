@@ -43,7 +43,8 @@ function clinical_prescription_qr_current(PDO $pdo, array $session): bool
     $body = ['draft_ref' => (string)$document['document_uuid'],
         'expected_version' => (int)$document['version'],
         'context' => ['patient_id' => $document['patient_id']], 'payload' => $payload];
-    return hash_equals((string)$session['content_fingerprint'], clinical_prescription_binding_fingerprint($body))
+    return (int)$session['fingerprint_version'] === clinical_prescription_fingerprint_version($body)
+        && hash_equals((string)$session['content_fingerprint'], clinical_prescription_binding_fingerprint($body))
         && hash_equals((string)$session['signer_authority'],
             clinical_prescription_binding_authority($body, (string)$session['doctor_id']))
         && hash_equals((string)$session['review_html_sha256'], hash('sha256', (string)$session['review_html']))
@@ -74,7 +75,7 @@ function clinical_prescription_qr_status(PDO $pdo, array $session, bool $include
 
 function clinical_prescription_qr_binding(array $session): array
 {
-    return ['version' => 1, 'document_type' => 'prescription', 'source' => 'remote_qr', 'role' => $session['role'],
+    return ['version' => (int)$session['fingerprint_version'], 'document_type' => 'prescription', 'source' => 'remote_qr', 'role' => $session['role'],
         'authority' => $session['signer_authority'], 'content_fingerprint' => $session['content_fingerprint'],
         'artifact_digest' => $session['artifact_digest'], 'document_uuid' => $session['document_uuid'],
         'document_version' => (int)$session['document_version'], 'token' => $session['token'],
@@ -94,6 +95,7 @@ function clinical_prescription_qr_claim(PDO $pdo, array $body, array $entry, str
         || (string)$session['doctor_id'] !== $doctorId
         || (string)$session['patient_id'] !== (string)($body['context']['patient_id'] ?? '')
         || (string)$session['role'] !== $role
+        || (int)$session['fingerprint_version'] !== clinical_prescription_fingerprint_version($body)
         || (string)$session['signer_authority'] !== clinical_prescription_binding_authority($body, $doctorId)
         || !hash_equals((string)$session['content_fingerprint'], clinical_prescription_binding_fingerprint($body))
         || !hash_equals((string)$session['artifact_digest'], clinical_consent_binding_artifact_digest((string)($entry['image_data'] ?? '')))
@@ -134,6 +136,7 @@ function clinical_prescription_qr_route(PDO $pdo, string $method, array $segment
         $documentBody = ['draft_ref' => (string)$document['document_uuid'], 'expected_version' => $version,
             'context' => ['patient_id' => $document['patient_id']], 'payload' => $payload];
         $authority = clinical_prescription_binding_authority($documentBody, (string)$doctor['doctor_id']);
+        $fingerprintVersion = clinical_prescription_fingerprint_version($documentBody);
         $name = trim((string)($payload['physician_snapshot']['full_name'] ?? ''));
         if ($name === '' || $authority === '') {
             clinical_send_response(['ok' => false, 'error' => 'PRESCRIPTION_QR_SIGNER_REQUIRED'], 422);
@@ -159,7 +162,7 @@ function clinical_prescription_qr_route(PDO $pdo, string $method, array $segment
                 signer_name,signer_role_label,fingerprint_version,content_fingerprint,review_html,review_html_sha256,
                 status,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 900 SECOND))");
             $stmt->execute([$token, $uuid, $version, $document['patient_id'], $doctor['doctor_id'],
-                $doctor['user_id'], $role, $authority, $name, $label, 1,
+                $doctor['user_id'], $role, $authority, $name, $label, $fingerprintVersion,
                 clinical_prescription_binding_fingerprint($documentBody), $html, hash('sha256', $html)]);
             $pdo->commit();
         } catch (Throwable $error) {

@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { execFileSync } from 'node:child_process';
+import { webcrypto } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
+const output=execFileSync('php',['modules/clinical/qa/rec_reg02_contract.php'],{
+  cwd:root,encoding:'utf8',env:{...process.env,REC_REG02_EXPORT_VECTOR:'1'}});
+const encoded=output.match(/^REG02_V2_BODY=(.+)$/m)?.[1];
+const phpHash=output.match(/^REG02_V2_HASH=([a-f0-9]{64})$/m)?.[1];
+assert.ok(encoded&&phpHash);
+const body=JSON.parse(Buffer.from(encoded,'base64').toString('utf8'));
+const window={mxmedConsentSignatureBinding:{imageHasInk:async()=>true,imageDigest:async()=>'digest'}};
+const context=vm.createContext({window,crypto:webcrypto,TextEncoder,console});
+vm.runInContext(fs.readFileSync(path.join(root,'assets/js/clinical/prescription-signature-binding.js'),'utf8'),context);
+const binding=window.mxmedPrescriptionSignatureBinding;
+assert.equal(binding.fingerprintVersion(body),2);
+assert.equal(await binding.hash(body),phpHash);
+const bound=await binding.bind(body,'doctor-qa',{source:'local_canvas',image_data:'data:image/png;base64,fixture'});
+assert.equal(bound.binding.version,2);
+const downgrade=structuredClone(body);
+delete downgrade.payload.prescription.medication_schema_version;
+assert.throws(()=>binding.fingerprintVersion(downgrade),/PRESCRIPTION_FINGERPRINT_SCHEMA_DOWNGRADE/);
+console.log('REG02_12=PASS');
+console.log('REC_REG02_BINDING_JS=PASS');

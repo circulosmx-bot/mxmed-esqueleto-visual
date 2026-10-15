@@ -3,9 +3,56 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_consent_signature_binding.php';
 
+function clinical_prescription_fingerprint_version(array $body): int
+{
+    $prescription = (array)($body['payload']['prescription'] ?? []);
+    $schema = $prescription['medication_schema_version'] ?? 1;
+    $hasRegimen = false;
+    foreach ((array)($prescription['items'] ?? []) as $item) {
+        if (is_array($item) && array_key_exists('regimen', $item)) $hasRegimen = true;
+    }
+    if ($schema === 2) {
+        foreach ((array)($prescription['items'] ?? []) as $item) {
+            if (!is_array($item) || !is_array($item['regimen'] ?? null))
+                throw new InvalidArgumentException('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
+        }
+        return 2;
+    }
+    if ($schema !== 1 || $hasRegimen) throw new InvalidArgumentException('PRESCRIPTION_FINGERPRINT_SCHEMA_DOWNGRADE');
+    return 1;
+}
+
+function clinical_prescription_binding_regimen_projection(array $regimen): array
+{
+    $c = 'clinical_consent_binding_clean';
+    $administration = (array)($regimen['administration'] ?? []);
+    $duration = (array)($regimen['duration'] ?? []);
+    $a = ['pattern'=>$c($administration['pattern'] ?? '')];
+    foreach (['instruction','indication','repeat_mode'] as $key)
+        if (array_key_exists($key, $administration)) $a[$key] = $c($administration[$key]);
+    if (isset($administration['minimum_interval'])) $a['minimum_interval'] = [
+        'value'=>$c($administration['minimum_interval']['value'] ?? ''),
+        'unit'=>$c($administration['minimum_interval']['unit'] ?? '')];
+    if (isset($administration['maximum_dose_per_period'])) {
+        $maximum = (array)$administration['maximum_dose_per_period'];
+        $a['maximum_dose_per_period'] = ['value'=>$c($maximum['value'] ?? ''),'unit'=>$c($maximum['unit'] ?? ''),
+            'period'=>['value'=>$c($maximum['period']['value'] ?? ''),'unit'=>$c($maximum['period']['unit'] ?? '')]];
+    }
+    if (isset($administration['maximum_administrations_per_period'])) {
+        $maximum = (array)$administration['maximum_administrations_per_period'];
+        $a['maximum_administrations_per_period'] = ['count'=>(int)($maximum['count'] ?? 0),
+            'period'=>['value'=>$c($maximum['period']['value'] ?? ''),'unit'=>$c($maximum['period']['unit'] ?? '')]];
+    }
+    $d = ['mode'=>$c($duration['mode'] ?? '')];
+    foreach (['value','unit','date','instruction'] as $key)
+        if (array_key_exists($key, $duration)) $d[$key] = $c($duration[$key]);
+    return ['administration'=>$a,'duration'=>$d];
+}
+
 /** Field order is mirrored by prescription-signature-binding.js. */
 function clinical_prescription_binding_projection(array $body): array
 {
+    $fingerprintVersion = clinical_prescription_fingerprint_version($body);
     $p = (array)($body['payload'] ?? []);
     $patient = (array)($p['patient_snapshot'] ?? []);
     $doctor = (array)($p['physician_snapshot'] ?? []);
@@ -19,6 +66,8 @@ function clinical_prescription_binding_projection(array $body): array
         $value = [];
         foreach (['name','presentation','dose','route','frequency','duration','quantity','instructions'] as $key)
             $value[$key] = $c($item[$key] ?? '');
+        if ($fingerprintVersion === 2) $value['regimen'] = clinical_prescription_binding_regimen_projection(
+            (array)($item['regimen'] ?? []));
         $items[] = $value;
     }
     $presentation = (array)($p['presentation'] ?? []);
@@ -73,6 +122,10 @@ function clinical_prescription_binding_projection(array $body): array
         $projection['professional_context']['consultorio'] = ['name'=>'', 'address'=>''];
         $projection['professional_presentation'] = ['version'=>2, 'offices'=>$offices];
     }
+    if ($fingerprintVersion === 2) {
+        $projection['fingerprint_version'] = 2;
+        $projection['medication_schema_version'] = 2;
+    }
     return $projection;
 }
 
@@ -95,7 +148,8 @@ function clinical_prescription_binding_classify(array $body, string $doctorId, ?
     $source = (string)($entry['source'] ?? '');
     $uuid = (string)($body['draft_ref'] ?? '');
     $version = (int)($body['expected_version'] ?? 0);
-    if (($binding['version'] ?? null) !== 1) return 'legacy_unverified_binding';
+    $fingerprintVersion = clinical_prescription_fingerprint_version($body);
+    if (($binding['version'] ?? null) !== $fingerprintVersion) return 'legacy_unverified_binding';
     if ($uuid === '' || $version < 1 || !in_array($source, ['local_canvas','registered_profile','remote_qr'], true)
         || ($entry['role'] ?? null) !== 'doctor' || ($binding['role'] ?? null) !== 'doctor'
         || ($binding['source'] ?? null) !== $source || !empty($binding['revoked_in_edit'])
@@ -125,6 +179,7 @@ function clinical_prescription_binding_classify(array $body, string $doctorId, ?
             || (string)$qr['actor_user_id'] !== (string)($body['payload']['physician_snapshot']['user_id'] ?? '')
             || (string)$qr['patient_id'] !== (string)($body['context']['patient_id'] ?? '')
             || (string)$qr['role'] !== 'doctor'
+            || (int)$qr['fingerprint_version'] !== $fingerprintVersion
             || (string)$qr['signer_authority'] !== clinical_prescription_binding_authority($body, $doctorId)
             || !hash_equals((string)$qr['content_fingerprint'], (string)$binding['content_fingerprint'])
             || !hash_equals((string)$qr['artifact_digest'], $digest)

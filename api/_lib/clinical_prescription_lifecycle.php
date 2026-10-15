@@ -145,8 +145,10 @@ function clinical_prescription_lifecycle_reissue(PDO $pdo, array $doctor, string
         unset($item);
         $copyBody = ['document_type'=>'prescription','context'=>['patient_id'=>$patientId],
             'payload'=>['contract_version'=>2,
-                'prescription'=>['items'=>$items,
-                    'observaciones'=>$sourcePayload['prescription']['observaciones'] ?? ''],
+                'prescription'=>array_merge(
+                    (int)($sourcePayload['prescription']['medication_schema_version'] ?? 1) === 2
+                        ? ['medication_schema_version'=>2] : [],
+                    ['items'=>$items,'observaciones'=>$sourcePayload['prescription']['observaciones'] ?? '']),
                 'diagnostic_context'=>$sourcePayload['diagnostic_context'] ?? ['mode'=>'sin_diagnostico','text'=>''],
                 'presentation'=>$sourcePayload['presentation'] ?? ['version'=>1,'professional_header'=>'shown']]];
         $payload = clinical_prescription_v2_normalize($pdo,$doctor,$patientId,$copyBody,false);

@@ -1,13 +1,44 @@
 (function () {
   'use strict';
   const clean = value => String(value ?? '').normalize('NFC').replace(/\r\n?/g, '\n');
+  const fingerprintVersion=body=>{
+    const prescription=body?.payload?.prescription||{},schema=prescription.medication_schema_version??1;
+    const items=Array.isArray(prescription.items)?prescription.items:[];
+    const hasRegimen=items.some(item=>item&&Object.prototype.hasOwnProperty.call(item,'regimen'));
+    if(schema===2){
+      if(items.some(item=>!item||!item.regimen||typeof item.regimen!=='object'||Array.isArray(item.regimen)))
+        throw new Error('PRESCRIPTION_FINGERPRINT_SCHEMA_INVALID');
+      return 2;
+    }
+    if(schema!==1||hasRegimen)throw new Error('PRESCRIPTION_FINGERPRINT_SCHEMA_DOWNGRADE');
+    return 1;
+  };
+  const regimenProjection=regimen=>{
+    const source=regimen||{},administration=source.administration||{},duration=source.duration||{};
+    const a={pattern:clean(administration.pattern)};
+    for(const key of ['instruction','indication','repeat_mode'])
+      if(Object.prototype.hasOwnProperty.call(administration,key))a[key]=clean(administration[key]);
+    if(administration.minimum_interval)a.minimum_interval={value:clean(administration.minimum_interval.value),unit:clean(administration.minimum_interval.unit)};
+    if(administration.maximum_dose_per_period){const maximum=administration.maximum_dose_per_period;
+      a.maximum_dose_per_period={value:clean(maximum.value),unit:clean(maximum.unit),
+        period:{value:clean(maximum.period?.value),unit:clean(maximum.period?.unit)}};}
+    if(administration.maximum_administrations_per_period){const maximum=administration.maximum_administrations_per_period;
+      a.maximum_administrations_per_period={count:Number(maximum.count)||0,
+        period:{value:clean(maximum.period?.value),unit:clean(maximum.period?.unit)}};}
+    const d={mode:clean(duration.mode)};
+    for(const key of ['value','unit','date','instruction'])
+      if(Object.prototype.hasOwnProperty.call(duration,key))d[key]=clean(duration[key]);
+    return {administration:a,duration:d};
+  };
   const projection = body => {
+    const fpVersion=fingerprintVersion(body);
     const p=body?.payload||{}, patient=p.patient_snapshot||{}, doctor=p.physician_snapshot||{};
     const professional=p.professional_context||{}, consultorio=professional.consultorio||{};
     const diagnosis=p.diagnostic_context||{}, items=(p.prescription?.items||[]).map(item=>{
       const result={};
       for(const key of ['name','presentation','dose','route','frequency','duration','quantity','instructions'])
         result[key]=clean(item?.[key]);
+      if(fpVersion===2)result.regimen=regimenProjection(item?.regimen);
       return result;
     });
     const presentationV2=p.presentation?.version===2;
@@ -40,6 +71,7 @@
         display_order:office?.display_order==null?null:(Number(office.display_order)||0)
       }))};
     }
+    if(fpVersion===2){result.fingerprint_version=2;result.medication_schema_version=2;}
     return result;
   };
   const hash=async body=>{
@@ -55,9 +87,9 @@
       || !signature?.image_data||!await window.mxmedConsentSignatureBinding.imageHasInk(signature.image_data))return null;
     const digest=await window.mxmedConsentSignatureBinding.imageDigest(signature.image_data);
     if(!digest)return null;
-    return {...signature,role:'doctor',binding:{version:1,document_type:'prescription',document_uuid:uuid,
+    return {...signature,role:'doctor',binding:{version:fingerprintVersion(body),document_type:'prescription',document_uuid:uuid,
       document_version:version,role:'doctor',source:signature.source,authority:authority(body,doctorId),
       artifact_digest:digest,content_fingerprint:await hash(body),applied_at:new Date().toISOString()}};
   };
-  window.mxmedPrescriptionSignatureBinding=Object.freeze({projection,hash,authority,bind});
+  window.mxmedPrescriptionSignatureBinding=Object.freeze({projection,hash,authority,bind,fingerprintVersion});
 })();

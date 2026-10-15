@@ -9682,17 +9682,24 @@ try {
                 if (($read['ok'] ?? false) !== true) throw new InvalidArgumentException('PRESCRIPTION_JSON_INVALID');
                 $body = (array)($read['data'] ?? []);
                 if ($action === 'preview') {
+                    $ref = trim((string)($body['draft_ref'] ?? ''));
+                    $version = (int)($body['expected_version'] ?? 0);
+                    $stored = $ref !== '' ? clinical_documents_get_by_uuid_fetch($pdo,$ref) : null;
+                    $storedPayload = is_array($stored) ? (array)($stored['content']['payload'] ?? []) : [];
+                    $storedIsCurrent = is_array($stored)
+                        && (string)($stored['document_type'] ?? '') === 'prescription'
+                        && (int)($stored['version'] ?? 0) === $version
+                        && (string)($stored['context']['patient_id'] ?? '') === $patientId
+                        && (string)($storedPayload['physician_snapshot']['user_id'] ?? '')
+                            === (string)$scopedDoctorContext['user_id'];
                     $normalized = clinical_prescription_v2_normalize($pdo,$scopedDoctorContext,$patientId,$body,
-                        ($body['final_review'] ?? false) === true);
+                        ($body['final_review'] ?? false) === true,
+                        $storedIsCurrent && is_string($storedPayload['issue_date'] ?? null)
+                            ? $storedPayload['issue_date'] : null);
                     if (($body['include_signature'] ?? false) === true) {
-                        $ref = trim((string)($body['draft_ref'] ?? ''));
-                        $version = (int)($body['expected_version'] ?? 0);
-                        $stored = $ref !== '' ? clinical_documents_get_by_uuid_fetch($pdo,$ref) : null;
-                        if (!$stored || (string)($stored['document_type'] ?? '') !== 'prescription'
-                            || (int)($stored['version'] ?? 0) !== $version
-                            || (string)($stored['context']['patient_id'] ?? '') !== $patientId)
+                        if (!$storedIsCurrent)
                             throw new InvalidArgumentException('PRESCRIPTION_REVIEW_VERSION_INVALID');
-                        $old = (array)($stored['content']['payload'] ?? []);
+                        $old = $storedPayload;
                         foreach (['patient_snapshot','physician_snapshot','professional_context','professional_presentation','issue_date','encounter_reference'] as $key)
                             $normalized[$key] = $old[$key] ?? $normalized[$key];
                         $check = ['draft_ref'=>$ref,'expected_version'=>$version,
@@ -9717,6 +9724,9 @@ try {
                 if ($document === null) throw new RuntimeException('PRESCRIPTION_DOCUMENT_NOT_FOUND');
                 clinical_send_response(['ok'=>true,'data'=>['document'=>$document],
                     'meta'=>['route'=>$routeName,'idempotency_replay'=>$replay]],$replay?200:201);return;
+            } catch (ClinicalPrescriptionRegimenException $e) {
+                clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->getMessage(),
+                    'meta'=>['route'=>$routeName]],422);return;
             } catch (ClinicalIdempotencyException $e) {
                 clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->getMessage(),
                     'meta'=>['route'=>$routeName]],$e->httpStatus);return;
