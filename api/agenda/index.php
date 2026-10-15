@@ -1190,6 +1190,8 @@ try {
             }
             if ($method === 'GET') {
                 $response = $consultorios->index($_GET);
+            } elseif ($method === 'PUT' && ($segments[1] ?? '') === 'reorder') {
+                $response = $consultorios->reorder(read_json_body());
             } elseif ($method === 'PUT') {
                 $response = $consultorios->update(read_json_body());
             } else {

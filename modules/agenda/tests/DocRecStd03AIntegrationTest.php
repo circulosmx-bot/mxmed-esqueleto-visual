@@ -158,16 +158,17 @@ try {
 
 $privateAppSource = (string)file_get_contents($root . '/private-app.php');
 $consultorioUiSource = (string)file_get_contents($root . '/assets/js/perfil/consultorio/multisede.js');
-std03aIntegrationAssert(str_contains($privateAppSource, 'Consultorio principal')
-    && str_contains($privateAppSource, 'Orden de presentación')
+std03aIntegrationAssert(!str_contains($privateAppSource, 'id="cons-document-primary"')
+    && !str_contains($privateAppSource, 'id="cons-document-order"')
+    && str_contains($privateAppSource, 'data-cons-save-order')
     && str_contains($privateAppSource, 'Mostrar en documentos'),
-    'existing consultorio administration surface exposes all presentation controls');
-std03aIntegrationAssert(str_contains($consultorioUiSource, 'document_is_primary:')
-    && str_contains($consultorioUiSource, 'document_display_order:')
+    'tab order replaces competing primary and numeric-order controls');
+std03aIntegrationAssert(!str_contains($consultorioUiSource, 'document_is_primary:')
+    && !str_contains($consultorioUiSource, 'document_display_order:')
     && str_contains($consultorioUiSource, 'document_publication_enabled:'),
-    'canonical consultorio PUT payload persists presentation controls');
-std03aIntegrationAssert(str_contains($consultorioUiSource, "row?.document_is_primary === true")
+    'ordinary office autosave preserves canonical ordering authority');
+std03aIntegrationAssert(str_contains($consultorioUiSource, 'mx:consultorios-hydrated')
     && str_contains($consultorioUiSource, "row?.document_publication_enabled === true"),
-    'administration controls hydrate from persisted server state');
+    'administration hydrates server order and independent publication state');
 
 echo "DOC_REC_STD03A_INTEGRATION=PASS\n";

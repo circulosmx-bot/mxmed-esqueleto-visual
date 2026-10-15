@@ -277,7 +277,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <link rel="stylesheet" href="assets/css/datos-generales-buttons.css?v=dg06">
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
-<link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
+<link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=cons-vis01">
 <link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=cons-sign02b-r2">
 <link rel="stylesheet" href="assets/css/patient-workspace-navigation-guard.css?v=vis24">
 <link rel="stylesheet" href="assets/css/clinical/dental-location-v1.css?v=dental-cat02">
@@ -1536,7 +1536,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
             <ul class="nav nav-pills mm-tabs mm-tabs-embed mb-3" role="tablist" data-exp-tabs>
 
-              <li class="nav-item">
+              <li class="nav-item" data-consultorio-tab-item>
 
                 <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sede1" type="button">
 
@@ -1545,6 +1545,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                   <span class="tab-lbl">PRIMER<br>CONSULTORIO</span>
 
                 </button>
+
+                <span class="cons-tab-drag-handle material-symbols-rounded" role="button" tabindex="0" aria-label="Reordenar consultorio" title="Arrastra o usa las flechas izquierda y derecha" aria-describedby="cons-order-help">drag_indicator</span>
 
               </li>
 
@@ -1561,6 +1563,14 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
               </li>
 
             </ul>
+
+            <div class="mx-cons-order-status" data-cons-order-status role="status" aria-live="polite">
+              <div>
+                <strong>Orden de consultorios sin confirmar.</strong>
+                <span id="cons-order-help">Arrastra las pestañas o enfoca el control de movimiento y usa las flechas. La primera sede será la principal.</span>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm" data-cons-save-order>Guardar orden actual</button>
+            </div>
 
             <!-- Leaflet CSS/JS (para mapa interactivo; si falla, queda el iframe) -->
 
@@ -1637,6 +1647,14 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
                   </div>
 
+                  <div class="col-12 d-flex justify-content-start gap-4 align-items-center cons-flags" data-cons-location-amenities>
+
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-estac"/><label class="form-check-label" for="cons-estac">Cuenta con estacionamiento <span class="material-symbols-outlined align-middle" aria-hidden="true">local_parking</span></label></div>
+
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-acces"/><label class="form-check-label" for="cons-acces">Accesibilidad para personas con discapacidad <span class="material-symbols-outlined align-middle" aria-hidden="true">accessible</span></label></div>
+
+                  </div>
+
                   <!-- Grupo médico: después del domicilio y ubicación -->
 
                   <div class="col-12">
@@ -1682,27 +1700,11 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                   </div>
 
                   <div class="col-12">
-                    <label class="form-label">Puedes escribir una referencia para que los pacientes ubiquen mejor tu consultorio (opcional)</label>
-                    <input class="form-control" placeholder="Ejemplo: Frente al parque central, segundo piso, arriba de farmacia."/>
-                  </div>
-
-                  <div class="col-12">
                     <div class="card border-0 bg-light p-3" data-cons-document-presentation>
                       <div class="d-flex flex-wrap gap-4 align-items-start">
-                        <div class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" id="cons-document-primary">
-                          <label class="form-check-label fw-semibold" for="cons-document-primary">Consultorio principal</label>
-                          <div class="form-text">Solo puede existir uno por médico. No se elige automáticamente.</div>
-                        </div>
-                        <div>
-                          <label class="form-label fw-semibold mb-1" for="cons-document-order">Orden de presentación</label>
-                          <select class="form-select form-select-sm" id="cons-document-order">
-                            <option value="">Sin configurar</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                          </select>
-                          <div class="form-text">Orden explícito para sedes adicionales en documentos.</div>
+                        <div class="mx-cons-order-summary">
+                          <strong>La primera pestaña es el consultorio principal.</strong>
+                          <div class="form-text">El orden se guarda para esta cuenta médica. La autorización para mostrar cada sede en documentos se controla por separado.</div>
                         </div>
                         <div class="form-check form-switch">
                           <input class="form-check-input" type="checkbox" id="cons-document-publication">
@@ -1733,14 +1735,6 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
                   <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><div class="save-wrap"><input id="cons-urg1" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
                   <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><div class="save-wrap"><input id="cons-urg2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
-
-                  <div class="col-md-6 d-flex justify-content-start gap-4 align-items-center cons-flags">
-
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-estac"/><label class="form-check-label" for="cons-estac">Cuenta con Estacionamiento <span class="material-symbols-outlined align-middle" aria-hidden="true">local_parking</span></label></div>
-
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-acces"/><label class="form-check-label" for="cons-acces">Accesibilidad para discapacitados <span class="material-symbols-outlined align-middle" aria-hidden="true">accessible</span></label></div>
-
-                  </div>
 
                   <div class="col-12">
 
@@ -11667,7 +11661,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/perfil/visibility-help.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
 
-<script src="assets/js/perfil/consultorio/multisede.js?v=20260429j"></script>
+<script src="assets/js/perfil/consultorio/consultorio-ordering.js?v=cons-vis01"></script>
+<script src="assets/js/perfil/consultorio/multisede.js?v=cons-vis01"></script>
 
 <script src="assets/js/title-fix.js"></script>
 

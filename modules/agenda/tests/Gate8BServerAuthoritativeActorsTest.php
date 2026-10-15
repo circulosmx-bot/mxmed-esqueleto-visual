@@ -244,7 +244,7 @@ gate8bAssert(array_keys($valid->publicResponse()) === ['authorized', 'status', '
 gate8bAssert(!preg_match('/account|membership|profile|token|cookie|reason/i', json_encode($valid->publicResponse(), JSON_THROW_ON_ERROR)), 'public response has no sensitive identifiers or internal reason');
 
 $knownHashes = [
-    'api/agenda/index.php' => '3aaf635fe62c588f3168948f347274be2684c2fa28eccc844a0d66430276e3b1',
+    'api/agenda/index.php' => '310274b2e0a53085fe44b339d8a3ff787ed5604c76526444ba139468304ec7da',
     'modules/agenda/tests/Gate8ACanonicalContractsTest.php' => 'efae63a8e5e353288a24e60770e0f7128df89c75411b6e6541c2daeda2637ecd',
     'modules/agenda/contracts/ActorAuthorityContract.php' => 'b0332df721d4af0ebd38ad0ff1f9abf6cf5d8d3b6b3a418b892506bff3720a3b',
     'modules/agenda/contracts/AppointmentLifecycleContract.php' => 'b7a264a584ecb806437cb67b8d212985ac9e8f9a76b2eb7ac39340de663f2d3a',

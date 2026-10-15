@@ -256,7 +256,7 @@ function mxClearHorarioInputs(inputs){
       });
       // renombrar ids con sufijo n
       const sfx = String(n);
-      const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-document-primary','cons-document-order','cons-document-publication','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-foto-slot','cons-map','cons-map-frame','cons-lat','cons-lng','cons-logo','cons-logo-slot','cons-logo-prev','cons-logo-img','cons-logo-del','cons-logo-sync','cons-logo-manual'];
+      const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-document-publication','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','cons-estac','cons-acces','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-foto-slot','cons-map','cons-map-frame','cons-lat','cons-lng','cons-logo','cons-logo-slot','cons-logo-prev','cons-logo-img','cons-logo-del','cons-logo-sync','cons-logo-manual'];
       ids.forEach(base=>{ const el = pane.querySelector('#'+base); if(el){ el.id = base + (base==='sched-body'||base==='sched-copy-mon'||base==='sched-clear' ? '-'+sfx : sfx); const lab = pane.querySelector(`label[for="${base}"]`); if(lab) lab.setAttribute('for', el.id); } });
       // Evita arrastrar filas/horarios renderizados del consultorio origen al clon.
       try{
@@ -334,11 +334,12 @@ function mxClearHorarioInputs(inputs){
       else { tabContent.appendChild(pane); }
     }
     if(!btn){
-      const li = document.createElement('li'); li.className='nav-item';
+      const li = document.createElement('li'); li.className='nav-item'; li.setAttribute('data-consultorio-tab-item','');
       btn = document.createElement('button'); btn.className='nav-link'; btn.type='button'; btn.setAttribute('data-bs-toggle','pill'); btn.setAttribute('data-bs-target','#sede'+n);
       btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl"></span>';
       const addLi = document.getElementById('btn-consul-add')?.closest('li'); if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
       li.appendChild(btn);
+      const dragHandle=document.createElement('span');dragHandle.className='cons-tab-drag-handle material-symbols-rounded';dragHandle.setAttribute('role','button');dragHandle.tabIndex=0;dragHandle.textContent='drag_indicator';li.appendChild(dragHandle);
     }
     updateConsultorioTabLabel(n, '');
     // insertar barra de eliminar en pane secundario
@@ -3556,8 +3557,10 @@ function mxClearHorarioInputs(inputs){
       return getPaneByIndex(idx);
     };
     const restorePrimaryConsultorioPaneAfterHydration = ()=>{
-      const tabBtn = root.querySelector('[data-bs-target="#sede1"]');
-      const pane = getPaneByIndex(1);
+      const tabBtn = root.querySelector('.mm-tabs-embed [data-consultorio-tab-item]:first-child .nav-link[data-bs-target^="#sede"]')
+        || root.querySelector('[data-bs-target="#sede1"]');
+      const target = clean(tabBtn?.getAttribute('data-bs-target') || '#sede1');
+      const pane = root.querySelector(target);
       if(!tabBtn || !pane) return false;
       try{
         if(window.bootstrap?.Tab){
@@ -4037,8 +4040,6 @@ function mxClearHorarioInputs(inputs){
         telefonos: [tel1, tel2, tel3].filter(Boolean),
         whatsapp: clean(getWhatsappField(pane)?.value || ''),
         urgencias: [urg1, urg2].filter(Boolean),
-        document_is_primary: !!getField(pane, '[id^="cons-document-primary"]')?.checked,
-        document_display_order: clean(getField(pane, '[id^="cons-document-order"]')?.value || '') || null,
         document_publication_enabled: !!getField(pane, '[id^="cons-document-publication"]')?.checked,
         logo_url: logoFromInput || logoPreviewValue,
         foto_url: fotoFromInput || fotoPreviewValue
@@ -4079,9 +4080,7 @@ function mxClearHorarioInputs(inputs){
         ...(Array.isArray(payload.telefonos) ? payload.telefonos : []),
         ...(Array.isArray(payload.urgencias) ? payload.urgencias : [])
       ].some((value)=> clean(value) !== '')
-      || payload.document_is_primary === true
       || payload.document_publication_enabled === true
-      || payload.document_display_order !== null
       || (
         Number.isFinite(Number(payload?.lat))
         && Number.isFinite(Number(payload?.lng))
@@ -4114,6 +4113,14 @@ function mxClearHorarioInputs(inputs){
         });
       }catch(_){ }
       return json;
+    };
+    const dispatchConsultorioOrderState = (json, doctorId, rows = [])=>{
+      root.dispatchEvent(new CustomEvent('mx:consultorios-hydrated',{detail:{
+        doctor_id:doctorId,
+        presentation_order_configured:json?.meta?.presentation_order_configured===true,
+        presentation_order:Array.isArray(json?.meta?.presentation_order)?json.meta.presentation_order:rows.map(row=>clean(row?.consultorio_id||row?.id||'')).filter(Boolean),
+        presentation_order_fingerprint:clean(json?.meta?.presentation_order_fingerprint||'')
+      }}));
     };
     const apiSaveConsultorio = async (payload)=>{
       try{
@@ -4265,6 +4272,10 @@ function mxClearHorarioInputs(inputs){
       }catch(_){ }
       if(result?.ok && result?.json?.ok){
         hydratedRows.add(consultorioId);
+        const refreshed=await apiGetConsultorios(doctorId).catch(()=>null);
+        if(refreshed?.ok===true){
+          dispatchConsultorioOrderState(refreshed,doctorId,Array.isArray(refreshed.data)?refreshed.data:[]);
+        }
       }
       return result;
     };
@@ -4578,11 +4589,7 @@ function mxClearHorarioInputs(inputs){
       const urgs = Array.isArray(row?.urgencias) ? row.urgencias : [];
       setValue(getField(pane, '[id^="cons-urg1"]'), urgs[0] || '');
       setValue(getField(pane, '[id^="cons-urg2"]'), urgs[1] || '');
-      const documentPrimary = getField(pane, '[id^="cons-document-primary"]');
-      const documentOrder = getField(pane, '[id^="cons-document-order"]');
       const documentPublication = getField(pane, '[id^="cons-document-publication"]');
-      if(documentPrimary instanceof HTMLInputElement) documentPrimary.checked = row?.document_is_primary === true;
-      if(documentOrder instanceof HTMLSelectElement) documentOrder.value = row?.document_display_order == null ? '' : String(row.document_display_order);
       if(documentPublication instanceof HTMLInputElement) documentPublication.checked = row?.document_publication_enabled === true;
       applyPreview(pane, '.logo-slot-preview img, .mf-upload[data-type="logo"] .mf-prev img', row?.logo_url || '');
       applyPreview(pane, '.foto-slot .mf-prev img', row?.foto_url || '');
@@ -4784,6 +4791,7 @@ function mxClearHorarioInputs(inputs){
       try{
         const json = await apiGetConsultorios(doctorId);
         const rows = Array.isArray(json?.data) ? json.data : [];
+        const selectedTarget = clean(root.querySelector('.mm-tabs-embed .nav-link.active[data-bs-target^="#sede"]')?.getAttribute('data-bs-target') || '#sede1');
         try{
           false && console.warn('MXM CONSULTORIO DEBUG:', {
             event: 'hydrate_rows_received',
@@ -4807,6 +4815,11 @@ function mxClearHorarioInputs(inputs){
           if(cid) hydratedRows.add(cid);
           applyRowToPane(row);
         });
+        dispatchConsultorioOrderState(json,doctorId,rows);
+        const selectedButton=root.querySelector(`.mm-tabs-embed .nav-link[data-bs-target="${selectedTarget}"]`);
+        if(selectedButton){
+          try{window.bootstrap?.Tab?.getOrCreateInstance(selectedButton)?.show();}catch(_){selectedButton.click();}
+        }
         const paneIds = getConsultorioSlots();
         paneIds.forEach((idx)=>{
           const key = String(idx);
@@ -4891,11 +4904,6 @@ function mxClearHorarioInputs(inputs){
       const pane = target.closest('.tab-pane[id^="sede"]');
       if(!pane) return;
       const targetId = clean(target.id || '');
-      if(targetId.startsWith('cons-document-primary') && target instanceof HTMLInputElement && target.checked){
-        root.querySelectorAll('input[id^="cons-document-primary"]').forEach((candidate)=>{
-          if(candidate !== target && candidate instanceof HTMLInputElement) candidate.checked = false;
-        });
-      }
       if(
         targetId.startsWith('cons-grupo-si')
         || targetId.startsWith('cons-grupo-no')

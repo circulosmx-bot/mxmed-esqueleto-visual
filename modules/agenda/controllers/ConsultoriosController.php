@@ -55,6 +55,7 @@ class ConsultoriosController
                 $rows = $this->repository->listByDoctor($doctorId);
                 $data = array_map([$this, 'normalizeRow'], $rows);
             }
+            $presentationState = $this->repository->documentPresentationState($doctorId, $rows ?? null);
         } catch (\RuntimeException $e) {
             if ($e->getMessage() === 'consultorios table not ready') {
                 return $this->error('db_not_ready', 'consultorios table not ready');
@@ -70,6 +71,60 @@ class ConsultoriosController
             'data' => $data,
             'meta' => (object)[
                 'doctor_id_effective' => $doctorId,
+                'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+                'auth_mode' => trim((string)($this->actorContext['mode'] ?? '')),
+                'auth_warnings' => $this->contextWarnings,
+                'presentation_order_configured' => $presentationState['configured'],
+                'presentation_order' => $presentationState['order'],
+                'presentation_order_fingerprint' => $presentationState['fingerprint'],
+            ],
+        ];
+    }
+
+    public function reorder(array $payload = [])
+    {
+        $this->contextWarnings = [];
+        if ($this->dbError || $this->repository === null) {
+            return $this->error('db_not_ready', 'consultorios table not ready');
+        }
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
+        }
+        $orderedIds = $payload['consultorio_ids'] ?? null;
+        $fingerprint = strtolower(trim((string)($payload['expected_order_fingerprint'] ?? '')));
+        if (!is_array($orderedIds) || $orderedIds === [] || count($orderedIds) > 3
+            || preg_match('/^[a-f0-9]{64}$/', $fingerprint) !== 1) {
+            return $this->error('invalid_params', 'complete consultorio order and fingerprint are required');
+        }
+        try {
+            $state = $this->repository->reorderDocumentPresentation(
+                (string)$doctorScope['doctor_id'],
+                array_values($orderedIds),
+                $fingerprint
+            );
+        } catch (\RuntimeException $e) {
+            return match ($e->getMessage()) {
+                'stale_consultorio_order' => $this->error('conflict', 'consultorio order changed; reload required'),
+                'consultorio_order_scope_mismatch' => $this->error('forbidden', 'consultorio order scope mismatch'),
+                'invalid_consultorio_order' => $this->error('invalid_params', 'invalid consultorio order'),
+                default => $this->error('db_error', 'database error'),
+            };
+        } catch (\PDOException) {
+            return $this->error('db_error', 'database error');
+        }
+        return [
+            'ok' => true,
+            'error' => null,
+            'message' => 'consultorio order updated',
+            'data' => [
+                'presentation_order_configured' => $state['configured'],
+                'presentation_order' => $state['order'],
+                'presentation_order_fingerprint' => $state['fingerprint'],
+            ],
+            'meta' => (object)[
+                'doctor_id_effective' => (string)$doctorScope['doctor_id'],
                 'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
                 'auth_mode' => trim((string)($this->actorContext['mode'] ?? '')),
                 'auth_warnings' => $this->contextWarnings,
@@ -92,6 +147,10 @@ class ConsultoriosController
         $consultorioId = trim((string)($payload['consultorio_id'] ?? ''));
         if ($doctorId === '' || $consultorioId === '') {
             return $this->error('invalid_params', 'doctor_id and consultorio_id are required');
+        }
+        if (array_key_exists('document_is_primary', $payload)
+            || array_key_exists('document_display_order', $payload)) {
+            return $this->error('invalid_params', 'use canonical consultorio reorder operation');
         }
 
         $cleanText = static function ($value): ?string {
