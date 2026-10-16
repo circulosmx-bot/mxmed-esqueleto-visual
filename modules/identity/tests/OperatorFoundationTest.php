@@ -18,7 +18,7 @@ use Identity\Http\{CanonicalDoctorMembershipPolicy,CanonicalClinicalIdentityReso
 if (($argv[1]??'')==='--worker') {
     try {
         $db=$argv[2]??'';$p=op01pdo($db);$input=json_decode(stream_get_contents(STDIN),true,512,JSON_THROW_ON_ERROR);
-        $clock=new Op01Clock(new DateTimeImmutable($input['now'],new DateTimeZone('UTC')));$s=op01stack($p,$clock);$a=op01login($s,$input['actor']);
+        $clock=new Op01Clock(new DateTimeImmutable($input['now'],new DateTimeZone('UTC')));$s=op01stack($p,$clock,isset($input['session_store'])?unserialize(base64_decode($input['session_store']),['allowed_classes'=>true]):null);$a=op01login($s,$input['actor']);
         echo "READY\n";flush();
         if ($input['action']==='recovery') op01governance($p,$s)->executeOwnerRecovery($a['context'],$input['case']);
         else op01command($s,$a,$input['profile'],$input['action'],$input['input'],$input['command']);
@@ -32,7 +32,7 @@ function concurrent(PDO $p,string $db,string $profile,array $s,array $tasks): ar
         foreach ($tasks as $i=>$task) {
             $process=proc_open([PHP_BINARY,__FILE__,'--worker',$db],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
             if (!is_resource($process)) throw new RuntimeException('worker_start_failed');
-            fwrite($pipes[0],json_encode($task+['profile'=>$profile,'command'=>'race_command_'.$i,'now'=>$s['clock']->now()->format('Y-m-d\TH:i:s.uP')],JSON_THROW_ON_ERROR));fclose($pipes[0]);
+            fwrite($pipes[0],json_encode($task+['profile'=>$profile,'command'=>'race_command_'.$i,'now'=>$s['clock']->now()->format('Y-m-d\TH:i:s.uP'),'session_store'=>base64_encode(serialize($s['store']))],JSON_THROW_ON_ERROR));fclose($pipes[0]);
             $workers[]=[$process,$pipes];
         }
         foreach ($workers as [$process,$pipes]) {
@@ -83,6 +83,7 @@ try {
     foreach (['2026_07_19_01_create_auth_accounts.sql','2026_07_20_04_create_auth_account_credentials.sql','2026_07_20_06_create_auth_rate_limit_buckets.sql','2026_09_08_07_create_internal_operator_grants.sql','2026_09_10_01_internal_governance.sql'] as $f)op01migrate($p,$base.'/db/migrations/'.$f);
     op01migrate($p,dirname($base).'/profiles/db/profiles_doctors_schema.sql');$p->exec('CREATE TABLE medical_groups(group_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
     foreach (['2026_07_19_03_create_auth_account_memberships.sql','2026_10_14_01_create_profile_ownership_governance.sql','2026_10_14_02_profile_ownership_r3_endorsements.sql','2026_10_15_01_identity_governance_r3_runtime.sql','2026_10_15_02_profile_operator_foundation.sql'] as $f)op01migrate($p,$base.'/db/migrations/'.$f);
+    op01migrate($p,$base.'/db/migrations/2026_10_16_01_governance_security_bindings.sql');
     op01migrate($p,$base.'/db/migrations/2026_10_15_02_profile_operator_foundation.sql');
     op01migrate($p,$base.'/db/migrations/2026_10_15_04_operator_presentations.sql');
     op01migrate($p,dirname($base).'/profiles/db/2026_06_19_create_subscription_plan_lifecycle.sql');
@@ -221,8 +222,11 @@ try {
         $only['role_code']=$role;
         op01check((new CanonicalDoctorMembershipPolicy())->select([$only])['reason']==='nonmedical_operator_requires_granular_consumer','provenance_denies_role_'.$role);
     }passed(29,'canonical_shell_no_hydration');
-    $audit=$p->query("SELECT real_actor_reference,correlation_id,metadata_json,event_hash,previous_hash,sequence_number,stream_key FROM platform_audit_events ORDER BY stream_key,sequence_number")->fetchAll();$last=[];
-    foreach($audit as $event){$meta=json_decode($event['metadata_json'],true,512,JSON_THROW_ON_ERROR);$producer=$meta['producer_metadata'];if(!isset($producer['operator_action'],$producer['profile_doctor_id'],$producer['owner_membership_id'],$producer['grant_revision'],$producer['operation_reason'])||$meta['_audit_v1']['session_id']===null)throw new RuntimeException('audit_attribution_failed');
+    $audit=$p->query("SELECT action,real_actor_reference,correlation_id,metadata_json,event_hash,previous_hash,sequence_number,stream_key FROM platform_audit_events ORDER BY stream_key,sequence_number")->fetchAll();$last=[];
+    foreach($audit as $event){$meta=json_decode($event['metadata_json'],true,512,JSON_THROW_ON_ERROR);$producer=$meta['producer_metadata'];if($event['action']==='INTERNAL_GOVERNANCE_CHANGED'){
+            if(!isset($producer['operation'],$producer['target_account_id'])||!in_array($event['real_actor_reference'],['account:requester','account:approver_a','account:approver_b'],true))throw new RuntimeException('governance_audit_attribution_failed');
+        }elseif(!isset($producer['operator_action'],$producer['profile_doctor_id'],$producer['owner_membership_id'],$producer['grant_revision'],$producer['operation_reason']))throw new RuntimeException('audit_attribution_failed');
+        if($meta['_audit_v1']['session_id']===null)throw new RuntimeException('audit_session_attribution_failed');
         if(str_contains($event['metadata_json'],'@example.invalid')||str_contains($event['metadata_json'],$ra['token']))throw new RuntimeException('audit_sensitive_metadata');
         if(isset($last[$event['stream_key']])&&$event['previous_hash']!==$last[$event['stream_key']])throw new RuntimeException('audit_chain_failed');$last[$event['stream_key']]=$event['event_hash'];}
     op01check((int)op01scalar($p,"SELECT COUNT(*) FROM platform_audit_events WHERE real_actor_reference='account:invitee_a' AND action='INVITATION_ACCEPTED'")>0,'invitee_real_actor');passed(30,'canonical_writer_attribution_chain');

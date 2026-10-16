@@ -21,11 +21,30 @@ use Identity\Contracts\SessionRotationDecision;
 use Identity\Contracts\SessionState;
 use Identity\Contracts\SessionStorePort;
 use Identity\Contracts\SessionToken;
+use Identity\Contracts\SessionTokenDigest;
 use Identity\Contracts\SessionValidationDecision;
 
 final class SessionService
 {
     private ?SessionRecord $lastSupersededSession = null;
+
+    /** Consumption-time check without cookie reconstruction, touch or new sessions. */
+    public function bindingIsCurrent(array $binding): bool
+    {
+        try {
+            if (!$this->store->healthCheck()->healthy()) return false;
+            $record = $this->store->read(new SessionTokenDigest((string)($binding['token_digest'] ?? '')));
+            if ($record === null || $record->state() !== SessionState::ACTIVE
+                || $record->expiresAt() <= $this->clock->now() || $record->absoluteExpiresAt() <= $this->clock->now()
+                || (string)$record->sessionId() !== ($binding['session_id'] ?? null)
+                || $record->principal()->accountId() !== ($binding['account_id'] ?? null)
+                || $record->principal()->credentialVersion() !== ($binding['credential_version'] ?? null)
+                || $this->accounts === null) return false;
+            $state = $this->accounts->current($record->principal()->accountId());
+            return is_array($state) && $state['status'] === AccountStatus::ACTIVE
+                && (int)$state['credential_version'] === $record->principal()->credentialVersion();
+        } catch (\Throwable) { return false; }
+    }
 
     public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null) {}
 

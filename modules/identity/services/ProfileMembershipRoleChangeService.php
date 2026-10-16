@@ -35,8 +35,11 @@ final class ProfileMembershipRoleChangeService
         private Clock $clock = new SystemClock(),
         private ?ProfileRoleChangeFinalizationPort $finalization = null,
         private ?\Identity\Contracts\ProfileOperatorOwnershipBoundary $operators = null,
+        private \Identity\Contracts\InitialOwnerEligibilityPort $eligibility = new \Identity\Adapters\CanonicalInitialOwnerEligibilityAdapter(),
+        private ?GovernanceCaseSecurity $security = null,
     ) {
         if (!$memberships->usesConnection($pdo)) throw new \InvalidArgumentException('profile_role_change_connection_mismatch');
+        if ($security!==null&&!$security->usesConnection($pdo)) throw new \InvalidArgumentException('profile_role_change_security_connection_mismatch');
     }
 
     /** @return array{membership_id:string,account_id:string,profile_doctor_id:string,role_code:string,scope_code:string,status:string} */
@@ -46,11 +49,14 @@ final class ProfileMembershipRoleChangeService
         $this->assertActor($actor,$request);
         try {
             $this->pdo->beginTransaction();
+            $this->security?->sessions->binding($actor);
             $this->lockAndValidateAccounts($actor,$request);
             $this->lockProfile($request->profileDoctorId);
+            $this->eligibility->assertEligible($this->pdo,$request->targetAccountId,$request->profileDoctorId);
             ProfileOperatorOwnershipGuard::assertConfigured($this->pdo,$request->profileDoctorId,$this->operators);
             $membership=$this->memberships->lockProfileMembership($request->membershipId);
             $this->assertMembership($membership,$request);
+            $this->security?->assertOperation($request->operationId,true);
             $active=$this->memberships->lockActivePhysicianMembershipsForAccount($request->targetAccountId);
             if(count($active)!==1 || (string)$active[0]['membership_id']!==$request->membershipId)
                 throw new \RuntimeException('profile_role_change_ambiguous_membership');
@@ -74,6 +80,7 @@ final class ProfileMembershipRoleChangeService
             $this->audit->append($this->pdo,$record);
             if($this->finalization!==null)$this->finalization->finalize($this->pdo,$request,$record);
             $this->operators?->ownershipChanged($this->pdo,$request->profileDoctorId,$actor,$request->operationId);
+            $this->security?->assertSeatLimit($request->profileDoctorId);
             if(!$this->pdo->commit())throw new \RuntimeException('profile_role_change_commit_failed');
             return ['membership_id'=>$request->membershipId,'account_id'=>$request->targetAccountId,
                 'profile_doctor_id'=>$request->profileDoctorId,'role_code'=>MembershipRole::OWNER,

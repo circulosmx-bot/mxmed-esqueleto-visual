@@ -1,5 +1,7 @@
 # OP-ACT01 — Paquete de despliegue de Operadores, deshabilitado por defecto
 
+> Estado posterior: OP-ACT02A ya instaló el esquema aditivo GOV03A (8 tablas) y Operadores (7) en normal-local, sin autoridad ni activación. No repetir el DDL ni tratar sus journals como receipts runtime. [GOV03B-FIX01](IDENTITY-GOV03A-governance-runtime.md) prepara controles adicionales y una migración nueva aún no autorizada para mxmed; ownership permanece bloqueado por falta del contrato cuenta-profesional/acreditación. Las instrucciones y evidencias de instalación siguientes describen la entrega histórica OP-ACT01.
+
 Continuación de [OP-INT04](OP-INT04_NORMAL_LOCAL_OPERATORS_INTEGRATION.md), OP-IMP07 y OP-ACT00. La aplicación sigue siendo `private-app.php`, con `#p-ag-operadores`, `#p-ag-admin` y `#ag_calendar`. Este paquete no instala nada en `mxmed`, no otorga titularidad y no activa correo. La composición requiere autorización operativa y autoridad personal independientes.
 
 ## Componentes y gates
@@ -61,7 +63,7 @@ El legado continúa sólo lectura, separado de plazas canónicas, también al ac
 
 Pruebas reutilizadas y nuevas: OP01 (autoridad/concurrencia/GOV), CLIN-AUTH02A, Gate8D semántico y contratos originales; HTTP real con Identity en el clon normal sin registros reales; owner-only, dos plazas pendientes, aceptación, email binding, alias/posiciones, cinco grants, snapshots originales tras rename/reschedule/cancel, revocación/suspensión y rutas clínicas/billing/staff/media/aliases bloqueadas; fallos de auditoría/cola con rollback; rutinas drift/credenciales sin acceso a normal; worker/SES simulado sin red; forward/replay/drift/DDL parcial/recovery y backup/restore. Browser Chromium/WebKit utiliza los componentes originales en 1440×900, 1366×768 y 820×1180. La aceptación física Safari del Director se reporta separada, nunca inferida.
 
-Orden futuro, cada paso sujeto al gate y autorización aplicable: backup/restore verificado y metadatos exactos → instalación aditiva GOV03A/Operadores aprobada → gobernanza/runtime y primera titularidad legítima en operación separada → conciliación de legado aprobada → recibo/clave/origen/router/entitlement y matriz de seguridad → corte de runtime autorizado → SES real y prueba de entrega autorizados → invitaciones reales explícitamente autorizadas. **La siguiente autorización solicitada es sólo backup/preflight y aplicación del DDL aditivo identificado a normal-local; no incluye titularidad, activación ni envío.**
+Orden futuro, cada paso sujeto al gate y autorización aplicable: backup/restore verificado y metadatos exactos → instalación aditiva GOV03A/Operadores aprobada → gobernanza/runtime y primera titularidad legítima en operación separada → conciliación de legado aprobada → recibo/clave/origen/router/entitlement y matriz de seguridad → corte de runtime autorizado → SES real y prueba de entrega autorizados → invitaciones reales explícitamente autorizadas. **OP-ACT02A ya completó esa instalación. La siguiente operación debe resolver los contratos y autorizaciones de GOV03B, sin repetir DDL anterior ni inferir permiso de titularidad, activación o envío.**
 
 
 ### Evidencia reproducible de esta entrega

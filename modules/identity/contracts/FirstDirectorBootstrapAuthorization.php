@@ -19,6 +19,10 @@ final readonly class FirstDirectorBootstrapAuthorization
         public bool $mfaVerified,
         public \DateTimeImmutable $authorizedAt,
         public \DateTimeImmutable $expiresAt,
+        public ?string $acceptingAccountId = null,
+        public ?string $acceptingSessionId = null,
+        public ?int $acceptingCredentialVersion = null,
+        public ?string $acceptingReauthenticatedAt = null,
     ) {
         if(preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD',$operationId)!==1)
             throw new \InvalidArgumentException('first_director_invalid_operation_id');
@@ -38,5 +42,15 @@ final readonly class FirstDirectorBootstrapAuthorization
             throw new \InvalidArgumentException('first_director_invalid_approval');
         if(!$reauthenticationVerified||!$mfaVerified||$expiresAt<=$authorizedAt)
             throw new \InvalidArgumentException('first_director_r3_controls_required');
+        if($acceptingAccountId!==null&&($acceptingAccountId!==$targetAccountId||strlen($acceptingSessionId??'')<8
+            ||($acceptingCredentialVersion??0)<1||$acceptingReauthenticatedAt===null))throw new \InvalidArgumentException('first_director_acceptance_binding_invalid');
+    }
+
+    public function withAcceptance(array $binding):self
+    {
+        return new self($this->operationId,$this->targetAccountId,$this->caseReference,$this->trustAnchorReference,
+            $this->ratifierSessionReference,$this->ratifierAccountIds,$this->approvalReferencesByRatifier,
+            $this->reauthenticationVerified,$this->mfaVerified,$this->authorizedAt,$this->expiresAt,
+            $binding['account_id'],$binding['session_id'],$binding['credential_version'],$binding['reauthenticated_at']);
     }
 }

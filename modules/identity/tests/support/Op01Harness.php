@@ -40,17 +40,18 @@ function op01writer(PDO $p,Op01AuditTransaction $tx): \Platform\Services\Canonic
         new \Platform\Services\CoarseAuditUserAgentSummarizer(),$tx,
         new \Platform\Services\CanonicalAuditSealer(new \Platform\Services\CanonicalAuditSerializer()),new \Platform\Services\AuditV1PhysicalMapper());
 }
-function op01stack(PDO $p,?Op01Clock $clock=null): array {
+function op01stack(PDO $p,?Op01Clock $clock=null,?\Identity\Adapters\InMemorySessionStoreAdapter $store=null): array {
     $clock??=new Op01Clock(new DateTimeImmutable('now',new DateTimeZone('UTC')));
     $accounts=new \Identity\Repositories\IdentityAccountRepository($p);$credentials=new \Identity\Repositories\AccountCredentialRepository($p);
-    $sessions=new \Identity\Services\SessionService(new \Identity\Adapters\InMemorySessionStoreAdapter(),new \Identity\Services\SessionTokenCodec(str_repeat('s',32)),$clock,
+    $store??=new \Identity\Adapters\InMemorySessionStoreAdapter();
+    $sessions=new \Identity\Services\SessionService($store,new \Identity\Services\SessionTokenCodec(str_repeat('s',32)),$clock,
         new \Identity\Contracts\SessionPolicy(),new \Identity\Adapters\PdoSessionAccountStateAdapter($accounts,$credentials));
     $csrf=new \Identity\Http\CsrfTokenService(str_repeat('c',32),900,$clock,'https://op01.example.invalid');
     $auth=new \Identity\Services\CredentialAuthenticationService($accounts,$credentials,
         new \Identity\Services\RateLimitService($p,new \Identity\Contracts\RateLimitKeyHasher(str_repeat('r',32)),$clock),$clock);
     $tx=new Op01AuditTransaction($p);$notifications=new \Identity\Adapters\InMemoryIdentityNotificationAdapter();
     $service=\Identity\Operators\DisposableOperatorFoundation::compose($p,$sessions,$csrf,op01writer($p,$tx),$notifications,$clock);
-    return compact('clock','sessions','csrf','auth','tx','notifications','service');
+    return compact('clock','sessions','csrf','auth','tx','notifications','service','store');
 }
 function op01login(array $stack,string $id): array {
     $d=$stack['auth']->authenticate($id.'@example.invalid','Only-Synthetic-Op01!', ['ip'=>'127.0.0.1']);
@@ -87,22 +88,41 @@ function op01fresh(PDO $p,string $suffix): string {
     $p->prepare("INSERT INTO profile_subscriptions(subscription_id,entity_type,entity_id,plan_code,contracted_plan_code,effective_plan_code,plan_label,status,starts_at,expires_at) VALUES(UUID(),'doctor',?,'optimum','optimum','optimum','Synthetic','active',DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 DAY))")->execute([$id]);
     return $id;
 }
+function op01GovernanceBindings(PDO $p,array $s): array {
+    require_once __DIR__.'/SyntheticOwnershipEligibility.php';
+    $security=new \Identity\Services\GovernanceSecurityContext($s['sessions'],$s['auth'],$s['clock']);
+    $mfa=new \Identity\Services\StaffMfaService($p,base64_encode(str_repeat('m',32)),'op01-key',new Op01MfaSecret(),$s['clock'],$security);
+    $pair=sodium_crypto_sign_seed_keypair(str_repeat('t',32));
+    $trust=new \Identity\Adapters\Ed25519ExternalTrustAnchorAdapter($p,base64_encode(sodium_crypto_sign_publickey($pair)),'op01-synthetic','local',$s['clock']);
+    $audit=new \Identity\Adapters\CanonicalGovernanceAuditAdapter($p,op01writer($p,$s['tx']));
+    $bindings=new \Identity\Services\GovernanceCaseSecurity($p,$security,new SyntheticOwnershipEligibility(),$trust,$audit);
+    return compact('security','mfa','pair','trust','audit','bindings');
+}
 function op01governance(PDO $p,array $s,bool $hook=true): \Identity\Services\R3ProfileGovernanceService {
-    $mfa=new \Identity\Services\StaffMfaService($p,base64_encode(str_repeat('m',32)),'op01-key',new Op01MfaSecret(),$s['clock']);
-    return new \Identity\Services\R3ProfileGovernanceService($p,$mfa,new \Identity\Adapters\PdoProfileOwnershipApproverAuthorityAdapter($p),$s['clock'],$hook?$s['service']:null);
+    $b=op01GovernanceBindings($p,$s);
+    return new \Identity\Services\R3ProfileGovernanceService($p,$b['mfa'],new \Identity\Adapters\PdoProfileOwnershipApproverAuthorityAdapter($p),$s['clock'],$hook?$s['service']:null,$b['bindings']);
 }
 function op01approvedRecovery(PDO $p,array $s,array $requester,string $profile,string $replacement): string {
-    $cases=op01governance($p,$s);$owner=(string)op01scalar($p,"SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active'",[$profile]);
+    $b=op01GovernanceBindings($p,$s);$cases=op01governance($p,$s);$owner=(string)op01scalar($p,"SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active'",[$profile]);
     $c=$cases->openOwnerRecoveryCase($requester['context'],'OWNER_REPLACEMENT',$owner,$replacement,'Synthetic owner transition review');
-    $mfa=new \Identity\Services\StaffMfaService($p,base64_encode(str_repeat('m',32)),'op01-key',new Op01MfaSecret(),$s['clock']);
+    $q=$p->prepare('SELECT * FROM auth_governance_cases WHERE case_id=?');$q->execute([$c['case_id']]);$case=$q->fetch();$context=json_decode($case['security_context'],true);
+    $claims=['contract_version'=>2,'operation'=>'OWNER_REPLACEMENT','operation_id'=>$c['operation_id'],'target_account_id'=>$case['beneficiary_account_id'],
+        'organization_id'=>'op01-synthetic','environment'=>'local','case_reference'=>$c['case_id'],'profile_doctor_id'=>$profile,'membership_id'=>$owner,
+        'membership_version'=>\Identity\Services\GovernanceCaseSecurity::version($context['membership']),'requester_account_id'=>$requester['context']->accountId(),
+        'trust_anchor_reference'=>'trust_'.bin2hex(random_bytes(16)),'ratifier_session_reference'=>'external-op01-session','authorized_at'=>$s['clock']->now()->format(DATE_ATOM),'expires_at'=>$s['clock']->now()->modify('+10 minutes')->format(DATE_ATOM),
+        'ratifiers'=>[['account_id'=>'external_ratifier_a','approval_reference'=>'external-approval-a','mfa_verified'=>true,'reauthenticated'=>true],['account_id'=>'external_ratifier_b','approval_reference'=>'external-approval-b','mfa_verified'=>true,'reauthenticated'=>true]]];
+    $json=json_encode($claims,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$b64=static fn($v)=>rtrim(strtr(base64_encode($v),'+/','-_'),'=');
+    $cases->bindExternalEvidence($requester['context'],$c['case_id'],$b64($json).'.'.$b64(sodium_crypto_sign_detached($json,sodium_crypto_sign_secretkey($b['pair']))));
+    $enrollment=new \Identity\Services\GovernanceStaffMfaCeremony($p,$b['mfa'],$b['security'],$b['audit'],$s['clock'],['requester']);
     foreach (['approver_a','approver_b'] as $id) {
         $actor=op01login($s,$id);
         if (!(int)op01scalar($p,"SELECT COUNT(*) FROM auth_staff_mfa_factors WHERE account_id=? AND status='ACTIVE'",[$id])) {
-            $e=$mfa->beginEnrollment($id);$mfa->activateEnrollment($id,$e['factor_id'],\Identity\Services\StaffMfaService::totp(str_repeat('s',20),intdiv($s['clock']->now()->getTimestamp(),30)));
+            $e=$enrollment->begin($actor['context'],$requester['context'],$id.'@example.invalid','Only-Synthetic-Op01!','requester@example.invalid','Only-Synthetic-Op01!');
+            $enrollment->activate($actor['context'],$e['factor_id'],\Identity\Services\StaffMfaService::totp(str_repeat('s',20),intdiv($s['clock']->now()->getTimestamp(),30)));
         }
         $s['clock']->value=$s['clock']->value->modify('+31 seconds');
-        $challenge=$cases->issueEndorsementChallenge($actor['context'],$c['case_id']);
-        $proof=$mfa->verifyChallenge($id,(string)$actor['context']->session()->sessionId(),1,$challenge['challenge_id'],$challenge['challenge'],
+        $challenge=$cases->issueEndorsementChallenge($actor['context'],$c['case_id'],$id.'@example.invalid','Only-Synthetic-Op01!',['ip'=>'synthetic']);
+        $proof=$b['mfa']->verifyChallenge($id,(string)$actor['context']->session()->sessionId(),1,$challenge['challenge_id'],$challenge['challenge'],
             \Identity\Services\StaffMfaService::totp(str_repeat('s',20),intdiv($s['clock']->now()->getTimestamp(),30)));
         $cases->endorse($actor['context'],$c['case_id'],$proof['proof_id'],$proof['proof']);
     }

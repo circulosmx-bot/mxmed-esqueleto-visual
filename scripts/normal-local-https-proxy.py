@@ -4,6 +4,11 @@ import argparse
 import http.client
 import http.server
 import ssl
+import os
+import time
+import secrets
+import hashlib
+import hmac
 
 HOP = {'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
        'te', 'trailer', 'transfer-encoding', 'upgrade'}
@@ -50,8 +55,19 @@ class Proxy(http.server.BaseHTTPRequestHandler):
             excluded = HOP | {v.strip().lower() for v in self.headers.get('Connection', '').split(',')}
             headers = {k: v for k, v in self.headers.items()
                        if k.lower() not in excluded and not k.lower().startswith('x-forwarded-')
+                       and not k.lower().startswith('x-mxmed-tls-')
                        and k.lower() not in {'forwarded', 'host', 'content-length'}}
             headers.update({'Host': 'localhost:8443', 'Connection': 'close'})
+            # No key is generated at startup. Provisioning is a separate operation.
+            key = self.server.governance_transport_key
+            if key:
+                stamp, nonce = str(int(time.time())), secrets.token_hex(16)
+                parts = [stamp, nonce, self.command, self.path, 'localhost:8443',
+                         self.headers.get('Origin', ''), self.headers.get('Referer', ''),
+                         self.headers.get('Cookie', ''), self.headers.get('X-CSRF-Token', ''),
+                         hashlib.sha256(body or b'').hexdigest()]
+                headers.update({'X-MXMED-TLS-Time': stamp, 'X-MXMED-TLS-Nonce': nonce,
+                                'X-MXMED-TLS-Proof': hmac.new(key, '\n'.join(parts).encode(), hashlib.sha256).hexdigest()})
             # Origin, Referer, Cookie and CSRF headers are preserved, never invented.
             connection.request(self.command, self.path, body=body, headers=headers)
             response = connection.getresponse()
@@ -90,6 +106,8 @@ def make_server(cert, key, port=8443, backend_port=8091, views_port=8092):
     server.daemon_threads = True
     server.backend_port = backend_port
     server.views_port = views_port
+    transport_key = os.environ.get('MXMED_GOVERNANCE_PROXY_KEY', '').encode()
+    server.governance_transport_key = transport_key if len(transport_key) >= 32 else None
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(cert, key)

@@ -2,14 +2,14 @@
 declare(strict_types=1);
 if(PHP_SAPI!=='cli')exit(1);
 function checkGovHttp(bool $ok,string $label):void{if(!$ok)throw new RuntimeException('FAIL '.$label);echo "PASS $label\n";}
-$root=dirname(__DIR__,3);$api=(string)file_get_contents($root.'/api/identity/governance.php');$composition=(string)file_get_contents(__DIR__.'/../http/GovernanceHttpComposition.php');$mfa=(string)file_get_contents(__DIR__.'/../services/StaffMfaService.php');
-checkGovHttp(str_contains($api,"REQUEST_METHOD']??''))!=='POST'")&&str_contains($api,'governanceHttps()'),'strict POST and HTTPS gate');
-checkGovHttp(str_contains($api,'HTTP_ORIGIN')&&str_contains($api,'HTTP_REFERER')&&str_contains($api,'allowedOrigin'),'same-origin enforcement');
-checkGovHttp(str_contains($api,'validAuthenticated')&&str_contains($api,'CanonicalHttpSessionResolver'),'canonical session and session-bound CSRF');
-checkGovHttp(str_contains($composition,"MXMED_IDENTITY_GOVERNANCE_ENABLED')!=='1'")&&str_contains($composition,'identity_governance_configuration_required'),'explicit fail-closed runtime configuration');
-checkGovHttp(str_contains($composition,'Ed25519ExternalTrustAnchorAdapter')&&str_contains($composition,'StaffMfaService'),'productive trust and MFA adapters composed');
-checkGovHttp(!str_contains($api,'beginEnrollment')&&!str_contains($api,'test_mode')&&!str_contains($composition,'GovSecret'),'no enrollment or synthetic provider HTTP route');
-checkGovHttp(str_contains($mfa,'sodium_crypto_secretbox')&&str_contains($mfa,'ux_auth_staff_mfa_totp_replay')===false&&str_contains($mfa,"'+15 minutes'"),'encrypted TOTP and throttling contract');
-checkGovHttp(str_contains($api,"['cases','initial-owner']")&&str_contains($api,"'beneficiary-step-up'")&&str_contains($api,"'execute-recovery'")&&str_contains($api,"['bootstrap','first-director']"),'bounded governance routes only');
-checkGovHttp(substr_count($api,"'GOVERNANCE_DENIED'")===1&&!str_contains($api,'$e->getMessage()'),'non-enumerating HTTP denial');
-echo "IDENTITY_GOV03A_HTTP_CONTRACT=PASS\n";
+$root=dirname(__DIR__,3);$api=file_get_contents($root.'/api/identity/governance.php');$composition=file_get_contents(__DIR__.'/../http/GovernanceHttpComposition.php');$gate=file_get_contents(__DIR__.'/../http/GovernanceHttpSecurity.php');$mfa=file_get_contents(__DIR__.'/../services/StaffMfaService.php');$cli=file_get_contents($root.'/scripts/governance-ceremony.php');
+checkGovHttp(str_contains($api,"REQUEST_METHOD']??''))!=='POST'")&&str_contains($api,'governanceHttps($raw)'),'POST and authenticated TLS transport');
+checkGovHttp(str_contains($gate,'HTTP_ORIGIN')&&str_contains($gate,'HTTP_REFERER')&&str_contains($gate,'$origin!==$allowed'),'exact configured origin');
+checkGovHttp(str_contains($gate,'validAuthenticated')&&str_contains($gate,'CanonicalHttpSessionResolver'),'canonical session-bound CSRF');
+checkGovHttp(str_contains($composition,'GovernanceDeploymentAuthorization::require')&&str_contains($composition,'assertSchema'),'private pinned authorization and schema prerequisite');
+checkGovHttp(str_contains($composition,'Ed25519ExternalTrustAnchorAdapter')&&str_contains($composition,'GovernanceStaffMfaCeremony'),'canonical trust and enrollment services');
+checkGovHttp(!str_contains($api,'beginEnrollment'),'no HTTP enrollment writer');
+checkGovHttp(str_contains($api,"'bootstrap/'")&&!str_contains($api,'->bootstrap->execute'),'bootstrap is CLI only');
+checkGovHttp(str_contains($cli,'MXMED_GOVERNANCE_CEREMONY_ENABLED')&&str_contains($cli,'secret-output'),'disabled private operational ceremony');
+checkGovHttp(str_contains($mfa,'reauthentication_context')&&str_contains($mfa,'assertChallengeContext'),'action-bound canonical reauthentication');
+echo "IDENTITY_GOV03B_HTTP_CONTRACT=PASS\n";

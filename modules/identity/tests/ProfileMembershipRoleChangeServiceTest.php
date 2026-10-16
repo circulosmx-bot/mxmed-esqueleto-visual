@@ -5,6 +5,7 @@ declare(strict_types=1);
 if(PHP_SAPI!=='cli')exit(1);
 require_once __DIR__.'/../http/IdentityHttpComposition.php';
 Identity\Http\IdentityHttpComposition::registerAutoloader();
+require_once __DIR__.'/support/SyntheticOwnershipEligibility.php';
 
 use Identity\Adapters\{RejectingProfileMembershipRoleChangeAuditAdapter,RejectingProfileOwnershipApprovalAdapter,RejectingProfileOwnershipStepUpAdapter};
 use Identity\Contracts\{AuthenticatedAccessContext,Clock,ProfileMembershipRoleChangeAuditPort,ProfileMembershipRoleChangeAuditRecord,
@@ -104,7 +105,7 @@ function ownershipEvidence(PDO $p,ProfileMembershipRoleChangeRequest $r,?string 
 function ownershipService(PDO $p,?ProfileOwnershipApprovalPort $approval=null,?ProfileOwnershipStepUpPort $step=null,?ProfileMembershipRoleChangeAuditPort $audit=null):array
 {
     $audit??=new DisposableRoleAuditPort($p);
-    return [new ProfileMembershipRoleChangeService($p,new AccountMembershipRepository($p),$approval??new DisposableApprovalPort($p),$step??new DisposableStepUpPort($p),$audit,new OwnershipFixedClock()),$audit];
+    return [new ProfileMembershipRoleChangeService($p,new AccountMembershipRepository($p),$approval??new DisposableApprovalPort($p),$step??new DisposableStepUpPort($p),$audit,new OwnershipFixedClock(),eligibility:new SyntheticOwnershipEligibility()),$audit];
 }
 
 function ownershipDenied(PDO $p,Closure $operation,string $label):void

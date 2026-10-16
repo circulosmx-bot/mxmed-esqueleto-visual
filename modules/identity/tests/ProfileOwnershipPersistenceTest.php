@@ -4,6 +4,7 @@ declare(strict_types=1);
 if(PHP_SAPI!=='cli')exit(1);
 require_once __DIR__.'/../http/IdentityHttpComposition.php';
 Identity\Http\IdentityHttpComposition::registerAutoloader();
+require_once __DIR__.'/support/SyntheticOwnershipEligibility.php';
 
 use Identity\Adapters\{CanonicalProfileMembershipRoleChangeAuditAdapter,PdoProfileOwnershipApprovalAdapter,
     PdoProfileOwnershipApproverAuthorityAdapter,PdoProfileOwnershipStepUpAdapter};
@@ -117,7 +118,7 @@ try{
  $request=qa02bRequest($p,$request->operationId,$request->approvalReference,$issuance->proof);
  $tx=new Qa02bAuditTransaction($p);$service=new ProfileMembershipRoleChangeService($p,new AccountMembershipRepository($p),
     new PdoProfileOwnershipApprovalAdapter($p,new PdoProfileOwnershipApproverAuthorityAdapter($p),$clock),new PdoProfileOwnershipStepUpAdapter($p,$stepRepo,$clock),
-    new CanonicalProfileMembershipRoleChangeAuditAdapter($p,qa02bWriter($p,$tx)),$clock);
+    new CanonicalProfileMembershipRoleChangeAuditAdapter($p,qa02bWriter($p,$tx)),$clock,eligibility:new SyntheticOwnershipEligibility());
  $result=$service->assignInitialOwner(qa02bActor(),$request);
  qa02b($result['role_code']==='owner'&&(int)$p->query('SELECT COUNT(*) FROM auth_account_memberships')->fetchColumn()===1,'same_membership_promoted_once');
  qa02b((int)$p->query('SELECT COUNT(*) FROM platform_audit_events')->fetchColumn()===3,'three_canonical_audit_events_atomic');
@@ -146,7 +147,7 @@ try{
     &&(string)$p->query("SELECT status FROM auth_profile_ownership_approvals")->fetchColumn()==='APPROVED','revoked_approver_no_evidence_consumption');
 
  qa02bReset($p);$request=qa02bRequest($p);qa02bApproval($p,$request);$issuance=$issuer->issue(qa02bActor(),$request,'qa_target@example.invalid','Synthetic-Password-123!',['ip'=>'qa02b-rollback']);$request=qa02bRequest($p,$request->operationId,$request->approvalReference,$issuance->proof);
- $failingTx=new Qa02bAuditTransaction($p);$failingTx->failInsert=true;$failing=new ProfileMembershipRoleChangeService($p,new AccountMembershipRepository($p),new PdoProfileOwnershipApprovalAdapter($p,new PdoProfileOwnershipApproverAuthorityAdapter($p),$clock),new PdoProfileOwnershipStepUpAdapter($p,$stepRepo,$clock),new CanonicalProfileMembershipRoleChangeAuditAdapter($p,qa02bWriter($p,$failingTx)),$clock);
+ $failingTx=new Qa02bAuditTransaction($p);$failingTx->failInsert=true;$failing=new ProfileMembershipRoleChangeService($p,new AccountMembershipRepository($p),new PdoProfileOwnershipApprovalAdapter($p,new PdoProfileOwnershipApproverAuthorityAdapter($p),$clock),new PdoProfileOwnershipStepUpAdapter($p,$stepRepo,$clock),new CanonicalProfileMembershipRoleChangeAuditAdapter($p,qa02bWriter($p,$failingTx)),$clock,eligibility:new SyntheticOwnershipEligibility());
  qa02bDenied(fn()=>$failing->assignInitialOwner(qa02bActor(),$request),'audit_failure_denied');
  qa02b((string)$p->query("SELECT role_code FROM auth_account_memberships WHERE membership_id='qa_membership'")->fetchColumn()==='collaborator'&&(string)$p->query("SELECT status FROM auth_profile_ownership_approvals")->fetchColumn()==='APPROVED','audit_failure_rolls_back_role_and_evidence');
 

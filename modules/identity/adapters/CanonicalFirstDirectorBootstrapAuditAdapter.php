@@ -36,6 +36,9 @@ final class CanonicalFirstDirectorBootstrapAuditAdapter implements FirstDirector
                     'trust_anchor_reference'=>$a->trustAnchorReference,'approval_references_by_ratifier'=>$a->approvalReferencesByRatifier,
                     'ratifier_account_ids'=>$a->ratifierAccountIds,'risk_level'=>'R3','mfa_verified'=>true,
                     'reauthentication_verified'=>true,
+                    'accepting_account_id'=>$a->acceptingAccountId,'accepting_session_id'=>$a->acceptingSessionId,
+                    'accepting_credential_version'=>$a->acceptingCredentialVersion,
+                    'accepting_reauthenticated_at'=>$a->acceptingReauthenticatedAt,
                 ],
             ]),$context);
     }
