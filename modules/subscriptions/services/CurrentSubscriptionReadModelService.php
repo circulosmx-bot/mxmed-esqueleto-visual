@@ -35,7 +35,8 @@ final class CurrentSubscriptionReadModelService
     public function __construct(
         CurrentSubscriptionRepository $repository,
         ?DateTimeImmutable $now = null,
-        ?ExistingCapabilityAuthorityService $capabilityAuthority = null
+        ?ExistingCapabilityAuthorityService $capabilityAuthority = null,
+        private bool $commercialOnly = false
     ) {
         $this->repository = $repository;
         $this->now = $now;
@@ -53,7 +54,7 @@ final class CurrentSubscriptionReadModelService
         $subscription = $this->repository->findCurrentCandidateForEntity($entityType, $entityId);
         $model = $subscription === null ? $this->buildFreeDefault($entityType, $entityId, false)
             : $this->buildFromSubscription($entityType, $entityId, $subscription);
-        if ($entityType !== 'doctor' || $entityId !== '1' || !NormalLocalReviewScenario::environmentAllowed()
+        if ($this->commercialOnly || $entityType !== 'doctor' || $entityId !== '1' || !NormalLocalReviewScenario::environmentAllowed()
             || !$this->repository->isNormalLocalDatabase()) return $model;
         $fingerprint = hash('sha256', json_encode([$subscription,$model['effective_plan_code'],$model['is_active'],$model['is_in_grace']], JSON_THROW_ON_ERROR));
         $record = NormalLocalReviewScenario::read();

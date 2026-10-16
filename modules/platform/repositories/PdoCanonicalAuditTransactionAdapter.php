@@ -5,6 +5,7 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use RuntimeException;
+require_once __DIR__.'/CanonicalAuditDatabaseTarget.php';
 final class PdoCanonicalAuditTransactionAdapter implements CanonicalAuditTransactionPort
 {
     private const HASH_VERSION='sha256-hex-v1';
@@ -19,7 +20,9 @@ final class PdoCanonicalAuditTransactionAdapter implements CanonicalAuditTransac
     }
     public function lockHead(string $streamKey): array
     {
-        $sql='CALL `mxmed`.`audit_mp01c_lock_stream_head_v1`(:stream_key)';
+        $target=CanonicalAuditDatabaseTarget::fromConnection($this->pdo);
+        $routine=$target->routine($this->pdo,'audit_mp01c_lock_stream_head_v1');
+        $sql=$target->database==='mxmed'?'CALL `mxmed`.`audit_mp01c_lock_stream_head_v1`(:stream_key)':'CALL '.$routine.'(:stream_key)';
         $s=$this->pdo->prepare($sql);
         try{
             $s->execute(['stream_key'=>$streamKey]);
@@ -50,7 +53,9 @@ final class PdoCanonicalAuditTransactionAdapter implements CanonicalAuditTransac
         if($expectedHashVersion===null&&$expectedSequence<=0) throw new RuntimeException('invalid_legacy_bridge_transition');
         if($expectedHashVersion!==null&&$expectedHashVersion!==$newHashVersion) throw new RuntimeException('forbidden_head_version_change');
         if($expectedUpdatedAt!==null&&!self::isCanonicalTime($expectedUpdatedAt)) throw new RuntimeException('invalid_expected_head_time');
-        $sql='CALL `mxmed`.`audit_mp01c_advance_stream_head_cas_v1`(:stream_key,:expected_sequence,:expected_hash,:expected_hash_version,:expected_updated_at,:new_sequence,:new_hash,:new_hash_version,:new_updated_at)';
+        $target=CanonicalAuditDatabaseTarget::fromConnection($this->pdo);
+        $routine=$target->routine($this->pdo,'audit_mp01c_advance_stream_head_cas_v1');
+        $sql=$target->database==='mxmed'?'CALL `mxmed`.`audit_mp01c_advance_stream_head_cas_v1`(:stream_key,:expected_sequence,:expected_hash,:expected_hash_version,:expected_updated_at,:new_sequence,:new_hash,:new_hash_version,:new_updated_at)':'CALL '.$routine.'(:stream_key,:expected_sequence,:expected_hash,:expected_hash_version,:expected_updated_at,:new_sequence,:new_hash,:new_hash_version,:new_updated_at)';
         $s=$this->pdo->prepare($sql);
         try{
             $s->execute(['stream_key'=>$streamKey,'expected_sequence'=>$expectedSequence,'expected_hash'=>$expectedHash,'expected_hash_version'=>$expectedHashVersion,'expected_updated_at'=>$expectedUpdatedAt,'new_sequence'=>$newSequence,'new_hash'=>$newHash,'new_hash_version'=>$newHashVersion,'new_updated_at'=>$newUpdatedAt]);

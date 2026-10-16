@@ -16,9 +16,17 @@ header('Referrer-Policy: same-origin');
 try {
     IdentityHttpComposition::registerAutoloader();
     $privateIdentity = IdentityHttpComposition::fromProcessEnvironment();
+    $normalOperators=null;
+    if(\Identity\Operators\OperatorDeploymentConfiguration::requested())$normalOperators=\Identity\Operators\OperatorRuntimeComposition::fromIdentity($privateIdentity);
     $operatorUi03 = \Identity\Operators\OperatorQaConfiguration::requested();
+    $boundedNormal=false;
+    if($normalOperators!==null){
+        $candidate=$privateIdentity->sessions()->validate($_COOKIE['__Host-mxmed_session']??null);
+        $boundedNormal=$candidate->allowed()&&\Identity\Operators\OperatorRuntimeComposition::accountRequiresBoundedShell($privateIdentity,$candidate->context()->accountId());
+        $operatorUi03=$operatorUi03||$boundedNormal;
+    }
     if ($operatorUi03) {
-        $operatorHttp = new \Identity\Operators\OperatorQaHttp();
+        $operatorHttp = $boundedNormal ? $normalOperators->http : new \Identity\Operators\OperatorQaHttp();
         $operatorSession = $operatorHttp->session();
         $operatorState = $operatorHttp->operators->snapshot($operatorSession);
         $operatorOwner = $operatorState['owner'];
@@ -59,6 +67,12 @@ $privateBootstrap = $privateAccess->context ?? [];
 $operatorPanel = $operatorUi03
     ? \Identity\Operators\OperatorPanelReadiness::available($operatorState)
     : \Identity\Operators\OperatorPanelReadiness::normalReadOnly($privateIdentity->pdo(), $privateBootstrap);
+if($normalOperators!==null&&!$operatorUi03){
+    $operatorState=$normalOperators->http->operators->snapshot((string)($_COOKIE['__Host-mxmed_session']??''));
+    $legacyPanel=$operatorPanel;
+    $operatorPanel=\Identity\Operators\OperatorPanelReadiness::available($operatorState);
+    $operatorPanel['can_configure_agenda']=true;$operatorPanel['legacy']=$legacyPanel['legacy'];
+}
 $privateBootstrap['operators_ui'] = $operatorPanel;
 if ($privateAccess->session === null) {
     http_response_code(503);
@@ -10466,7 +10480,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script>window.mxmedInitializeSidebar();</script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
 <script src="/assets/js/agenda/operators-panel.js?v=op-imp07"></script>
-<script src="/assets/js/agenda/canonical-operators.js?v=op-imp07"></script>
+<script src="/assets/js/agenda/canonical-operators.js?v=op-act01"></script>
 <script src="/assets/js/agenda/agenda-workspace.js?v=op-imp07"></script>
 <script>window.mxmedCanonicalOperators.whenReady.then(function(){window.mxmedInitializeAgenda();}).catch(function(){/* The original panel retains the bootstrap error. */});</script>
 </body></html>
@@ -10686,7 +10700,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/clinical/prescription-editor-host.js?v=rec-tpl02"></script>
 <script src="assets/js/core/sidebar.js?v=op-ui03"></script>
 <script src="assets/js/agenda/agenda-workspace.js?v=op-imp07"></script>
-<script src="assets/js/agenda/operators-panel.js?v=op-imp07"></script>
+<script src="assets/js/agenda/operators-panel.js?v=op-act01"></script>
+<script src="assets/js/agenda/canonical-operators.js?v=op-act01"></script>
 <script src="assets/js/app.js?v=op-int04"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>

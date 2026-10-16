@@ -14,9 +14,9 @@ use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use PDO;
 
 /**
- * Canonical OP-IMP01 authority reused by two explicit synthetic compositions:
- * disposable CLI and OP-IMP02 isolated HTTP. No normal-local/production factory
- * or legacy Agenda credential writer is supplied.
+ * Canonical OP-IMP01 authority shared by guarded synthetic factories and the
+ * explicitly approved deployment composition. Every actor uses this same policy;
+ * no legacy Agenda credential writer is supplied.
  */
 final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
 {
@@ -30,8 +30,9 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
     private function __construct(private PDO $pdo, private SessionService $sessions,
         private CsrfTokenService $csrf, private CanonicalAuditWriter $audit,
         private \Identity\Contracts\IdentityNotificationPort $notifications, private Clock $clock,
-        private string $origin='https://op01.example.invalid')
+        private string $origin='https://op01.example.invalid', private ?OperatorInvitationRecipients $recipients=null, private bool $commercialOnly=false)
     {
+        $this->recipients ??= OperatorInvitationRecipients::synthetic();
         $this->memberships = new AccountMembershipRepository($pdo);
         $this->presentations = new OperatorPresentationRepository($pdo);
         $this->presentationReady = $this->presentations->ready();
@@ -51,11 +52,18 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         return new self($pdo,$sessions,$csrf,$audit,$notifications,$clock);
     }
 
-    /** Explicit isolated HTTP composition; no normal-local/production constructor. */
+    /** Existing isolated HTTP factory retains its synthetic environment restrictions. */
     public static function isolated(\Identity\Http\IdentityHttpComposition $identity, CanonicalAuditWriter $audit, IsolatedInvitationOutbox $outbox): self
     {
         OperatorQaConfiguration::assertEnabled($identity->pdo());
         return new self($identity->pdo(),$identity->sessions(),$identity->csrf(),$audit,$outbox,new \Identity\Contracts\SystemClock(),OperatorQaConfiguration::origin());
+    }
+
+    /** Called only after the server deployment receipt/schema gate, never from request data. */
+    public static function deployed(\Identity\Http\IdentityHttpComposition $identity,CanonicalAuditWriter $audit,TransactionalOperatorInvitationDelivery $delivery,OperatorDeploymentConfiguration $configuration):self
+    {
+        $configuration->assertConnection($identity->pdo());
+        return new self($identity->pdo(),$identity->sessions(),$identity->csrf(),$audit,$delivery,new \Identity\Contracts\SystemClock(),$identity->allowedOrigin(),OperatorInvitationRecipients::canonical(),true);
     }
 
     /** All mutation inputs pass canonical Identity session + authenticated CSRF.
@@ -126,7 +134,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             $this->exec('INSERT INTO auth_profile_operator_commands(profile_doctor_id,actor_account_id,command_id,request_hash,result_json,created_at) VALUES(?,?,?,?,?,?)',
                 [$profile,$actor->accountId(),$commandId,$requestHash,json_encode($result,JSON_THROW_ON_ERROR),$this->now()]);
             $this->authenticate($rawSession,$csrf); // Revoked/expired session denies before commit.
-            if ($notification!==null && $this->notifications instanceof IsolatedInvitationOutbox) {
+            if ($notification!==null && $this->notifications instanceof TransactionalOperatorInvitationDelivery) {
                 $this->notifications->send($notification);$notification=null;
             }
             if (!$this->pdo->commit()) throw new \RuntimeException('operator_commit_failed');
@@ -166,7 +174,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             $i=$this->invitation($profile,$r['invitation_id']);
             if ($i['status']!=='accepted'||$i['accepted_membership_id']!==$m['membership_id']) throw new \RuntimeException('operator_provenance_denied');
             $granted=$this->one('SELECT capability FROM auth_profile_operator_grants WHERE revision_id=? AND capability=?',[$r['revision_id'],$capability])!==null;
-            $commercial=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now()))->resolveForEntity('doctor',$profile);
+            $commercial=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now(),commercialOnly:$this->commercialOnly))->resolveForEntity('doctor',$profile);
             $entitled=($commercial['feature_access']['agenda_appointments']['available']??false)===true;
             $valid=$this->sessions->validate($session)->allowed();
             if($owns)$this->pdo->commit();
@@ -210,12 +218,13 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             $o=$this->all("SELECT membership_id,account_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active'",[$profile]);
             $owner=count($o)===1&&$o[0]['membership_id']===$m['membership_id']&&$m['status']==='active';
             $r=$this->one('SELECT revision FROM auth_profile_operator_grant_revisions WHERE membership_id=? ORDER BY revision DESC LIMIT 1',[$m['membership_id']]);$revision=(int)($r['revision']??0);
-            $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now()))->resolveForEntity('doctor',$profile);
+            $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now(),commercialOnly:$this->commercialOnly))->resolveForEntity('doctor',$profile);
             foreach(ProfileOperatorCapabilityCatalog::KEYS as $key)$caps[$key]=$owner?($plan['feature_access']['agenda_appointments']['available']??false)===true:$this->permits($session,$profile,$profile,$key);
         }
-        $inbox=$this->all("SELECT i.invitation_id,i.profile_doctor_id,p.display_name,i.expires_at,i.offered_capabilities,o.opened_at FROM auth_profile_operator_invitations i JOIN auth_operator_invitation_outbox o ON o.invitation_id=i.invitation_id JOIN profiles_doctors p ON p.doctor_id=i.profile_doctor_id WHERE i.email_normalized=? AND i.status='pending' AND i.expires_at>UTC_TIMESTAMP(6) ORDER BY i.created_at",[$account['email_normalized']]);
+        $inbox=$this->all("SELECT i.invitation_id,i.profile_doctor_id,p.display_name,i.expires_at,i.offered_capabilities FROM auth_profile_operator_invitations i JOIN profiles_doctors p ON p.doctor_id=i.profile_doctor_id WHERE i.email_normalized=? AND i.status='pending' AND i.expires_at>UTC_TIMESTAMP(6) ORDER BY i.created_at",[$account['email_normalized']]);
         foreach($inbox as &$i){
             $i['capabilities']=json_decode($i['offered_capabilities'],true);
+            $i+= $this->notifications instanceof TransactionalOperatorInvitationDelivery ? $this->notifications->inboxState($i['invitation_id']) : ['opened_at'=>null,'requires_email_link'=>false];
             $p=$this->presentationReady?$this->one('SELECT * FROM auth_profile_operator_presentations WHERE profile_doctor_id=? AND invitation_id=?',[$i['profile_doctor_id'],$i['invitation_id']]):null;
             $i+=OperatorPresentationRepository::projection($p);
         }unset($i);
@@ -239,7 +248,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             if($owner['account_id']!==$d->context()->accountId())throw new \RuntimeException('operator_owner_required');
             $this->expire($profile,$d->context(),$this->uuid());
             $pending=$this->all("SELECT invitation_id,email_normalized,role_code,offered_capabilities,created_at,expires_at,offer_revision,status FROM auth_profile_operator_invitations WHERE profile_doctor_id=? AND status='pending' ORDER BY created_at",[$profile]);
-            foreach($pending as &$i){$i['alias']=explode('@',$i['email_normalized'])[0];$i['capabilities']=json_decode($i['offered_capabilities'],true);$i+=OperatorPresentationRepository::projection($this->presentationReady?$this->presentations->invitation($profile,$i['invitation_id']):null);}unset($i);
+            foreach($pending as &$i){$i['alias']=explode('@',$i['email_normalized'])[0];$i['capabilities']=json_decode($i['offered_capabilities'],true);if($this->notifications instanceof TransactionalOperatorInvitationDelivery)$i+=$this->notifications->inboxState($i['invitation_id']);$i+=OperatorPresentationRepository::projection($this->presentationReady?$this->presentations->invitation($profile,$i['invitation_id']):null);}unset($i);
             $members=$this->all("SELECT m.membership_id,m.account_id,m.role_code,m.status,a.email_normalized,a.status account_status,a.email_verified_at FROM auth_account_memberships m JOIN auth_accounts a ON a.account_id=m.account_id WHERE m.profile_doctor_id=? AND m.assignment_source=? ORDER BY m.created_at",[$profile,self::SOURCE]);
             foreach($members as &$m){$r=$this->one('SELECT * FROM auth_profile_operator_grant_revisions WHERE membership_id=? ORDER BY revision DESC LIMIT 1',[$m['membership_id']]);
                 $m+=OperatorPresentationRepository::projection($this->presentationReady?$this->presentations->membership($profile,$m['membership_id']):null);
@@ -251,7 +260,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
                 $m['revision']=(int)($r['revision']??0);$m['grant_status']=$r['status']??'missing';
                 $m['capabilities']=$r===null?[]:array_column($this->all('SELECT capability FROM auth_profile_operator_grants WHERE revision_id=? ORDER BY capability',[$r['revision_id']]),'capability');
             }unset($m);
-            $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now()))->resolveForEntity('doctor',$profile);
+            $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now(),commercialOnly:$this->commercialOnly))->resolveForEntity('doctor',$profile);
             foreach($members as &$member){
                 $r=$this->one('SELECT * FROM auth_profile_operator_grant_revisions WHERE membership_id=? ORDER BY revision DESC LIMIT 1',[$member['membership_id']]);
                 // Display-only projection. Action consumers always revalidate through permits.
@@ -275,7 +284,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             if(count($members)!==1||$members[0]['status']!=='active')throw new \RuntimeException('operator_membership_denied');
             $m=$members[0];$isOwner=$owner['membership_id']===$m['membership_id'];$r=$isOwner?null:$this->currentRevision($m['membership_id']);$revision=(int)($r['revision']??0);
             if($expectedRevision!==$revision)throw new \RuntimeException('operator_revision_conflict');
-            $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now()))->resolveForEntity('doctor',$profile);
+            $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now(),commercialOnly:$this->commercialOnly))->resolveForEntity('doctor',$profile);
             if(($plan['feature_access']['agenda_appointments']['available']??false)!==true||(!$isOwner&&!$this->permits($session,$profile,$profile,$capability)))throw new \RuntimeException('operator_capability_denied');
             $creator=null;
             if($this->originReady){
@@ -315,10 +324,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
 
     private function invite(AuthenticatedAccessContext $actor,string $profile,array $owner,array $input,string $correlation,?int $preferredPosition=null): array
     {
-        $email=IdentityAccount::normalizeEmail((string)($input['email']??''));
-        // Synthetic-only composition. Never emit a real address, even if a caller supplies one.
-        if (!filter_var($email,FILTER_VALIDATE_EMAIL)||!str_ends_with($email,'@example.invalid')||strlen($email)>190)
-            throw new \InvalidArgumentException('operator_contact_invalid');
+        $email=$this->recipients->normalize($input['email']??null);
         $role=$input['role']??'collaborator';
         if (!in_array($role,['collaborator','administrator'],true)) throw new \InvalidArgumentException('operator_role_invalid');
         $caps=ProfileOperatorCapabilityCatalog::normalize($input['capabilities']??[]);
@@ -359,6 +365,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         $this->memberships->create(new AccountMembership($id,$actor->accountId(),CanonicalProfileReference::profile($profile),$i['role_code'],'profile','active',self::SOURCE));
         // Convert reservation to membership while holding the profile lock, never double count.
         $this->exec("UPDATE auth_profile_operator_invitations SET status='accepted',closed_at=?,accepted_membership_id=? WHERE invitation_id=? AND status='pending'",[$this->now(),$id,$i['invitation_id']]);
+        if($this->notifications instanceof TransactionalOperatorInvitationDelivery)$this->notifications->retire($i['invitation_id']);
         $presentation=$this->presentationReady?$this->presentations->accept($profile,$i['invitation_id'],$id,$input['alias']??null,$this->now()):null;
         $caps=ProfileOperatorCapabilityCatalog::normalize(json_decode($i['offered_capabilities'],true,512,JSON_THROW_ON_ERROR));
         $this->revision($id,$i['invitation_id'],$owner['membership_id'],1,$caps,null);
@@ -467,7 +474,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         if ($this->exec('UPDATE auth_profile_operator_invitations SET status=?,closed_at=? WHERE invitation_id=? AND status=\'pending\'',[$status,$this->now(),$i['invitation_id']])!==1)
             throw new \RuntimeException('operator_invitation_state_conflict');
         if($this->presentationReady)$this->presentations->release($i['profile_doctor_id'],$i['invitation_id'],$this->now());
-        if($this->notifications instanceof IsolatedInvitationOutbox)$this->notifications->retire($i['invitation_id']);
+        if($this->notifications instanceof TransactionalOperatorInvitationDelivery)$this->notifications->retire($i['invitation_id']);
         $this->event($status,$actor,$i['profile_doctor_id'],$correlation,null,$i['invitation_id'],1,$i['owner_membership_id'],[],$reason);
     }
     private function event(string $action,AuthenticatedAccessContext $actor,string $profile,string $correlation,?string $membership,?string $invitation,int $revision,string $owner,array $caps,string $reason,array $presentation=[]): void

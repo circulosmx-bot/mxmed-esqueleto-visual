@@ -92,6 +92,7 @@
   }
 
   function safePrivateDestination() {
+    if(/^#operator-invitation=[A-Za-z0-9_.%~-]{20,512}$/.test(location.hash))return '/private-app.php'+location.hash;
     const raw = new URLSearchParams(window.location.search).get('next') || '/private-app.php';
     try {
       const parsed = new URL(raw, window.location.origin);

@@ -5,7 +5,7 @@ use Identity\Contracts\{IdentityNotificationPort,NotificationMessage};
 use PDO;
 
 /** Durable encrypted delivery in the SAME invitation transaction; never email. */
-final class IsolatedInvitationOutbox implements IdentityNotificationPort
+final class IsolatedInvitationOutbox implements TransactionalOperatorInvitationDelivery
 {
     private string $key;
     public function __construct(private PDO $pdo)
@@ -26,6 +26,11 @@ final class IsolatedInvitationOutbox implements IdentityNotificationPort
     {
         if(!$this->pdo->inTransaction())throw new \RuntimeException('op02_outbox_transaction_required');
         $this->pdo->prepare('UPDATE auth_operator_invitation_outbox SET ciphertext=NULL,retired_at=UTC_TIMESTAMP(6) WHERE invitation_id=? AND ciphertext IS NOT NULL')->execute([$id]);
+    }
+    public function inboxState(string $invitationId):array
+    {
+        $s=$this->pdo->prepare('SELECT opened_at FROM auth_operator_invitation_outbox WHERE invitation_id=?');$s->execute([$invitationId]);
+        return ['opened_at'=>$s->fetchColumn()?:null,'requires_email_link'=>false];
     }
     public function open(string $id,string $verifiedRecipient): string
     {

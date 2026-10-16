@@ -2,6 +2,30 @@
  * Server composition selects this adapter; client state is never authority. */
 (() => {
   'use strict';
+  // The physician retains the full original Agenda/clinical shell. Only its
+  // existing team panel receives the canonical management command port.
+  const serverBootstrap=JSON.parse(document.getElementById('mxmed-private-bootstrap')?.textContent||'{}');
+  if(document.body.dataset.operatorComposition!=='canonical'&&serverBootstrap.operators_ui?.service_ready===true){
+    const request=async(path,method='GET',body)=>{
+      const r=await fetch(path,{method,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRF-Token':window.mxmedPrivateSession.csrfToken},...(body===undefined?{}:{body:JSON.stringify(body)})});
+      const json=await r.json();if(!r.ok||json.ok===false)throw Error(json.message||'No se pudo guardar el cambio.');return json.data??json;
+    };
+    const roster=async()=>{const state=await request('/api/profile-operators/index.php/bootstrap');window.mxmedOperatorPresentationRoster={presentation_ready:state.presentation_ready,operator_presentations:state.operator_presentations};window.dispatchEvent(new CustomEvent('mxmed:operator-grants'));};
+    const attempts=new Map();let panel,reading=false,readAgain=false;
+    const command=async(action,input)=>{const key=JSON.stringify({action,input});if(!attempts.has(key))attempts.set(key,crypto.randomUUID());const r=await request('/api/profile-operators/index.php/command','POST',{action,input,command_id:attempts.get(key)});attempts.delete(key);await roster();return r;};
+    const refresh=async()=>{
+      if(!panel)return;if(reading){readAgain=true;return;}reading=true;
+      try{await panel.refresh();await roster();}
+      catch(error){if(error.name!=='AbortError'){const notice=document.getElementById('ag_ops_modal_error');notice.textContent='No pudimos actualizar el equipo. Usa Actualizar para intentarlo de nuevo.';notice.classList.remove('d-none');}}
+      finally{reading=false;if(readAgain){readAgain=false;void refresh();}}
+    };
+    // Session generation changes can discard an initial read. Refresh only reads;
+    // mutations retain their explicit command id and are never replayed here.
+    window.addEventListener('mxmed:session-authenticated',()=>void refresh());
+    const mount=()=>{panel=window.mxmedInitializeOperatorsPanel(serverBootstrap.operators_ui,{data:request,command,refresh});void refresh();};
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+    return;
+  }
   if (document.body.dataset.operatorComposition !== 'canonical') return;
   const $ = id => document.getElementById(id);
   const bootstrap = JSON.parse($('mxmed-private-bootstrap').textContent);
@@ -34,7 +58,23 @@
   async function run(fn) {try{await fn();}catch(e){notify(e.message,true);}}
   const button=(text,fn,cls='btn btn-outline-secondary btn-sm')=>{const b=element('button',text,cls);b.type='button';b.addEventListener('click',()=>run(fn));return b;};
   const expiry=value=>new Date(value.replace(' ','T')+'Z').toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'});
-  async function inbox(){const list=$('operator-inbox-list');list.replaceChildren();for(const item of state.inbox){const card=element('article',undefined,'mx-ag-ops-operator-band p-3');card.append(element('h6',item.display_name),element('p',item.capabilities.map(k=>labels[k]).join(' · ')||'Sin permisos ofrecidos'),element('p','Vence: '+expiry(item.expires_at)));if(item.opened_at===null)card.append(button('Abrir invitación',async()=>{offer=await data('/api/profile-operators/index.php/open-invitation','POST',{invitation_id:item.invitation_id});$('operator-offer-content').replaceChildren(element('h6',offer.physician),element('p',offer.capabilities.map(k=>labels[k]).join(' · ')||'Sin permisos ofrecidos'));$('operator-offer-alias-group').classList.toggle('d-none',offer.presentation_ready!==true);$('operator-offer-alias').value=offer.personal_alias||'';$('operator-offer-alias').disabled=offer.presentation_ready!==true||offer.personal_alias!==null;$('operator-offer-error').textContent='';bootstrapModal('operator-offer-modal').show();}));else card.append(element('p','Mensaje abierto. Si cerraste la oferta sin responder, solicita una nueva invitación.'));list.append(card);}if(!state.inbox.length)list.append(element('p','No tienes invitaciones pendientes.'));}
+  function showOffer(value){
+    offer=value;$('operator-offer-content').replaceChildren(element('h6',offer.physician),element('p',offer.capabilities.map(k=>labels[k]).join(' · ')||'Sin permisos ofrecidos'));
+    $('operator-offer-alias-group').classList.toggle('d-none',offer.presentation_ready!==true);$('operator-offer-alias').value=offer.personal_alias||'';$('operator-offer-alias').disabled=offer.presentation_ready!==true||offer.personal_alias!==null;$('operator-offer-error').textContent='';bootstrapModal('operator-offer-modal').show();
+  }
+  async function inbox(){const list=$('operator-inbox-list');list.replaceChildren();for(const item of state.inbox){
+    const card=element('article',undefined,'mx-ag-ops-operator-band p-3');card.append(element('h6',item.display_name),element('p',item.capabilities.map(k=>labels[k]).join(' · ')||'Sin permisos ofrecidos'),element('p','Vence: '+expiry(item.expires_at)));
+    if(item.requires_email_link)card.append(element('p','Abre el enlace de tu correo para revisar y responder esta invitación.'));
+    else if(item.opened_at===null)card.append(button('Abrir invitación',async()=>showOffer(await data('/api/profile-operators/index.php/open-invitation','POST',{invitation_id:item.invitation_id}))));
+    else card.append(element('p','Mensaje abierto. Si cerraste la oferta sin responder, solicita una nueva invitación.'));
+    list.append(card);
+  }if(!state.inbox.length)list.append(element('p','No tienes invitaciones pendientes.'));}
+  async function openEmailOffer(){
+    if(!/^#operator-invitation=[A-Za-z0-9_.%~-]{20,512}$/.test(location.hash))return;
+    const raw=decodeURIComponent(location.hash.slice('#operator-invitation='.length));history.replaceState(null,'','/private-app.php#p-operator-inbox');
+    const split=raw.indexOf('.');if(split<1)return;const invitation_id=raw.slice(0,split),token=raw.slice(split+1);
+    const value=await data('/api/profile-operators/index.php/inspect-invitation','POST',{invitation_id,token});window.jumpTo?.('p-operator-inbox');showOffer({...value,token});
+  }
   function bootstrapModal(id){return window.bootstrap.Modal.getOrCreateInstance($(id));}
   async function refresh(){state=await data('/api/profile-operators/index.php/bootstrap');ready=true;if(state.owner&&panel)await panel.refresh();await inbox();applyGates();window.dispatchEvent(new CustomEvent('mxmed:operator-grants'));}
   const restrictedSelectors=['[data-ag-slot-action="more"]','[data-ag-work-panel="p-ag-ajustes"]','[data-ag-slot-action*="block"]','[data-ag-slot-action*="waitlist"]','[data-ag-slot-action*="confirm"]','[data-ag-slot-action*="patient"]','[data-ag-day-action*="block"]','[data-ag-block-id]'];
@@ -93,7 +133,7 @@
     $('operator-offer-modal').addEventListener('hidden.bs.modal',()=>{offer=null;run(refresh);});
     const observer=new MutationObserver(applyGates);observer.observe($('p-ag-admin')||$('viewport'),{childList:true,subtree:true});
     document.addEventListener('click',e=>{const b=e.target.closest(restrictedSelectors.join(','));if(b){e.preventDefault();e.stopImmediatePropagation();notify('No tienes autorización para realizar esta acción.',true);}},true);
-    try { await refresh();resolveReady(); } catch(error) { rejectReady(error);throw error; }
+    try { await refresh();await openEmailOffer();resolveReady(); } catch(error) { rejectReady(error);throw error; }
   }));
   window.addEventListener('focus',()=>run(refresh));
 })();

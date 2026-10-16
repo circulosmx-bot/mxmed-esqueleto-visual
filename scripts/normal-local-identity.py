@@ -158,7 +158,7 @@ def start(replace):
         if port == 8092:
             php_env['MXMED_API_BASE'] = 'http://127.0.0.1:8091'
         launch(str(port), ['php','-d','upload_max_filesize=10M','-d','post_max_size=12M',
-                          '-d','memory_limit=256M','-S','127.0.0.1:'+str(port),'-t',str(ROOT)],
+                          '-d','memory_limit=256M','-S','127.0.0.1:'+str(port),'-t',str(ROOT),str(ROOT/'scripts/canonical-private-router.php')],
                port, state, php_env)
     launch('https',[sys.executable,str(PROXY),'--cert',str(TLS/'localhost.crt'),
                     '--key',str(TLS/'localhost.key')],8443,state,env)

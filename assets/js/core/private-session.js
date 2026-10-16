@@ -136,11 +136,11 @@
   }
 
   function safeNext() {
-    return '/private-app.php' + window.location.search + window.location.hash;
+    return '/private-app.php' + window.location.search + (location.hash.startsWith('#operator-invitation=')?'':location.hash);
   }
 
   function loginUrl(state) {
-    return LOGIN_ROUTE + '?next=' + encodeURIComponent(safeNext()) + (state ? '&state=' + encodeURIComponent(state) : '');
+    return LOGIN_ROUTE + '?next=' + encodeURIComponent(safeNext()) + (state ? '&state=' + encodeURIComponent(state) : '') + (/^#operator-invitation=[A-Za-z0-9_.%~-]{20,512}$/.test(location.hash)?location.hash:'');
   }
 
   function broadcast(type) {

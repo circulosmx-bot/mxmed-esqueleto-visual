@@ -35,7 +35,7 @@
   function resetEditor(){editing=null;if(!$('ag_ops_email'))return;$('ag_ops_alias').value='';$('ag_ops_alias').disabled=!aliasReady;$('ag_ops_email').value='';$('ag_ops_email').disabled=false;$('ag_ops_role').disabled=false;$('ag_ops_role').value='collaborator';$('ag_ops_form_title').textContent='Invitar operador';$('ag_ops_save_btn').textContent='Enviar invitación';document.querySelectorAll('[data-operator-grant]').forEach(e=>{e.checked=false;e.disabled=false;});$('ag_ops_modal_error').classList.add('d-none');accordion('general');}
   function edit(record,kind){editing={record,kind};$('ag_ops_alias').value=record.personal_alias||'';$('ag_ops_alias').disabled=!aliasReady||kind==='member';$('ag_ops_email').value=record.email_normalized||record.alias;$('ag_ops_email').disabled=true;$('ag_ops_role').value=record.role_code;$('ag_ops_role').disabled=true;$('ag_ops_form_title').textContent='Permisos · '+record.alias;$('ag_ops_save_btn').textContent=kind==='invitation'?'Reexpedir oferta':'Guardar permisos';document.querySelectorAll('[data-operator-grant]').forEach(e=>{e.checked=record.capabilities.includes(e.dataset.operatorGrant);e.disabled=kind==='alias';});if(kind==='alias'){$('ag_ops_form_title').textContent='Alias del operador';$('ag_ops_save_btn').textContent='Guardar alias';$('ag_ops_identity_readiness').open=true;}accordion(kind==='alias'?'general':'permissions');$('ag_ops_form_title').scrollIntoView({block:'center',behavior:'smooth'});}
   function showHistory(record=null,kind=null){
-    const events=auditEvents.filter(e=>{
+    const events=(kind==='legacy'?(ui.legacy?.audit||[]):auditEvents).filter(e=>{
       if(!record)return true;
       if(kind==='legacy')return e.operator_id===record.operator_id;
       try{const m=JSON.parse(e.metadata_json).producer_metadata;return kind==='invitation'?m.invitation_id===record.invitation_id:m.membership_id===record.membership_id;}catch(_){return false;}
@@ -74,6 +74,7 @@
       if(invitation){
         fact('Contacto invitado',maskEmail(record.email_normalized));
         fact('Invitación',expiry(record.created_at));fact('Vencimiento',expiry(record.expires_at));
+        if(record.delivery_state)fact('Entrega',({queued:'Pendiente de envío',retry:'Pendiente de reintento',dispatching:'En proceso',provider_accepted:'Aceptado por el proveedor',failed:'No enviado',uncertain:'Requiere revisión',retired:'Retirado'})[record.delivery_state]||'No disponible');
         fact('Cuenta y contacto','La invitación no confirma una cuenta ni su aceptación.');
       }else{
         fact('Contacto verificado',typeof record.contact_verified==='boolean'?(record.contact_verified?'Sí':'No'):'No disponible');
@@ -102,6 +103,29 @@
     const history=element('button','Ver historial','btn btn-outline-secondary btn-sm');history.type='button';history.onclick=()=>showHistory(record,kind);actions.append(history);
     detail.append(actions);if(expanded.has(card.dataset.operatorId)){detail.classList.remove('d-none');card.classList.add('is-open');head.setAttribute('aria-expanded','true');}head.onclick=()=>{const open=detail.classList.contains('d-none');if(open)expanded.add(card.dataset.operatorId);else expanded.delete(card.dataset.operatorId);detail.classList.toggle('d-none',!open);card.classList.toggle('is-open',open);head.setAttribute('aria-expanded',String(open));};card.append(head,detail);return card;
   }
+  function renderBrowserReferences(){
+      let local=[],localNotice='',localCount=0;
+      try{const raw=localStorage.getItem('mxmed.agenda.operators.state.v1');if(raw){
+        if(raw.length>=524288)throw new Error('cache too large');
+        const parsed=JSON.parse(raw),rows=[...(Array.isArray(parsed?.operators)?parsed.operators:[]),...(Array.isArray(parsed?.archived_operators)?parsed.archived_operators:[])];
+        localCount=rows.length;
+        local=rows.slice(0,500).map(r=>({operator_id:typeof r?.operator_id==='string'?r.operator_id:'',alias:typeof r?.alias==='string'&&r.alias?r.alias:'Registro local',status:typeof r?.status==='string'?r.status:'unknown'}));
+        if(localCount>500)localNotice='Se muestran las primeras 500 referencias. El historial completo sigue guardado en este navegador.';
+      }}catch(_){localNotice='No pudimos mostrar las referencias de este navegador. Los datos guardados no se han modificado.';}
+      $('ag_ops_browser_history').classList.toggle('d-none',!localCount&&!localNotice);
+      $('ag_ops_browser_count').textContent=String(localCount);$('ag_ops_browser_notice').textContent=localNotice;
+      $('ag_ops_browser_list').replaceChildren(...local.map((r,index)=>{const row=element('li',undefined,'list-group-item px-0 py-1');row.dataset.localReference=String(index);row.dataset.operatorId=r.operator_id;row.append(element('strong',r.alias),document.createTextNode(' · '+(legacyStatuses[r.status]||'Estado desconocido')));return row;}));
+  }
+  function renderDeployedLegacy(){
+    if(!ui.legacy)return;
+    const holder=$('ag_ops_legacy_summary');holder.replaceChildren();
+    const archive=element('details',undefined,'border rounded p-2 mt-2');archive.id='ag_ops_deployed_legacy';archive.append(element('summary','Registros anteriores · sólo consulta'));
+    archive.append(element('p','Estas referencias no confirman una cuenta Identity ni ocupan plazas canónicas.','small'));
+    const records=ui.legacy.records||[];
+    for(const r of records)archive.append(band({...r,membership_id:r.source+':'+r.operator_id,capabilities:[]},'legacy'));
+    if(ui.legacy.read_status!=='ready')archive.append(element('p','No pudimos consultar el historial anterior.'));
+    holder.append(archive);
+  }
   async function ownerView(){
     const sequence=++overviewSequence;
     try{const fresh=await data('/api/profile-operators/index.php/overview');if(sequence!==overviewSequence)return;overview=fresh;}catch(e){$('ag_ops_empty_team').classList.add('d-none');for(const id of ['ag_ops_active_value','ag_ops_available_value','ag_ops_pending_value'])$(id).textContent='No disponible';throw e;}
@@ -110,6 +134,7 @@
     $('ag_ops_list').replaceChildren(...overview.members.filter(m=>m.status!=='revoked').map(m=>band(m,'member')),...overview.invitations.map(i=>band(i,'invitation')));
     const archived=overview.members.filter(m=>m.status==='revoked');$('ag_ops_archived_count').textContent=archived.length;$('ag_ops_archived_list').replaceChildren(...archived.map(m=>band(m,'member')));
     $('ag_ops_limit_notice').textContent=overview.available?'El titular no ocupa plaza. Puedes invitar hasta completar dos operadores.':'Las dos plazas están ocupadas o reservadas. Suspender conserva la plaza; revocar la libera.';
+    renderDeployedLegacy();
     // Seat authority is server-confirmed, including the conflict response to an invitation race.
     syncBusy();
     auditReady=false;auditEvents=await data('/api/profile-operators/index.php/audit');auditReady=true;
@@ -119,6 +144,7 @@
     $('ag_ops_archived_toggle').addEventListener('click',()=>{const open=$('ag_ops_archived_panel').classList.contains('d-none');$('ag_ops_archived_panel').classList.toggle('d-none',!open);$('ag_ops_archived_toggle').setAttribute('aria-expanded',String(open));});
     const history=element('button','Historial del equipo','btn btn-outline-secondary btn-sm');history.type='button';history.onclick=()=>showHistory();$('ag_ops_limit_notice').after(history);
     for(const type of ['dragover','drop'])$('ag_ops_identity_readiness').addEventListener(type,event=>event.preventDefault());
+    renderBrowserReferences();
     if(ui.service_ready&&ui.can_manage&&service){
       $('ag_ops_empty_invite').addEventListener('click',()=>{resetEditor();$('ag_ops_email').focus();});
       $('ag_ops_add_btn').addEventListener('click',resetEditor);$('ag_ops_form_cancel_btn').addEventListener('click',resetEditor);$('ag_ops_refresh').addEventListener('click',()=>run(refresh));
@@ -126,22 +152,11 @@
     }else{
       const legacy=ui.legacy;
       // Do not modify, migrate or treat browser cache as Identity authority.
-      let local=[],localNotice='',localCount=0;
-      try{const raw=localStorage.getItem('mxmed.agenda.operators.state.v1');if(raw){
-        if(raw.length>=524288)throw new Error('cache too large');
-        const parsed=JSON.parse(raw),rows=[...(Array.isArray(parsed?.operators)?parsed.operators:[]),...(Array.isArray(parsed?.archived_operators)?parsed.archived_operators:[])];
-        localCount=rows.length;
-        local=rows.slice(0,500).map(r=>({operator_id:typeof r?.operator_id==='string'?r.operator_id:'',alias:typeof r?.alias==='string'&&r.alias?r.alias:'Registro local',status:typeof r?.status==='string'?r.status:'unknown'}));
-        if(localCount>500)localNotice='Se muestran las primeras 500 referencias. El historial completo sigue guardado en este navegador.';
-      }}catch(_){localNotice='No pudimos mostrar las referencias de este navegador. Los datos guardados no se han modificado.';}
       // A matching ID, alias or email in unverified storage is not proof of origin.
       // Only server records become primary cards; local references remain discoverable separately.
       const records=(legacy?.records||[]).map(r=>({...r,membership_id:r.source+':'+r.operator_id,alias:r.alias||r.operator_id,capabilities:[]}));
       $('ag_ops_list').replaceChildren(...records.filter(r=>r.status!=='archived').map(r=>band(r,'legacy')));
       const archived=records.filter(r=>r.status==='archived');$('ag_ops_archived_list').replaceChildren(...archived.map(r=>band(r,'legacy')));$('ag_ops_archived_count').textContent=legacy?.read_status==='ready'?String(archived.length):'No disponible';
-      $('ag_ops_browser_history').classList.toggle('d-none',!localCount&&!localNotice);
-      $('ag_ops_browser_count').textContent=String(localCount);$('ag_ops_browser_notice').textContent=localNotice;
-      $('ag_ops_browser_list').replaceChildren(...local.map((r,index)=>{const row=element('li',undefined,'list-group-item px-0 py-1');row.dataset.localReference=String(index);row.dataset.operatorId=r.operator_id;row.append(element('strong',r.alias),document.createTextNode(' · '+(legacyStatuses[r.status]||'Estado desconocido')));return row;}));
       const c=legacy?.counts;
       auditEvents=legacy?.audit||[];auditReady=legacy?.read_status==='ready';
       $('ag_ops_legacy_summary').textContent=c?`Registros anteriores del consultorio: ${c.active} activos, ${c.paused} pausados, ${c.pending} pendientes y ${c.archived} archivados.`:'No pudimos consultar los registros anteriores del consultorio. Intenta de nuevo más tarde.';

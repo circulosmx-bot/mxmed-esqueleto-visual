@@ -96,6 +96,7 @@ final class IdentityHttpComposition
         if (is_file($autoload)) require_once $autoload;
         self::registerAutoloader();
         if (\Identity\Operators\OperatorQaConfiguration::requested()) return self::isolatedOperators();
+        if(getenv('MXMED_OPERATOR_DEPLOYMENT_REHEARSAL')==='1')return self::operatorDeploymentRehearsal();
         $selector = IdentityHttpCompositionSelector::fromProcessEnvironment();
         return $selector->select(
             static fn(): self => self::preview(),
@@ -115,6 +116,18 @@ final class IdentityHttpComposition
         $store=new \Identity\Adapters\ValkeySessionStoreAdapter($valkey,'mxmed:op02:session:',$clock);
         return self::build($pdo,(string)getenv('MXMED_PREVIEW_PEPPER'),new PreviewIdentityNotificationAdapter((string)getenv('MXMED_PREVIEW_NOTIFICATION_FILE')),
             $store,'local',\Identity\Operators\OperatorQaConfiguration::origin(),$clock);
+    }
+
+    /** Faithful deployment rehearsal, synthetic DB/user/store only. Same build/SessionService. */
+    private static function operatorDeploymentRehearsal():self
+    {
+        $db=(string)getenv('MXMED_DB_NAME');$user=(string)getenv('MXMED_DB_USER');
+        if(getenv('APP_ENV')!=='local'||getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT')!=='0'||getenv('MXMED_OP02_ISOLATED')==='1'||!preg_match('/^mxmed_operator_deploy_([a-f0-9]{10})$/D',$db,$m)||$user!=='mxmed_act01_'.$m[1]||getenv('MXMED_DB_HOST')!=='127.0.0.1'||getenv('MXMED_PREVIEW_ORIGIN')!=='https://127.0.0.1:8448'||getenv('MXMED_SESSION_STORE_PORT')!=='6390')throw new \RuntimeException('operator_deployment_rehearsal_isolation_required');
+        $pdo=new PDO('mysql:host=127.0.0.1;port=3306;dbname='.$db.';charset=utf8mb4',$user,(string)getenv('MXMED_DB_PASS'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
+        if($pdo->query('SELECT CURRENT_USER()')->fetchColumn()!==$user.'@127.0.0.1')throw new \RuntimeException('operator_deployment_rehearsal_identity_denied');
+        $clock=new SystemClock();$client=new PreviewValkeyClient('127.0.0.1',6390);
+        $store=new \Identity\Adapters\ValkeySessionStoreAdapter($client,'mxmed:gate4d:preview:session:',$clock);
+        return self::build($pdo,(string)getenv('MXMED_PREVIEW_PEPPER'),new PreviewIdentityNotificationAdapter((string)getenv('MXMED_PREVIEW_NOTIFICATION_FILE')),$store,'local','https://127.0.0.1:8448',$clock);
     }
 
     public static function preview(): self

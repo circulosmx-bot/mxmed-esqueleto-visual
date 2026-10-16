@@ -43,7 +43,11 @@ final class SesIdentityNotificationAdapter implements IdentityNotificationPort
     }
 
     public function send(NotificationMessage $message): void
+    { $this->sendWithReceipt($message); }
+
+    public function sendWithReceipt(NotificationMessage $message): string
     {
+        $attempted=false;
         try {
             if (trim($message->recipient()) !== $message->recipient() || filter_var($message->recipient(), FILTER_VALIDATE_EMAIL) === false) {
                 throw new \RuntimeException('invalid_notification_recipient');
@@ -63,10 +67,17 @@ final class SesIdentityNotificationAdapter implements IdentityNotificationPort
                 ],
             ];
             if ($this->replyTo !== null) $request['ReplyToAddresses'] = [$this->replyTo];
+            $attempted=true;
             $result = $this->client->sendEmail($request);
             $messageId = $this->messageId($result);
             if ($messageId === '') throw new \RuntimeException('provider_message_id_missing');
-        } catch (\Throwable) {
+            return $messageId;
+        } catch (\Throwable $e) {
+            if($message->purpose()===OneTimeTokenPurpose::OPERATOR_INVITATION){
+                $code=is_callable([$e,'getAwsErrorCode'])?(string)$e->getAwsErrorCode():'';
+                $outcome=!$attempted||in_array($code,['MessageRejected','MailFromDomainNotVerifiedException','AccountSuspendedException','SendingPausedException','BadRequestException','NotFoundException'],true)?'permanent_not_accepted':(in_array($code,['TooManyRequestsException','ThrottlingException','LimitExceededException'],true)?'retryable_not_accepted':'uncertain');
+                throw new \Identity\Operators\OperatorDeliveryFailure($outcome);
+            }
             throw new \RuntimeException('notification_unavailable');
         }
     }
@@ -89,9 +100,16 @@ final class SesIdentityNotificationAdapter implements IdentityNotificationPort
                 'Continúa con la recuperación de tu cuenta mediante el siguiente enlace:',
                 'Este enlace vence en 30 minutos.',
             ],
+            OneTimeTokenPurpose::OPERATOR_INVITATION => [
+                '/public/identity/acceso.php', 'Invitación al equipo de México Médico',
+                'Invitación personal al equipo', 'Inicia sesión con tu propia cuenta verificada para revisar y aceptar la invitación:',
+                'Esta invitación vence en siete días y se acepta una sola vez.',
+            ],
             default => throw new \RuntimeException('unsupported_notification_purpose'),
         };
-        $url = $this->identityOrigin . $path . '?token=' . rawurlencode($message->token());
+        $url = $message->purpose()===OneTimeTokenPurpose::OPERATOR_INVITATION
+            ? \Identity\Operators\OperatorInvitationOrigin::assertPublic($this->identityOrigin).$path.'#operator-invitation='.rawurlencode($message->token())
+            : $this->identityOrigin . $path . '?token=' . rawurlencode($message->token());
         $text = $heading . "\n\n" . $instruction . "\n" . $url . "\n\n" . $expiry
             . "\n\nSi no solicitaste esta acción, puedes ignorar este mensaje.";
         $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

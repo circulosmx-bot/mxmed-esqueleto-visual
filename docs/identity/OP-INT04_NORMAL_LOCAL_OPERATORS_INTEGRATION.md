@@ -228,3 +228,7 @@ Los runners HTTP focalizados exigen el preestado indicado y no son resets. El fl
 - Se conservan evidencias privadas en `~/Library/Application Support/MXMED/op02-admin/evidence/op-imp07/`; nunca se publican claves, tokens, correos reales ni credenciales.
 
 **Normal-local continúa sin alias editable ni snapshots nuevos:** sus tablas OP01/presentación/origen no están activadas y su miembro real sigue collaborator, sin elevación. No se aplicó DDL ni cambios de datos a normal-local, QA05, OP02 persistente o UI03 existente. Las fotos privadas, dropzone y captura QR continúan pendientes del backend/media protegido y sus pruebas; no se habilitan por implementar alias.
+
+## OP-ACT01 — composición preparada, todavía inactiva
+
+El [paquete de despliegue OP-ACT01](OP-ACT01_NORMAL_LOCAL_DEPLOYMENT_PACKAGE.md) añade la composición canónica del mismo panel/Agenda, adaptaciones DDL separadas, auditoría target-local, cola cifrada y adapter SES. Mantiene el normal-local sin activación, DDL, titularidad ni correo. Reutiliza este documento como contrato de producto; la guía enlazada detalla artefactos, huellas, recuperación, ensayo y autorizaciones pendientes.

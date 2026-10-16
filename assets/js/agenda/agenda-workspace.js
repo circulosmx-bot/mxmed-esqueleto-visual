@@ -14,11 +14,12 @@
   if(!panel) return;
 
   const syncCanonicalOperatorLegend=()=>{
-    if(!canonical?.state?.presentation_ready)return;
+    const presentationState=canonical?.state||window.mxmedOperatorPresentationRoster;
+    if(!presentationState?.presentation_ready)return;
     for(const position of [1,2]){
       const dot=document.querySelector('#ag_origin_catalog .mx-ag-origin-dot--operator-0'+position);
       if(!dot?.parentElement)continue;
-      const record=(canonical.state.operator_presentations||[]).find(r=>r.seat_position===position);
+      const record=(presentationState.operator_presentations||[]).find(r=>r.seat_position===position);
       const label=typeof record?.personal_alias==='string'&&record.personal_alias?'Operador '+record.personal_alias:'Operador 0'+position;
       const item=dot.parentElement;
       [...item.childNodes].filter(n=>n!==dot).forEach(n=>n.remove());item.append(document.createTextNode(label));

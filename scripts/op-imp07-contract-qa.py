@@ -17,6 +17,12 @@ def main():
  name='assets/js/agenda/agenda-workspace.js'
  assert agenda_business(source(name))==agenda_business(source(name,True)), 'Agenda business logic changed outside origin presentation'
  names=['partials/private-app/agenda.php','assets/css/style.css','assets/js/core/navigation.js','assets/js/core/sidebar.js','assets/js/core/private-session.js','api/agenda/index.php','api/_lib/clinical_professional_authority.php','assets/js/app.js']
- for name in names:assert source(name)==source(name,True),name
- print(json.dumps({'original_agenda_business_logic':'IDENTICAL_OUTSIDE_ORIGIN_PRESENTATION','shell_calendar_styles_navigation_session_clinical_dispatch':'BYTE_IDENTICAL'},indent=2))
+ for name in names:
+  current=source(name)
+  if name=='assets/js/core/private-session.js':
+   # OP-ACT01 moves only a strictly validated invitation fragment outside next=.
+   expected=source(name,True).replace("return '/private-app.php' + window.location.search + window.location.hash;","return '/private-app.php' + window.location.search + (location.hash.startsWith('#operator-invitation=')?'':location.hash);").replace("(state ? '&state=' + encodeURIComponent(state) : '');","(state ? '&state=' + encodeURIComponent(state) : '') + (/^#operator-invitation=[A-Za-z0-9_.%~-]{20,512}$/.test(location.hash)?location.hash:'');")
+   assert current==expected,name+' changed beyond protected fragment transport'
+  else:assert current==source(name,True),name
+ print(json.dumps({'original_agenda_business_logic':'IDENTICAL_OUTSIDE_ORIGIN_PRESENTATION','shell_calendar_styles_navigation_clinical_dispatch_session_except_reviewed_invitation_fragment':'BYTE_IDENTICAL'},indent=2))
 if __name__=='__main__':main()
