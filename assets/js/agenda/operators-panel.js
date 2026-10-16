@@ -27,12 +27,12 @@
     const legacy=kind==='legacy';const revoked=record.status==='revoked';const card=element('article',undefined,'mx-ag-ops-operator-band');card.dataset.operatorId=record.membership_id||record.invitation_id;
     const head=element('button',undefined,'mx-ag-ops-band-head');head.type='button';head.disabled=pendingUi>0;head.setAttribute('aria-expanded','false');
     const avatar=element('span',record.alias.slice(0,2).toUpperCase(),'mx-ag-ops-avatar');avatar.setAttribute('aria-hidden','true');
-    const summary=element('span',undefined,'mx-ag-ops-band-summary'),title=element('span',undefined,'mx-ag-ops-band-title');title.append(element('span',legacy?(legacyStatuses[record.status]||'Estado desconocido')+' · legacy':kind==='invitation'?'Invitación pendiente':statuses[record.status]||record.status,'mx-ag-ops-status-pill '+(record.status==='active'?'is-active':'is-paused')),element('strong',record.alias));summary.append(title,element('span',legacy?(record.source==='legacy_server'?'Registro previo del servidor':'Registro local del navegador · perfil sin verificar'):record.role_code==='administrator'?'Administrador · 1 plaza':'Operador · 1 plaza','mx-ag-ops-band-contact'));
+    const summary=element('span',undefined,'mx-ag-ops-band-summary'),title=element('span',undefined,'mx-ag-ops-band-title');title.append(element('span',legacy?(legacyStatuses[record.status]||'Estado desconocido'):kind==='invitation'?'Invitación pendiente':statuses[record.status]||record.status,'mx-ag-ops-status-pill '+(record.status==='active'?'is-active':'is-paused')),element('strong',record.alias));summary.append(title,element('span',legacy?'Registro anterior del consultorio':record.role_code==='administrator'?'Administrador · 1 plaza':'Operador · 1 plaza','mx-ag-ops-band-contact'));
     head.append(avatar,summary,element('span','expand_more','material-symbols-rounded mx-ag-ops-band-chevron'));
     const detail=element('div',undefined,'mx-ag-ops-band-panel d-none');if(!legacy)detail.append(element('p','Concedidos: '+(record.capabilities.map(k=>labels[k]).join(' · ')||'Ninguno')));
     if(kind==='member')detail.append(element('p','Efectivos: '+(record.effective_capabilities.map(k=>labels[k]).join(' · ')||'Ninguno')));
     else if(!legacy)detail.append(element('p','Vence: '+expiry(record.expires_at)));
-    if(legacy)detail.append(element('p','Pendiente de conciliación. Este registro no acredita una membresía Identity ni permisos canónicos.'));
+    if(legacy)detail.append(element('p','Conservado para consulta. Este registro anterior no confirma un acceso vigente ni permite cambiar permisos.'));
     if(record.grant_status==='review_required')detail.append(element('p','Requiere revisión del nuevo titular.'));
     const actions=element('div',undefined,'mx-ag-ops-card-foot');
     if(!revoked&&!legacy){actions.append(button(kind==='invitation'?'Cambiar oferta':'Editar permisos',()=>edit(record,kind)));
@@ -62,15 +62,26 @@
     }else{
       const legacy=ui.legacy;
       // Do not modify, migrate or treat browser cache as Identity authority.
-      let local=[];
-      try{const raw=localStorage.getItem('mxmed.agenda.operators.state.v1');if(raw&&raw.length<524288){const parsed=JSON.parse(raw);local=[...(Array.isArray(parsed.operators)?parsed.operators:[]),...(Array.isArray(parsed.archived_operators)?parsed.archived_operators:[])].slice(0,500).map(r=>({operator_id:String(r.operator_id||''),alias:String(r.alias||'Registro local'),status:String(r.status||'unknown'),source:'legacy_browser'}));}}catch(_){}
-      const records=[...(legacy?.records||[]),...local].map(r=>({...r,membership_id:r.source+':'+r.operator_id,alias:r.alias||r.operator_id,capabilities:[]}));
+      let local=[],localNotice='',localCount=0;
+      try{const raw=localStorage.getItem('mxmed.agenda.operators.state.v1');if(raw){
+        if(raw.length>=524288)throw new Error('cache too large');
+        const parsed=JSON.parse(raw),rows=[...(Array.isArray(parsed?.operators)?parsed.operators:[]),...(Array.isArray(parsed?.archived_operators)?parsed.archived_operators:[])];
+        localCount=rows.length;
+        local=rows.slice(0,500).map(r=>({operator_id:typeof r?.operator_id==='string'?r.operator_id:'',alias:typeof r?.alias==='string'&&r.alias?r.alias:'Registro local',status:typeof r?.status==='string'?r.status:'unknown'}));
+        if(localCount>500)localNotice='Se muestran las primeras 500 referencias. El historial completo sigue guardado en este navegador.';
+      }}catch(_){localNotice='No pudimos mostrar las referencias de este navegador. Los datos guardados no se han modificado.';}
+      // A matching ID, alias or email in unverified storage is not proof of origin.
+      // Only server records become primary cards; local references remain discoverable separately.
+      const records=(legacy?.records||[]).map(r=>({...r,membership_id:r.source+':'+r.operator_id,alias:r.alias||r.operator_id,capabilities:[]}));
       $('ag_ops_list').replaceChildren(...records.filter(r=>r.status!=='archived').map(r=>band(r,'legacy')));
       const archived=records.filter(r=>r.status==='archived');$('ag_ops_archived_list').replaceChildren(...archived.map(r=>band(r,'legacy')));$('ag_ops_archived_count').textContent=legacy?.read_status==='ready'?String(archived.length):'No disponible';
-      const c=legacy?.counts;const repeated=local.filter(r=>(legacy?.records||[]).some(server=>server.operator_id===r.operator_id)).length;
-      $('ag_ops_legacy_summary').textContent=c?`Registros legacy del servidor: ${c.active} activos, ${c.paused} pausados, ${c.pending} pendientes y ${c.archived} archivados. Registros locales sin perfil verificado: ${local.length}. Referencias repetidas entre fuentes: ${repeated}; requieren conciliación y no se fusionan.`:'No se pudo consultar el inventario legacy del servidor; no se interpreta como vacío.';
-      $('ag_ops_limit_notice').textContent=(legacy?.over_two_seats?'El inventario legacy supera dos plazas y requiere conciliación. ':'')+'Modelo aprobado: un titular y hasta dos operadores. El cupo canónico no está disponible. Los registros legacy no se cuentan como membresías canónicas.';
-      $('ag_ops_history_list').replaceChildren(...(legacy?.audit||[]).map(e=>element('p',e.at+' · '+e.action_label+' · '+(legacyStatuses[records.find(r=>r.operator_id===e.operator_id)?.status]||'Registro legacy'))));
+      $('ag_ops_browser_history').classList.toggle('d-none',!localCount&&!localNotice);
+      $('ag_ops_browser_count').textContent=String(localCount);$('ag_ops_browser_notice').textContent=localNotice;
+      $('ag_ops_browser_list').replaceChildren(...local.map((r,index)=>{const row=element('li',undefined,'list-group-item px-0 py-1');row.dataset.localReference=String(index);row.dataset.operatorId=r.operator_id;row.append(element('strong',r.alias),document.createTextNode(' · '+(legacyStatuses[r.status]||'Estado desconocido')));return row;}));
+      const c=legacy?.counts;
+      $('ag_ops_legacy_summary').textContent=c?`Registros anteriores del consultorio: ${c.active} activos, ${c.paused} pausados, ${c.pending} pendientes y ${c.archived} archivados.`:'No pudimos consultar los registros anteriores del consultorio. Intenta de nuevo más tarde.';
+      $('ag_ops_limit_notice').textContent='El límite es de dos operadores además del titular. El cupo y las invitaciones estarán disponibles cuando se habilite la administración. Los registros anteriores no confirman plazas ocupadas.';
+      $('ag_ops_history_list').replaceChildren(...(legacy?.audit||[]).map(e=>element('p',e.at+' · '+e.action_label+' · '+(legacyStatuses[records.find(r=>r.operator_id===e.operator_id)?.status]||'Registro anterior'))));
       if(!legacy?.audit?.length)$('ag_ops_history_list').append(element('p','Sin historial disponible para consulta.'));
       $('ag_ops_form_cancel_btn').disabled=true;
     }

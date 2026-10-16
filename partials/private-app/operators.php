@@ -22,9 +22,8 @@
             <div class="mx-ag-ops-shell" id="ag_ops_shell">
               <?php if (!$operatorPanel['service_ready']): ?>
               <div class="alert alert-info" id="ag_ops_readiness" role="status">
-                <strong>Invitaciones canónicas no disponibles</strong>
-                <p class="mb-1"><?= $html($operatorPanel['message']) ?></p>
-                <p class="mb-0"><?= $html($operatorPanel['access_message']) ?></p>
+                <strong>Administración de operadores pendiente de habilitación</strong>
+                <p class="mb-0">Por ahora puedes consultar los registros anteriores.</p>
               </div>
               <?php endif; ?>
               <div class="mx-ag-ops-layout" id="ag_ops_layout">
@@ -32,7 +31,7 @@
                   <header class="mx-ag-ops-main-head">
                     <div>
                       <h6 id="ag_ops_list_title">Operadores registrados</h6>
-                      <p>Administra aquí los operadores con acceso a tu consultorio.</p>
+                      <p><?= $operatorPanel['service_ready'] ? 'Administra aquí los operadores con acceso a tu consultorio.' : 'Consulta aquí los registros anteriores de tu consultorio.' ?></p>
                     </div>
                     <button type="button" class="btn btn-primary mx-ag-ops-add-btn" id="ag_ops_add_btn" <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?>>
                       <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
@@ -40,7 +39,7 @@
                     </button>
                   </header>
 
-                  <button type="button" class="btn btn-outline-secondary btn-sm mb-2" id="ag_ops_refresh" <?= !$operatorPanel['service_ready'] ? 'disabled title="Servicio canónico no disponible"' : '' ?>>Actualizar equipo</button>                  <div id="ag_ops_legacy_summary" class="form-text mb-2" aria-live="polite"></div>
+                  <button type="button" class="btn btn-outline-secondary btn-sm mb-2" id="ag_ops_refresh" <?= !$operatorPanel['service_ready'] ? 'disabled title="La administración está pendiente de habilitación"' : '' ?>>Actualizar equipo</button>                  <div id="ag_ops_legacy_summary" class="form-text mb-2" aria-live="polite"></div>
                   <div class="mx-ag-ops-list" id="ag_ops_list" role="list"></div>
 
                   <section class="mx-ag-ops-archived" id="ag_ops_archived_section" aria-labelledby="ag_ops_archived_title">
@@ -56,11 +55,18 @@
                     </div>
                   </section>
 
+                  <details id="ag_ops_browser_history" class="border rounded p-2 mt-2 d-none">
+                    <summary>Referencias guardadas en este navegador <span id="ag_ops_browser_count" class="badge bg-secondary">0</span></summary>
+                    <p class="form-text mb-1">No se ha confirmado a qué registro pertenecen. Se conservan para consulta y no otorgan acceso.</p>
+                    <p id="ag_ops_browser_notice" class="form-text mb-1"></p>
+                    <ul id="ag_ops_browser_list" class="list-group list-group-flush small"></ul>
+                  </details>
+
                   <section class="mx-ag-ops-summary-secondary" aria-labelledby="ag_ops_summary_title">
                     <h6 id="ag_ops_summary_title">Resumen de operadores</h6>
                     <div class="mx-ag-ops-summary-grid">
                       <article class="mx-ag-ops-kpi-card">
-                        <span class="mx-ag-ops-kpi-label">Plazas canónicas ocupadas</span>
+                        <span class="mx-ag-ops-kpi-label">Plazas ocupadas</span>
                         <strong class="mx-ag-ops-kpi-value" id="ag_ops_active_value">No disponible</strong>
                       </article>
                       <article class="mx-ag-ops-kpi-card">
@@ -68,7 +74,7 @@
                         <strong class="mx-ag-ops-kpi-value" id="ag_ops_available_value">No disponible</strong>
                       </article>
                       <article class="mx-ag-ops-kpi-card">
-                        <span class="mx-ag-ops-kpi-label">Modelo canónico</span>
+                        <span class="mx-ag-ops-kpi-label">Límite de operadores</span>
                         <strong class="mx-ag-ops-kpi-value" id="ag_ops_max_allowed_value">2 operadores</strong>
                       </article>
                       <article class="mx-ag-ops-kpi-card">
@@ -86,6 +92,9 @@
                     <h5 id="ag_ops_form_title">Invitar operador</h5>
                   </div>
                   <div class="mx-ag-ops-form-body">
+                    <?php if (!$operatorPanel['can_manage']): ?>
+                    <p class="form-text mb-3" id="ag_ops_form_readiness" role="status"><?= !$operatorPanel['service_ready'] ? 'Podrás enviar invitaciones cuando se habilite la administración. Sólo el titular puede administrar operadores.' : 'Sólo el titular puede administrar operadores.' ?></p>
+                    <?php endif; ?>
                     <div class="mx-ag-ops-modal-error d-none" id="ag_ops_modal_error" role="alert"></div>
                     <div class="mx-ag-ops-accordion" id="ag_ops_modal_accordion">
                       <article class="mx-ag-ops-accordion-item is-active" data-ops-accordion-item="general">
@@ -107,7 +116,7 @@
                       </article>
 
                       <article class="mx-ag-ops-accordion-item" data-ops-accordion-item="access">
-                        <button type="button" class="mx-ag-ops-accordion-toggle" data-ops-accordion-toggle="access"><span class="mx-ag-ops-accordion-index">2</span><span class="mx-ag-ops-accordion-copy"><strong>Invitación de acceso</strong><small>Cuenta personal de Identity y aceptación explícita.</small></span><span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span></button>
+                        <button type="button" class="mx-ag-ops-accordion-toggle" data-ops-accordion-toggle="access"><span class="mx-ag-ops-accordion-index">2</span><span class="mx-ag-ops-accordion-copy"><strong>Invitación de acceso</strong><small>Cuenta personal y aceptación de la invitación.</small></span><span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span></button>
                         <div class="mx-ag-ops-accordion-body d-none"><p>La invitación dura siete días y reserva una plaza. La persona inicia sesión con su propia cuenta verificada y acepta los permisos ofrecidos.</p><p>La entrega requiere un servicio habilitado. No se generan contraseñas compartidas.</p></div>
                       </article>
                       <article class="mx-ag-ops-accordion-item" data-ops-accordion-item="permissions">
@@ -130,7 +139,7 @@
                     </div>
                                       </div>
                   <div class="mx-ag-ops-form-footer">
-                    <button type="button" class="btn btn-outline-secondary" id="ag_ops_form_cancel_btn">Cancelar</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ag_ops_form_cancel_btn" <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?>>Cancelar</button>
                     <button type="button" class="btn btn-primary" id="ag_ops_save_btn" <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?>>Enviar invitación</button>
                   </div>
                 </aside>
