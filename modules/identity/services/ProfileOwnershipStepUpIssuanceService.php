@@ -63,7 +63,7 @@ final class ProfileOwnershipStepUpIssuanceService
                 'case_reference'=>(string)$row['case_reference'],'target_account_id'=>$request->targetAccountId,
                 'membership_id'=>$request->membershipId,'profile_doctor_id'=>$request->profileDoctorId,
                 'now'=>$now->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u')]);
-            if((int)$dual->fetchColumn()!==2)throw new \RuntimeException('profile_ownership_step_up_dual_approval_required');
+            if((int)$dual->fetchColumn()!==PhysicianOwnershipPolicy::approvalCount($this->pdo,$request->operationId,(string)$row['case_reference']))throw new \RuntimeException('profile_ownership_step_up_approval_count_required');
             $proof='stepup_'.OneTimeTokenCodec::issue();$stepUpId=OneTimeTokenCodec::id('stepup_');$expires=$now->modify('+5 minutes');
             $this->proofs->issue($stepUpId,OneTimeTokenCodec::hash($proof),$request,$actor->accountId(),
                 (string)$session->sessionId(),$actor->principal()->credentialVersion(),$now,$expires);

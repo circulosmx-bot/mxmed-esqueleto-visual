@@ -35,7 +35,8 @@ final class GovernanceDeploymentAuthorization
         $root=dirname(__DIR__,3);$files=[];
         foreach(['services','adapters','contracts','http','repositories'] as $dir)$files=array_merge($files,glob($root.'/modules/identity/'.$dir.'/*.php'));
         foreach(['api/identity/governance.php','scripts/governance-ceremony.php','scripts/normal-local-https-proxy.py',
-            'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql'] as $path)$files[]=$root.'/'.$path;
+            'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql',
+            'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql'] as $path)$files[]=$root.'/'.$path;
         sort($files);$hash=[];foreach($files as $f)$hash[substr($f,strlen($root)+1)]=hash_file('sha256',$f);
         return hash('sha256',json_encode($hash,JSON_THROW_ON_ERROR));
     }

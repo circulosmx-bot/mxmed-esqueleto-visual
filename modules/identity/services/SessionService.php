@@ -46,7 +46,7 @@ final class SessionService
         } catch (\Throwable) { return false; }
     }
 
-    public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null) {}
+    public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null, private bool $touchActivity = true) {}
 
     public function create(AuthenticationPrincipalCandidate $candidate, array $metadata = []): SessionCreationDecision
     {
@@ -90,7 +90,17 @@ final class SessionService
             if ($status !== AccountStatus::ACTIVE) { $reason = $this->accountReason($status); $this->safeRevoke($digest, $reason); return new SessionValidationDecision(false, $reason); }
             if ((int)($state['credential_version'] ?? 0) !== $record->principal()->credentialVersion()) { $this->safeRevoke($digest, ReasonCode::CREDENTIAL_VERSION_MISMATCH); return new SessionValidationDecision(false, ReasonCode::CREDENTIAL_VERSION_MISMATCH); }
         }
-        if ($now->getTimestamp() - $record->lastSeenAt()->getTimestamp() >= $this->policy->touchIntervalSeconds()) { try { $record = $this->store->touch($digest, $now, $this->policy) ?? $record; } catch (\Throwable) { return new SessionValidationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); } }
+        if ($this->touchActivity && $now->getTimestamp() - $record->lastSeenAt()->getTimestamp() >= $this->policy->touchIntervalSeconds()) {
+            try { $touched = $this->store->touch($digest, $now, $this->policy); }
+            catch (\Throwable) { return new SessionValidationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
+            // A concurrent revoke/expiry may remove the record after read().
+            // Never authorize using the stale copy when the atomic touch denies it.
+            if ($touched === null || $touched->state() !== SessionState::ACTIVE)
+                return new SessionValidationDecision(false, ReasonCode::SESSION_REVOKED);
+            if ($now >= $touched->absoluteExpiresAt()) return new SessionValidationDecision(false, ReasonCode::SESSION_ABSOLUTE_EXPIRED);
+            if ($now >= $touched->expiresAt()) return new SessionValidationDecision(false, ReasonCode::SESSION_IDLE_EXPIRED);
+            $record = $touched;
+        }
         return new SessionValidationDecision(true, ReasonCode::ALLOWED, $record->principal(), $record, new AuthenticatedAccessContext($record->principal(), $record));
     }
 

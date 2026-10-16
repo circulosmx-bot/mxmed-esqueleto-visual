@@ -1,5 +1,7 @@
 # GOV03B-DEC01 — elegibilidad de owner y recuperación extraordinaria de la raíz
 
+> **Reconciliación posterior GOV-SIM02:** la regla mínima de owner médico y una sola aprobación rutinaria de staff queda aprobada por el Director, con aceptación independiente y evidencia profesional exacta. Los dos aprobadores/evidencia externa de esta propuesta no son prerrequisitos de la rutina. El plazo obligatorio de doce meses y toda recuperación extraordinaria V3 quedan `DEFERRED_NOT_APPROVED`. El resto de este documento conserva la propuesta histórica, sin ratificación por inferencia. Rige [GOV-SIM02](GOV-SIM02-physician-ownership-session.md).
+
 ```text
 STATUS=PROPOSED_NOT_RATIFIED
 DATE=2026-10-16
@@ -64,17 +66,17 @@ El emisor debe tener cuenta y staff activos, sesión vigente, MFA/reauth recient
 | Vigencia | `valid_from`, `reverify_at`, vencimiento cuando aplique, estado y revisión de las fuentes aceptadas. Rige el vencimiento más temprano. |
 | Incidentes/cambios | Actor, caso, motivo y fecha de suspensión/revocación; `authority_version` monotónica y auditoría canónica. No borrar decisiones previas. |
 
-Propuesta concreta de vigencia para ratificación: **revisión máxima a doce meses**, o antes si vence una fuente o hay cambio material; sin gracia después de `reverify_at`. No es un plazo histórico ya aprobado. Estados de admisión propuestos: `PENDING/APPROVED/REJECTED/SUSPENDED/REVOKED/EXPIRED`; vinculación: `PENDING/ACTIVE/SUSPENDED/REVOKED/REJECTED/EXPIRED`, coherentes con 02B1. Sólo admisión `APPROVED` y binding `ACTIVE` vigentes satisfacen elegibilidad. Revocación terminal; nueva decisión referenciada para reincorporación. No fabricar fechas/revisores para perfiles heredados: permanecen no elegibles hasta revisión real.
+**DEFERRED_NOT_APPROVED por GOV-SIM02:** la propuesta histórica de revisión máxima a doce meses, o antes si vence una fuente o hay cambio material; sin gracia después de `reverify_at`. No es un plazo histórico ya aprobado. Estados de admisión propuestos: `PENDING/APPROVED/REJECTED/SUSPENDED/REVOKED/EXPIRED`; vinculación: `PENDING/ACTIVE/SUSPENDED/REVOKED/REJECTED/EXPIRED`, coherentes con 02B1. Sólo admisión `APPROVED` y binding `ACTIVE` vigentes satisfacen elegibilidad. Revocación terminal; nueva decisión referenciada para reincorporación. No fabricar fechas/revisores para perfiles heredados: permanecen no elegibles hasta revisión real.
 
 ### Proyección y revalidación final
 
 Proyección propuesta **sólo de lectura**, request-scoped, por `(account_id, doctor_id)`: permitido/denegado, reason code estable, IDs/versiones de admisión/binding/claim/VID01/CRD02, `valid_until` y versión de política. No incluye documentos o cédulas completas ni se guarda como autoridad en PHP, cookie o navegador. Cuenta, admisión, binding o fuente ausentes, ambiguos, suspendidos, revocados, vencidos o inaccesibles deniegan.
 
-Un permiso de lectura previo no autoriza el commit. Al abrir el caso y al asignar owner, el puerto debe releer las mismas fuentes **en el PDO/transacción canónicos**, tomar locks y comparar las versiones aprobadas; fijar el orden global de locks con los escritores de revocación durante el diseño físico. Cambiar fuente/decisión/perfil/claim entre aprobación y ejecución exige nuevo caso, no adoptar silenciosamente otra versión. Validar cuenta/credencial/sesión y aceptación fresca, membresía activa exacta, perfil sin owner y cuotas; conservar solicitante + dos aprobadores R3, prueba del beneficiario, consumo y auditoría en esa transacción. Revocación concurrente debe tener un punto de orden comprobado; SQL y Valkey **no** constituyen una transacción distribuida. Si no se demuestra la garantía de revocación, no liberar la implementación.
+Un permiso de lectura previo no autoriza el commit. Al abrir el caso y al asignar owner, el puerto debe releer las mismas fuentes **en el PDO/transacción canónicos**, tomar locks y comparar las versiones aprobadas; fijar el orden global de locks con los escritores de revocación durante el diseño físico. Cambiar fuente/decisión/perfil/claim entre aprobación y ejecución exige nuevo caso, no adoptar silenciosamente otra versión. Validar cuenta/credencial/sesión y aceptación fresca, membresía activa exacta, perfil sin owner y cuotas; para nuevos casos rutinarios conservar una aprobación de staff autorizado, aceptación independiente del médico, consumo y auditoría en esa transacción (GOV-SIM02); los casos históricos/recuperaciones conservan sus reglas más fuertes. Revocación concurrente debe tener un punto de orden comprobado; SQL y Valkey **no** constituyen una transacción distribuida. Si no se demuestra la garantía de revocación, no liberar la implementación.
 
 Suspender/revocar admisión o binding deniega inmediatamente nuevas decisiones y consumos, invalida los casos/evidencias dependientes y obliga reverificación; conservar historia. Una suspensión profesional **no transfiere ownership** ni borra membresías: la respuesta administrativa se gobierna por su propio caso. Owner elegible no se vuelve firmante: CLIN-AUTH02A queda intacto; integrar autoridad profesional para actos clínicos requiere el contrato/implementación separados de 02B1.
 
-## 4. Propuesta de recuperación raíz, pendiente de DECISION_2
+## 4. Propuesta de recuperación raíz — DEFERRED_NOT_APPROVED
 
 ### Recuperación normal y excepcional
 

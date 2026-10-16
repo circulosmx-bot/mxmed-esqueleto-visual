@@ -1,7 +1,9 @@
 # GOV03B-DEC01 — DECISION_2: recuperación extraordinaria del Director interno
 
+> GOV-SIM02 difiere expresamente esta propuesta: **no aprobada ni obligatoria para ownership médico rutinario**. No se implementa V3 ni se debilitan los controles existentes de las autoridades raíz.
+
 ```text
-STATUS=PROPOSED_NOT_RATIFIED
+STATUS=DEFERRED_NOT_APPROVED
 DATE=2026-10-16
 DECISION=NOT_TAKEN
 CUSTODIANS_OR_TARGET_SELECTED=false
@@ -9,7 +11,7 @@ CUSTODIANS_OR_TARGET_SELECTED=false
 
 **Opción recomendada:** una operación backend raíz separada del bootstrap inicial, disponible sólo para un incidente aprobado cuando no se reúna autoridad interna normal suficiente. Tres custodios institucionales independientes previamente nombrados; **dos firmas Ed25519 propias de dos custodios vigentes**, distintos de beneficiario/autoridad comprometida/iniciador/ejecutor. Un solo custodio o la llave agregadora v2 no pueden autorizar recovery.
 
-**Detalle nuevo por ratificar:** padrón/custodia/autoridad organizacional previa, quorum 2/3, fuentes de identidad fuerte y MFA/reauth externos independientes; envelope v3 exacto, consumible una vez. Ventanas propuestas: reauth cinco minutos, evidencia quince, ceremonia treinta; revisión independiente en 24 horas. Recuperar al titular original es preferible; sucesor distinto requiere aprobación nominativa expresa, sin promoción automática. La [propuesta completa, §4](GOV03B-DEC01-policy-reconciliation.md#4-propuesta-de-recuperación-raíz-pendiente-de-decision_2) detalla compromiso, contención y atomicidad.
+**Detalle nuevo por ratificar:** padrón/custodia/autoridad organizacional previa, quorum 2/3, fuentes de identidad fuerte y MFA/reauth externos independientes; envelope v3 exacto, consumible una vez. Ventanas propuestas: reauth cinco minutos, evidencia quince, ceremonia treinta; revisión independiente en 24 horas. Recuperar al titular original es preferible; sucesor distinto requiere aprobación nominativa expresa, sin promoción automática. La [propuesta completa, §4](GOV03B-DEC01-policy-reconciliation.md#4-propuesta-de-recuperación-raíz--deferred_not_approved) detalla compromiso, contención y atomicidad.
 
 **Alternativas:** 3 de 5 para tolerar dos indisponibles con mayor coste; 2 de 2 aceptando bloqueo si falta uno; o mantener recuperación extraordinaria deshabilitada hasta definir custodia. Mantener una sola llave emisora no satisface resistencia ante compromiso de esa llave.
 

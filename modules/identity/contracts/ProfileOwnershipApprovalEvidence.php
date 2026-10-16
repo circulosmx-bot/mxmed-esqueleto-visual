@@ -30,7 +30,7 @@ final readonly class ProfileOwnershipApprovalEvidence
         foreach ([$approverAccountId,$executorAccountId,$targetAccountId,$membershipId,$profileDoctorId] as $identifier) {
             if (preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/D',$identifier)!==1) throw new \InvalidArgumentException('invalid_approval_evidence_identifier');
         }
-        if(count($approverAccountIds)!==2||count(array_unique($approverAccountIds,SORT_STRING))!==2
+        if(!in_array(count($approverAccountIds),[1,2],true)||count(array_unique($approverAccountIds,SORT_STRING))!==count($approverAccountIds)
             ||!in_array($approverAccountId,$approverAccountIds,true)||in_array($targetAccountId,$approverAccountIds,true))
             throw new \InvalidArgumentException('invalid_approval_evidence_authorities');
         foreach($approverAccountIds as $identifier)if(preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/D',$identifier)!==1)

@@ -29,3 +29,40 @@ function clinical_request_identity(string $capabilityId):array
         return ['context'=>null,'reason'=>'authentication required','http_status'=>401];
     return clinical_identity_authority($capabilityId);
 }
+
+/** The existing canonical resolver, shared by standalone legacy HTTP entries. */
+function clinical_legacy_http_identity():?array
+{
+    if(PHP_SAPI==='cli'&&!\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested())return null;
+    $authority=clinical_request_identity('clinical_record');
+    if(!is_array($authority['context']))mxmed_json_response(['ok'=>false,'error'=>'authentication_required'],(int)$authority['http_status']);
+    return $authority['context'];
+}
+
+function clinical_legacy_patient_scope(PDO $pdo,?array $identity,string $patientId):void
+{
+    if($identity!==null&&!clinical_has_active_doctor_patient_link($pdo,$identity['doctor_id'],$patientId))
+        mxmed_json_response(['ok'=>false,'error'=>'not_found'],404);
+}
+
+function clinical_has_active_doctor_patient_link(PDO $pdo, string $doctorId, string $patientId): bool
+{
+    $safeDoctorId = trim($doctorId);
+    $safePatientId = trim($patientId);
+    if ($safeDoctorId === '' || $safePatientId === '') {
+        return false;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM patients_doctor_links
+        WHERE doctor_id = :doctor_id
+          AND patient_id = :patient_id
+          AND status = 'active'
+    ");
+    $stmt->execute([
+        ':doctor_id' => $safeDoctorId,
+        ':patient_id' => $safePatientId,
+    ]);
+    return (int)$stmt->fetchColumn() > 0;
+}

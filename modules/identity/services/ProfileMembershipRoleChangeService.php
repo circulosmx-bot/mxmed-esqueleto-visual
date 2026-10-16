@@ -135,9 +135,11 @@ final class ProfileMembershipRoleChangeService
     private function assertApproval(ProfileOwnershipApprovalEvidence $e,ProfileMembershipRoleChangeRequest $r,string $executor):void
     {
         $now=$this->clock->now();
+        $required=PhysicianOwnershipPolicy::approvalCount($this->pdo,$r->operationId,$e->caseReference);
+        if($required===1&&$this->security===null)throw new \RuntimeException('routine_owner_canonical_security_required');
         if($e->approvalReference!==$r->approvalReference||$e->executorAccountId!==$executor
-            ||$e->approverAccountId===$r->targetAccountId||count($e->approverAccountIds)!==2
-            ||count(array_unique($e->approverAccountIds,SORT_STRING))!==2||in_array($r->targetAccountId,$e->approverAccountIds,true)
+            ||$e->approverAccountId===$r->targetAccountId||count($e->approverAccountIds)!==$required
+            ||count(array_unique($e->approverAccountIds,SORT_STRING))!==$required||in_array($r->targetAccountId,$e->approverAccountIds,true)
             ||$e->operationId!==$r->operationId
             ||$e->membershipId!==$r->membershipId||$e->targetAccountId!==$r->targetAccountId
             ||$e->profileDoctorId!==$r->profileDoctorId||$e->expectedRole!==$r->expectedRole

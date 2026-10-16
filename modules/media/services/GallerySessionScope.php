@@ -2,12 +2,25 @@
 declare(strict_types=1);
 
 namespace Media\Services;
+require_once __DIR__ . '/../../identity/http/IdentityHttpComposition.php';
 
 /** Consumes the established server session_scope contract; never request identity. */
 final class GallerySessionScope
 {
     public static function resolve(array $session, bool $allowDevFixture = false): ?array
     {
+        // PHP session aliases never outlive canonical Identity in normal-local.
+        // Keep legacy fixture contracts isolated from the normal application.
+        if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested()) {
+            require_once __DIR__ . '/../../identity/http/PrivateApplicationAccessResolver.php';
+            try {
+                $access = \Identity\Http\PrivateApplicationAccessResolver::fromProcessEnvironment()->resolve($_COOKIE);
+                if (!$access->allowed) return null;
+                return ['user_id'=>(string)$access->context['account']['id'],
+                    'doctor_id'=>(string)$access->context['professional']['doctor_id'],
+                    'session_id'=>(string)$access->session->sessionId()];
+            } catch (\Throwable) { return null; }
+        }
         $value = static function (array $keys) use ($session): string {
             foreach ($keys as $key) {
                 $v = trim((string)($session[$key] ?? ''));

@@ -30,6 +30,7 @@ final class InternalCapabilityCatalog
         $key=self::MANAGE_ADVISORS;$result[$key]=['key'=>$key,'domain'=>'internal_governance','label'=>'Administrar asesores','description'=>'Gestionar relaciones de asesores; conceder permisos operativos requiere delegación adicional.','delegable'=>false,'kind'=>'governance'];
         $key=self::APPROVE_INITIAL_PROFILE_OWNERSHIP;$result[$key]=['key'=>$key,'domain'=>'profile_ownership','label'=>'Aprobar ownership inicial','description'=>'Participar como autoridad interna en una decisión R3 de ownership inicial de un perfil médico.','delegable'=>false,'kind'=>'governance'];
         $key='provider_claim_review';$result[$key]=['key'=>$key,'domain'=>'provider_claim','label'=>'Revisar claims de organizaciones','description'=>'Aprobar o rechazar el primer claim de una organización proveedora.','delegable'=>true,'kind'=>'operational'];
+        $key='physician_accreditation_review';$result[$key]=['key'=>$key,'domain'=>'physician_accreditation','label'=>'Revisar acreditación médica','description'=>'Revisión humana de identidad, credenciales y vínculo con el perfil exacto; no concede ownership ni firma.','delegable'=>true,'kind'=>'operational'];
         $key='provider_subscription_activate';$result[$key]=['key'=>$key,'domain'=>'provider_commercial','label'=>'Activar suscripción proveedora','description'=>'Crear o cancelar una suscripción organizacional mediante gobernanza interna; no representa un pago.','delegable'=>true,'kind'=>'operational'];
         return $result;
     }

@@ -10,7 +10,7 @@ final readonly class MediaSubmissionActor
     {
         $scope=GallerySessionScope::resolve($session,false);
         if($scope===null || $sessionId==='')throw new \RuntimeException('submission_unauthorized');
-        return new self($scope['doctor_id'],$scope['user_id'],$sessionId,false);
+        return new self($scope['doctor_id'],$scope['user_id'],$scope['session_id']??$sessionId,false);
     }
     public static function executor(string $doctor): self
     {

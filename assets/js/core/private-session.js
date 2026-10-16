@@ -6,7 +6,8 @@
   const LOGOUT_ENDPOINT = '/api/identity/index.php/logout';
   const CHANNEL_NAME = 'mxmed-session';
   const SIGNAL_KEY = 'mxmed.session.signal';
-  const EXPIRED_MESSAGE = 'Tu sesión ha finalizado. Inicia sesión nuevamente para continuar.';
+  const EXPIRED_MESSAGE = 'Por seguridad, inicia sesión nuevamente para continuar.';
+  const WARNING_LEAD_MS = 120000;
   const SENSITIVE_EXACT = new Set([
     'mxmed.activeContext', 'mxmed_last_panel', 'mxmed_btn_pacientes',
     'mxmed.qa.realEntity', 'mxmed.qa.classification.v1', 'mxmed.dev.rbac.role',
@@ -26,6 +27,7 @@
   let generation = 0;
   let locked = false;
   let expiryTimer = 0;
+  let warningTimer = 0;
   let channel = null;
   let confirmationFlight = null;
   let sessionMarker = '';
@@ -154,6 +156,7 @@
     locked = true;
     manager.state = 'locked';
     window.clearTimeout(expiryTimer);
+    clearWarning();
     abortPending();
     clearSensitiveState();
     document.documentElement.classList.add('mxmed-auth-checking');
@@ -170,19 +173,47 @@
     locked = true;
     manager.state = 'unavailable';
     window.clearTimeout(expiryTimer);
+    clearWarning();
     abortPending();
     clearSensitiveState();
     document.documentElement.classList.add('mxmed-auth-checking');
     showLock(message || 'No fue posible validar tu sesión. Inténtalo de nuevo.', true);
   }
 
+  function clearWarning() {
+    window.clearTimeout(warningTimer);
+    document.getElementById('mxmed-session-warning')?.remove();
+  }
+
+  function warnBeforeExpiry() {
+    if (locked || manager.state !== 'authenticated') return;
+    let notice = document.getElementById('mxmed-session-warning');
+    if (!notice) {
+      notice = document.createElement('aside');
+      notice.id = 'mxmed-session-warning';
+      notice.className = 'mxmed-session-warning';
+      notice.setAttribute('role', 'status');
+      notice.setAttribute('aria-live', 'polite');
+      notice.innerHTML = '<strong>Tu sesión está por finalizar.</strong><p data-session-warning-copy></p>';
+      (document.body || document.documentElement).appendChild(notice);
+    }
+    const pending = window.mxmedPatientWorkspaceNavigationGuard?.active?.().length > 0;
+    notice.querySelector('[data-session-warning-copy]').textContent = pending
+      ? 'Tienes cambios pendientes. Guárdalos con los controles de la consulta antes de que finalice la sesión. No se guardarán automáticamente.'
+      : 'Guarda los cambios pendientes antes de que finalice la sesión. Después deberás iniciar sesión nuevamente.';
+    // Advisory only: no keepalive, autosave, rotation or credential access.
+  }
+
   function scheduleExpiry(context) {
     window.clearTimeout(expiryTimer);
+    clearWarning();
     const expiries = [context?.session?.idle_expires_at, context?.session?.absolute_expires_at]
       .map((value) => Date.parse(String(value || '')))
       .filter(Number.isFinite);
     if (!expiries.length) return;
-    const delay = Math.max(0, Math.min(...expiries) - Date.now() + 250);
+    const remaining = Math.min(...expiries) - Date.now();
+    if (remaining > 0) warningTimer = window.setTimeout(warnBeforeExpiry, Math.min(2147483647, Math.max(0, remaining - WARNING_LEAD_MS)));
+    const delay = Math.max(0, remaining + 250);
     expiryTimer = window.setTimeout(() => validate('expiry'), Math.min(delay, 2147483647));
   }
 
@@ -370,6 +401,7 @@
     if (locked || manager.state !== 'authenticated') return false;
     locked = true;
     manager.state = 'logging-out';
+    clearWarning();
     abortPending();
     document.documentElement.classList.add('mxmed-auth-checking');
     showLock('Cerrando tu sesión…', false);

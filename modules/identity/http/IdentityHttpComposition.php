@@ -89,6 +89,14 @@ final class IdentityHttpComposition
         private ?ActorContextFactory $auditActors = null
     ) {}
 
+    /** Active canonical environments never fall back to legacy PHP/header identities. */
+    public static function canonicalRuntimeRequested(): bool
+    {
+        return getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') === '1'
+            || getenv('MXMED_PREVIEW_EXPLICIT') === '1'
+            || in_array(strtolower((string)getenv('APP_ENV')), ['staging','production','prod'], true);
+    }
+
     /** Shared HTTP composition selection; authentication remains in SessionService. */
     public static function fromProcessEnvironment(): self
     {
@@ -284,7 +292,12 @@ final class IdentityHttpComposition
         $verification = new EmailVerificationService($pdo, $accounts, $consents, $tokens, $rateLimits, $notifications, $clock);
         $authentication = new CredentialAuthenticationService($accounts, $credentials, $rateLimits, $clock);
         $recovery = new RecoveryService($pdo, $accounts, $credentials, $tokens, $rateLimits, $notifications, $clock);
-        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials));
+        // Browser expiry/focus checks observe the deadline; they are not activity.
+        // Every consumer of this request's service, including operator snapshots,
+        // receives the same non-touching validation for current-session GET.
+        $observing = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
+            && parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) === '/api/identity/index.php/current-session';
+        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing);
         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
         $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority, new MedicalGroupTypeRepository($pdo));
         return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $identityAudit, $sessionAudit, $auditRequests, $auditActors);

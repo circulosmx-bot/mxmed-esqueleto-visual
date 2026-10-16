@@ -9,7 +9,7 @@ use PDO;
 final class GovernanceCaseSecurity
 {
     public function __construct(private PDO $pdo,public readonly GovernanceSecurityContext $sessions,
-        private InitialOwnerEligibilityPort $eligibility,public readonly Ed25519ExternalTrustAnchorAdapter $trust,
+        private InitialOwnerEligibilityPort $eligibility,public readonly ?Ed25519ExternalTrustAnchorAdapter $trust,
         public readonly CanonicalGovernanceAuditAdapter $audit) {}
     public function usesConnection(PDO $pdo):bool{return $pdo===$this->pdo;}
 
@@ -47,6 +47,7 @@ final class GovernanceCaseSecurity
         (new PdoProfileOwnershipApproverAuthorityAdapter($this->pdo))->assertAuthorized($this->pdo,$requester->accountId(),$case['beneficiary_account_id'],
             $case['profile_doctor_id']??'staff-mfa-recovery',$requester->principal()->credentialVersion());
         if($context['trust_anchor_reference']!==null)throw new \RuntimeException('governance_external_evidence_already_bound');
+        if($this->trust===null)throw new \RuntimeException('governance_external_trust_required');
         $context['trust_anchor_reference']=$this->trust->stage($envelope,$this->expected($case,$context));
         return $context;
     }
@@ -54,7 +55,7 @@ final class GovernanceCaseSecurity
     public function assertIndependentApprover(array $case,string $actor):void
     {
         $context=$this->context($case);
-        if(in_array($actor,[$case['requester_account_id'],$case['beneficiary_account_id'],$context['membership']['account_id']??null],true))throw new \RuntimeException('governance_approver_conflict');
+        if(in_array($actor,[PhysicianOwnershipPolicy::routine($case)?null:$case['requester_account_id'],$case['beneficiary_account_id'],$context['membership']['account_id']??null],true))throw new \RuntimeException('governance_approver_conflict');
     }
     private function activeBeneficiary(string $account):void
     {
@@ -77,7 +78,9 @@ final class GovernanceCaseSecurity
         }
         if($case['operation']!=='MFA_RECOVERY')$this->eligibility->assertEligible($this->pdo,$case['beneficiary_account_id'],$case['profile_doctor_id']);
         if($case['status']==='APPROVED')$this->assertEndorsements($case,$context);
+        if(PhysicianOwnershipPolicy::routine($case))return;
         if(!is_string($context['trust_anchor_reference']??null))throw new \RuntimeException('governance_external_evidence_required');
+        if($this->trust===null)throw new \RuntimeException('governance_external_trust_required');
         $this->trust->assertCase($this->expected($case,$context)+['trust_anchor_reference'=>$context['trust_anchor_reference']],$consume);
     }
 
@@ -88,10 +91,11 @@ final class GovernanceCaseSecurity
             JOIN auth_staff_mfa_challenges c ON c.challenge_id=p.challenge_id JOIN auth_staff_mfa_factors f ON f.factor_id=p.factor_id
             WHERE e.case_id=? AND e.status='APPROVED' ORDER BY e.endorsement_slot FOR UPDATE");
         $s->execute([$case['case_id']]);$rows=$s->fetchAll(PDO::FETCH_ASSOC);$ids=[];
-        if(count($rows)!==2)throw new \RuntimeException('governance_dual_approval_required');
+        $required=PhysicianOwnershipPolicy::requiredApprovals($case);
+        if(count($rows)!==$required)throw new \RuntimeException('governance_approval_count_required');
         foreach($rows as $row){
             $id=$row['approver_account_id'];$ids[]=$id;
-            if(in_array($id,[$case['requester_account_id'],$case['beneficiary_account_id'],$context['membership']['account_id']??null],true)
+            if(in_array($id,[PhysicianOwnershipPolicy::routine($case)?null:$case['requester_account_id'],$case['beneficiary_account_id'],$context['membership']['account_id']??null],true)
                 ||$row['staff_session_id']!==$row['endorsement_session']||(int)$row['credential_version']!==(int)$row['endorsement_version']||$row['consumed_by_reference']!==$case['case_id']||$row['actor_account_id']!==$id||$row['operation']!==$case['operation']||$row['case_id']!==$case['case_id']
                 ||$row['target_account_id']!==$case['beneficiary_account_id']||$row['beneficiary_account_id']!==$case['beneficiary_account_id']
                 ||$row['profile_doctor_id']!==$case['profile_doctor_id']||$row['status']!=='CONSUMED'||$row['factor_status']!=='ACTIVE')throw new \RuntimeException('governance_approval_binding_denied');
@@ -102,7 +106,7 @@ final class GovernanceCaseSecurity
             (new PdoProfileOwnershipApproverAuthorityAdapter($this->pdo))->assertAuthorized($this->pdo,$id,$case['beneficiary_account_id'],
                 $case['profile_doctor_id']??'staff-mfa-recovery',(int)$row['credential_version']);
         }
-        if(count(array_unique($ids))!==2)throw new \RuntimeException('governance_approver_independence_required');
+        if(count(array_unique($ids))!==$required)throw new \RuntimeException('governance_approver_independence_required');
     }
 
     public function assertOperation(string $operationId,bool $consume):void

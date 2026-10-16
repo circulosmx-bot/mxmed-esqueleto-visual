@@ -263,7 +263,7 @@ function resolveAgendaActorRole(array $query = [], array $body = []): array
 
 function resolveAgendaActorContext(array $segments, array $query = [], array $actorRoleContext = []): array
 {
-    if (getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') === '1') {
+    if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested()) {
         try {
             \Identity\Http\IdentityHttpComposition::registerAutoloader();
             $access=(new \Identity\Http\PrivateApplicationAccessResolver(

@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
+require_once __DIR__ . '/_lib/clinical_identity_authority.php';
+
+$clinicalHospitalIdentity=clinical_legacy_http_identity();
 
 $action = trim((string)($_GET['action'] ?? ''));
 
@@ -69,8 +72,9 @@ function mxmed_hospital_stays_read_patient_id($value): string {
     return $patientId;
 }
 
-function mxmed_hospital_stays_validate_patient_id(PDO $pdo, $value): string {
+function mxmed_hospital_stays_validate_patient_id(PDO $pdo, $value,?array $identity=null): string {
     $patientId = mxmed_hospital_stays_read_patient_id($value);
+    clinical_legacy_patient_scope($pdo,$identity,$patientId);
 
     if (!mxmed_hospital_stays_patient_exists($pdo, $patientId)) {
         mxmed_hospital_stays_error('not_found', 'patient not found', 404);
@@ -183,7 +187,7 @@ function mxmed_hospital_stays_success(?array $stay, string $message = 'ok', int 
 
 try {
     if ($action === 'current') {
-        $patientId = mxmed_hospital_stays_validate_patient_id($pdo, $_GET['patient_id'] ?? null);
+        $patientId = mxmed_hospital_stays_validate_patient_id($pdo, $_GET['patient_id'] ?? null,$clinicalHospitalIdentity);
         $row = mxmed_hospital_stays_find_open($pdo, $patientId);
         mxmed_hospital_stays_success($row ? mxmed_hospital_stays_row_to_stay($row) : null);
     }
@@ -194,7 +198,7 @@ try {
         }
 
         $body = mxmed_read_json_body();
-        $patientId = mxmed_hospital_stays_validate_patient_id($pdo, $body['patient_id'] ?? null);
+        $patientId = mxmed_hospital_stays_validate_patient_id($pdo, $body['patient_id'] ?? null,$clinicalHospitalIdentity);
 
         $pdo->beginTransaction();
         $open = mxmed_hospital_stays_find_open($pdo, $patientId, true);
@@ -250,7 +254,7 @@ try {
         }
 
         $body = mxmed_read_json_body();
-        $patientId = mxmed_hospital_stays_validate_patient_id($pdo, $body['patient_id'] ?? null);
+        $patientId = mxmed_hospital_stays_validate_patient_id($pdo, $body['patient_id'] ?? null,$clinicalHospitalIdentity);
         $stayId = mxmed_hospital_stays_read_stay_id($body['hospital_stay_id'] ?? ($body['stay_id'] ?? ($body['id'] ?? null)));
 
         $pdo->beginTransaction();

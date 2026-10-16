@@ -17,9 +17,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
+require_once __DIR__ . '/_lib/clinical_identity_authority.php';
+require_once __DIR__ . '/_lib/clinical_professional_authority.php';
 require_once __DIR__ . '/_lib/clinical_documents.php';
 require_once __DIR__ . '/_lib/clinical_m6_cutover.php';
 require_once __DIR__ . '/_lib/clinical_m6_observability.php';
+
+// Authenticate before schema checks, resource lookup or any legacy writer.
+// Isolated CLI migration harnesses retain their existing contract; HTTP never does.
+$clinicalDocumentIdentity=clinical_legacy_http_identity();
 
 clinical_m6_observability_request_started_at();
 clinical_m6_observability_route('C16_LEGACY_DOCUMENT', strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')), 'GUARDED_LEGACY');
@@ -120,6 +126,13 @@ if ($action === 'save') {
         }
     }
     $patientId = mxmed_clinical_documents_validate_save_patient_id($pdo, $body);
+    if($clinicalDocumentIdentity!==null) {
+        if(!clinical_has_active_doctor_patient_link($pdo,$clinicalDocumentIdentity['doctor_id'],$patientId))
+            mxmed_json_response(['ok'=>false,'error'=>'not_found'],404);
+        // This legacy builder always generates a document; it cannot bypass 02A.
+        try { clinical_professional_authority_assert($clinicalDocumentIdentity,'LEGACY_DOCUMENT_GENERATE'); }
+        catch(ClinicalProfessionalAuthorityException $e) { mxmed_json_response(['ok'=>false,'error'=>$e::ERROR_CODE],$e->httpStatus()); }
+    }
     try {
         // M6_GUARD_C16_STANDALONE_SAVE: deny before document/participant INSERT.
         clinical_m6_assert_legacy_write_allowed($patientId);
@@ -244,6 +257,8 @@ if ($action === 'save') {
 if ($action === 'list') {
     $patientId = trim((string)($_GET['patient_id'] ?? ''));
     if ($patientId === '') mxmed_json_response(['ok' => false, 'error' => 'patient_id requerido'], 400);
+    if($clinicalDocumentIdentity!==null&&!clinical_has_active_doctor_patient_link($pdo,$clinicalDocumentIdentity['doctor_id'],$patientId))
+        mxmed_json_response(['ok'=>false,'error'=>'not_found'],404);
     $type = trim((string)($_GET['document_type'] ?? ''));
     $hospitalStayId = trim((string)($_GET['hospital_stay_id'] ?? ''));
     $limit = (int)($_GET['limit'] ?? 30);
@@ -291,6 +306,8 @@ if ($action === 'get') {
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch();
         if (!$row) mxmed_json_response(['ok' => false, 'error' => 'Documento no encontrado'], 404);
+        if($clinicalDocumentIdentity!==null&&!clinical_has_active_doctor_patient_link($pdo,$clinicalDocumentIdentity['doctor_id'],(string)$row['patient_id']))
+            mxmed_json_response(['ok'=>false,'error'=>'not_found'],404);
 
         $pstmt = $pdo->prepare("SELECT user_id, role, participation_type, signed_at FROM clinical_document_participants WHERE clinical_document_id = :id ORDER BY id ASC");
         $pstmt->execute([':id' => $id]);

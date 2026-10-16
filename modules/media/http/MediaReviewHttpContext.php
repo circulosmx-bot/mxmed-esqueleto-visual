@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Media\Http;
+require_once __DIR__.'/../../identity/http/IdentityHttpComposition.php';
 require_once __DIR__.'/../services/MediaReviewAuthority.php';
 use Media\Services\MediaReviewAuthority;
 use Platform\Contracts\{AuthorizationContext,TrustedAuthorizationContext,AuthorizationPlane,RiskLevel,ActorReference,SessionReference,CapabilitySet};
@@ -11,7 +12,7 @@ final class MediaReviewHttpContext
     public static function fromRequest(array $cookies, array $server): ?TrustedAuthorizationContext
     {
         // Presence of a canonical token always prevents fallback, including invalid tokens.
-        if (array_key_exists('__Host-mxmed_session', $cookies)) {
+        if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested() || array_key_exists('__Host-mxmed_session', $cookies)) {
             try {
                 $identity = \Identity\Http\IdentityHttpComposition::fromProcessEnvironment();
                 $authority = new \Identity\Services\InternalOperatorAuthority(

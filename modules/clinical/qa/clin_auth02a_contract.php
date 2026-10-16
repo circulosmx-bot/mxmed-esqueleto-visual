@@ -106,12 +106,25 @@ $forbidden = array_filter($changed, static fn(string $path): bool => str_contain
 if (in_array('--security-regression', $argv ?? [], true)) {
     // The original delivery forbade ALL Identity/SQL changes. Later authorized
     // Identity phases legitimately supersede that delivery-only assertion.
-    // Regression mode still locks every production clinical guard to OP-IMP01.
+    // GOV-SIM02 authorizes only canonical expiration at standalone clinical entries and extraction of
+    // the existing patient-link predicate. Pin those exact reviewed sources;
+    // all other production clinical guards remain locked to OP-IMP01.
+    $sim02Pins=[
+        'api/clinical/index.php'=>'e109caa38e62d84114bd6cd91ddf927bcd97b00dfbd5961d3cd7e847e9fc0f0a',
+        'api/_lib/clinical_identity_authority.php'=>'1fcd12d32f60f0190f00c1407f676edf858b2e2c2c95b36c700e231848c98f89',
+        'api/clinical-documents.php'=>'5c471369408c30a89ec90de15bcdb83dce2ae7c52e48117c7c365e44471d9790',
+        'api/hospital-stays.php'=>'c6ed400386b4de1dc77d5a6bd777f9eaf3d006249b0d54612c8b3ca6da6a71c1',
+        'api/evolution-note-generate.php'=>'817251129d39aeb6ff49ddfe33e348d0f2f7b57212b56778fae6153460fdfb42',
+    ];
     $guardPaths=['api/clinical','api/_lib','api/clinical-documents.php','modules/clinical',
         ':(exclude)modules/clinical/qa/clin_auth02a_contract.php'];
+    foreach($sim02Pins as $path=>$expected){
+        if(hash_file('sha256',$root.'/'.$path)!==$expected)throw new RuntimeException('AUTH02A_GOV_SIM02_SOURCE_DRIFT');
+        $guardPaths[]=':(exclude)'.$path;
+    }
     exec('cd '.escapeshellarg($root).' && git diff --quiet aa7184c8c49b171f89a969226acbb605e94a0eb6 -- '
         .implode(' ',array_map('escapeshellarg',$guardPaths)), $guardOutput, $guardDiff);
-    auth02a($guardDiff === 0, 'AUTH02A_29', 'PASS_PRODUCTION_CLINICAL_GUARDS_UNCHANGED');
+    auth02a($guardDiff === 0, 'AUTH02A_29', 'PASS_PRODUCTION_CLINICAL_GUARDS_PINNED_WITH_SIM02_CONTAINMENT');
 } else {
     auth02a($gitStatus === 0 && $forbidden === [], 'AUTH02A_29');
 }

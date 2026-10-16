@@ -37,7 +37,8 @@ final class PdoProfileOwnershipApprovalAdapter implements ProfileOwnershipApprov
             consumed_at,consumed_operation_id FROM auth_profile_ownership_approval_endorsements
             WHERE approval_reference=:reference ORDER BY endorsement_slot FOR UPDATE");
         $endorsements->execute(['reference'=>$request->approvalReference]);$rows=$endorsements->fetchAll(PDO::FETCH_ASSOC);
-        if(count($rows)!==2)throw new \RuntimeException('profile_ownership_dual_approval_unavailable');
+        $required=\Identity\Services\PhysicianOwnershipPolicy::approvalCount($this->pdo,$request->operationId,(string)$row['case_reference']);
+        if(count($rows)!==$required)throw new \RuntimeException('profile_ownership_dual_approval_unavailable');
         $approvers=[];
         foreach($rows as $endorsement){
             if($endorsement['operation_id']!==$row['operation_id']||$endorsement['case_reference']!==$row['case_reference']
@@ -51,7 +52,7 @@ final class PdoProfileOwnershipApprovalAdapter implements ProfileOwnershipApprov
             $this->authority->assertAuthorized($this->pdo,(string)$endorsement['approver_account_id'],
                 (string)$row['target_account_id'],(string)$row['profile_doctor_id'],(int)$endorsement['credential_version']);
         }
-        if(count(array_unique($approvers,SORT_STRING))!==2||!in_array((string)$row['approver_account_id'],$approvers,true))
+        if(count(array_unique($approvers,SORT_STRING))!==$required||!in_array((string)$row['approver_account_id'],$approvers,true))
             throw new \RuntimeException('profile_ownership_dual_approval_unavailable');
         $update=$this->pdo->prepare("UPDATE auth_profile_ownership_approvals
             SET status='CONSUMED',consumed_at=:consumed_at,consumed_operation_id=:operation_id
@@ -66,7 +67,7 @@ final class PdoProfileOwnershipApprovalAdapter implements ProfileOwnershipApprov
               AND consumed_operation_id IS NULL AND expires_at>:now");
         $consumeEndorsements->execute(['consumed_at'=>self::sqlTime($now),'operation_id'=>$request->operationId,
             'reference'=>$request->approvalReference,'now'=>self::sqlTime($now)]);
-        if($consumeEndorsements->rowCount()!==2)throw new \RuntimeException('profile_ownership_endorsement_replay');
+        if($consumeEndorsements->rowCount()!==$required)throw new \RuntimeException('profile_ownership_endorsement_replay');
         return new ProfileOwnershipApprovalEvidence(
             (string)$row['approval_reference'],(string)$row['case_reference'],(string)$row['decision_reference'],
             (string)$row['approver_account_id'],$approvers,(string)$row['executor_account_id'],(string)$row['operation_id'],

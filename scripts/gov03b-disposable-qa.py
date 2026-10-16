@@ -56,6 +56,8 @@ def main():
             source = (ROOT/'modules/identity/deployment/op-act01'/file).read_text().replace('{{TARGET_SCHEMA}}', '`'+db+'`').replace('{{RESTRICTED_DEFINER}}', "'"+user+"'@'127.0.0.1'")
             sql('DELIMITER $$\n'+source.rstrip().rstrip(';')+'$$\nDELIMITER ;\n', db)
         sql((ROOT/'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql').read_text(), db)
+        if args.suite == 'contracts':
+            sql((ROOT/'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql').read_text(), db)
         sql("CREATE TABLE gov03b_qa_faults(enabled INT NOT NULL); INSERT INTO gov03b_qa_faults VALUES(0)", db)
         sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
         connection = evidence/'disposable-connection.json'

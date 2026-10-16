@@ -78,7 +78,7 @@ with tempfile.TemporaryDirectory(prefix="mxmed-session02b-browser-") as tmp:
     directory = Path(tmp); (directory / "assets/js/core").mkdir(parents=True)
     (directory / "assets/js/core/private-session.js").write_bytes((ROOT / "assets/js/core/private-session.js").read_bytes())
     bootstrap = json.dumps({**CONTEXT, "csrf_token": "qa-csrf"}, ensure_ascii=False)
-    (directory / "fixture.html").write_text(f'''<!doctype html><html class="mxmed-auth-checking"><head>
+    (directory / "fixture.html").write_text(f'''<!doctype html><html class="mxmed-auth-checking"><head><meta charset="utf-8">
       <style>html.mxmed-auth-checking body{{visibility:hidden}}.mxmed-session-lock{{visibility:visible!important}}</style>
       <script id="mxmed-private-bootstrap" type="application/json">{bootstrap}</script>
       <script src="/assets/js/core/private-session.js"></script></head>
@@ -117,13 +117,13 @@ with tempfile.TemporaryDirectory(prefix="mxmed-session02b-browser-") as tmp:
           page = open_authenticated(browser, base); Handler.reset("denied")
           page.evaluate("fetch('/api/test/unauthorized')")
           page.wait_for_function("mxmedPrivateSession.state === 'locked'")
-          expect(f"TEST_D_CANONICAL_DENIAL_{engine_name.upper()}", "finalizado" not in page.locator("#mxmed-session-lock").inner_text().lower())
+          expect(f"TEST_D_CANONICAL_DENIAL_{engine_name.upper()}", "Por seguridad, inicia sesión nuevamente para continuar." not in page.locator("#mxmed-session-lock").inner_text())
           page.close()
 
           page = open_authenticated(browser, base); Handler.reset("unavailable")
           page.evaluate("fetch('/api/test/unauthorized')")
           page.wait_for_function("mxmedPrivateSession.state === 'unavailable'")
-          expect(f"TEST_E_{engine_name.upper()}", "finalizado" not in page.locator("#mxmed-session-lock").inner_text().lower())
+          expect(f"TEST_E_{engine_name.upper()}", "Por seguridad, inicia sesión nuevamente para continuar." not in page.locator("#mxmed-session-lock").inner_text())
           page.close()
 
           page = open_authenticated(browser, base); Handler.reset(plan=[(.3, "expired"), (0, "valid")])
@@ -166,7 +166,7 @@ with tempfile.TemporaryDirectory(prefix="mxmed-session02b-browser-") as tmp:
           page = open_authenticated(browser, base); Handler.reset("expired")
           page.evaluate("fetch('/api/test/unauthorized')")
           page.wait_for_function("mxmedPrivateSession.state === 'locked'")
-          expect(f"TEST_C_{engine_name.upper()}", "finalizado" in page.locator("#mxmed-session-lock").inner_text().lower())
+          expect(f"TEST_C_{engine_name.upper()}", "Por seguridad, inicia sesión nuevamente para continuar." in page.locator("#mxmed-session-lock").inner_text())
           page.close(); browser.close()
     finally:
       server.shutdown(); server.server_close()

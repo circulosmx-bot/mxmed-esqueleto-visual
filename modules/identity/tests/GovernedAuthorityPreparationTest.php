@@ -84,8 +84,11 @@ try{
 
     $ownership=ProfileGovernancePolicy::initialOwnershipApproval('profile_exact');
     qa02e($ownership->riskLevel()==='R3'&&$ownership->reauthenticationRequired()&&$ownership->mfaRequired()
-        &&$ownership->caseRequired()&&$ownership->dualApprovalRequired()&&$ownership->entityProfileRequired()
-        &&$ownership->capabilitiesRequired()->contains(InternalCapabilityCatalog::APPROVE_INITIAL_PROFILE_OWNERSHIP),'ownership_r3_policy_complete');
+        &&$ownership->caseRequired()&&$ownership->approvalRequired()&&!$ownership->dualApprovalRequired()&&$ownership->entityProfileRequired()
+        &&$ownership->capabilitiesRequired()->contains(InternalCapabilityCatalog::APPROVE_INITIAL_PROFILE_OWNERSHIP),'ownership_routine_single_staff_policy');
+    $rootPolicy=ProfileGovernancePolicy::firstDirectorBootstrap('staff_candidate');
+    qa02e($rootPolicy->dualApprovalRequired()&&$rootPolicy->mfaRequired()&&$rootPolicy->reauthenticationRequired()
+        &&$rootPolicy->caseRequired()&&$rootPolicy->auditTrailRequired(),'root_r3_controls_not_simplified');
     $assisted=ProfileGovernancePolicy::assistedProfileAdministration('curate','profile_exact');
     qa02e($assisted->riskLevel()==='R2'&&!$assisted->ownershipRequired()&&!$assisted->membershipRequired()
         &&$assisted->entityProfileRequired()&&$assisted->capabilitiesRequired()->contains(InternalCapabilityCatalog::CURATE_PHYSICIAN_PROFILE),'ownerless_assisted_profile_policy');

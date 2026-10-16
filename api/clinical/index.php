@@ -437,28 +437,6 @@ function clinical_request_actor_user_id_strict(?array $payload = null): string
     return is_array($context)?trim((string)($context['account_id']??'')):'';
 }
 
-function clinical_has_active_doctor_patient_link(PDO $pdo, string $doctorId, string $patientId): bool
-{
-    $safeDoctorId = trim($doctorId);
-    $safePatientId = trim($patientId);
-    if ($safeDoctorId === '' || $safePatientId === '') {
-        return false;
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM patients_doctor_links
-        WHERE doctor_id = :doctor_id
-          AND patient_id = :patient_id
-          AND status = 'active'
-    ");
-    $stmt->execute([
-        ':doctor_id' => $safeDoctorId,
-        ':patient_id' => $safePatientId,
-    ]);
-    return (int)$stmt->fetchColumn() > 0;
-}
-
 /** @return array{doctor_id:string,user_id:string}|null */
 function clinical_authenticated_doctor_context(): ?array
 {

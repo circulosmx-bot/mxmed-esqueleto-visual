@@ -52,5 +52,22 @@ $fixture=['cookie'=>$tokens['ceremony_staff_a'],'csrf'=>$identity->csrf()->issue
  'environment'=>['MXMED_GOVERNANCE_TRUST_ANCHOR_PUBLIC_KEY'=>(string)getenv('MXMED_GOVERNANCE_TRUST_ANCHOR_PUBLIC_KEY'),
  'MXMED_GOVERNANCE_DEPLOYMENT_AUTHORIZATION'=>(string)getenv('MXMED_GOVERNANCE_DEPLOYMENT_AUTHORIZATION'),
  'MXMED_GOVERNANCE_DEPLOYMENT_AUTHORIZATION_SHA256'=>(string)getenv('MXMED_GOVERNANCE_DEPLOYMENT_AUTHORIZATION_SHA256')]];
+$client=new \Identity\Adapters\PreviewValkeyClient('127.0.0.1',(int)getenv('MXMED_SESSION_STORE_PORT'));
+$codec=new \Identity\Services\SessionTokenCodec((string)getenv('MXMED_PREVIEW_PEPPER'));
+foreach(['idle','absolute','revoked','observe'] as $kind) {
+    $raw=$codec->issue();$digest=$codec->digest($raw);
+    $created=$now->modify($kind==='absolute'?'-13 hours':'-2 hours');
+    $last=$created;$absolute=$created->modify('+12 hours');
+    $expires=$created->modify('+1 hour');
+    if($kind==='revoked'){$created=$now;$last=$now;$absolute=$now->modify('+12 hours');$expires=$now->modify('+1 hour');}
+    if($kind==='observe'){$created=$now->modify('-10 minutes');$last=$created;$absolute=$created->modify('+12 hours');$expires=$created->modify('+1 hour');}
+    $record=new \Identity\Contracts\SessionRecord(\Identity\Contracts\SessionId::generate(),$digest,
+        new \Identity\Contracts\SessionPrincipal('ceremony_staff_a',1,'active',$created->format(DATE_ATOM)),
+        $created,$last,$expires,$absolute,$kind==='revoked'?'revoked':'active');
+    // Own ephemeral Valkey only. Keep expired serialized facts available for HTTP rejection.
+    ceremonyCheck($client->set('mxmed:gate4d:preview:session:'.(string)$digest,json_encode($record->toArray(),JSON_THROW_ON_ERROR),600),'SIM02_owned_'.$kind.'_fixture');
+    if($kind==='observe'){$fixture['observation_cookie']=(string)$raw;$fixture['observation_key']='mxmed:gate4d:preview:session:'.(string)$digest;$fixture['observation_last_seen_at']=$last->format(DATE_ATOM);}
+    else $fixture['expired_cookies'][$kind]=(string)$raw;
+}
 file_put_contents($dir.'/http-fixture.json',json_encode($fixture,JSON_THROW_ON_ERROR));chmod($dir.'/http-fixture.json',0600);
 echo "GOV03B_CANONICAL_CLI_INTEGRATION=PASS\n";

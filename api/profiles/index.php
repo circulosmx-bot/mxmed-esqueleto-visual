@@ -119,7 +119,7 @@ function profileBoolEnvFlag($value): bool
 
 function profileResolvePrivateContext(string $doctorId, bool $requireDoctorScope = false): array
 {
-    if (getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT') === '1') {
+    if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested()) {
         try {
             \Identity\Http\IdentityHttpComposition::registerAutoloader();
             $access=(new \Identity\Http\PrivateApplicationAccessResolver(

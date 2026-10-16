@@ -105,9 +105,11 @@ $html = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES,
 html.mxmed-auth-checking body { visibility: hidden !important; }
 .mxmed-session-lock { position: fixed; inset: 0; z-index: 100000; display: grid; place-items: center; padding: 24px; background: #f4f8fa; color: #173e4a; visibility: visible !important; }
 .mxmed-session-lock__card { width: min(460px, 100%); padding: 28px; border: 1px solid #c9dce2; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px rgba(16, 61, 74, .14); text-align: center; }
+.mxmed-session-warning { position: fixed; top: 72px; right: 20px; z-index: 99999; width: min(390px, calc(100vw - 40px)); padding: 16px 20px; color: #173e4a; background: #fff; border: 1px solid #c9dce2; border-left: 4px solid #00a7b5; border-radius: 12px; box-shadow: 0 8px 28px rgba(16, 61, 74, .14); }
+.mxmed-session-warning p { margin: 8px 0 0; font-size: .9rem; }
 </style>
 <script id="mxmed-private-bootstrap" type="application/json"><?= $privateBootstrapJson ?></script>
-<script src="/assets/js/core/private-session.js?v=identity-session02b"></script>
+<script src="/assets/js/core/private-session.js?v=gov-sim02"></script>
 
 
 

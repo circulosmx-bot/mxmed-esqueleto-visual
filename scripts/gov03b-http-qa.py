@@ -10,7 +10,9 @@ spec=importlib.util.spec_from_file_location('gov_proxy',ROOT/'scripts/normal-loc
 with tempfile.TemporaryDirectory(prefix='mxmed-gov03b-http-') as d, (evidence/'http-private-server.log').open('wb') as log:
  base=pathlib.Path(d);base.chmod(0o700)
  subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(base/'key.pem'),'-out',str(base/'cert.pem'),'-days','1','-subj','/CN=localhost','-addext','subjectAltName=DNS:localhost'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
- php=subprocess.Popen(['php','-S','127.0.0.1:'+str(port),'-t',str(ROOT),str(ROOT/'scripts/canonical-private-router.php')],cwd=ROOT,env=config,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+ sessions=base/'php-sessions';sessions.mkdir(mode=0o700)
+ (sessions/'sess_sim02legacy').write_text('user_id|s:1:"1";doctor_id|s:1:"1";actor_role|s:6:"doctor";entity_type|s:6:"doctor";entity_id|s:1:"1";')
+ php=subprocess.Popen(['php','-d','session.save_path='+str(sessions),'-S','127.0.0.1:'+str(port),'-t',str(ROOT),str(ROOT/'scripts/canonical-private-router.php')],cwd=ROOT,env=config,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
  tls=None
  try:
   for _ in range(50):
@@ -40,6 +42,41 @@ with tempfile.TemporaryDirectory(prefix='mxmed-gov03b-http-') as d, (evidence/'h
    ('environment_HTTPS_flag_and_forwarded_header_insufficient',503,lambda:request('POST','cases/initial-owner',direct=True))]
   for name,expected,fn in cases:
    actual=fn();assert actual==expected,(name,actual,expected);print('PASS HTTP_'+name+'_'+str(actual))
+  private_paths=[
+   '/api/identity/index.php/current-session',
+   '/api/patients/index.php/doctors/1/patients/search?q=synthetic',
+   '/api/clinical/index.php/patients/p_sim02missing/history',
+   '/api/clinical-documents.php?action=list&patient_id=p_sim02missing',
+   '/api/clinical-documents.php?action=get&id=1',
+   '/api/hospital-stays.php?action=current&patient_id=p_sim02missing',
+   '/api/evolution-note-generate.php',
+   '/api/profiles/index.php/private/doctor/1',
+   '/api/profiles/professional-information.php',
+   '/api/media/physician-signature.php','/api/media/gallery.php',
+   '/api/media/owner-review.php','/api/media/signature-handoff.php',
+   '/api/billing/issuance.php','/api/billing/invoices.php','/api/billing/patient-profiles.php',
+   '/api/subscriptions/index.php/context/current',
+   '/api/subscriptions/index.php/entities/doctor/1/current',
+   '/api/agenda/index.php/appointments?doctor_id=1']
+  for kind,token in fixture.get('expired_cookies',{}).items():
+   for path in private_paths:
+    client=http.client.HTTPSConnection('localhost',tls.server_port,context=context,timeout=10)
+    client.request('GET',path,headers={'Host':'localhost:8443','Cookie':'__Host-mxmed_session='+token+'; PHPSESSID=sim02legacy','X-User-Id':'1','X-Doctor-Id':'1'})
+    response=client.getresponse();status=response.status;response.read();client.close()
+    assert status==401,('SIM02_'+kind,path,status)
+   print('PASS SIM02_HTTP_'+kind+'_'+str(len(private_paths))+'_private_routes_legacy_cookie_and_headers_denied')
+   for path in ['/api/clinical-documents.php?action=save','/api/clinical/index.php/patients/p_sim02missing/history','/api/hospital-stays.php?action=start','/api/hospital-stays.php?action=close','/api/evolution-note-generate.php']:
+    client=http.client.HTTPSConnection('localhost',tls.server_port,context=context,timeout=10)
+    client.request('PUT' if '/history' in path else 'POST',path,body='{}',headers={'Host':'localhost:8443','Content-Type':'application/json','Cookie':'__Host-mxmed_session='+token+'; PHPSESSID=sim02legacy'})
+    response=client.getresponse();status=response.status;response.read();client.close();assert status==401,(kind,path,status)
+   print('PASS SIM02_HTTP_'+kind+'_legacy_mutations_denied_before_writer')
+  client=http.client.HTTPSConnection('localhost',tls.server_port,context=context,timeout=10)
+  client.request('GET','/api/identity/index.php/current-session',headers={'Host':'localhost:8443','Cookie':'__Host-mxmed_session='+fixture['observation_cookie']})
+  response=client.getresponse();status=response.status;response.read();client.close();assert status==200
+  with socket.create_connection(('127.0.0.1',int(config['MXMED_SESSION_STORE_PORT'])),timeout=5) as stream:
+   key=fixture['observation_key'].encode();stream.sendall(b'*2\r\n$3\r\nGET\r\n$'+str(len(key)).encode()+b'\r\n'+key+b'\r\n');reader=stream.makefile('rb');line=reader.readline();assert line.startswith(b'$');record=json.loads(reader.read(int(line[1:-2])))
+  assert record['last_seen_at']==fixture['observation_last_seen_at'],'current-session must not keep idle session alive'
+  print('PASS SIM02_HTTP_current_session_is_observation_not_activity')
  finally:
   if tls is not None: tls.shutdown();tls.server_close()
   if php.poll() is None: os.killpg(php.pid,signal.SIGTERM);php.wait(timeout=10)

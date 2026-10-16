@@ -17,9 +17,17 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
+require_once __DIR__ . '/_lib/clinical_identity_authority.php';
+require_once __DIR__ . '/_lib/clinical_professional_authority.php';
 require_once __DIR__ . '/_lib/clinical_documents.php';
 require_once __DIR__ . '/_lib/clinical_m6_cutover.php';
 require_once __DIR__ . '/_lib/clinical_m6_observability.php';
+
+$clinicalEvolutionIdentity=clinical_legacy_http_identity();
+if($clinicalEvolutionIdentity!==null) {
+    try { clinical_professional_authority_assert($clinicalEvolutionIdentity,'LEGACY_EVOLUTION_GENERATE'); }
+    catch(ClinicalProfessionalAuthorityException $e) { mxmed_json_response(['ok'=>false,'error'=>$e::ERROR_CODE],$e->httpStatus()); }
+}
 
 clinical_m6_observability_request_started_at();
 clinical_m6_observability_route('C17_EVOLUTION_NOTE', 'CREATE_DOCUMENT', 'GUARDED_LEGACY');
@@ -113,6 +121,7 @@ function mxmed_evolution_note_validate_patient_id(PDO $pdo, array $body): string
 
 $body = mxmed_read_json_body();
 $patientId = mxmed_evolution_note_validate_patient_id($pdo, $body);
+clinical_legacy_patient_scope($pdo,$clinicalEvolutionIdentity,$patientId);
 try {
     // M6_GUARD_C17_EVOLUTION_CREATE: deny before document/participant INSERT.
     clinical_m6_assert_legacy_write_allowed($patientId);

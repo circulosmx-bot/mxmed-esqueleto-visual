@@ -78,6 +78,7 @@ use Subscriptions\Services\SubscriptionPlanPriceResolverService;
 use Subscriptions\Services\SubscriptionWriteIdempotencyService;
 use Subscriptions\Services\SubscriptionWriteException;
 
+require_once __DIR__.'/../../modules/identity/http/IdentityHttpComposition.php';
 header('Content-Type: application/json; charset=UTF-8');
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -617,6 +618,16 @@ function subscriptionIsLocalRequest(): bool
 
 function subscriptionSessionValue(array $keys): string
 {
+    if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested()) {
+        $access=subscriptionCanonicalAccess();
+        if (!$access->allowed) return '';
+        $values=['user_id'=>(string)$access->context['account']['id'],
+            'doctor_id'=>(string)$access->context['professional']['doctor_id'],
+            'entity_type'=>'doctor','entity_id'=>(string)$access->context['professional']['doctor_id'],
+            'actor_role'=>'doctor'];
+        foreach ($keys as $key) if (isset($values[$key])) return $values[$key];
+        return '';
+    }
     foreach ($keys as $key) {
         $value = trim((string)($_SESSION[$key] ?? ''));
         if ($value !== '') {
@@ -652,7 +663,14 @@ function subscriptionDevSessionFixtureError(string $code, string $message): arra
 
 function subscriptionDevSessionFixtureEnabled(): bool
 {
+    if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested()) return false;
     return subscriptionEnvValue('MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED') === '1';
+}
+
+function subscriptionCanonicalAccess(): \Identity\Http\PrivateApplicationAccessDecision
+{
+    require_once __DIR__.'/../../modules/identity/http/PrivateApplicationAccessResolver.php';
+    return \Identity\Http\PrivateApplicationAccessResolver::fromProcessEnvironment()->resolve($_COOKIE);
 }
 
 function subscriptionProductionEnvironmentDetected(): bool
@@ -2620,6 +2638,23 @@ function subscriptionValidEntityId(string $entityId): bool
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = subscriptionRelativeSegments();
+
+    // GOV-SIM02: private legacy PHP/header scope cannot bypass canonical expiry.
+    // The provider-signed webhook and public Stripe config retain their own contracts.
+    if (\Identity\Http\IdentityHttpComposition::canonicalRuntimeRequested()
+        && ($segments[0] ?? '') !== 'webhooks' && ($segments[0] ?? '') !== 'config') {
+        $canonical=subscriptionCanonicalAccess();
+        if (!$canonical->allowed) {
+            subscriptionRespond(subscriptionContextError('unauthorized','authentication required','canonical_identity'),$canonical->httpStatus);
+            return;
+        }
+        if (!in_array($method,['GET','HEAD'],true)) {
+            // Legacy payment writers still expect numeric PHP-session identities.
+            // Do not translate an opaque Identity account into that authority.
+            subscriptionRespond(subscriptionWriteError('forbidden','canonical subscription write authorization unavailable','canonical_identity'),403);
+            return;
+        }
+    }
 
     if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'concurrency-doctor') {
         $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/concurrency-doctor', $method);
