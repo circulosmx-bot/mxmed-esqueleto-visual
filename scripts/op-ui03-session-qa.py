@@ -40,6 +40,12 @@ async def main():
   await page.unroute('**/api/profile-operators/index.php/bootstrap',delay)
   assert await page.evaluate("async()=> (await window.mxmedCanonicalOperators.request('/api/profile-operators/index.php/bootstrap')).status")==200
   RESULTS['S04_rotated_session_remains_valid']='PASS'
+  async def unavailable(route):await route.abort('failed')
+  await page.route('**/api/profile-operators/index.php/bootstrap',unavailable)
+  failure=await page.evaluate("async()=>{const r=await window.mxmedCanonicalOperators.request('/api/profile-operators/index.php/bootstrap');return {ok:r.ok,status:r.status,body_ok:r.json.ok};}")
+  assert failure=={'ok':False,'status':0,'body_ok':False},failure
+  await page.unroute('**/api/profile-operators/index.php/bootstrap',unavailable)
+  RESULTS['S06_transport_failure_never_success']='PASS'
   await page.evaluate('window.mxmedPrivateSession.logout()');await page.wait_for_url('**/public/identity/acceso.php?state=logged-out')
   assert (await ctx.request.get(BASE+'/api/profile-operators/index.php/bootstrap')).status==401
   RESULTS['S05_logout_revocation']='PASS';await ctx.close();await browser.close()

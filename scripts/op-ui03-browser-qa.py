@@ -54,7 +54,7 @@ def run_case(p,engine,width,height):
    try:debug.append([arg.json_value() for arg in m.args])
    except Exception:pass
  def fresh():
-  c=browser.new_context(ignore_https_errors=True,viewport={'width':width,'height':height},timezone_id='America/Mexico_City');contexts.append(c);pg=c.new_page();pg.on('pageerror',lambda e:errors.append(str(e)));pg.on('console',debug_console);return pg
+  c=browser.new_context(ignore_https_errors=True,viewport={'width':width,'height':height},timezone_id='America/Mexico_City');contexts.append(c);pg=c.new_page();pg.on('pageerror',lambda e:errors.append({'message':str(e),'stack':e.stack,'url':pg.url}));pg.on('console',debug_console);return pg
  try:
   owner=fresh();login(owner,'owner');expect(owner.locator('#p-ag-operadores')).to_be_visible();expect(owner.locator('#ag_ops_active_value')).to_have_text('0/2')
   invite(owner,'operador-a',CAPS);invite(owner,'operador-b',[CAPS[0],CAPS[3]],'administrator');expect(owner.locator('#ag_ops_pending_value')).to_have_text('2')
@@ -69,7 +69,7 @@ def run_case(p,engine,width,height):
   slot=a.locator('.mx-ag-custom-week-col[data-day-key="'+tomorrow+'"] [data-slot-kind=available]').first;slot.click()
   a.locator('#ag_custom_slot_new_btn').click();expect(a.locator('#ag_new_appointment_modal')).to_be_visible()
   print('UI03_ORIGINAL_CREATE_FORM_OPEN='+engine,flush=True)
-  a.locator('#ag_patient_search_query').fill('Persona');a.locator('#ag_patient_search_btn').click();expect(a.locator('#ag_patient_lookup_modal')).to_be_visible()
+  a.locator('#ag_patient_search_query').fill('Persona');a.locator('#ag_patient_search_query').press('Enter');expect(a.locator('#ag_patient_lookup_modal')).to_be_visible()
   a.locator('#ag_patient_lookup_list [data-ag-identity-select]').first.click();a.locator('#ag_patient_lookup_list [data-ag-identity-confirm-yes]').first.click()
   expect(a.locator('#ag_patient_lookup_modal')).not_to_be_visible();a.screenshot(path=str(EVIDENCE/f'{engine}-{width}x{height}-original-appointment-form.png'))
   with a.expect_response(lambda r:'/api/agenda/index.php/appointments' in r.url and r.request.method=='POST') as response:a.locator('#ag_create_submit_btn').click()
@@ -102,7 +102,7 @@ def run_case(p,engine,width,height):
   # CREATE is usable in the ORIGINAL appointment modal without READ or availability.
   owner.bring_to_front();edit(owner,'op02-operador-b',[CAPS[1]]);b.bring_to_front();b.reload();expect(b.locator('#ag_granted_create_btn')).to_be_visible(timeout=15000);b.locator('#ag_granted_create_btn').click()
   b.locator('#ag_start_input').fill(tomorrow+'T11:00');b.locator('#ag_start_input').dispatch_event('change');b.locator('#ag_end_input').fill(tomorrow+'T11:30');b.locator('#ag_end_input').dispatch_event('change')
-  b.locator('#ag_patient_search_query').fill('Persona');b.locator('#ag_patient_search_btn').click();expect(b.locator('#ag_patient_lookup_modal')).to_be_visible();b.locator('#ag_patient_lookup_list [data-ag-identity-select]').first.click();b.locator('#ag_patient_lookup_list [data-ag-identity-confirm-yes]').first.click();expect(b.locator('#ag_patient_lookup_modal')).not_to_be_visible()
+  b.locator('#ag_patient_search_query').fill('Persona');b.locator('#ag_patient_search_query').press('Enter');expect(b.locator('#ag_patient_lookup_modal')).to_be_visible();b.locator('#ag_patient_lookup_list [data-ag-identity-select]').first.click();b.locator('#ag_patient_lookup_list [data-ag-identity-confirm-yes]').first.click();expect(b.locator('#ag_patient_lookup_modal')).not_to_be_visible()
   with b.expect_response(lambda r:'/api/agenda/index.php/appointments' in r.url and r.request.method=='POST') as response:b.locator('#ag_create_submit_btn').click()
   assert response.value.status==200,response.value.status
   manual_id=response.value.json()['data']['appointment_id'];expect(b.locator('#ag_new_appointment_modal')).not_to_be_visible();print('UI03_CREATE_WITHOUT_READ_OR_AVAILABILITY=PASS',flush=True)
@@ -135,10 +135,11 @@ def run_case(p,engine,width,height):
   browser.close()
 
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--first-only',action='store_true');args=parser.parse_args();results=[]
+ parser=argparse.ArgumentParser();parser.add_argument('--first-only',action='store_true');parser.add_argument('--engine',choices=['chromium','webkit']);parser.add_argument('--size',choices=['1440','1366','820']);args=parser.parse_args();results=[]
  with sync_playwright() as p:
-  for engine in ['chromium','webkit']:
+  for engine in ([args.engine] if args.engine else ['chromium','webkit']):
    for width,height in [(1440,900),(1366,768),(820,1180)]:
+    if args.size and str(width)!=args.size:continue
     result=run_case(p,engine,width,height);results.append(result);(EVIDENCE/'op-ui03-browser.json').write_text(json.dumps(results,indent=2));print(f'QA_{engine.upper()}_{width}_{height}='+result['result'],flush=True)
     if args.first_only:break
    if args.first_only:break

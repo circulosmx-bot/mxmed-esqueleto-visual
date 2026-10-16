@@ -1399,35 +1399,15 @@ try {
             }
             break;
         case 'operators':
+            // OP-INT04: retire all HTTP legacy writers, including migration/apply
+            // and status aliases. The canonical service remains the sole writer.
+            if ($method !== 'GET') {
+                $response = forbidden_response('La administración legacy está cerrada. Las invitaciones canónicas requieren una activación autorizada.');
+                break;
+            }
             $operators = new OperatorsController();
-            if (is_array($actorContext)) {
-                apply_actor_context($operators, $actorContext);
-            }
-            if ($method === 'GET' && !isset($segments[1])) {
-                $response = $operators->index($_GET);
-            } elseif ($method === 'POST' && !isset($segments[1])) {
-                $response = $operators->store(read_json_body());
-            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'migration' && ($segments[2] ?? '') === 'preview') {
-                $response = $operators->migrationPreview(read_json_body());
-            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'migration' && ($segments[2] ?? '') === 'apply') {
-                $response = $operators->migrationApply(read_json_body());
-            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'pause') {
-                $response = $operators->pause((string)$segments[1], read_json_body());
-            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'reactivate') {
-                $response = $operators->reactivate((string)$segments[1], read_json_body());
-            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'archive') {
-                $response = $operators->archive((string)$segments[1], read_json_body());
-            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'restore') {
-                $response = $operators->restore((string)$segments[1], read_json_body());
-            } else {
-                $response = [
-                    'ok' => false,
-                    'error' => 'not_found',
-                    'message' => 'route not found',
-                    'data' => null,
-                    'meta' => (object)[],
-                ];
-            }
+            if (is_array($actorContext)) apply_actor_context($operators, $actorContext);
+            $response = !isset($segments[1]) ? $operators->index($_GET) : forbidden_response('Ruta legacy no disponible.');
             break;
     }
 } catch (\Throwable $e) {

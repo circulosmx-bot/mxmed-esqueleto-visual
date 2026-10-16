@@ -279,7 +279,9 @@ gate8dAssert($plan->failureAction() === 'rollback' && $plan->rollbackRequired() 
 // 83-94: byte-equivalence y preservación de gates previos.
 $root = dirname(__DIR__, 3);
 $protected = [
-    'api/agenda/index.php' => 'f807101a927a0041d2da80832825dd993c12f5db780d6d1e3970ff0d7fe13d72',
+    // OP-INT04: only legacy Operators HTTP writes retired; the preservation
+    // contract verifies every other dispatcher byte against 8e29d3fa.
+    'api/agenda/index.php' => '67f737ae947e20b4fef805b25ab9902553d4b7b804be715445c790c8da7bc54e',
     'modules/agenda/tests/Gate8ACanonicalContractsTest.php' => 'efae63a8e5e353288a24e60770e0f7128df89c75411b6e6541c2daeda2637ecd',
     'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '48670ec07a1d87d3d8283426470c0f742bb6a266c8adb3d96101214eebb48b45',
     'modules/agenda/contracts/ActorAuthorityContract.php' => 'b0332df721d4af0ebd38ad0ff1f9abf6cf5d8d3b6b3a418b892506bff3720a3b',

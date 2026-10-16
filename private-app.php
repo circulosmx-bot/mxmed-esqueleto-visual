@@ -56,6 +56,10 @@ if (!$privateAccess->allowed) {
 }
 
 $privateBootstrap = $privateAccess->context ?? [];
+$operatorPanel = $operatorUi03
+    ? \Identity\Operators\OperatorPanelReadiness::available($operatorState)
+    : \Identity\Operators\OperatorPanelReadiness::normalReadOnly($privateIdentity->pdo(), $privateBootstrap);
+$privateBootstrap['operators_ui'] = $operatorPanel;
 if ($privateAccess->session === null) {
     http_response_code(503);
     echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Aplicación no disponible</title>'
@@ -10461,7 +10465,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="/assets/js/core/sidebar.js?v=op-ui03"></script>
 <script>window.mxmedInitializeSidebar();</script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
-<script src="/assets/js/agenda/canonical-operators.js?v=op-ui03"></script>
+<script src="/assets/js/agenda/operators-panel.js?v=op-int04"></script>
+<script src="/assets/js/agenda/canonical-operators.js?v=op-int04"></script>
 <script src="/assets/js/agenda/agenda-workspace.js?v=op-ui03"></script>
 <script>window.mxmedCanonicalOperators.whenReady.then(function(){window.mxmedInitializeAgenda();}).catch(function(){/* The original panel retains the bootstrap error. */});</script>
 </body></html>
@@ -10681,7 +10686,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/clinical/prescription-editor-host.js?v=rec-tpl02"></script>
 <script src="assets/js/core/sidebar.js?v=op-ui03"></script>
 <script src="assets/js/agenda/agenda-workspace.js?v=op-ui03"></script>
-<script src="assets/js/app.js?v=rec-vis08"></script>
+<script src="assets/js/agenda/operators-panel.js?v=op-int04"></script>
+<script src="assets/js/app.js?v=op-int04"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>

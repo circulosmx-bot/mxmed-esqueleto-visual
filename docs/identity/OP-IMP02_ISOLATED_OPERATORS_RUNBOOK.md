@@ -1,5 +1,7 @@
 # OP-IMP02 — OPERADORES y Agenda funcionales en QA aislada
 
+> Actualización OP-INT04: [integración normal-local](OP-INT04_NORMAL_LOCAL_OPERATORS_INTEGRATION.md) sustituye el formulario/controller legacy por el panel canónico único con readiness de servidor. Los resultados y límites descritos abajo corresponden al hito histórico anterior. Normal-local permanece sin activación, migraciones ni mutaciones reales de operadores.
+
 Fecha: 2026-10-15. Baseline: `aa7184c8c49b171f89a969226acbb605e94a0eb6`, rama `ux/consultation-step2-vitals-r1`.
 
 **Entrega funcional exclusivamente aislada.** No habilita operadores reales en normal-local, staging o producción. Conserva [OP-POL02](OP-POL02_NONMEDICAL_OPERATOR_IMPLEMENTATION_READINESS.md), las reglas Q01–Q04/Q12 de [OP-IMP01](OP-IMP01_OPERATOR_FOUNDATION.md) y la contención [CLIN-AUTH02A](../clinical/CLIN-AUTH02A_URGENT_CONTAINMENT.md).

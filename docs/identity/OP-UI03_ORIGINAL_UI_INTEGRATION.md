@@ -1,5 +1,7 @@
 # OP-UI03 — integración en la aplicación original
 
+> Actualización OP-INT04: [integración normal-local](OP-INT04_NORMAL_LOCAL_OPERATORS_INTEGRATION.md) sustituye el formulario/controller legacy por el panel canónico único con readiness de servidor. Los resultados y límites descritos abajo corresponden al hito histórico anterior. Normal-local permanece sin activación, migraciones ni mutaciones reales de operadores.
+
 Baseline: `4e3e4db0c1cacd3236a57483f5f6e46ef2309635`. Rama `ux/consultation-step2-vitals-r1`. Fecha: 2026-10-15.
 
 ## Corrección de OP-IMP02
