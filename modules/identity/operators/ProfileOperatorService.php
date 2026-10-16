@@ -207,11 +207,15 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             $this->pdo->beginTransaction();$this->lockProfile($profile);$this->account($d->context());$owner=$this->owner($profile);
             if($owner['account_id']!==$d->context()->accountId())throw new \RuntimeException('operator_owner_required');
             $this->expire($profile,$d->context(),$this->uuid());
-            $pending=$this->all("SELECT invitation_id,email_normalized,role_code,offered_capabilities,expires_at,offer_revision FROM auth_profile_operator_invitations WHERE profile_doctor_id=? AND status='pending' ORDER BY created_at",[$profile]);
+            $pending=$this->all("SELECT invitation_id,email_normalized,role_code,offered_capabilities,created_at,expires_at,offer_revision,status FROM auth_profile_operator_invitations WHERE profile_doctor_id=? AND status='pending' ORDER BY created_at",[$profile]);
             foreach($pending as &$i){$i['alias']=explode('@',$i['email_normalized'])[0];$i['capabilities']=json_decode($i['offered_capabilities'],true);}unset($i);
-            $members=$this->all("SELECT m.membership_id,m.account_id,m.role_code,m.status,a.email_normalized FROM auth_account_memberships m JOIN auth_accounts a ON a.account_id=m.account_id WHERE m.profile_doctor_id=? AND m.assignment_source=? ORDER BY m.created_at",[$profile,self::SOURCE]);
+            $members=$this->all("SELECT m.membership_id,m.account_id,m.role_code,m.status,a.email_normalized,a.status account_status,a.email_verified_at FROM auth_account_memberships m JOIN auth_accounts a ON a.account_id=m.account_id WHERE m.profile_doctor_id=? AND m.assignment_source=? ORDER BY m.created_at",[$profile,self::SOURCE]);
             foreach($members as &$m){$r=$this->one('SELECT * FROM auth_profile_operator_grant_revisions WHERE membership_id=? ORDER BY revision DESC LIMIT 1',[$m['membership_id']]);
-                $m['alias']=explode('@',$m['email_normalized'])[0];unset($m['email_normalized']);
+                $m['alias']=explode('@',$m['email_normalized'])[0];
+                $m['contact_verified']=$m['email_verified_at']!==null;unset($m['email_normalized'],$m['email_verified_at']);
+                $invitation=$r===null?null:$this->one('SELECT created_at,closed_at,status FROM auth_profile_operator_invitations WHERE invitation_id=? AND profile_doctor_id=? AND accepted_membership_id=?',[$r['invitation_id'],$profile,$m['membership_id']]);
+                $m['invited_at']=$invitation['created_at']??null;
+                $m['accepted_at']=($invitation['status']??'')==='accepted'?$invitation['closed_at']:null;
                 $m['revision']=(int)($r['revision']??0);$m['grant_status']=$r['status']??'missing';
                 $m['capabilities']=$r===null?[]:array_column($this->all('SELECT capability FROM auth_profile_operator_grants WHERE revision_id=? ORDER BY capability',[$r['revision_id']]),'capability');
             }unset($m);
@@ -219,7 +223,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             foreach($members as &$member){
                 $r=$this->one('SELECT * FROM auth_profile_operator_grant_revisions WHERE membership_id=? ORDER BY revision DESC LIMIT 1',[$member['membership_id']]);
                 // Display-only projection. Action consumers always revalidate through permits.
-                $member['effective_capabilities']=($member['status']==='active'&&($r['status']??'')==='active'&&$r['owner_membership_id']===$owner['membership_id']
+                $member['effective_capabilities']=($member['status']==='active'&&$member['account_status']==='active'&&$member['contact_verified']&&($r['status']??'')==='active'&&$r['owner_membership_id']===$owner['membership_id']
                     &&$r['valid_from']<=$this->now()&&($r['valid_until']===null||$r['valid_until']>$this->now())
                     &&($plan['feature_access']['agenda_appointments']['available']??false)===true)?$member['capabilities']:[];
             }unset($member);

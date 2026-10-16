@@ -110,8 +110,23 @@ try {
     }
     passed(1,'owner_plus_two_all_role_combinations');passed(2,'third_denied');passed(3,'administrator_counts');passed(4,'identical_collaborator_grants');
     $pr=op01fresh($p,'different');$ia=op01invite($s,$owner,$pr,'invitee_a',['agenda.appointments.create']);$ma=op01accept($s,$a,$pr,$ia);$ib=op01invite($s,$owner,$pr,'invitee_b',['agenda.appointments.cancel']);$mb=op01accept($s,$b,$pr,$ib);
+    $view=$s['service']->overview($owner['token'],$pr);
+    foreach($view['members'] as $member){
+        op01check($member['contact_verified']===true&&$member['account_status']==='active','ux06_current_contact_facts');
+        op01check($member['invited_at']!==null&&$member['accepted_at']!==null,'ux06_persisted_invitation_acceptance_dates');
+        op01check(!array_key_exists('email_normalized',$member)&&!array_key_exists('email_verified_at',$member)&&!array_key_exists('last_access',$member),'ux06_minimal_projection_no_guessed_access');
+    }
+    op01check(op01denied(fn()=>$s['service']->overview($a['token'],$pr)),'ux06_profile_reader_owner_only');
+    $p->exec("UPDATE auth_accounts SET status='disabled' WHERE account_id='invitee_a'");
+    $view=$s['service']->overview($owner['token'],$pr);
+    $disabled=array_values(array_filter($view['members'],fn($m)=>$m['account_id']==='invitee_a'))[0];
+    op01check($disabled['account_status']==='disabled'&&$disabled['effective_capabilities']===[],'ux06_disabled_account_not_displayed_as_effective');
+    $p->exec("UPDATE auth_accounts SET status='active' WHERE account_id='invitee_a'");
     op01check($s['service']->permits($a['token'],$pr,$pr,'agenda.appointments.create')&&!$s['service']->permits($a['token'],$pr,$pr,'agenda.appointments.cancel')&&$s['service']->permits($b['token'],$pr,$pr,'agenda.appointments.cancel')&&!$s['service']->permits($b['token'],$pr,$pr,'agenda.appointments.create'),'different_permissions');passed(5,'different_grants');
     $pending=op01fresh($p,'pending');$ip=op01invite($s,$owner,$pending,'invitee_a');op01invite($s,$owner,$pending,'invitee_b');op01check(op01denied(fn()=>op01invite($s,$owner,$pending,'invitee_c')),'pending_reservation');passed(6,'pending_reserves');
+    $view=$s['service']->overview($owner['token'],$pending);
+    op01check($view['occupied']===0&&$view['reserved']===2&&$view['available']===0,'ux06_pending_seats_are_reserved_not_accepted');
+    foreach($view['invitations'] as $invitation)op01check($invitation['status']==='pending'&&$invitation['created_at']!==null&&$invitation['expires_at']!==null,'ux06_pending_dates_from_server');
     op01command($s,$owner,$pr,'suspend',['membership_id'=>$ma['membership_id'],'expected_revision'=>1]);
     op01check(!$s['service']->permits($a['token'],$pr,$pr,'agenda.appointments.create')&&op01denied(fn()=>op01invite($s,$owner,$pr,'invitee_c')),'suspended_keeps_seat');passed(7,'suspension_retains');
     op01command($s,$owner,$pr,'reactivate',['membership_id'=>$ma['membership_id'],'expected_revision'=>1]);op01check($s['service']->permits($a['token'],$pr,$pr,'agenda.appointments.create'),'reactivation_current_owner');

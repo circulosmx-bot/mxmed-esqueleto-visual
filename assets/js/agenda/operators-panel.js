@@ -3,60 +3,121 @@
   'use strict';
   const $=id=>document.getElementById(id);
   const labels={'agenda.appointments.read':'Consultar citas','agenda.appointments.create':'Crear citas','agenda.appointments.reschedule':'Reprogramar citas','agenda.appointments.cancel':'Cancelar citas','agenda.availability.read':'Consultar disponibilidad'};
-  const statuses={active:'Activo',suspended:'Suspendido',revoked:'Revocado',pending:'Invitación pendiente'};
+  const statuses={active:'Activo',suspended:'Suspendido',revoked:'Revocado',pending:'Invitación pendiente',expired:'Invitación vencida',cancelled:'Invitación cancelada',rejected:'Invitación rechazada'};
   const legacyStatuses={active:'Activo',paused:'Pausado',pending:'Pendiente',archived:'Archivado'};
   const element=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-  const expiry=value=>new Date(value.replace(' ','T')+'Z').toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'});
+  const expiry=value=>{
+    if(typeof value!=='string'||!value)return 'No disponible';
+    const iso=value.replace(' ','T'),date=new Date(iso+(/(?:Z|[+-]\d{2}:\d{2})$/i.test(iso)?'':'Z'));
+    return Number.isFinite(date.getTime())?date.toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}):'No disponible';
+  };
+  const maskEmail=value=>{const [name,domain]=String(value||'').split('@');return name&&domain?Array.from(name)[0]+'•••@'+domain:'Contacto no disponible';};
+  const initials=value=>{
+    const name=String(value||'').normalize('NFC');
+    const parts=typeof Intl.Segmenter==='function'?Array.from(new Intl.Segmenter('es',{granularity:'grapheme'}).segment(name),s=>s.segment):Array.from(name);
+    return parts.slice(0,2).join('').toLocaleUpperCase('es')||'?';
+  };
   window.mxmedInitializeOperatorsPanel=(ui,service=null)=>{
     if(!$('p-ag-operadores'))return null;
     if(window.mxmedOperatorPanel)return window.mxmedOperatorPanel;
-    let overview=null,editing=null,pendingUi=0,overviewSequence=0;
+    let overview=null,editing=null,pendingUi=0,overviewSequence=0,detailSequence=0,auditEvents=[],auditReady=false;
     const expanded=new Set();
     const notify=(text,error=false)=>{const e=$('ag_ops_modal_error');e.textContent=text;e.classList.remove('d-none');e.classList.toggle('mx-ag-ops-modal-error',error);e.classList.toggle('alert',!error);e.classList.toggle('alert-success',!error);};
     const data=(...args)=>service.data(...args);
     const command=(...args)=>{if(!ui.can_manage||!service)throw new Error('La administración de operadores no está habilitada.');return service.command(...args);};
     const refresh=()=>service.refresh();
-    const syncBusy=()=>{document.querySelectorAll('#p-ag-operadores button').forEach(b=>b.disabled=pendingUi>0);};
+    const syncBusy=()=>{document.querySelectorAll('#p-ag-operadores button').forEach(b=>b.disabled=pendingUi>0||b.hasAttribute('data-ops-unavailable'));};
     const run=async fn=>{pendingUi++;syncBusy();try{await fn();}catch(e){notify(e.message,true);}finally{pendingUi--;syncBusy();}};
     const button=(text,fn,cls='btn btn-outline-secondary btn-sm')=>{const b=element('button',text,cls);b.type='button';b.addEventListener('click',()=>run(fn));return b;};
     const bootstrapModal=id=>window.bootstrap.Modal.getOrCreateInstance($(id));
   function accordion(key) {document.querySelectorAll('[data-ops-accordion-item]').forEach(article=>{const active=article.dataset.opsAccordionItem===key;article.classList.toggle('is-active',active);article.querySelector('.mx-ag-ops-accordion-body')?.classList.toggle('d-none',!active);article.querySelector('button')?.setAttribute('aria-expanded',String(active));});}
   function resetEditor(){editing=null;if(!$('ag_ops_email'))return;$('ag_ops_email').value='';$('ag_ops_email').disabled=false;$('ag_ops_role').disabled=false;$('ag_ops_role').value='collaborator';$('ag_ops_form_title').textContent='Invitar operador';$('ag_ops_save_btn').textContent='Enviar invitación';document.querySelectorAll('[data-operator-grant]').forEach(e=>e.checked=false);$('ag_ops_modal_error').classList.add('d-none');accordion('general');}
   function edit(record,kind){editing={record,kind};$('ag_ops_email').value=record.email_normalized||record.alias;$('ag_ops_email').disabled=true;$('ag_ops_role').value=record.role_code;$('ag_ops_role').disabled=true;$('ag_ops_form_title').textContent='Permisos · '+record.alias;$('ag_ops_save_btn').textContent=kind==='invitation'?'Reexpedir oferta':'Guardar permisos';document.querySelectorAll('[data-operator-grant]').forEach(e=>e.checked=record.capabilities.includes(e.dataset.operatorGrant));accordion('permissions');$('ag_ops_form_title').scrollIntoView({block:'center',behavior:'smooth'});}
+  function showHistory(record=null,kind=null){
+    const events=auditEvents.filter(e=>{
+      if(!record)return true;
+      if(kind==='legacy')return e.operator_id===record.operator_id;
+      try{const m=JSON.parse(e.metadata_json).producer_metadata;return kind==='invitation'?m.invitation_id===record.invitation_id:m.membership_id===record.membership_id;}catch(_){return false;}
+    });
+    $('ag_ops_history_operator_name').textContent=record?(kind==='invitation'?maskEmail(record.email_normalized):record.alias):'Equipo';
+    $('ag_ops_history_count').textContent=events.length+' acciones';
+    $('ag_ops_history_list').replaceChildren(...events.map(e=>{
+      if(e.action_label)return element('p',e.at+' · '+e.action_label);
+      let metadata={};try{metadata=JSON.parse(e.metadata_json).producer_metadata||{};}catch(_){}
+      // Retain the historical actor reference; never substitute a current seat occupant's alias.
+      return element('p',e.occurred_at_utc+' · '+e.real_actor_reference+' · '+(metadata.operator_action||metadata.capability||e.action)+' · '+e.outcome);
+    }));
+    if(!events.length)$('ag_ops_history_list').append(element('p',auditReady?'No hay acciones disponibles para esta referencia en el historial consultado.':'El historial no está disponible por ahora.'));
+    bootstrapModal('ag_ops_history_modal').show();
+  }
   function band(record,kind){
-    const legacy=kind==='legacy';const revoked=record.status==='revoked';const card=element('article',undefined,'mx-ag-ops-operator-band');card.dataset.operatorId=record.membership_id||record.invitation_id;
+    const legacy=kind==='legacy',invitation=kind==='invitation';
+    // The current overview's alias is an email-derived reference, not a saved team alias.
+    const name=invitation?maskEmail(record.email_normalized):record.alias;
+    const status=record.status||(invitation?'pending':'unknown'),revoked=status==='revoked';
+    const card=element('article',undefined,'mx-ag-ops-operator-band');card.dataset.operatorId=record.membership_id||record.invitation_id;
     const head=element('button',undefined,'mx-ag-ops-band-head');head.type='button';head.disabled=pendingUi>0;head.setAttribute('aria-expanded','false');
-    const avatar=element('span',record.alias.slice(0,2).toUpperCase(),'mx-ag-ops-avatar');avatar.setAttribute('aria-hidden','true');
-    const summary=element('span',undefined,'mx-ag-ops-band-summary'),title=element('span',undefined,'mx-ag-ops-band-title');title.append(element('span',legacy?(legacyStatuses[record.status]||'Estado desconocido'):kind==='invitation'?'Invitación pendiente':statuses[record.status]||record.status,'mx-ag-ops-status-pill '+(record.status==='active'?'is-active':'is-paused')),element('strong',record.alias));summary.append(title,element('span',legacy?'Registro anterior del consultorio':record.role_code==='administrator'?'Administrador · 1 plaza':'Operador · 1 plaza','mx-ag-ops-band-contact'));
+    const avatar=element('span',initials(invitation?'?':name),'mx-ag-ops-avatar');avatar.setAttribute('aria-hidden','true');
+    const summary=element('span',undefined,'mx-ag-ops-band-summary'),title=element('span',undefined,'mx-ag-ops-band-title');title.append(element('span',legacy?(legacyStatuses[status]||'Estado desconocido'):statuses[status]||'Estado desconocido','mx-ag-ops-status-pill '+(status==='active'?'is-active':'is-paused')),element('strong',name));summary.append(title,element('span',legacy?'Registro anterior del consultorio':invitation?'Contacto invitado · aún no es integrante':(record.role_code==='administrator'?'Administrador':'Operador')+(revoked?' · histórico':' · 1 plaza'),'mx-ag-ops-band-contact'));
     head.append(avatar,summary,element('span','expand_more','material-symbols-rounded mx-ag-ops-band-chevron'));
-    const detail=element('div',undefined,'mx-ag-ops-band-panel d-none');if(!legacy)detail.append(element('p','Concedidos: '+(record.capabilities.map(k=>labels[k]).join(' · ')||'Ninguno')));
-    if(kind==='member')detail.append(element('p','Efectivos: '+(record.effective_capabilities.map(k=>labels[k]).join(' · ')||'Ninguno')));
-    else if(!legacy)detail.append(element('p','Vence: '+expiry(record.expires_at)));
+    const detail=element('div',undefined,'mx-ag-ops-band-panel d-none');detail.id='ag_ops_profile_'+(++detailSequence);head.setAttribute('aria-controls',detail.id);
+    const facts=element('dl',undefined,'row small mb-0');
+    const fact=(label,value)=>facts.append(element('dt',label,'col-sm-5 mb-1'),element('dd',value,'col-sm-7 mb-1 text-break'));
+    fact(legacy?'Alias histórico':'Alias de equipo',legacy?record.alias:'Pendiente de definir');
+    fact('Fotografía','Se muestran iniciales; la foto privada aún no está habilitada.');
+    fact('Posición y color','Asignación no disponible en esta consulta.');
+    if(!legacy){
+      fact('Tipo de integrante',record.role_code==='administrator'?'Administrador':'Operador');
+      fact('Estado',statuses[status]||'No disponible');
+      if(invitation){
+        fact('Contacto invitado',maskEmail(record.email_normalized));
+        fact('Invitación',expiry(record.created_at));fact('Vencimiento',expiry(record.expires_at));
+        fact('Cuenta y contacto','La invitación no confirma una cuenta ni su aceptación.');
+      }else{
+        fact('Contacto verificado',typeof record.contact_verified==='boolean'?(record.contact_verified?'Sí':'No'):'No disponible');
+        fact('Cuenta',({active:'Activa',disabled:'Deshabilitada',pending_verification:'Pendiente de verificación'})[record.account_status]||'No disponible');
+        fact('Invitación',expiry(record.invited_at));fact('Aceptación',expiry(record.accepted_at));
+      }
+      fact('Último acceso','No disponible en esta consulta.');
+    }
+    detail.append(facts);
+    if(!legacy)detail.append(element('p',(invitation?'Permisos ofrecidos: ':'Concedidos: ')+(record.capabilities.map(k=>labels[k]||'Permiso no disponible').join(' · ')||'Ninguno'),'small mb-0'));
+    if(kind==='member')detail.append(element('p','Efectivos: '+(record.effective_capabilities.map(k=>labels[k]||'Permiso no disponible').join(' · ')||'Ninguno'),'small mb-0'));
     if(legacy)detail.append(element('p','Conservado para consulta. Este registro anterior no confirma un acceso vigente ni permite cambiar permisos.'));
     if(record.grant_status==='review_required')detail.append(element('p','Requiere revisión del nuevo titular.'));
     const actions=element('div',undefined,'mx-ag-ops-card-foot');
-    if(!revoked&&!legacy){actions.append(button(kind==='invitation'?'Cambiar oferta':'Editar permisos',()=>edit(record,kind)));
+    if(!legacy)detail.append(element('p',invitation?(status==='pending'?'Reserva una plaza hasta su vencimiento. Aún no tiene acceso.':'Esta invitación ya no reserva una plaza.'):revoked?'Fuera del equipo. Su historial se conserva y la plaza está libre.':status==='suspended'?'Acceso pausado. Conserva su plaza y no puede utilizar los permisos.':'Los permisos efectivos dependen del estado actual de la cuenta, del nombramiento y del plan.','small mb-0'));
+    if(ui.can_manage&&service&&!legacy){
+      const future=element('details',undefined,'small');future.append(element('summary','Alias y fotografía · pendientes de habilitación'));
+      for(const text of ['Editar alias','Cambiar foto','Quitar foto']){const b=element('button',text,'btn btn-outline-secondary btn-sm me-1 mt-1');b.type='button';b.disabled=true;b.setAttribute('data-ops-unavailable','');future.append(b);}
+      if(!revoked&&!invitation)detail.append(future);
+    }
+    if(ui.can_manage&&service&&!revoked&&!legacy&&(kind==='member'&&['active','suspended'].includes(status)||invitation&&status==='pending')){actions.append(button(invitation?'Cambiar oferta / reexpedir':'Editar permisos',()=>edit(record,kind)));
       if(kind==='member'){actions.append(button(record.status==='suspended'?'Reactivar':'Suspender',async()=>{await command(record.status==='suspended'?'reactivate':'suspend',{membership_id:record.membership_id,expected_revision:record.revision});await refresh();notify('Estado actualizado.');}));actions.append(button('Revocar',async()=>{if(!confirm('¿Revocar el nombramiento y liberar la plaza?'))return;await command('revoke',{membership_id:record.membership_id,expected_revision:record.revision});await refresh();},'btn btn-outline-danger btn-sm'));}
       else actions.append(button('Cancelar invitación',async()=>{await command('cancel',{invitation_id:record.invitation_id});await refresh();}));
     }
+    const history=element('button','Ver historial','btn btn-outline-secondary btn-sm');history.type='button';history.onclick=()=>showHistory(record,kind);actions.append(history);
     detail.append(actions);if(expanded.has(card.dataset.operatorId)){detail.classList.remove('d-none');card.classList.add('is-open');head.setAttribute('aria-expanded','true');}head.onclick=()=>{const open=detail.classList.contains('d-none');if(open)expanded.add(card.dataset.operatorId);else expanded.delete(card.dataset.operatorId);detail.classList.toggle('d-none',!open);card.classList.toggle('is-open',open);head.setAttribute('aria-expanded',String(open));};card.append(head,detail);return card;
   }
   async function ownerView(){
     const sequence=++overviewSequence;
-    try{const fresh=await data('/api/profile-operators/index.php/overview');if(sequence!==overviewSequence)return;overview=fresh;}catch(e){for(const id of ['ag_ops_active_value','ag_ops_available_value','ag_ops_pending_value'])$(id).textContent='No disponible';throw e;}
-    $('ag_ops_active_value').textContent=overview.occupied+'/2';$('ag_ops_available_value').textContent=overview.available;$('ag_ops_pending_value').textContent=overview.reserved;
+    try{const fresh=await data('/api/profile-operators/index.php/overview');if(sequence!==overviewSequence)return;overview=fresh;}catch(e){$('ag_ops_empty_team').classList.add('d-none');for(const id of ['ag_ops_active_value','ag_ops_available_value','ag_ops_pending_value'])$(id).textContent='No disponible';throw e;}
+    $('ag_ops_active_value').textContent=(overview.occupied+overview.reserved)+'/2';$('ag_ops_available_value').textContent=overview.available;$('ag_ops_pending_value').textContent=overview.reserved;
+    $('ag_ops_empty_team').classList.toggle('d-none',overview.occupied!==0||overview.reserved!==0);
     $('ag_ops_list').replaceChildren(...overview.members.filter(m=>m.status!=='revoked').map(m=>band(m,'member')),...overview.invitations.map(i=>band(i,'invitation')));
     const archived=overview.members.filter(m=>m.status==='revoked');$('ag_ops_archived_count').textContent=archived.length;$('ag_ops_archived_list').replaceChildren(...archived.map(m=>band(m,'member')));
     $('ag_ops_limit_notice').textContent=overview.available?'El titular no ocupa plaza. Puedes invitar hasta completar dos operadores.':'Las dos plazas están ocupadas o reservadas. Suspender conserva la plaza; revocar la libera.';
     // Seat authority is server-confirmed, including the conflict response to an invitation race.
     syncBusy();
-    const events=await data('/api/profile-operators/index.php/audit');$('ag_ops_history_list').replaceChildren(...events.map(e=>{const metadata=JSON.parse(e.metadata_json).producer_metadata;return element('p',e.occurred_at_utc+' · '+e.real_actor_reference+' · '+(metadata.operator_action||metadata.capability||e.action)+' · '+e.outcome);}));
+    auditReady=false;auditEvents=await data('/api/profile-operators/index.php/audit');auditReady=true;
   }
 
     document.querySelectorAll('#p-ag-operadores [data-ops-accordion-toggle]').forEach(b=>b.addEventListener('click',()=>accordion(b.dataset.opsAccordionToggle)));
     $('ag_ops_archived_toggle').addEventListener('click',()=>{const open=$('ag_ops_archived_panel').classList.contains('d-none');$('ag_ops_archived_panel').classList.toggle('d-none',!open);$('ag_ops_archived_toggle').setAttribute('aria-expanded',String(open));});
-    const history=element('button','Historial del equipo','btn btn-outline-secondary btn-sm');history.type='button';history.onclick=()=>bootstrapModal('ag_ops_history_modal').show();$('ag_ops_limit_notice').after(history);
+    const history=element('button','Historial del equipo','btn btn-outline-secondary btn-sm');history.type='button';history.onclick=()=>showHistory();$('ag_ops_limit_notice').after(history);
+    for(const type of ['dragover','drop'])$('ag_ops_identity_readiness').addEventListener(type,event=>event.preventDefault());
     if(ui.service_ready&&ui.can_manage&&service){
+      $('ag_ops_empty_invite').addEventListener('click',()=>{resetEditor();$('ag_ops_email').focus();});
       $('ag_ops_add_btn').addEventListener('click',resetEditor);$('ag_ops_form_cancel_btn').addEventListener('click',resetEditor);$('ag_ops_refresh').addEventListener('click',()=>run(refresh));
       $('ag_ops_save_btn').addEventListener('click',()=>run(async()=>{notify('Guardando cambios…');const caps=Array.from(document.querySelectorAll('[data-operator-grant]:checked'),e=>e.dataset.operatorGrant);if(!editing){const email=$('ag_ops_email');if(!email.reportValidity()||!email.value.trim())throw new Error('Ingresa el correo del invitado.');await command('invite',{email:email.value.trim(),role:$('ag_ops_role').value,capabilities:caps});}else{const {record,kind}=editing;await command(kind==='invitation'?'reissue':record.grant_status==='review_required'?'review':'grants',kind==='invitation'?{invitation_id:record.invitation_id,email:record.email_normalized,role:record.role_code,capabilities:caps}:{membership_id:record.membership_id,expected_revision:record.revision,capabilities:caps});}resetEditor();await refresh();notify('Cambio guardado y confirmado.');}));
     }else{
@@ -79,6 +140,7 @@
       $('ag_ops_browser_count').textContent=String(localCount);$('ag_ops_browser_notice').textContent=localNotice;
       $('ag_ops_browser_list').replaceChildren(...local.map((r,index)=>{const row=element('li',undefined,'list-group-item px-0 py-1');row.dataset.localReference=String(index);row.dataset.operatorId=r.operator_id;row.append(element('strong',r.alias),document.createTextNode(' · '+(legacyStatuses[r.status]||'Estado desconocido')));return row;}));
       const c=legacy?.counts;
+      auditEvents=legacy?.audit||[];auditReady=legacy?.read_status==='ready';
       $('ag_ops_legacy_summary').textContent=c?`Registros anteriores del consultorio: ${c.active} activos, ${c.paused} pausados, ${c.pending} pendientes y ${c.archived} archivados.`:'No pudimos consultar los registros anteriores del consultorio. Intenta de nuevo más tarde.';
       $('ag_ops_limit_notice').textContent='El límite es de dos operadores además del titular. El cupo y las invitaciones estarán disponibles cuando se habilite la administración. Los registros anteriores no confirman plazas ocupadas.';
       $('ag_ops_history_list').replaceChildren(...(legacy?.audit||[]).map(e=>element('p',e.at+' · '+e.action_label+' · '+(legacyStatuses[records.find(r=>r.operator_id===e.operator_id)?.status]||'Registro anterior'))));

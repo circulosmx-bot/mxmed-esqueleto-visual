@@ -35,12 +35,17 @@
                     </div>
                     <button type="button" class="btn btn-primary mx-ag-ops-add-btn" id="ag_ops_add_btn" <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?>>
                       <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
-                      Agregar operador
+                      Invitar operador
                     </button>
                   </header>
 
                   <button type="button" class="btn btn-outline-secondary btn-sm mb-2" id="ag_ops_refresh" <?= !$operatorPanel['service_ready'] ? 'disabled title="La administración está pendiente de habilitación"' : '' ?>>Actualizar equipo</button>                  <div id="ag_ops_legacy_summary" class="form-text mb-2" aria-live="polite"></div>
                   <div class="mx-ag-ops-list" id="ag_ops_list" role="list"></div>
+                  <div id="ag_ops_empty_team" class="border rounded p-3 d-none" role="status">
+                    <strong>Tu equipo aún no tiene operadores</strong>
+                    <p class="small mb-0">Puedes invitar hasta dos personas y elegir por separado qué funciones de Agenda delegar.</p>
+                    <button type="button" class="btn btn-primary btn-sm mt-2" id="ag_ops_empty_invite" <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?>>Invitar operador</button>
+                  </div>
 
                   <section class="mx-ag-ops-archived" id="ag_ops_archived_section" aria-labelledby="ag_ops_archived_title">
                     <button type="button" class="mx-ag-ops-archived-toggle" id="ag_ops_archived_toggle" aria-expanded="false" aria-controls="ag_ops_archived_panel">
@@ -111,6 +116,21 @@
                           <div class="row g-3">
                             <div class="col-12"><label class="form-label" for="ag_ops_email">Correo del invitado</label><input <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> class="form-control" type="email" id="ag_ops_email" autocomplete="off" placeholder="operador@correo.com"></div>
                             <div class="col-12"><label class="form-label" for="ag_ops_role">Tipo de integrante</label><select <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> class="form-select" id="ag_ops_role"><option value="collaborator">Operador</option><option value="administrator">Administrador</option></select><div class="form-text">Ambos tipos ocupan una de las dos plazas. Los permisos se seleccionan individualmente.</div></div>
+                            <div class="col-12"><details id="ag_ops_identity_readiness">
+                              <summary class="small">Alias y fotografía · pendientes de habilitación</summary>
+                              <label class="form-label mt-2" for="ag_ops_alias">Alias de una palabra (opcional)</label>
+                              <input class="form-control" id="ag_ops_alias" placeholder="Mary" disabled aria-describedby="ag_ops_alias_help">
+                              <p class="form-text" id="ag_ops_alias_help">Respetará mayúsculas y acentos. Su guardado y edición aún no están habilitados.</p>
+                              <fieldset disabled class="border rounded p-2" aria-describedby="ag_ops_photo_help"><legend class="small float-none w-auto mb-1">Fotografía privada</legend>
+                                <label class="form-label small" for="ag_ops_photo">Cargar o arrastrar una foto</label>
+                                <input type="file" id="ag_ops_photo" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" disabled>
+                                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" disabled data-ops-unavailable>Usar cámara móvil</button>
+                              </fieldset>
+                              <p class="form-text mb-1" id="ag_ops_photo_help">Por ahora se muestran iniciales. La carga, el arrastre y la cámara móvil aún no están habilitados.</p>
+                              <p class="small mb-0">Colores de las posiciones, pendientes de asignación:</p>
+                              <span class="mx-ag-origin-item small"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-01" aria-hidden="true"></span>Posición 1</span>
+                              <span class="mx-ag-origin-item small"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-02" aria-hidden="true"></span>Posición 2</span>
+                            </details></div>
                           </div>
                         </div>
                       </article>
@@ -134,7 +154,8 @@
                           <label class="mx-ag-ops-permission-card"><input <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> type="checkbox" data-operator-grant="agenda.appointments.reschedule"><span class="mx-ag-ops-permission-copy"><strong>Reprogramar citas</strong></span></label>
                           <label class="mx-ag-ops-permission-card"><input <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> type="checkbox" data-operator-grant="agenda.appointments.cancel"><span class="mx-ag-ops-permission-copy"><strong>Cancelar citas</strong></span></label>
                           <label class="mx-ag-ops-permission-card"><input <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> type="checkbox" data-operator-grant="agenda.availability.read"><span class="mx-ag-ops-permission-copy"><strong>Consultar disponibilidad</strong></span></label>
-                        </fieldset><p class="form-text">Todos los permisos comienzan apagados. Un permiso no incluye los demás.</p></div>
+                        </fieldset><p class="form-text">Todos los permisos comienzan apagados. Un permiso no incluye los demás. Una invitación pendiente reserva una plaza.</p>
+                        <details class="small"><summary>Otras funciones · pendientes de habilitación</summary><p class="form-text mb-0">Perfil público, medios, promociones, facturación, renovación de suscripción y captura preparatoria limitada requieren permisos y servicios específicos. No están incluidos en los permisos de Agenda.</p></details></div>
                       </article>
                     </div>
                                       </div>
