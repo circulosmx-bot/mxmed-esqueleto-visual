@@ -29,8 +29,22 @@ final class EvidenceAudit
         if (!in_array($operation,['PHONE_CHALLENGE','PHONE_DELIVERY','PHONE_VERIFIED','PHONE_DENIED','REQUEST_CREATED','FILE_ADDED','FILE_READ',
             'SUBMITTED','REVIEW_CHALLENGE','APPROVED','REJECTED','CONFIRMATION_ISSUED','CONFIRMED','SUSPENDED','REVOKED','EXPIRED'],true))
             throw new \InvalidArgumentException('c4_audit_operation_invalid');
-        $ids=new RandomAuditUuidProvider();
         $staff=$staffRead||in_array($operation,['REVIEW_CHALLENGE','APPROVED','REJECTED','SUSPENDED','REVOKED','EXPIRED'],true);
+        return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','physician_evidence',$operation,$version,$before,$after,$caseId,$reviewReason,$staff);
+    }
+    public function authority(AuthenticatedAccessContext $actor,string $target,string $operation,int $version,string $before,string $after,
+        string $caseId,?string $reason=null,bool $staff=false):string
+    {
+        if (!in_array($operation,['ADMISSION_STAGED','BINDING_STAGED','ADMISSION_APPROVED','BINDING_ACTIVE','CHANGE_CHALLENGE',
+            'ADMISSION_REJECTED','ADMISSION_SUSPENDED','ADMISSION_REVOKED','ADMISSION_EXPIRED',
+            'BINDING_REJECTED','BINDING_SUSPENDED','BINDING_REVOKED','BINDING_EXPIRED'],true)) throw new \InvalidArgumentException('physician_audit_operation_invalid');
+        return $this->write($actor,$target,'PHYSICIAN_AUTHORITY_CHANGED','physician_authority',$operation,$version,$before,$after,$caseId,$reason,$staff);
+    }
+    private function write(AuthenticatedAccessContext $actor,string $target,string $eventType,string $targetType,string $operation,int $version,
+        string $before,string $after,?string $caseId,?string $reviewReason,bool $staff):string
+    {
+        if (!$this->pdo->inTransaction()) throw new \RuntimeException('c4_audit_transaction_required');
+        $ids=new RandomAuditUuidProvider();
         $role='authenticated_account';
         if ($staff) {
             $q=$this->pdo->prepare("SELECT s.governance_class FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id
@@ -38,11 +52,11 @@ final class EvidenceAudit
             $q->execute([$actor->accountId()]);$role=$q->fetchColumn();
             if (!is_string($role)) throw new \RuntimeException('c4_audit_staff_authority_required');
         }
-        $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$role,'physician_evidence',
-            $ids->generateCanonicalUuid(),$ids->generateCanonicalUuid(),(string)$actor->session()->sessionId(),null,null,'AUTH','physician-evidence/'.$operation);
+        $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$role,$targetType,
+            $ids->generateCanonicalUuid(),$ids->generateCanonicalUuid(),(string)$actor->session()->sessionId(),null,null,'AUTH',$targetType.'/'.$operation);
         $reason=$staff?'ADMIN_DECISION':'USER_REQUEST';
-        $event=$this->writer->append(new CanonicalAuditEventInput('PHYSICIAN_EVIDENCE_CHANGED','SUCCESS',$reason,
-            'account',$actor->accountId(),'physician_evidence',$target,
+        $event=$this->writer->append(new CanonicalAuditEventInput($eventType,'SUCCESS',$reason,
+            'account',$actor->accountId(),$targetType,$target,
             ['operation'=>$operation,'version'=>$version,'previous_status'=>$before,'new_status'=>$after,'case_id'=>$caseId,
                 'review_reason'=>$reviewReason,'capability'=>$staff?'physician_accreditation_review':null]),$context);
         return (string)$event->value('event_id');

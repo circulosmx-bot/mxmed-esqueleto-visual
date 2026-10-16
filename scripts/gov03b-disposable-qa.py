@@ -10,7 +10,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--connection', required=True)
     ap.add_argument('--evidence', required=True)
-    ap.add_argument('--suite', choices=['contracts', 'ceremony', 'evidence'], default='contracts')
+    ap.add_argument('--suite', choices=['contracts', 'ceremony', 'evidence', 'issuer'], default='contracts')
     args = ap.parse_args()
     os.umask(0o077)
     cfg = json.loads(pathlib.Path(args.connection).read_text())
@@ -28,10 +28,10 @@ def main():
         return result.stdout
 
     suffix = secrets.token_hex(5)
-    db = ('mxmed_op01_' if args.suite == 'contracts' else ('mxmed_gate4d_preview_gov03b_' if args.suite == 'ceremony' else 'mxmed_gate4d_preview_c4ev_')) + suffix
+    db = ('mxmed_op01_' if args.suite == 'contracts' else ('mxmed_gate4d_preview_gov03b_' if args.suite == 'ceremony' else ('mxmed_gate4d_preview_c4ev_' if args.suite == 'evidence' else 'mxmed_gate4d_preview_c4issuer_'))) + suffix
     user = 'gov03b_' + suffix
     password = secrets.token_urlsafe(32)
-    assert re.fullmatch(r'mxmed_(?:op01_|gate4d_preview_(?:gov03b_|c4ev_))[a-f0-9]{10}', db)
+    assert re.fullmatch(r'mxmed_(?:op01_|gate4d_preview_(?:gov03b_|c4ev_|c4issuer_))[a-f0-9]{10}', db)
     sql(f"CREATE DATABASE `{db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     created_user = False
     valkey = None
@@ -56,16 +56,18 @@ def main():
             source = (ROOT/'modules/identity/deployment/op-act01'/file).read_text().replace('{{TARGET_SCHEMA}}', '`'+db+'`').replace('{{RESTRICTED_DEFINER}}', "'"+user+"'@'127.0.0.1'")
             sql('DELIMITER $$\n'+source.rstrip().rstrip(';')+'$$\nDELIMITER ;\n', db)
         sql((ROOT/'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql').read_text(), db)
-        if args.suite in ['contracts', 'evidence']:
+        if args.suite in ['contracts', 'evidence', 'issuer']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql').read_text(), db)
-        if args.suite == 'evidence':
+        if args.suite in ['evidence', 'issuer']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql').read_text(), db)
+        if args.suite == 'issuer':
+            sql((ROOT/'modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql').read_text(), db)
         sql("CREATE TABLE gov03b_qa_faults(enabled INT NOT NULL); INSERT INTO gov03b_qa_faults VALUES(0)", db)
-        sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
+        sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 OR ((SELECT enabled FROM gov03b_qa_faults)=2 AND NEW.action='PHYSICIAN_AUTHORITY_CHANGED' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation'))='BINDING_ACTIVE') THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
         connection = evidence/'disposable-connection.json'
         connection.write_text(json.dumps({'db': db, 'user': user, 'password': password}))
-        test_env = {**os.environ, 'MXMED_OP02_ISOLATED':'0','MXMED_OPERATOR_DEPLOYMENT_REHEARSAL':'0','MXMED_OPERATORS_RUNTIME_ENABLED':'0','MXMED_IDENTITY_GOVERNANCE_ENABLED':'0', 'GOV03B_QA_CONNECTION': str(connection), 'MXMED_AUDIT_IP_HMAC_SECRET': secrets.token_hex(32), 'MXMED_AUDIT_IP_HMAC_KEY_VERSION': 'audit-ip-local-v001'}
-        if args.suite in ['ceremony', 'evidence']:
+        test_env = {**os.environ, 'C4_ISSUER_QA':'0','MXMED_OP02_ISOLATED':'0','MXMED_OPERATOR_DEPLOYMENT_REHEARSAL':'0','MXMED_OPERATORS_RUNTIME_ENABLED':'0','MXMED_IDENTITY_GOVERNANCE_ENABLED':'0', 'GOV03B_QA_CONNECTION': str(connection), 'MXMED_AUDIT_IP_HMAC_SECRET': secrets.token_hex(32), 'MXMED_AUDIT_IP_HMAC_KEY_VERSION': 'audit-ip-local-v001'}
+        if args.suite in ['ceremony', 'evidence', 'issuer']:
             notification_dir = pathlib.Path(tempfile.mkdtemp(prefix='mxmed-gov03b-notifications-', dir='/tmp')); notification_dir.chmod(0o700)
             with socket.socket() as reservation:
                 reservation.bind(('127.0.0.1', 0)); port = reservation.getsockname()[1]
@@ -84,16 +86,30 @@ def main():
                 'MXMED_PREVIEW_NOTIFICATION_FILE':str(notification_dir/'notifications.json'),'MXMED_GOVERNANCE_CEREMONY_ENABLED':'1',
                 'MXMED_STAFF_MFA_ENCRYPTION_KEY':base64.b64encode(secrets.token_bytes(32)).decode(),'MXMED_STAFF_MFA_KEY_ID':'gov03b-test-only',
                 'MXMED_GOVERNANCE_ORGANIZATION_ID':'mxmed-synthetic','GOV03B_QA_EVIDENCE':str(evidence)})
-        if args.suite == 'evidence':
+        if args.suite in ['evidence', 'issuer']:
             test_env['MXMED_GOVERNANCE_CEREMONY_ENABLED'] = '0'
             test_env['C4_EV_QA_STORAGE_ROOT'] = str(notification_dir/'private-c4')
-        test_name = {'contracts':'GovernanceGov03BTest.php', 'ceremony':'GovernanceCeremonyIntegrationTest.php', 'evidence':'C4EvidenceIntegrationTest.php'}[args.suite]
+        if args.suite == 'issuer':
+            test_env['C4_ISSUER_QA'] = '1'
+        test_name = {'contracts':'GovernanceGov03BTest.php', 'ceremony':'GovernanceCeremonyIntegrationTest.php', 'evidence':'C4EvidenceIntegrationTest.php', 'issuer':'PhysicianAuthorityIssuerIntegrationTest.php'}[args.suite]
         result = subprocess.run(['php', str(ROOT/'modules/identity/tests'/test_name)], cwd=ROOT, env=test_env, capture_output=True, text=True)
         (evidence/'disposable-governance.log').write_text(result.stdout+result.stderr)
         print(result.stdout, end='')
         if result.returncode:
             print('DISPOSABLE_GOVERNANCE=FAIL; inspect private log')
             raise SystemExit(result.returncode)
+        if args.suite == 'issuer':
+            # The application principal deliberately has NO DDL or temporary-table grant.
+            # Only this owning runner rehearses migrations, always against its fresh DB.
+            before_guard = sql('SHOW CREATE TABLE profiles_physician_admissions; SHOW CREATE TABLE auth_account_professional_bindings', db)
+            guard = subprocess.run(['mysql', *mysql_args, db], input=(ROOT/'modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql').read_text(), text=True, capture_output=True, env=env)
+            (evidence/'populated-migration-guard.log').write_text(guard.stderr)
+            if guard.returncode == 0 or 'ERROR 3819' not in guard.stderr:
+                raise RuntimeError('prepared issuer migration did not reject populated authority')
+            if sql('SHOW CREATE TABLE profiles_physician_admissions; SHOW CREATE TABLE auth_account_professional_bindings', db) != before_guard:
+                raise RuntimeError('populated migration guard changed authority schema')
+            print('PASS prepared_04_rejects_populated_authorities_before_DDL')
+            print('PASS guard_failure_preserves_existing_authority_schema')
         if args.suite == 'ceremony':
             result = subprocess.run(['python3', str(ROOT/'scripts/gov03b-http-qa.py')], cwd=ROOT, env=test_env, capture_output=True, text=True)
             (evidence/'http-governance.log').write_text(result.stdout+result.stderr)

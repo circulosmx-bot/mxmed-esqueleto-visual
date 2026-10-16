@@ -1,5 +1,7 @@
 # GOV-SIM02 — owner médico, autoridad de receta y expiración canónica
 
+**Seguimiento C4-ADM02-IMP02:** el [emisor y proyección protegida](C4-ADM02-IMP02-physician-authority-issuer.md) completan la emisión rutinaria de fuente y sustituyen el fixture manual de admisión/binding por QA del escritor real. Se conserva el escritor de owner y se prueba su revalidación transaccional. La composición normal-local sigue cerrada y no se activa firma.
+
 **C4-EV01:** la [fundación de evidencia protegida](C4-EV01-protected-evidence-foundation.md) implementa en fuente contacto/origen/revisión/confirmación, sólo con QA sintética. Sustituye la ausencia de esos componentes descrita históricamente abajo; no activa el emisor C4/ADM02, la proyección en ownership ni firma real. SMS/custodia/retención/despliegue permanecen pendientes por separado.
 
 **Seguimiento C4-ADM02-IMP01 (2026-10-16):** implementación acotada de fuente autorizada, sin activación real. La [auditoría del emisor](C4-ADM02-IMP01-issuer-readiness.md) detiene el componente por falta de contrato/fuente protegida de evidencia cuenta–persona–perfil y prerrequisitos de contacto/origen no resueltos. No se implementó ni conectó un emisor o binding; los positivos SQL descritos abajo siguen siendo fixtures GOV-SIM02. No interpretar la autorización como aprobación de DDL, autoridades o firma normal-local.

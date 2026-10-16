@@ -1,5 +1,7 @@
 # C4-EV01 — expediente protegido y confirmación del médico
 
+**Seguimiento C4-ADM02-IMP02:** el [emisor de admisión/binding](C4-ADM02-IMP02-physician-authority-issuer.md) reutiliza esta fundación, añade un handoff opcional desde la confirmación y completa emisión/lifecycle/elegibilidad con QA desechable. Las limitaciones de emisor descritas abajo son históricas; operación real, onboarding completo y firma siguen sin activar.
+
 Fecha: 2026-10-16. Rama `ux/consultation-step2-vitals-r1`; inicio local `df8ed30d4380ef7bc7b7fad87c46aa9ec24948a3`, limpio, un commit documental por delante de upstream/remoto `97db0129100a5c13c9df0d1cb49dc975ea4adb37`. Se conserva ese commit; no se reescribe historia.
 
 ```text

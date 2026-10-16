@@ -13,9 +13,11 @@ final class PhysicianEvidenceService implements ProtectedPhysicianEvidencePort
 {
     private EvidenceAudit $audit;
     public function __construct(private EvidenceAuthority $a,private EvidenceCipher $cipher,
-        private PrivateMediaStoragePort $storage,private StaffMfaService $mfa)
+        private PrivateMediaStoragePort $storage,private StaffMfaService $mfa,
+        private ?ProfessionalIssuanceWorkflow $issuanceWorkflow=null)
     {
         if (!$mfa->usesConnection($a->pdo)) throw new \RuntimeException('c4_mfa_connection_mismatch');
+        if ($issuanceWorkflow!==null&&!$issuanceWorkflow->usesConnection($a->pdo)) throw new \RuntimeException('physician_workflow_connection_mismatch');
         $this->audit=new EvidenceAudit($a->pdo);
     }
 
@@ -225,7 +227,8 @@ final class PhysicianEvidenceService implements ProtectedPhysicianEvidencePort
             $event=$this->audit->append($actor,$id,'CONFIRMED',$version+1,'APPROVED','CONFIRMED');
             $this->update($r,['status'=>'CONFIRMED','version'=>$version+1,'confirmation_hash'=>null,'confirmed_at'=>$this->a->sqlTime(),
                 'confirmation_audit_reference'=>$event,'audit_reference'=>$event]);
-            return ['request_id'=>$id,'version'=>$version+1,'status'=>'CONFIRMED'];
+            $handoff=$this->issuanceWorkflow?->record($this->a->pdo,$this,$id,$version+1);
+            return ['request_id'=>$id,'version'=>$version+1,'status'=>'CONFIRMED']+($handoff===null?[]:['issuance_command_id'=>$handoff]);
         });
     }
 

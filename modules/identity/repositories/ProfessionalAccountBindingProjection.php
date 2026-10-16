@@ -5,10 +5,11 @@ namespace Identity\Repositories;
 use Identity\Contracts\{Clock,SystemClock};
 use PDO;
 
-/** Prepared C4/ADM02 read projection. No issuer, writes, runtime composition or signing activation. */
+/** Transactional consumer for ownership and the future clinical gate. No authority writes. */
 final class ProfessionalAccountBindingProjection
 {
-    public function __construct(private PDO $pdo,private Clock $clock=new SystemClock()){}
+    public function __construct(private PDO $pdo,private Clock $clock=new SystemClock(),
+        private ?\Identity\Accreditation\ProtectedPhysicianEvidencePort $evidence=null){}
     public function usesConnection(PDO $pdo):bool{return $pdo===$this->pdo;}
     public static function identityRevision(array $row):string
     {
@@ -30,11 +31,21 @@ final class ProfessionalAccountBindingProjection
         return hash('sha256',json_encode($facts,JSON_THROW_ON_ERROR));
     }
     public function assertEligible(string $accountId,string $doctorId):void
+    { $this->requireCurrent($this->pdo,$accountId,$doctorId); }
+
+    /** Future clinical consumer MUST additionally validate session, owner, operation,
+     * entitlement, patient/document scope, intention and audit in its own transaction.
+     * These minimized facts are not a signing permission or a cacheable credential.
+     */
+    public function requireCurrent(PDO $transaction,string $accountId,string $doctorId):array
     {
-        if(!$this->pdo->inTransaction())throw new \RuntimeException('professional_binding_transaction_required');
+        if($transaction!==$this->pdo||!$this->pdo->inTransaction())throw new \RuntimeException('professional_binding_transaction_required');
+        if($this->evidence===null)throw new \RuntimeException('professional_protected_evidence_required');
         $q=$this->pdo->prepare("SELECT b.*,a.status admission_status,a.authority_version current_admission_version,
             a.doctor_id admission_doctor_id,a.verified_identity_id admission_identity_id,a.professional_credential_id,
-            a.reviewed_by_account_id,a.approved_at,a.valid_from admission_valid_from,a.valid_until admission_valid_until,a.reverify_at admission_reverify_at
+            a.reviewed_by_account_id,a.approved_at,a.valid_from admission_valid_from,a.valid_until admission_valid_until,a.reverify_at admission_reverify_at,
+            a.evidence_request_id admission_request_id,a.evidence_version admission_evidence_version,a.account_id admission_account_id,
+            a.case_reference,a.decision_reference
             FROM auth_account_professional_bindings b JOIN profiles_physician_admissions a ON a.admission_id=b.admission_id
             WHERE b.account_id=? AND b.profile_doctor_id=? AND b.status='ACTIVE' FOR UPDATE");
         $q->execute([$accountId,$doctorId]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
@@ -67,5 +78,21 @@ final class ProfessionalAccountBindingProjection
             ||!hash_equals($b['identity_revision_hash'],self::identityRevision($identity))
             ||!hash_equals($b['credential_revision_hash'],self::credentialRevision($credential)))
             throw new \RuntimeException('professional_source_evidence_changed');
+        if($b['account_id']!==$accountId||$b['profile_doctor_id']!==$doctorId||$b['admission_account_id']!==$accountId
+            ||$b['admission_request_id']!==$b['evidence_request_id']||(int)$b['admission_evidence_version']!==(int)$b['evidence_version'])
+            throw new \RuntimeException('professional_evidence_scope_mismatch');
+        $r=$this->evidence->requireConfirmed($this->pdo,$b['evidence_request_id'],(int)$b['evidence_version'],$accountId,$doctorId);
+        if((int)$r['verified_identity_id']!==(int)$b['verified_identity_id']||(int)$r['professional_credential_id']!==(int)$b['professional_credential_id']
+            ||$r['reviewer_account_id']!==$b['reviewed_by_account_id']||$r['case_id']!==$b['case_reference']
+            ||$r['review_audit_reference']!==$b['decision_reference']||$r['review_audit_reference']!==$b['relationship_evidence_reference']
+            ||$r['confirmation_audit_reference']!==$b['acceptance_reference']||$r['valid_until']!==$b['valid_until']
+            ||$r['valid_until']!==$b['admission_valid_until']||!hash_equals($b['identity_revision_hash'],$r['identity_revision_hash'])
+            ||!hash_equals($b['credential_revision_hash'],$r['credential_revision_hash']))throw new \RuntimeException('professional_evidence_revision_mismatch');
+        return ['binding_id'=>$b['binding_id'],'binding_version'=>(int)$b['authority_version'],'admission_id'=>$b['admission_id'],
+            'admission_version'=>(int)$b['admission_version'],'account_id'=>$accountId,'profile_doctor_id'=>$doctorId,
+            'verified_identity_id'=>(int)$b['verified_identity_id'],'professional_credential_id'=>(int)$b['professional_credential_id'],
+            'evidence_request_id'=>$b['evidence_request_id'],'evidence_version'=>(int)$b['evidence_version'],
+            'identity_revision_hash'=>$b['identity_revision_hash'],'credential_revision_hash'=>$b['credential_revision_hash'],
+            'audit_reference'=>$b['audit_reference']];
     }
 }

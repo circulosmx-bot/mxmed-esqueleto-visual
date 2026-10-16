@@ -1,5 +1,7 @@
 # CLIN-AUTH02B1 — contrato de autoridad profesional y operaciones clínicas
 
+**C4-ADM02-IMP02:** el [emisor canónico y consumidor transaccional](../identity/C4-ADM02-IMP02-physician-authority-issuer.md) ya preparan admisión/binding con evidencia protegida y QA desechable. `requireCurrent` devuelve hechos exactos, no permiso clínico. La integración de sesión/owner/operación/entitlement/scope/intención/auditoría y la activación de firma siguen pendientes; CLIN-AUTH02A no cambia.
+
 **Corrección vinculante GOV-SIM02 (2026-10-16):** owner exclusivamente médico legítimo del perfil; un no médico no es elegible. Ownership inicial rutinario: una aprobación de staff explícitamente autorizado y aceptación independiente del médico, con identidad/cédula/binding aprobados y auditoría. Un owner médico acreditado podrá firmar/emitir por su cuenta sólo tras implementar/probar/activar las verificaciones de operación. Los operadores no médicos nunca reciben creación/emisión de receta ni firma profesional. El esquema y lectura preparada de [GOV-SIM02](../identity/GOV-SIM02-physician-ownership-session.md) no activan firma. Revisión obligatoria de doce meses y recuperación raíz V3: `DEFERRED_NOT_APPROVED`. Se sustituyen las alternativas incompatibles D07; las demás decisiones pendientes no se dan por ratificadas.
 
 Fecha: 2026-10-15. Fuente revisada: `3fc19bc59d5aa9fc73d739035b2f30737bc85168`, rama `ux/consultation-step2-vitals-r1`.

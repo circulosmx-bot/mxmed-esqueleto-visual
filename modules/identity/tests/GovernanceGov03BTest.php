@@ -94,8 +94,9 @@ denyB(fn()=>$s['enroll']->activate($factor['context'],$e['factor_id'],StaffMfaSe
 checkB(scalarB($p,'SELECT status FROM auth_staff_mfa_factors WHERE factor_id=?',[$e['factor_id']])==='REVOKED','C_explicit_pending_cancellation');
 $e=$s['enroll']->begin($factor['context'],$director['context'],'factor_test@example.invalid',B_PASSWORD,'director_test@example.invalid',B_PASSWORD);$clock->advance('+6 minutes');denyB(fn()=>$s['enroll']->activate($factor['context'],$e['factor_id'],'000000'),'C_enrollment_expiration');$s['enroll']->cancel($factor['context'],$e['factor_id']);
 checkB(true,'C_controlled_enrollment_audited');
-require __DIR__.'/support/GovSim02ProfessionalEvidence.php';
-govSim02ProfessionalEvidence($p,$s,$clock,$a);
+// The prior manually seeded SIM02 positive is superseded by the actual C4 issuer suite.
+// A projection without its protected evidence port can no longer establish eligibility.
+$p->beginTransaction();try{denyB(fn()=>(new Identity\Repositories\ProfessionalAccountBindingProjection($p,$clock))->assertEligible('beneficiary_test',$profile),'SIM02_projection_without_protected_port_denied');}finally{$p->rollBack();}
 denyB(fn()=>$s['cases']->openInitialOwnerCase($beneficiary['context'],$membership,'Synthetic request rejected'),'E_beneficiary_not_internal_requester');
 $productionGate=new CanonicalInitialOwnerEligibilityAdapter();denyB(fn()=>$productionGate->assertEligible($p,'beneficiary_test',$profile),'G_verified_account_cannot_substitute_accreditation');
 $case=$s['cases']->openInitialOwnerCase($requester['context'],$membership,'Synthetic independent initial owner');

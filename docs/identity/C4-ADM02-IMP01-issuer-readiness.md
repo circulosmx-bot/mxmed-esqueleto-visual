@@ -1,5 +1,7 @@
 # C4-ADM02-IMP01 — discrepancias previas al emisor
 
+**Seguimiento C4-ADM02-IMP02:** el [emisor canónico](C4-ADM02-IMP02-physician-authority-issuer.md) ya consume la fundación C4-EV01 y completa admisión/binding, journal y elegibilidad bajo QA desechable. Este bloqueo IMP01 se conserva como historia; no describe un permiso para activar normal-local.
+
 **Seguimiento C4-EV01:** la [fundación protegida](C4-EV01-protected-evidence-foundation.md) implementa posteriormente intake/revisión, contacto, origen y confirmación en fuente con QA desechable. El estado BLOCKED de este documento es el resultado histórico de IMP01, conservado sin reescribir su commit. El emisor de admisión/binding sigue pendiente; proveedor SMS, custodia/retención y despliegue reales no están aprobados ni activados.
 
 Fecha: 2026-10-16. Baseline y upstream: `97db0129100a5c13c9df0d1cb49dc975ea4adb37`, rama `ux/consultation-step2-vitals-r1`, worktree `mxmed-step2-vitals-r1` inicialmente limpio.

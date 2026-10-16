@@ -1,5 +1,7 @@
 # DG05C3 professional designation: governance discovery and local UI
 
+**C4-ADM02-IMP02:** the [canonical admission/binding issuer](../identity/C4-ADM02-IMP02-physician-authority-issuer.md) now consumes protected C4 evidence, with transactional lifecycle/audit and disposable QA. This closes the routine issuer source gap; real admission, advisor editing, original onboarding deployment and clinical signing remain inactive. Earlier missing-issuer findings below are historical.
+
 **C4-EV01:** the [protected evidence foundation](../identity/C4-EV01-protected-evidence-foundation.md) subsequently implements source-only account/contact/origin/document review and confirmation, with disposable QA. Admission/binding issuance, advisor editing and normal-local activation remain pending. This preserves the unpublished IMP01 documentation checkpoint as history.
 
 **C4-ADM02-IMP01 update (2026-10-16):** bounded source implementation was subsequently authorized, without normal-local activation. The [issuer readiness audit](../identity/C4-ADM02-IMP01-issuer-readiness.md) stopped the issuer on the protected accreditation-evidence/contact/origin contract gaps; no issuer or runtime integration was delivered. The deferred status below is historical. Advisor designation editing and real admission remain unavailable; VID01/CRD02 references and synthetic ownership fixtures do not establish human accreditation.

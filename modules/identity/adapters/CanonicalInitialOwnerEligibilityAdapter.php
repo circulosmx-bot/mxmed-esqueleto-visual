@@ -4,7 +4,7 @@ namespace Identity\Adapters;
 use Identity\Contracts\InitialOwnerEligibilityPort;
 use PDO;
 
-/** Missing C4/ADM02 issuer/composition stays closed; no flag or legacy matching bypass. */
+/** Uncomposed C4/ADM02 eligibility stays closed; no flag or legacy matching bypass. */
 final class CanonicalInitialOwnerEligibilityAdapter implements InitialOwnerEligibilityPort
 {
     public function __construct(private ?\Identity\Repositories\ProfessionalAccountBindingProjection $projection=null){}

@@ -38,6 +38,7 @@ final class GovernanceDeploymentAuthorization
             'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql',
             'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql',
             'modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql',
+            'modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql',
             'modules/media/storage/LocalPersistentPrivateMediaStorage.php','modules/media/contracts/PrivateMediaStoragePort.php',
             'modules/platform/services/CanonicalAuditPolicyRegistry.php','modules/platform/contracts/CanonicalAuditEventType.php',
             'modules/platform/services/SourceModuleCatalog.php','modules/platform/services/CorrelatableOperationCatalog.php'] as $path)$files[]=$root.'/'.$path;
