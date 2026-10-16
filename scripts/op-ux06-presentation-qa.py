@@ -5,7 +5,7 @@ No product page or listener is created. All commands are intercepted in the brow
 import copy,json,os,pathlib,re,subprocess
 from playwright.sync_api import sync_playwright,expect
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-OUT=pathlib.Path.home()/'Library/Application Support/MXMED/op02-admin/evidence/op-ux06'
+OUT=pathlib.Path.home()/'Library/Application Support/MXMED/op02-admin/evidence/op-imp07/presentation-regression'
 CAPS=['agenda.appointments.read','agenda.appointments.create','agenda.appointments.reschedule','agenda.appointments.cancel','agenda.availability.read']
 
 def render(ready=True,owner=True):
@@ -14,7 +14,7 @@ def render(ready=True,owner=True):
     return subprocess.check_output(['php'],input=prefix+(ROOT/'partials/private-app/operators.php').read_text(),text=True)
 
 def member(id='a',alias='Mary',status='active'):
-    return {'membership_id':'membership-'+id,'account_id':'account-'+id,'alias':alias,'role_code':'collaborator','status':status,'capabilities':CAPS[:2],'effective_capabilities':CAPS[:1] if status=='active' else [],'revision':1,'contact_verified':True,'account_status':'active','invited_at':'2026-10-15 10:00:00','accepted_at':'2026-10-15 11:00:00'}
+    return {'membership_id':'membership-'+id,'account_id':'account-'+id,'alias':'unverified-reference','personal_alias':alias,'role_code':'collaborator','status':status,'capabilities':CAPS[:2],'effective_capabilities':CAPS[:1] if status=='active' else [],'revision':1,'contact_verified':True,'account_status':'active','invited_at':'2026-10-15 10:00:00','accepted_at':'2026-10-15 11:00:00'}
 
 def invitation(status='pending'):
     return {'invitation_id':'invitation-a','alias':'private-contact','email_normalized':'private-contact@example.invalid','status':status,'role_code':'administrator','capabilities':CAPS[2:4],'created_at':'2026-10-15 10:00:00','expires_at':'2026-10-22 10:00:00'}
@@ -24,7 +24,7 @@ def view(members=None,invitations=None):
     occupied=sum(m['status']!='revoked' for m in members);reserved=sum(i['status']=='pending' for i in invitations)
     return {'limit':2,'occupied':occupied,'reserved':reserved,'available':2-occupied-reserved,'members':members,'invitations':invitations}
 
-CASES={'empty':view(),'one':view([member()]),'two':view([member(),member('b','Tere')]),'pending':view(invitations=[invitation()]),'expired':view(invitations=[invitation('expired')]),'suspended':view([member(status='suspended')]),'revoked':view([member(status='revoked')]),'alias_collision_unavailable':view([member(),member('b','Mary')]),'unicode_initials':view([member(alias='Ñu')]),'photo_unavailable':view([{**member(),'photo_url':'https://untrusted.example.invalid/avatar.svg'}])}
+CASES={'unverified_reference':view([member(alias=None)]),'empty':view(),'one':view([member()]),'two':view([member(),member('b','Tere')]),'pending':view(invitations=[invitation()]),'expired':view(invitations=[invitation('expired')]),'suspended':view([member(status='suspended')]),'revoked':view([member(status='revoked')]),'alias_collision_unavailable':view([member(),member('b','Mary')]),'unicode_initials':view([member(alias='Ñu')]),'photo_unavailable':view([{**member(),'photo_url':'https://untrusted.example.invalid/avatar.svg'}])}
 
 def main():
     os.umask(0o077);OUT.mkdir(parents=True,exist_ok=True);results=[]
@@ -71,6 +71,8 @@ def main():
                         expect(cards.first).to_contain_text('Conserva su plaza');expect(cards.first.get_by_role('button',name='Reactivar',exact=True)).to_be_visible()
                     if name=='revoked':assert cards.first.get_by_role('button').count()==2 # expand + history only
                     if name=='expired':assert cards.first.get_by_role('button').count()==2
+                    if name=='unverified_reference':
+                        expect(cards.first.locator('strong')).to_have_text('Operador sin alias');assert 'unverified-reference' not in cards.first.inner_text()
                     if name=='unicode_initials':expect(cards.first.locator('.mx-ag-ops-avatar')).to_have_text('ÑU')
                     if name=='photo_unavailable':assert not cards.first.locator('img').count();expect(cards.first.locator('.mx-ag-ops-avatar')).to_have_text('MA')
                     if name=='alias_collision_unavailable':expect(cards).to_have_count(2);assert len(set(cards.evaluate_all('es=>es.map(e=>e.dataset.operatorId)')))==2
@@ -94,12 +96,12 @@ def main():
             assert page.evaluate("window.commands.length===1 && window.commands[0].input.membership_id==='membership-a'")
             # Replacing a displayed operator never edits appointment creator snapshots or history.
             old={'created_by_id':'original-person','creator_membership_id':'old-membership','operator_alias':'Mary','operator_slot':1,'origin_visual_key':'operator-01'}
-            page.evaluate('value=>{window.appointment=value;window.snapshot.members=[{...window.snapshot.members[0],membership_id:"new-membership",account_id:"new-person",alias:"Tere"}]}',old)
+            page.evaluate('value=>{window.appointment=value;window.snapshot.members=[{...window.snapshot.members[0],membership_id:"new-membership",account_id:"new-person",personal_alias:"Tere"}]}',old)
             page.evaluate('window.mxmedOperatorPanel.refresh()');assert page.evaluate('window.appointment')==old
             expect(page.locator('#ag_ops_list strong')).to_have_text('Tere')
-            # No alias writer or upload endpoint exists behind the disabled controls.
+            # This stub composition does not activate the canonical alias writer or private media.
             expect(page.locator('#ag_ops_alias')).to_be_disabled();expect(page.locator('#ag_ops_photo')).to_be_disabled()
-            results.append({'engine':engine,'failed_command':'PASS','future_actions_stay_disabled':'PASS','historical_creator_after_replacement':'PASS','alias_collision_rename_persistence':'NOT_IMPLEMENTED_DISABLED','photo_mobile_storage':'NOT_IMPLEMENTED_DISABLED'})
+            results.append({'engine':engine,'failed_command':'PASS','future_actions_stay_disabled':'PASS','historical_creator_after_replacement':'PASS','alias_persistence':'DISABLED_IN_THIS_STUB_COMPOSITION','photo_mobile_storage':'NOT_IMPLEMENTED_DISABLED'})
             context.close();browser.close()
     (OUT/'presentation.json').write_text(json.dumps(results,indent=2)+'\n');print('OP_UX06_PRESENTATION_CASES='+str(len(results))+' PASS (persistence boundaries explicitly disabled)')
 if __name__=='__main__':main()

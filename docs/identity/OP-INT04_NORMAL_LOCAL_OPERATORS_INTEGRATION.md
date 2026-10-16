@@ -1,5 +1,7 @@
 # OP-INT04 — Operadores dentro de la aplicación normal-local
 
+**Actualización OP-IMP07:** la sección final documenta alias, posiciones y procedencia implementados y probados sólo en bases desechables. Sustituye las menciones anteriores a esos tres elementos como implementación futura; no activa normal-local.
+
 Baseline `8e29d3fa5be7f6f75dfd7321b5cde58781f5d755`, rama `ux/consultation-step2-vitals-r1`, 2026-10-15.
 
 ## Cambio en el producto 8443
@@ -170,3 +172,59 @@ Las categorías futuras (perfil público, medios, promociones, facturación, ren
 - Hashes de todas las tablas al inicio/final comprueban normal-local + QA05 y las 49 tablas OP02 sin cambios. Ninguna migración real, invitación real, membresía, grant, foto, procedencia de cita o fixture persistente se modifica. Evidencia privada: `~/Library/Application Support/MXMED/op02-admin/evidence/op-ux06/`.
 
 Quedan pendientes de autorización e implementación la persistencia de alias/posiciones, media privada y QR autenticado, snapshot inmutable y binding de alias en Agenda, además del corte de activación normal-local gobernado. **OP-UX06 no declara completo ese lifecycle funcional ni activa administración para collaborator.**
+
+
+## OP-IMP07 — Alias canónico y procedencia inmutable, implementación aislada
+
+Baseline `2add5afa8f652c0c1d00662642e9d33cd9dd8492`, 2026-10-15. Se extiende `ProfileOperatorService`, con las mismas sesiones Identity, CSRF/origin, lock de perfil, cuota de dos personas, membresías, revisiones de grants, idempotencia y auditoría. No hay otro writer de operadores ni motor de permisos. La normalización es un valor de presentación, nunca un identificador de autorización.
+
+El titular puede proponer un alias opcional al invitar/reexpedir. Integra la versión/hash de oferta y no puede cambiarse durante aceptación; si no existe, el invitado puede proponerlo en su respuesta. Renombrar exige titular vigente, miembro activo de ese perfil, origen de nombramiento válido y revisión optimista de presentación. El mismo command ID/payload repite el recibo, y cualquier fallo de auditoría revierte alias/revisión. Los eventos anteriores conservan su actor y referencias reales.
+
+`OperatorAlias` aplica UTF-8 válido, trim Unicode en extremos y NFC; una palabra de letras/marcas, hasta 24 codepoints NFC y 96 bytes. La presentación conserva mayúsculas y acentos. La clave binaria usa casefold Unicode y NFC (hasta 192 bytes), separada de la collation MySQL: `José` colisiona con `JOSÉ` o su forma descompuesta, pero no con `Jose`. Se rechazan espacios internos, controles/ZWJ, cifras y símbolos. La unicidad se limita a presentaciones no liberadas de ese perfil, con índice único físico y el lock existente. No se confirman alias a partir de prefijos de correo.
+
+### Relaciones y recuperación preparadas
+
+- `modules/identity/db/migrations/2026_10_15_04_operator_presentations.sql`: relación de presentación vinculada por FK compuesta al perfil, invitación y membresía existentes. Reserva posición 1/2 mediante las mismas transacciones de cuota, sin contador adicional. Una invitación reserva; aceptar conserva; suspender conserva; cancelar/rechazar/vencer/revocar libera. Reexpedir crea una nueva asignación con preferencia por la posición previa. El cambio gobernado de owner cancela ofertas/revisa grants y libera la asignación si su persona pasa a ser titular o su membresía fue revocada. La posición/identidad de asignación no se pueden reescribir ni reactivar después de liberarse.
+- `modules/agenda/db/migrations/2026_10_15_12_appointment_creator_snapshots.sql`: relación uno-a-uno versión 1 con cita/perfil, cuenta/membresía y asignación creadoras, alias/posición/origen y fecha UTC del servidor. FKs y trigger verifican la vinculación física; otros triggers rechazan UPDATE/DELETE y cambios al creador original. La cita y su snapshot se guardan en la transacción existente antes de sus eventos. Reprogramar/cancelar conserva el snapshot; el actor de esas acciones se registra por separado.
+- Cada forward tiene un archivo `rollback_*` emparejado. Ambos rechazan cualquier base ajena a `mxmed_op01_<10hex>` o `mxmed_gate4d_preview_opimp07` **antes de DDL persistente**. Ejecutar con el runner PDO existente (`PDO::exec` del archivo completo); sus cuerpos de trigger no llevan comandos DELIMITER del cliente mysql. Forward/replay y recuperación vacía comprobados. Recuperación exige tabla vacía; si hay datos, se rechaza sin borrar el historial. Recuperar primero snapshots y luego presentaciones. Datos poblados requieren desactivar consumidores y un plan explícito de conservación, no vaciar tablas para forzar rollback.
+
+Los tipos físicos son `VARCHAR(64) / utf8mb4_unicode_ci` y DATETIME(6), compatibles con las claves reales inspeccionadas. Los índices compuestos agregados evitan depender de claves foráneas no únicas. Las nuevas migraciones **no están autorizadas para mxmed ni QA05/OP02/UI03 persistentes**; sus guards lo impiden. Una activación futura necesita migraciones de despliegue autorizadas y rehearsal/backup propios, además de los gates de owner, entrega y composición normal descritos arriba.
+
+### Integración de los componentes originales
+
+El formulario, tarjetas/acordeones, iniciales, historial, dos columnas y sidebar originales siguen siendo únicos. El mismo formulario invita/reexpide o renombra, sin otro modal de negocio. En edición de alias, los cinco grants se muestran sin permitir cambios accidentales. El input sólo se habilita cuando el servidor confirma servicio, owner y esquema de presentación. La aceptación reutiliza su modal existente; el alias del titular se muestra deshabilitado, y el invitado sólo propone uno cuando falta. Guardar sólo confirma después de la respuesta canónica.
+
+`agenda-workspace.js` cambia exclusivamente la presentación del origen y el transporte de su DTO. El catálogo actual usa el roster de asignaciones validado en servidor: posición 1 `#FF007F`, posición 2 `#FF66CC`, mismas variables y clases existentes. La etiqueta del detalle y su proyección en Consulta usan el snapshot de la cita, nunca sustituyen el alias por quien ocupa hoy la plaza. Una cita creada por Mary sigue mostrando «Operador Mary» después de renombrarla, reemplazarla por Tere, reprogramarla o cancelarla. El reader mínimo no expone cuenta, membresía, email, avatar ni datos clínicos para pintar el origen.
+
+No hay backfill ni escritura sobre citas anteriores. Operadores históricos sin snapshot dicen «Operador (histórico sin alias confirmado)» y no infieren posición por el roster actual. Una procedencia antigua indeterminada dice «Origen histórico no confirmado»; otros canales conocidos conservan sus etiquetas. El calendario, disponibilidad, navegación y reglas de negocio quedan preservados. `op-imp07-contract-qa.py` compara con el baseline excluyendo sólo los resolvers de origen y dos campos de transporte; el contrato OP-INT04 delega esa comprobación y mantiene sus restantes garantías byte a byte.
+
+### Composición desechable y reproducción
+
+Se amplía el runner OP02 existente con `MXMED_OP_IMP07_REHEARSAL=1`: base `mxmed_gate4d_preview_opimp07`, usuario DB propio, origen loopback `https://127.0.0.1:8447`, backend 8096, Valkey 6389 y cookie `__Host-mxmed_opimp07_session`. Son los mismos private-app/partials/controladores y Agenda originales, con el adaptador acotado ya existente. No se copian datos normales; se reutiliza el seeder sintético de OP02 y sus cinco cuentas example.invalid. No se resetea ningún entorno existente; el comando reset rechaza este modo.
+
+Secuencia sobre recursos nuevos y propios:
+
+```sh
+MXMED_OP_IMP07_REHEARSAL=1 python3 scripts/op02-env.py prepare
+MXMED_OP_IMP07_REHEARSAL=1 python3 scripts/op02-env.py start
+php modules/identity/tests/OperatorFoundationTest.php
+python3 scripts/op-imp07-http-qa.py
+python3 scripts/op-imp07-browser-qa.py
+python3 scripts/op-imp07-browser-qa.py --offers-only
+```
+
+Los runners HTTP focalizados exigen el preestado indicado y no son resets. El flujo focalizado deja B/C activos; antes de la matriz OP02 se revocan esas membresías sintéticas mediante el comando canónico, manteniendo sus filas/historial, y se cancelan ofertas pendientes mediante el mismo servicio. A continuación `MXMED_OP_IMP07_REHEARSAL=1 python3 scripts/op02-http-qa.py`. La evidencia debe copiarse fuera del soporte desechable antes de `MXMED_OP_IMP07_REHEARSAL=1 python3 scripts/op02-env.py destroy --confirm mxmed_gate4d_preview_opimp07`.
+
+### Evidencia y límites de esta entrega
+
+- OP01 ampliado: estados de plazas, TTL, oferta/reexpedición, Unicode físico, colisiones concurrentes, revisión/idempotencia, aislamiento, auditoría con rollback y recuperación protegida; conserva los 38 contratos originales y nueve regresiones Identity/GOV03A.
+- HTTP focalizado: logins Identity genuinos sobre Valkey separado, alias owner/invitado, dos posiciones, cuota, forjado denegado, snapshot físico inmutable, actor separado de reprogramación/cancelación, sustitución de persona y DTO histórico mínimo.
+- Chromium y WebKit sobre la aplicación original: 1440×900, 1366×768, 820×1180. Renombrar/rechazar colisión, cinco grants, leyenda actual Tere/Lupita, detalle real histórico Mary, colores exactos, sin overflow; foto y QR deshabilitados. La apertura de detalle espera la hidratación asíncrona del calendario, sin modificar su lógica para la prueba.
+- Invitación del titular y propuesta del invitado ejercitadas en los formularios y modal originales, con confirmación del servidor y sesiones propias de las cuentas sintéticas. Revisión física del Director en Safari: **NOT_RUN**.
+- Matriz HTTP OP02 completa: **48/48 PASS**, con **1020/1020 denegaciones 403** en las rutas/grants probados. Incluye OP01, concurrencia física, cambio gobernado de titular, CLIN-AUTH02A, composición de autoridad, idempotencia de Agenda y disponibilidad pública. Permanece la restricción clínica preexistente `AUTH02A_15=BLOCKED_BY_AUTHORITY_CONTRACT`; no se abre ni modifica autoridad clínica.
+- Preservación: checksums coincidentes para las **226 tablas de normal-local/QA05**, **49 de OP02 persistente** y **49 de UI03 existente**. El postcheck desechable encontró tres FKs por relación, cinco triggers OP07, cero huérfanos y cero colisiones de posición/alias. Repetir una creación con la misma clave después de renombrar conserva la cita y snapshot originales.
+- Safari, pestaña temporal nueva de la URL normal real con la sesión ya autenticada: un solo panel/calendario, collaborator, servicio/presentación/can_manage falsos, guardar y alias deshabilitados. Sólo lectura; la pestaña temporal se cerró y no se copió la sesión. Es evidencia de readiness, no aceptación física del Director ni prueba de edición normal-local.
+- Contratos de sesión privada/readiness y preservación de fuente: PASS. El runner de presentación OP-UX06 pasó **74 casos** y adapta sus fixtures al DTO `personal_alias` explícito y comprueba que una referencia no confirmada sigue siendo genérica; este stub mantiene el writer deshabilitado y no sustituye las pruebas reales de persistencia. El selector de fixture UI03 usa account_id → membership_id del overview autorizado, no prefijos de correo/alias; se verificó ese helper en OP-IMP07 sin ejecutar el runner UI03 que resetea su base.
+- Se conservan evidencias privadas en `~/Library/Application Support/MXMED/op02-admin/evidence/op-imp07/`; nunca se publican claves, tokens, correos reales ni credenciales.
+
+**Normal-local continúa sin alias editable ni snapshots nuevos:** sus tablas OP01/presentación/origen no están activadas y su miembro real sigue collaborator, sin elevación. No se aplicó DDL ni cambios de datos a normal-local, QA05, OP02 persistente o UI03 existente. Las fotos privadas, dropzone y captura QR continúan pendientes del backend/media protegido y sus pruebas; no se habilitan por implementar alias.

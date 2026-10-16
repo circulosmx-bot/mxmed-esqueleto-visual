@@ -873,6 +873,7 @@ final class CanonicalAuditPolicyRegistry
                     // OP-IMP01 closed operator action metadata; never raw email/token.
                     'operator_action', 'actor_membership_id', 'profile_doctor_id', 'membership_id', 'invitation_id',
                     'grant_revision', 'owner_membership_id', 'capabilities', 'operation_reason',
+                    'presentation_version','presentation_id','personal_alias','seat_position','presentation_revision','presentation_released',
                 ],
                 'allowed_reason_codes' => [
                     'USER_REQUEST',
@@ -921,6 +922,7 @@ final class CanonicalAuditPolicyRegistry
                     // OP-IMP01 closed operator action metadata; never raw email/token.
                     'operator_action', 'actor_membership_id', 'profile_doctor_id', 'membership_id', 'invitation_id',
                     'grant_revision', 'owner_membership_id', 'capabilities', 'operation_reason',
+                    'presentation_version','presentation_id','personal_alias','seat_position','presentation_revision','presentation_released',
                 ],
                 'allowed_reason_codes' => [
                     'USER_REQUEST',
@@ -982,6 +984,7 @@ final class CanonicalAuditPolicyRegistry
                     // OP-IMP01 closed operator action metadata; never raw email/token.
                     'operator_action', 'actor_membership_id', 'profile_doctor_id', 'membership_id', 'invitation_id',
                     'grant_revision', 'owner_membership_id', 'capabilities', 'operation_reason',
+                    'presentation_version','presentation_id','personal_alias','seat_position','presentation_revision','presentation_released',
                 ],
                 'allowed_reason_codes' => [
                     'ADMIN_DECISION',
@@ -1683,7 +1686,7 @@ final class CanonicalAuditPolicyRegistry
             ],
             [
                 'actor_required'=>true,
-                'allowed_producer_metadata'=>['operator_action','actor_membership_id','profile_doctor_id','membership_id','invitation_id','grant_revision','owner_membership_id','capabilities','operation_reason'],
+                'allowed_producer_metadata'=>['operator_action','actor_membership_id','profile_doctor_id','membership_id','invitation_id','grant_revision','owner_membership_id','capabilities','operation_reason','presentation_version','presentation_id','personal_alias','seat_position','presentation_revision','presentation_released'],
                 'allowed_reason_codes'=>['ADMIN_DECISION','SECURITY_RESPONSE'],
                 'allowed_result_reason_pairs'=>[['reason_code'=>'ADMIN_DECISION','result'=>'SUCCESS'],['reason_code'=>'SECURITY_RESPONSE','result'=>'SUCCESS']],
                 'allowed_results'=>['SUCCESS'],'allowed_writer_internal_metadata'=>[],

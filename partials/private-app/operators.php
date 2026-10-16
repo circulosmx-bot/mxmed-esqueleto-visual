@@ -117,17 +117,17 @@
                             <div class="col-12"><label class="form-label" for="ag_ops_email">Correo del invitado</label><input <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> class="form-control" type="email" id="ag_ops_email" autocomplete="off" placeholder="operador@correo.com"></div>
                             <div class="col-12"><label class="form-label" for="ag_ops_role">Tipo de integrante</label><select <?= !$operatorPanel['can_manage'] ? 'disabled' : '' ?> class="form-select" id="ag_ops_role"><option value="collaborator">Operador</option><option value="administrator">Administrador</option></select><div class="form-text">Ambos tipos ocupan una de las dos plazas. Los permisos se seleccionan individualmente.</div></div>
                             <div class="col-12"><details id="ag_ops_identity_readiness">
-                              <summary class="small">Alias y fotografía · pendientes de habilitación</summary>
+                              <summary class="small">Alias y fotografía<?= !($operatorPanel['presentation_ready']??false) ? ' · pendientes de habilitación' : '' ?></summary>
                               <label class="form-label mt-2" for="ag_ops_alias">Alias de una palabra (opcional)</label>
-                              <input class="form-control" id="ag_ops_alias" placeholder="Mary" disabled aria-describedby="ag_ops_alias_help">
-                              <p class="form-text" id="ag_ops_alias_help">Respetará mayúsculas y acentos. Su guardado y edición aún no están habilitados.</p>
+                              <input class="form-control" id="ag_ops_alias" placeholder="Mary" <?= !($operatorPanel['presentation_ready']??false) || !$operatorPanel['can_manage'] ? 'disabled' : '' ?> aria-describedby="ag_ops_alias_help">
+                              <p class="form-text" id="ag_ops_alias_help"><?= ($operatorPanel['presentation_ready']??false) ? 'Una palabra de hasta 24 letras, respetando mayúsculas y acentos. Debe ser único en este equipo.' : 'Respetará mayúsculas y acentos. Su guardado y edición aún no están habilitados.' ?></p>
                               <fieldset disabled class="border rounded p-2" aria-describedby="ag_ops_photo_help"><legend class="small float-none w-auto mb-1">Fotografía privada</legend>
                                 <label class="form-label small" for="ag_ops_photo">Cargar o arrastrar una foto</label>
                                 <input type="file" id="ag_ops_photo" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" disabled>
                                 <button type="button" class="btn btn-outline-secondary btn-sm mt-2" disabled data-ops-unavailable>Usar cámara móvil</button>
                               </fieldset>
                               <p class="form-text mb-1" id="ag_ops_photo_help">Por ahora se muestran iniciales. La carga, el arrastre y la cámara móvil aún no están habilitados.</p>
-                              <p class="small mb-0">Colores de las posiciones, pendientes de asignación:</p>
+                              <p class="small mb-0">Colores de las dos posiciones:</p>
                               <span class="mx-ag-origin-item small"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-01" aria-hidden="true"></span>Posición 1</span>
                               <span class="mx-ag-origin-item small"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-02" aria-hidden="true"></span>Posición 2</span>
                             </details></div>

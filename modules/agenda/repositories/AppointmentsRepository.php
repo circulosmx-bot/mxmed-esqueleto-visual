@@ -90,7 +90,7 @@ class AppointmentsRepository
         }
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->withCreatorSnapshots($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     private function getColumns(string $table): array
@@ -112,7 +112,26 @@ class AppointmentsRepository
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        return $row ? $this->withCreatorSnapshots([$row])[0] : null;
+    }
+
+    /** Label DTO only: never hydrate accounts, contacts or the current seat occupant. */
+    private function withCreatorSnapshots(array $rows): array
+    {
+        if(!$rows)return $rows;
+        $s=$this->pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agenda_appointment_creator_snapshots'");$s->execute();
+        $map=[];
+        if((int)$s->fetchColumn()===1){
+            $ids=array_column($rows,'appointment_id');
+            $s=$this->pdo->prepare('SELECT s.appointment_id,s.snapshot_version,s.creator_alias,s.creator_position,s.origin_visual_key,s.created_at_utc FROM agenda_appointment_creator_snapshots s JOIN '.$this->table.' a ON a.appointment_id=s.appointment_id AND a.doctor_id=s.profile_doctor_id WHERE s.appointment_id IN ('.implode(',',array_fill(0,count($ids),'?')).')');
+            $s->execute($ids);
+            foreach($s->fetchAll(PDO::FETCH_ASSOC) as $r)$map[$r['appointment_id']]=['version'=>(int)$r['snapshot_version'],'alias'=>$r['creator_alias'],'position'=>$r['creator_position']===null?null:(int)$r['creator_position'],'origin_visual_key'=>$r['origin_visual_key'],'created_at_utc'=>$r['created_at_utc']];
+        }
+        foreach($rows as &$row){
+            $row['creator_snapshot']=$map[$row['appointment_id']]??null;
+            $row['creator_origin_status']=$row['creator_snapshot']===null?'historical_unverified':'snapshot_v1';
+        }unset($row);
+        return $rows;
     }
 
     private function sanitizeIdentifier(?string $value): string

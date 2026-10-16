@@ -12,25 +12,26 @@ import subprocess
 import sys
 import time
 
+IMP07 = os.environ.get('MXMED_OP_IMP07_REHEARSAL') == '1'
 REHEARSAL = os.environ.get('MXMED_OP_UI03_REHEARSAL') == '1'
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SUPPORT = pathlib.Path.home() / 'Library/Application Support/MXMED' / ('opui03-rehearsal' if REHEARSAL else 'op02-admin')
+SUPPORT = pathlib.Path.home() / 'Library/Application Support/MXMED' / ('opimp07-rehearsal' if IMP07 else 'opui03-rehearsal' if REHEARSAL else 'op02-admin')
 RUNTIME = SUPPORT / 'runtime'
 TLS = SUPPORT / 'tls'
 MEDIA = SUPPORT / 'media'
 PRIVATE_MEDIA = MEDIA / 'private'
 PUBLIC_MEDIA = MEDIA / 'public'
 TMP = SUPPORT / 'tmp'
-NOTIFICATIONS = pathlib.Path('/tmp') / (('mxmed-opui03-' if REHEARSAL else 'mxmed-op02-')+str(os.getuid())) / 'notifications.json'
+NOTIFICATIONS = pathlib.Path('/tmp') / (('mxmed-opimp07-' if IMP07 else 'mxmed-opui03-' if REHEARSAL else 'mxmed-op02-')+str(os.getuid())) / 'notifications.json'
 VALKEY = SUPPORT / 'valkey'
 CONFIG = SUPPORT / 'environment.json'
 CREDS_JSON = SUPPORT / 'credentials.json'
 CREDS_TEXT = SUPPORT / 'Safari credentials.txt'
 STATE = RUNTIME / 'processes.json'
-DATABASE = 'mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'
-DB_USER = 'mxmed_opui03' if REHEARSAL else 'mxmed_op02'
-ORIGIN = 'https://127.0.0.1:8446' if REHEARSAL else 'https://127.0.0.1:8445'
-PORTS = {'app':8095, 'https':8446, 'valkey':6388} if REHEARSAL else {'app':8094, 'https':8445, 'valkey':6387}
+DATABASE = 'mxmed_gate4d_preview_opimp07' if IMP07 else 'mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'
+DB_USER = 'mxmed_opimp07' if IMP07 else 'mxmed_opui03' if REHEARSAL else 'mxmed_op02'
+ORIGIN = 'https://127.0.0.1:8447' if IMP07 else 'https://127.0.0.1:8446' if REHEARSAL else 'https://127.0.0.1:8445'
+PORTS = {'app':8096,'https':8447,'valkey':6389} if IMP07 else {'app':8095, 'https':8446, 'valkey':6388} if REHEARSAL else {'app':8094, 'https':8445, 'valkey':6387}
 REQUIRED_TABLES = {
     'auth_accounts', 'auth_account_credentials', 'auth_account_consents',
     'auth_account_memberships', 'profiles_doctors', 'consultorios', 'consultorio_schedule', 'agenda_settings',
@@ -50,12 +51,12 @@ def safe_config():
     values=json.loads(CONFIG.read_text())
     required={
         'APP_ENV':'local','MXMED_ENVIRONMENT':'local','MXMED_PREVIEW_EXPLICIT':'1',
-        'MXMED_OP02_ISOLATED':'1','MXMED_OP_UI03_REHEARSAL':'1' if REHEARSAL else '0','MXMED_DB_NAME':DATABASE,
+        'MXMED_OP02_ISOLATED':'1','MXMED_OP_UI03_REHEARSAL':'1' if REHEARSAL else '0','MXMED_OP_IMP07_REHEARSAL':'1' if IMP07 else '0','MXMED_DB_NAME':DATABASE,
         'MXMED_DB_HOST':'127.0.0.1','MXMED_DB_PORT':'3306','MXMED_DB_USER':DB_USER,
         'MXMED_PREVIEW_ORIGIN':ORIGIN,'MXMED_SESSION_STORE_PORT':str(PORTS['valkey']),
     }
     for key,value in required.items():
-        if values.get(key, '0' if key=='MXMED_OP_UI03_REHEARSAL' and not REHEARSAL else None)!=value: raise RuntimeError('op02 isolation configuration rejected')
+        if values.get(key, '0' if (key=='MXMED_OP_UI03_REHEARSAL' and not REHEARSAL) or (key=='MXMED_OP_IMP07_REHEARSAL' and not IMP07) else None)!=value: raise RuntimeError('op02 isolation configuration rejected')
     if values.get('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT','') not in ('','0'): raise RuntimeError('op02 normal-local composition forbidden')
     if not str(values.get('MXMED_PRIVATE_MEDIA_ROOT','')).startswith(str(SUPPORT)) or not str(values.get('MXMED_PUBLIC_MEDIA_ROOT','')).startswith(str(SUPPORT)): raise RuntimeError('op02 media isolation rejected')
     return values
@@ -79,7 +80,7 @@ def seed(values):
     subprocess.run(['php',str(ROOT/'scripts/op02-fixture.php')],cwd=ROOT,env=env,check=True)
 
 def create_database(values):
-    if DATABASE.lower()=='mxmed' or DATABASE!=('mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'): raise RuntimeError('op02 destructive target rejected')
+    if DATABASE.lower()=='mxmed' or DATABASE!=('mxmed_gate4d_preview_opimp07' if IMP07 else 'mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'): raise RuntimeError('op02 destructive target rejected')
     password=values['MXMED_DB_PASS'].replace("'","''")
     admin_mysql(f"CREATE DATABASE IF NOT EXISTS `{DATABASE}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\nCREATE USER IF NOT EXISTS '{DB_USER}'@'127.0.0.1' IDENTIFIED BY '{password}';\nALTER USER '{DB_USER}'@'127.0.0.1' IDENTIFIED BY '{password}';\nREVOKE ALL PRIVILEGES, GRANT OPTION FROM '{DB_USER}'@'127.0.0.1';\nGRANT ALL PRIVILEGES ON `{DATABASE}`.* TO '{DB_USER}'@'127.0.0.1';\n")
     table_rows=admin_mysql("SELECT table_name FROM information_schema.tables WHERE table_schema='"+DATABASE+"';",capture=True).stdout.splitlines()
@@ -119,7 +120,7 @@ def prepare():
         CREDS_JSON.write_text(json.dumps(credentials,indent=2)+'\n');CREDS_JSON.chmod(0o600)
         CREDS_TEXT.write_text('MXMED OP02 — credenciales exclusivamente sintéticas\nURL: '+ORIGIN+'/public/identity/acceso.php\n\n'+''.join(f"{role.upper()}\nCorreo: {entry['email']}\nContraseña: {entry['password']}\n\n" for role,entry in credentials.items()));CREDS_TEXT.chmod(0o600)
         private_dir(NOTIFICATIONS.parent)
-        values={'APP_ENV':'local','MXMED_ENVIRONMENT':'local','MXMED_PREVIEW_EXPLICIT':'1','MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT':'0','MXMED_OP02_ISOLATED':'1','MXMED_OP_UI03_REHEARSAL':'1' if REHEARSAL else '0',
+        values={'APP_ENV':'local','MXMED_ENVIRONMENT':'local','MXMED_PREVIEW_EXPLICIT':'1','MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT':'0','MXMED_OP02_ISOLATED':'1','MXMED_OP_UI03_REHEARSAL':'1' if REHEARSAL else '0','MXMED_OP_IMP07_REHEARSAL':'1' if IMP07 else '0',
                 'MXMED_DB_HOST':'127.0.0.1','MXMED_DB_PORT':'3306','MXMED_DB_NAME':DATABASE,'MXMED_DB_USER':DB_USER,'MXMED_DB_PASS':db_password,
                 'MXMED_PREVIEW_PEPPER':secrets.token_hex(32),'MXMED_PREVIEW_ORIGIN':ORIGIN,'MXMED_PREVIEW_NOTIFICATION_FILE':str(NOTIFICATIONS),
                 'MXMED_SESSION_STORE_PORT':str(PORTS['valkey']),'MXMED_PRIVATE_MEDIA_ROOT':str(PRIVATE_MEDIA),'MXMED_PUBLIC_MEDIA_ROOT':str(PUBLIC_MEDIA),
@@ -190,8 +191,9 @@ def status():
     print('NORMAL_LOCAL_BASELINE_MATCH='+str(snapshot_normal()==json.loads((SUPPORT/'normal-local-baseline.json').read_text())).lower())
 
 def reset():
+    if IMP07: raise RuntimeError('OP-IMP07 never resets an existing environment; destroy its owned disposable resources instead')
     values=safe_config();stop()
-    if DATABASE.lower()=='mxmed' or DATABASE!=('mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'): raise RuntimeError('op02 reset target rejected')
+    if DATABASE.lower()=='mxmed' or DATABASE!=('mxmed_gate4d_preview_opimp07' if IMP07 else 'mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'): raise RuntimeError('op02 reset target rejected')
     admin_mysql(f"DROP DATABASE `{DATABASE}`; CREATE DATABASE `{DATABASE}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
     schema_clone();seed(values)
     for target in [VALKEY/'op02.rdb',VALKEY/'appendonlydir']:
@@ -202,9 +204,9 @@ def reset():
 def destroy(confirm):
     if confirm!=DATABASE: raise RuntimeError('destroy requires --confirm '+DATABASE)
     values=safe_config();stop()
-    if DATABASE.lower()=='mxmed' or DATABASE!=('mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'): raise RuntimeError('op02 destroy target rejected')
+    if DATABASE.lower()=='mxmed' or DATABASE!=('mxmed_gate4d_preview_opimp07' if IMP07 else 'mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'): raise RuntimeError('op02 destroy target rejected')
     admin_mysql(f"DROP DATABASE IF EXISTS `{DATABASE}`; DROP USER IF EXISTS '{DB_USER}'@'127.0.0.1';")
-    if SUPPORT.is_symlink() or SUPPORT.name!=('opui03-rehearsal' if REHEARSAL else 'op02-admin'): raise RuntimeError('op02 support path rejected')
+    if SUPPORT.is_symlink() or SUPPORT.name!=('opimp07-rehearsal' if IMP07 else 'opui03-rehearsal' if REHEARSAL else 'op02-admin'): raise RuntimeError('op02 support path rejected')
     shutil.rmtree(SUPPORT);print('OP02_DESTROYED=true')
 
 if __name__=='__main__':

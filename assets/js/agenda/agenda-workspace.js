@@ -13,6 +13,20 @@
   const panel = document.getElementById(panelId);
   if(!panel) return;
 
+  const syncCanonicalOperatorLegend=()=>{
+    if(!canonical?.state?.presentation_ready)return;
+    for(const position of [1,2]){
+      const dot=document.querySelector('#ag_origin_catalog .mx-ag-origin-dot--operator-0'+position);
+      if(!dot?.parentElement)continue;
+      const record=(canonical.state.operator_presentations||[]).find(r=>r.seat_position===position);
+      const label=typeof record?.personal_alias==='string'&&record.personal_alias?'Operador '+record.personal_alias:'Operador 0'+position;
+      const item=dot.parentElement;
+      [...item.childNodes].filter(n=>n!==dot).forEach(n=>n.remove());item.append(document.createTextNode(label));
+    }
+  };
+  document.addEventListener('DOMContentLoaded',syncCanonicalOperatorLegend,{once:true});
+  window.addEventListener('mxmed:operator-grants',syncCanonicalOperatorLegend);
+  syncCanonicalOperatorLegend();
   const els = {
     doctor: panel.querySelector('#ag_doctor_filter'),
     agendaFrontendV1: panel.querySelector('#agendaFrontendV1'),
@@ -5909,9 +5923,12 @@
   };
   const resolveEventActionOriginMeta = (props = {})=>{
     const visualKey = sanitizeText(resolveAppointmentOriginVisualKey(props) || 'user') || 'user';
-    if(visualKey === 'operator-01') return { visualKey, label: 'Operador 01' };
-    if(visualKey === 'operator-02') return { visualKey, label: 'Operador 02' };
-    if(visualKey === 'operator') return { visualKey, label: 'Operadora' };
+    const snapshot=props?.creator_snapshot;
+    if(['operator','operator-01','operator-02'].includes(visualKey)){
+      const alias=snapshot?.version===1&&typeof snapshot.alias==='string'?snapshot.alias:'';
+      return {visualKey,label:alias?'Operador '+alias:snapshot?.version===1?(visualKey==='operator'?'Operador sin alias':'Operador '+visualKey.slice(-2)):'Operador (histórico sin alias confirmado)'};
+    }
+    if(props?.creator_origin_status==='historical_unverified'&&['user','operator'].includes(visualKey))return {visualKey,label:'Origen histórico no confirmado'};
     if(visualKey === 'web-patient') return { visualKey, label: 'Paciente vía perfil web' };
     if(visualKey === 'ai') return { visualKey, label: 'Operador IA' };
     if(visualKey === 'call-center') return { visualKey, label: 'Call Center' };
@@ -5924,11 +5941,7 @@
   // Share Agenda's origin key and visible legend label with Consultation.
   window.mxmedAgendaAppointmentOriginMeta = (props = {})=>{
     const meta = resolveEventActionOriginMeta(props);
-    const legendDot = document.querySelector(`#ag_origin_catalog .mx-ag-origin-dot--${meta.visualKey}`);
-    return {
-      visualKey:meta.visualKey,
-      label:String(legendDot?.parentElement?.textContent || meta.label || '').trim()
-    };
+    return meta; // Event/Consultation labels never borrow the current roster's alias.
   };
   const syncEventActionPatientIdentityDisplay = ({
     name = '',
@@ -16808,6 +16821,9 @@
     return null;
   };
   const resolveAppointmentOriginVisualKey = (props = {})=>{
+    const snapshot=props?.creator_snapshot;
+    if(snapshot?.version===1&&['user','operator','operator-01','operator-02'].includes(snapshot.origin_visual_key))return snapshot.origin_visual_key;
+
     const explicitOrigin = normalizeText(sanitizeText(
       props?.origin_visual_key
       || props?.origin
@@ -16922,14 +16938,7 @@
       || haystack.includes('operator')
     );
     if(operatorContextDetected){
-      const slotFromOperatorId = resolveOperatorSlotFromConfiguredId(operatorId);
-      if(slotFromOperatorId === 1 || slotFromOperatorId === 2){
-        return toOperatorVisualKey(slotFromOperatorId);
-      }
-      const slotFromCreatorId = resolveOperatorSlotFromConfiguredId(createdById);
-      if(slotFromCreatorId === 1 || slotFromCreatorId === 2){
-        return toOperatorVisualKey(slotFromCreatorId);
-      }
+      // No current-roster inference for an appointment without an immutable snapshot.
       return 'operator';
     }
     if(!haystack){
@@ -18489,6 +18498,8 @@
       operator_slot: sanitizeText(row?.operator_slot || ''),
       operator_number: sanitizeText(row?.operator_number || ''),
       operator_alias: sanitizeText(row?.operator_alias || ''),
+      creator_snapshot: row?.creator_snapshot || null,
+      creator_origin_status: row?.creator_origin_status || '',
       origin_visual_key: sanitizeText(row?.origin_visual_key || ''),
       origin: sanitizeText(row?.origin || ''),
       source: sanitizeText(row?.source || '')
@@ -18538,6 +18549,8 @@
           operator_slot: sanitizeText(row?.operator_slot || ''),
           operator_number: sanitizeText(row?.operator_number || ''),
           operator_alias: sanitizeText(row?.operator_alias || ''),
+      creator_snapshot: row?.creator_snapshot || null,
+      creator_origin_status: row?.creator_origin_status || '',
           origin: sanitizeText(row?.origin || ''),
           source: sanitizeText(row?.source || ''),
           origin_visual_key: originVisualKey,
@@ -18594,6 +18607,8 @@
         operator_slot: sanitizeText(row?.operator_slot || ''),
         operator_number: sanitizeText(row?.operator_number || ''),
         operator_alias: sanitizeText(row?.operator_alias || ''),
+      creator_snapshot: row?.creator_snapshot || null,
+      creator_origin_status: row?.creator_origin_status || '',
         origin: sanitizeText(row?.origin || ''),
         source: sanitizeText(row?.source || ''),
         origin_visual_key: originVisualKey

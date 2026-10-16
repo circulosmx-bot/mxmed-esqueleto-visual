@@ -129,7 +129,7 @@ final class OperatorQaHttp
                 $display=$this->pdo->prepare("SELECT p.display_name FROM patients_patients p JOIN patients_doctor_links l ON l.patient_id=p.patient_id WHERE p.patient_id=? AND l.doctor_id=? AND l.status='active' AND p.status='active'");
                 $rows=array_map(function($r)use($display,$profile){
                     $display->execute([$r['patient_id']??'',$profile]);$name=$display->fetchColumn();
-                    return array_intersect_key($r,array_flip(['appointment_id','consultorio_id','start_at','end_at','modality','status']))
+                    return array_intersect_key($r,array_flip(['appointment_id','consultorio_id','start_at','end_at','modality','status','creator_snapshot','creator_origin_status']))
                         +['patient_name'=>is_string($name)?$name:'Paciente'];
                 },$rows);
                 return ['ok'=>true,'data'=>$rows];
@@ -144,6 +144,7 @@ final class OperatorQaHttp
                 return ['ok'=>true,'data'=>$data];
             }
             $writer=new \Agenda\Controllers\AppointmentWriteController($this->pdo);$writer->setActorContext($context);
+            if($actor['creator_snapshot']!==null)$writer->setCanonicalCreatorSnapshot($actor['creator_snapshot']);
             $common=['actor_role'=>$context['actor_role'],'actor_id'=>$actor['account_id'],'created_by_role'=>$context['actor_role'],'created_by_id'=>$actor['account_id'],'channel_origin'=>'operator_workspace','doctor_id'=>$profile,'notify_patient'=>false,'contact_method'=>'none'];
             if($cap==='agenda.appointments.create'){
                 foreach(array_keys($input) as $key)if(!in_array($key,['consultorio_id','patient_id','start_at','end_at','modality'],true))self::deny();

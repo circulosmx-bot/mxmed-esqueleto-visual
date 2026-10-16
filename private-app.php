@@ -10465,9 +10465,9 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="/assets/js/core/sidebar.js?v=op-ui03"></script>
 <script>window.mxmedInitializeSidebar();</script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
-<script src="/assets/js/agenda/operators-panel.js?v=op-ux06"></script>
-<script src="/assets/js/agenda/canonical-operators.js?v=op-int04"></script>
-<script src="/assets/js/agenda/agenda-workspace.js?v=op-ui03"></script>
+<script src="/assets/js/agenda/operators-panel.js?v=op-imp07"></script>
+<script src="/assets/js/agenda/canonical-operators.js?v=op-imp07"></script>
+<script src="/assets/js/agenda/agenda-workspace.js?v=op-imp07"></script>
 <script>window.mxmedCanonicalOperators.whenReady.then(function(){window.mxmedInitializeAgenda();}).catch(function(){/* The original panel retains the bootstrap error. */});</script>
 </body></html>
 <?php else: ?>
@@ -10685,8 +10685,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/clinical-document-ui-primitives.js?v=doc-core03"></script>
 <script src="assets/js/clinical/prescription-editor-host.js?v=rec-tpl02"></script>
 <script src="assets/js/core/sidebar.js?v=op-ui03"></script>
-<script src="assets/js/agenda/agenda-workspace.js?v=op-ui03"></script>
-<script src="assets/js/agenda/operators-panel.js?v=op-ux06"></script>
+<script src="assets/js/agenda/agenda-workspace.js?v=op-imp07"></script>
+<script src="assets/js/agenda/operators-panel.js?v=op-imp07"></script>
 <script src="assets/js/app.js?v=op-int04"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
@@ -10703,7 +10703,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/clinical/res02a-linked-result-composer.js?v=res02a"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=res02a"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=plan02br1"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=consultation-save-ux-r6"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=op-imp07"></script>
 <script src="assets/js/clinical/vis04-consultation.js?v=consultation-placeholder-r2"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=h09-r1-selection"></script>

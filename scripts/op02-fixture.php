@@ -19,6 +19,10 @@ foreach(['modules/profiles/db/2026_06_19_create_subscription_plan_lifecycle.sql'
 $overrides=explode('-- Datos de ejemplo',file_get_contents($root.'/modules/agenda/db/availability_overrides_min.sql'))[0];$p->exec($overrides);
 $p->exec('CREATE TABLE IF NOT EXISTS platform_audit_stream_heads(stream_key VARCHAR(191) PRIMARY KEY,last_sequence_number BIGINT NOT NULL,last_event_hash CHAR(64) NOT NULL,hash_version VARCHAR(32),updated_at DATETIME(6)) ENGINE=InnoDB');
 $p->exec('CREATE TABLE IF NOT EXISTS platform_audit_events(stream_key VARCHAR(191),sequence_number BIGINT,event_id CHAR(64),schema_version VARCHAR(32),occurred_at_utc DATETIME(6),action VARCHAR(128),risk_level VARCHAR(2),outcome VARCHAR(16),reason_code VARCHAR(128),real_actor_reference VARCHAR(191),effective_actor_reference VARCHAR(191),affected_subject_reference VARCHAR(191),correlation_id VARCHAR(191),request_id VARCHAR(191),case_reference VARCHAR(191),resource_type VARCHAR(128),resource_reference VARCHAR(191),metadata_json JSON,previous_hash CHAR(64),event_hash CHAR(64),created_at_utc DATETIME(6),PRIMARY KEY(stream_key,sequence_number),UNIQUE(event_id),UNIQUE(event_hash)) ENGINE=InnoDB');
+if(Identity\Operators\OperatorQaConfiguration::implementationRehearsal()){
+ $p->exec(file_get_contents($root.'/modules/identity/db/migrations/2026_10_15_04_operator_presentations.sql'));
+ $p->exec(file_get_contents($root.'/modules/agenda/db/migrations/2026_10_15_12_appointment_creator_snapshots.sql'));
+}
 $p=new PDO('mysql:host=127.0.0.1;port=3306;dbname='.getenv('MXMED_DB_NAME').';charset=utf8mb4',getenv('MXMED_DB_USER'),getenv('MXMED_DB_PASS'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 Identity\Operators\OperatorQaConfiguration::assertEnabled($p);
 if((int)$p->query('SELECT COUNT(*) FROM auth_accounts')->fetchColumn()>0){echo "OP02_FIXTURE=EXISTS\n";exit;}

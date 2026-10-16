@@ -32,7 +32,7 @@ function concurrent(PDO $p,string $db,string $profile,array $s,array $tasks): ar
         foreach ($tasks as $i=>$task) {
             $process=proc_open([PHP_BINARY,__FILE__,'--worker',$db],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
             if (!is_resource($process)) throw new RuntimeException('worker_start_failed');
-            fwrite($pipes[0],json_encode($task+['profile'=>$profile,'command'=>'race_command_'.$i,'now'=>$s['clock']->now()->format(DATE_ATOM)],JSON_THROW_ON_ERROR));fclose($pipes[0]);
+            fwrite($pipes[0],json_encode($task+['profile'=>$profile,'command'=>'race_command_'.$i,'now'=>$s['clock']->now()->format('Y-m-d\TH:i:s.uP')],JSON_THROW_ON_ERROR));fclose($pipes[0]);
             $workers[]=[$process,$pipes];
         }
         foreach ($workers as [$process,$pipes]) {
@@ -84,6 +84,7 @@ try {
     op01migrate($p,dirname($base).'/profiles/db/profiles_doctors_schema.sql');$p->exec('CREATE TABLE medical_groups(group_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
     foreach (['2026_07_19_03_create_auth_account_memberships.sql','2026_10_14_01_create_profile_ownership_governance.sql','2026_10_14_02_profile_ownership_r3_endorsements.sql','2026_10_15_01_identity_governance_r3_runtime.sql','2026_10_15_02_profile_operator_foundation.sql'] as $f)op01migrate($p,$base.'/db/migrations/'.$f);
     op01migrate($p,$base.'/db/migrations/2026_10_15_02_profile_operator_foundation.sql');
+    op01migrate($p,$base.'/db/migrations/2026_10_15_04_operator_presentations.sql');
     op01migrate($p,dirname($base).'/profiles/db/2026_06_19_create_subscription_plan_lifecycle.sql');
     // Physical audit.v1 shape: same joined canonical writer, local SQL transaction
     // port, no calls to the production routines qualified to the mxmed schema.
@@ -101,6 +102,8 @@ try {
     $s=op01stack($p);$owner=op01login($s,'owner_a');$a=op01login($s,'invitee_a');$b=op01login($s,'invitee_b');$c=op01login($s,'invitee_c');$other=op01login($s,'outsider');
     $credentialsBefore=op01credentialFingerprint($p);
     $accountsBefore=(int)op01scalar($p,'SELECT COUNT(*) FROM auth_accounts');
+    require_once __DIR__.'/support/Op07PresentationAssertions.php';
+    op07PresentationAssertions($p,$root,$db,$s,$owner,$a,$b,$c);
     // All role combinations, with identical and differing closed grants.
     foreach ([['collaborator','collaborator'],['administrator','collaborator'],['collaborator','administrator'],['administrator','administrator']] as $n=>[$r1,$r2]) {
         $pr=op01fresh($p,'roles'.$n);$i1=op01invite($s,$owner,$pr,'invitee_a',['agenda.appointments.read'],$r1);$m1=op01accept($s,$a,$pr,$i1);

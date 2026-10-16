@@ -123,7 +123,9 @@
       'origin_label', 'origin_display_label', 'origin_display_name',
       'appointment_origin_label', 'channel_origin_label', 'source_label'
     ].map(field=>String(originData[field] || '').trim()).find(Boolean) || '';
-    const hasOriginCode = [
+    const hasSnapshot=originData.creator_snapshot?.version===1;
+    const hasAttribution=hasSnapshot||originData.creator_origin_status==='historical_unverified';
+    const hasOriginCode = hasAttribution || [
       'origin_visual_key', 'origin', 'source', 'appointment_origin', 'channel_origin',
       'created_by_role', 'actor_role', 'operator_slot', 'operatorSlot',
       'operator_number', 'operatorNumber', 'operator_index', 'operatorIndex',
@@ -132,8 +134,8 @@
     const agendaOrigin = window.mxmedAgendaAppointmentOriginMeta?.(originData);
     const visualKey = agendaOrigin?.visualKey || 'user';
     originDot.classList.add(`mx-ag-origin-dot--${visualKey}`);
-    originLabel.textContent = realLabel || (hasOriginCode ? agendaOrigin?.label : '') || 'Médico tratante';
-    originCluster.dataset.labelSource = realLabel ? 'REAL_LABEL' : hasOriginCode && agendaOrigin?.label ? 'MAPPED_CODE' : 'SYNTHETIC_FALLBACK';
+    originLabel.textContent = (hasAttribution ? agendaOrigin?.label : '') || realLabel || (hasOriginCode ? agendaOrigin?.label : '') || 'Médico tratante';
+    originCluster.dataset.labelSource = hasSnapshot ? 'CREATOR_SNAPSHOT_V1' : realLabel ? 'REAL_LABEL' : hasOriginCode && agendaOrigin?.label ? 'MAPPED_CODE' : 'SYNTHETIC_FALLBACK';
     originCluster.dataset.colorSource = hasOriginCode && agendaOrigin?.visualKey ? 'AGENDA_MAPPING' : 'SYNTHETIC_FALLBACK';
     originCluster.hidden = false;
   }

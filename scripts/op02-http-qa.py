@@ -2,9 +2,10 @@
 """Real HTTPS security QA; synthetic OP02 DB only, no token/credential output."""
 import os, datetime, hashlib, http.cookiejar, importlib.util, json, pathlib, ssl, subprocess, urllib.request, urllib.error, uuid
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+IMP07=os.environ.get('MXMED_OP_IMP07_REHEARSAL')=='1'
 REHEARSAL=os.environ.get('MXMED_OP_UI03_REHEARSAL')=='1'
-SUPPORT=pathlib.Path.home()/'Library/Application Support/MXMED'/('opui03-rehearsal' if REHEARSAL else 'op02-admin')
-BASE='https://127.0.0.1:8446' if REHEARSAL else 'https://127.0.0.1:8445';DB='mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'
+SUPPORT=pathlib.Path.home()/'Library/Application Support/MXMED'/('opimp07-rehearsal' if IMP07 else 'opui03-rehearsal' if REHEARSAL else 'op02-admin')
+BASE='https://127.0.0.1:8447' if IMP07 else 'https://127.0.0.1:8446' if REHEARSAL else 'https://127.0.0.1:8445';DB='mxmed_gate4d_preview_opimp07' if IMP07 else 'mxmed_gate4d_preview_opui03' if REHEARSAL else 'mxmed_gate4d_preview_op02'
 CREDS=json.loads((SUPPORT/'credentials.json').read_text());RESULTS={};MATRIX=[]
 spec=importlib.util.spec_from_file_location('op02env',ROOT/'scripts/op02-env.py');envmod=importlib.util.module_from_spec(spec);spec.loader.exec_module(envmod)
 BEFORE=envmod.snapshot_normal()
@@ -139,5 +140,5 @@ def run():
         (evidence/'http-qa.json').write_text(json.dumps({'results':RESULTS,'denial_matrix':MATRIX},indent=2)+'\n')
 
 if __name__=='__main__':
-    if not REHEARSAL:raise SystemExit('Mutation QA requires MXMED_OP_UI03_REHEARSAL=1; persistent OP02 review data must be preserved.')
+    if not REHEARSAL and not IMP07:raise SystemExit('Mutation QA requires MXMED_OP_UI03_REHEARSAL=1; persistent OP02 review data must be preserved.')
     run()

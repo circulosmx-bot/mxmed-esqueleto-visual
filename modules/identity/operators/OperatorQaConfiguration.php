@@ -9,12 +9,13 @@ final class OperatorQaConfiguration
     public const DATABASE='mxmed_gate4d_preview_op02';
     public const USER='mxmed_op02';
     public const ORIGIN='https://127.0.0.1:8445';
+    public static function implementationRehearsal(): bool { return getenv('MXMED_OP_IMP07_REHEARSAL')==='1'; }
     public static function rehearsal(): bool { return getenv('MXMED_OP_UI03_REHEARSAL')==='1'; }
-    public static function database(): string { return self::rehearsal()?'mxmed_gate4d_preview_opui03':self::DATABASE; }
-    public static function user(): string { return self::rehearsal()?'mxmed_opui03':self::USER; }
-    public static function origin(): string { return self::rehearsal()?'https://127.0.0.1:8446':self::ORIGIN; }
-    public static function port(): int { return self::rehearsal()?6388:6387; }
-    public static function supportName(): string { return self::rehearsal()?'opui03-rehearsal':'op02-admin'; }
+    public static function database(): string { return self::implementationRehearsal()?'mxmed_gate4d_preview_opimp07':(self::rehearsal()?'mxmed_gate4d_preview_opui03':self::DATABASE); }
+    public static function user(): string { return self::implementationRehearsal()?'mxmed_opimp07':(self::rehearsal()?'mxmed_opui03':self::USER); }
+    public static function origin(): string { return self::implementationRehearsal()?'https://127.0.0.1:8447':(self::rehearsal()?'https://127.0.0.1:8446':self::ORIGIN); }
+    public static function port(): int { return self::implementationRehearsal()?6389:(self::rehearsal()?6388:6387); }
+    public static function supportName(): string { return self::implementationRehearsal()?'opimp07-rehearsal':(self::rehearsal()?'opui03-rehearsal':'op02-admin'); }
     public static function requested(): bool { return getenv('MXMED_OP02_ISOLATED')==='1'; }
     public static function assertEnabled(?PDO $pdo=null): void
     {

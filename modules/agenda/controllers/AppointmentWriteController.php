@@ -20,6 +20,7 @@ require_once __DIR__ . '/../repositories/AppointmentCollisionsRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
 require_once __DIR__ . '/../config/agenda.php';
 require_once __DIR__ . '/../contracts/IdempotencyContract.php';
+require_once __DIR__ . '/../contracts/AppointmentCreatorSnapshot.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AppointmentWriteController
@@ -31,6 +32,13 @@ class AppointmentWriteController
     private array $agendaConfig = [];
     private array $actorContext = [];
     private array $contextWarnings = [];
+    private ?\Agenda\Contracts\AppointmentCreatorSnapshot $creatorSnapshot = null;
+
+    /** Internal canonical adapter only; HTTP payloads cannot construct this value object. */
+    public function setCanonicalCreatorSnapshot(\Agenda\Contracts\AppointmentCreatorSnapshot $snapshot): void
+    {
+        $this->creatorSnapshot=$snapshot;
+    }
 
     public function __construct(?\PDO $pdo = null)
     {
@@ -69,6 +77,9 @@ class AppointmentWriteController
 
     public function createFromPayload(array $payload): array
     {
+        foreach(array_keys($payload) as $field)
+            if(str_starts_with((string)$field,'creator_')||$field==='snapshot_version')
+                return $this->error('invalid_params','creator snapshot must be server-derived');
         $scopeError = $this->applyCreateScope($payload);
         if (is_array($scopeError)) {
             return $scopeError;
@@ -209,7 +220,7 @@ class AppointmentWriteController
         }
 
         try {
-            $result = $this->repository->createAppointment($payload, $identity, $fingerprint);
+            $result = $this->repository->createAppointment($payload, $identity, $fingerprint, $this->creatorSnapshot);
         } catch (PDOException $e) {
             // IMPORTANT: many "collision" cases are actually enforced by DB constraints.
             // Map common SQLSTATE/driver errors to a semantic error in QA.

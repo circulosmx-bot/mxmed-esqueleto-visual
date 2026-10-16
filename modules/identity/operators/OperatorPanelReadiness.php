@@ -17,14 +17,14 @@ final class OperatorPanelReadiness
     /** The caller has already composed/revalidated the canonical service and its snapshot. */
     public static function available(array $snapshot): array
     {
-        return ['service_ready'=>true,'schema_ready'=>true,'can_manage'=>$snapshot['owner']===true,'can_configure_agenda'=>false,
+        return ['service_ready'=>true,'schema_ready'=>true,'presentation_ready'=>($snapshot['presentation_ready']??false)===true,'can_manage'=>$snapshot['owner']===true,'can_configure_agenda'=>false,
             'status'=>'available','message'=>'','access_message'=>'','seat_limit'=>2,'legacy'=>null];
     }
 
     /** Only called after PrivateApplicationAccessResolver authorizes the medical context. */
     public static function normalReadOnly(PDO $pdo, array $context): array
     {
-        $result=['service_ready'=>false,'schema_ready'=>false,'can_manage'=>false,'can_configure_agenda'=>true,
+        $result=['service_ready'=>false,'schema_ready'=>false,'presentation_ready'=>false,'can_manage'=>false,'can_configure_agenda'=>true,
             'status'=>'schema_not_ready','seat_limit'=>2,
             'message'=>'Las invitaciones y los permisos de Identity todavía no están habilitados. Falta preparar el esquema canónico y autorizar su activación. Los registros anteriores se conservan para consulta.',
             'access_message'=>'La administración requiere autoridad canónica de titular. Tu membresía actual no se modifica.',

@@ -31,11 +31,16 @@ def accept(page):
  nav.click();page.get_by_role('button',name='Abrir invitación',exact=True).click()
  expect(page.locator('#operator-offer-modal')).to_be_visible();page.locator('#operator-offer-accept').click();page.wait_for_url('**/private-app.php?workspace=agenda#p-ag-admin');expect(page.locator('#ag_custom_week_root')).to_be_visible(timeout=20000)
 
-def band(page,alias):return page.locator('#ag_ops_list .mx-ag-ops-operator-band').filter(has=page.locator('strong',has_text=alias))
+def band(page,account):
+ # The synthetic account ID is stable. A generic/missing personal alias must
+ # never be recovered from an email prefix or treated as membership identity.
+ ident=page.evaluate("async account=>{const r=await window.mxmedCanonicalOperators.request('/api/profile-operators/index.php/overview');if(!r.ok)throw Error('overview unavailable');return r.json.data.members.find(m=>m.account_id===account&&['active','suspended'].includes(m.status))?.membership_id;}",account)
+ assert ident,'expected synthetic membership missing'
+ return page.locator('#ag_ops_list .mx-ag-ops-operator-band[data-operator-id="'+ident+'"]')
 def expand(card):
  if card.locator('.mx-ag-ops-band-head').get_attribute('aria-expanded')!='true':card.locator('.mx-ag-ops-band-head').click()
-def edit(page,alias,caps):
- card=band(page,alias);expand(card);card.get_by_role('button',name='Editar permisos',exact=True).click();grants(page,caps);page.locator('#ag_ops_save_btn').click();expect(page.locator('#ag_ops_save_btn')).to_be_enabled(timeout=15000);expect(page.locator('#ag_ops_modal_error')).to_have_text('Cambio guardado y confirmado.',timeout=15000)
+def edit(page,account,caps):
+ card=band(page,account);expand(card);card.get_by_role('button',name='Editar permisos',exact=True).click();grants(page,caps);page.locator('#ag_ops_save_btn').click();expect(page.locator('#ag_ops_save_btn')).to_be_enabled(timeout=15000);expect(page.locator('#ag_ops_modal_error')).to_have_text('Cambio guardado y confirmado.',timeout=15000)
 
 def assert_shell(page,owner):
  assert page.locator('#mmSidebar').count()==1 and page.locator('#ag_calendar').count()==1

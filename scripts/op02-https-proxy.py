@@ -8,9 +8,10 @@ import ssl
 
 HOP = {'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade'}
 CANONICAL_SESSION_COOKIE = '__Host-mxmed_session'
+IMP07 = os.environ.get('MXMED_OP_IMP07_REHEARSAL') == '1'
 REHEARSAL = os.environ.get('MXMED_OP_UI03_REHEARSAL') == '1'
-QA_SESSION_COOKIE = '__Host-mxmed_opui03_session' if REHEARSAL else '__Host-mxmed_op02_session'
-HOST = '127.0.0.1:8446' if REHEARSAL else '127.0.0.1:8445'
+QA_SESSION_COOKIE = '__Host-mxmed_opimp07_session' if IMP07 else '__Host-mxmed_opui03_session' if REHEARSAL else '__Host-mxmed_op02_session'
+HOST = '127.0.0.1:8447' if IMP07 else '127.0.0.1:8446' if REHEARSAL else '127.0.0.1:8445'
 
 def backend_cookie_header(raw):
     mapped=[]
@@ -68,6 +69,6 @@ class Server(http.server.ThreadingHTTPServer):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--cert',required=True);parser.add_argument('--key',required=True);parser.add_argument('--backend-port',type=int,default=8094)
-    args=parser.parse_args(); server=Server(('127.0.0.1',8446 if REHEARSAL else 8445),Handler,args.backend_port)
+    args=parser.parse_args(); server=Server(('127.0.0.1',8447 if IMP07 else 8446 if REHEARSAL else 8445),Handler,args.backend_port)
     context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);context.minimum_version=ssl.TLSVersion.TLSv1_2;context.load_cert_chain(args.cert,args.key)
     server.socket=context.wrap_socket(server.socket,server_side=True);server.serve_forever()

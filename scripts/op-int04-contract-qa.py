@@ -16,9 +16,10 @@ def render(s,ready=False):
  return subprocess.check_output(['php'],input=prefix+s,cwd=ROOT,text=True)
 def run():
  results={}
- for name in ['partials/private-app/agenda.php','assets/js/agenda/agenda-workspace.js','assets/js/core/navigation.js','assets/js/core/sidebar.js','assets/js/core/private-session.js','api/_lib/clinical_professional_authority.php','api/_lib/clinical_identity.php']:
+ for name in ['partials/private-app/agenda.php','assets/js/core/navigation.js','assets/js/core/sidebar.js','assets/js/core/private-session.js','api/_lib/clinical_professional_authority.php','api/_lib/clinical_identity.php']:
   if (ROOT/name).exists():assert read(name)==old(name),name+' changed'
- results['agenda_and_security_boundaries']='BYTE_IDENTICAL'
+ subprocess.run(['python3',str(ROOT/'scripts/op-imp07-contract-qa.py')],cwd=ROOT,check=True)
+ results['agenda_and_security_boundaries']='ORIGIN_ONLY_OP_IMP07_OTHER_BOUNDARIES_IDENTICAL'
  before=old('private-app.php');after=read('private-app.php');start='<body ';end='<div id="viewport">'
  assert parse(render(before[before.index(start):before.index(end)]))==parse(render(after[after.index(start):after.index(end)]))
  results['normal_header_sidebar']='DOM_IDENTICAL'

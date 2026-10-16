@@ -21,6 +21,7 @@
     if(!$('p-ag-operadores'))return null;
     if(window.mxmedOperatorPanel)return window.mxmedOperatorPanel;
     let overview=null,editing=null,pendingUi=0,overviewSequence=0,detailSequence=0,auditEvents=[],auditReady=false;
+    const aliasReady=ui.service_ready&&ui.can_manage&&ui.presentation_ready===true&&!!service;
     const expanded=new Set();
     const notify=(text,error=false)=>{const e=$('ag_ops_modal_error');e.textContent=text;e.classList.remove('d-none');e.classList.toggle('mx-ag-ops-modal-error',error);e.classList.toggle('alert',!error);e.classList.toggle('alert-success',!error);};
     const data=(...args)=>service.data(...args);
@@ -31,8 +32,8 @@
     const button=(text,fn,cls='btn btn-outline-secondary btn-sm')=>{const b=element('button',text,cls);b.type='button';b.addEventListener('click',()=>run(fn));return b;};
     const bootstrapModal=id=>window.bootstrap.Modal.getOrCreateInstance($(id));
   function accordion(key) {document.querySelectorAll('[data-ops-accordion-item]').forEach(article=>{const active=article.dataset.opsAccordionItem===key;article.classList.toggle('is-active',active);article.querySelector('.mx-ag-ops-accordion-body')?.classList.toggle('d-none',!active);article.querySelector('button')?.setAttribute('aria-expanded',String(active));});}
-  function resetEditor(){editing=null;if(!$('ag_ops_email'))return;$('ag_ops_email').value='';$('ag_ops_email').disabled=false;$('ag_ops_role').disabled=false;$('ag_ops_role').value='collaborator';$('ag_ops_form_title').textContent='Invitar operador';$('ag_ops_save_btn').textContent='Enviar invitación';document.querySelectorAll('[data-operator-grant]').forEach(e=>e.checked=false);$('ag_ops_modal_error').classList.add('d-none');accordion('general');}
-  function edit(record,kind){editing={record,kind};$('ag_ops_email').value=record.email_normalized||record.alias;$('ag_ops_email').disabled=true;$('ag_ops_role').value=record.role_code;$('ag_ops_role').disabled=true;$('ag_ops_form_title').textContent='Permisos · '+record.alias;$('ag_ops_save_btn').textContent=kind==='invitation'?'Reexpedir oferta':'Guardar permisos';document.querySelectorAll('[data-operator-grant]').forEach(e=>e.checked=record.capabilities.includes(e.dataset.operatorGrant));accordion('permissions');$('ag_ops_form_title').scrollIntoView({block:'center',behavior:'smooth'});}
+  function resetEditor(){editing=null;if(!$('ag_ops_email'))return;$('ag_ops_alias').value='';$('ag_ops_alias').disabled=!aliasReady;$('ag_ops_email').value='';$('ag_ops_email').disabled=false;$('ag_ops_role').disabled=false;$('ag_ops_role').value='collaborator';$('ag_ops_form_title').textContent='Invitar operador';$('ag_ops_save_btn').textContent='Enviar invitación';document.querySelectorAll('[data-operator-grant]').forEach(e=>{e.checked=false;e.disabled=false;});$('ag_ops_modal_error').classList.add('d-none');accordion('general');}
+  function edit(record,kind){editing={record,kind};$('ag_ops_alias').value=record.personal_alias||'';$('ag_ops_alias').disabled=!aliasReady||kind==='member';$('ag_ops_email').value=record.email_normalized||record.alias;$('ag_ops_email').disabled=true;$('ag_ops_role').value=record.role_code;$('ag_ops_role').disabled=true;$('ag_ops_form_title').textContent='Permisos · '+record.alias;$('ag_ops_save_btn').textContent=kind==='invitation'?'Reexpedir oferta':'Guardar permisos';document.querySelectorAll('[data-operator-grant]').forEach(e=>{e.checked=record.capabilities.includes(e.dataset.operatorGrant);e.disabled=kind==='alias';});if(kind==='alias'){$('ag_ops_form_title').textContent='Alias del operador';$('ag_ops_save_btn').textContent='Guardar alias';$('ag_ops_identity_readiness').open=true;}accordion(kind==='alias'?'general':'permissions');$('ag_ops_form_title').scrollIntoView({block:'center',behavior:'smooth'});}
   function showHistory(record=null,kind=null){
     const events=auditEvents.filter(e=>{
       if(!record)return true;
@@ -52,20 +53,21 @@
   }
   function band(record,kind){
     const legacy=kind==='legacy',invitation=kind==='invitation';
-    // The current overview's alias is an email-derived reference, not a saved team alias.
-    const name=invitation?maskEmail(record.email_normalized):record.alias;
+    // Only the canonical presentation confirms a team alias; an invitation contact does not.
+    const name=legacy?record.alias:record.personal_alias||(invitation?maskEmail(record.email_normalized):'Operador sin alias');
+    const position=record.presentation_version===1&&[1,2].includes(record.seat_position)?record.seat_position:null;
     const status=record.status||(invitation?'pending':'unknown'),revoked=status==='revoked';
     const card=element('article',undefined,'mx-ag-ops-operator-band');card.dataset.operatorId=record.membership_id||record.invitation_id;
     const head=element('button',undefined,'mx-ag-ops-band-head');head.type='button';head.disabled=pendingUi>0;head.setAttribute('aria-expanded','false');
-    const avatar=element('span',initials(invitation?'?':name),'mx-ag-ops-avatar');avatar.setAttribute('aria-hidden','true');
+    const avatar=element('span',initials(invitation?'?':name),'mx-ag-ops-avatar');avatar.setAttribute('aria-hidden','true');if(position)avatar.style.borderColor='var(--agenda-origin-operator-0'+position+')';
     const summary=element('span',undefined,'mx-ag-ops-band-summary'),title=element('span',undefined,'mx-ag-ops-band-title');title.append(element('span',legacy?(legacyStatuses[status]||'Estado desconocido'):statuses[status]||'Estado desconocido','mx-ag-ops-status-pill '+(status==='active'?'is-active':'is-paused')),element('strong',name));summary.append(title,element('span',legacy?'Registro anterior del consultorio':invitation?'Contacto invitado · aún no es integrante':(record.role_code==='administrator'?'Administrador':'Operador')+(revoked?' · histórico':' · 1 plaza'),'mx-ag-ops-band-contact'));
     head.append(avatar,summary,element('span','expand_more','material-symbols-rounded mx-ag-ops-band-chevron'));
     const detail=element('div',undefined,'mx-ag-ops-band-panel d-none');detail.id='ag_ops_profile_'+(++detailSequence);head.setAttribute('aria-controls',detail.id);
     const facts=element('dl',undefined,'row small mb-0');
-    const fact=(label,value)=>facts.append(element('dt',label,'col-sm-5 mb-1'),element('dd',value,'col-sm-7 mb-1 text-break'));
-    fact(legacy?'Alias histórico':'Alias de equipo',legacy?record.alias:'Pendiente de definir');
+    const fact=(label,value)=>{const dd=element('dd',undefined,'col-sm-7 mb-1 text-break');if(value instanceof Node)dd.append(value);else dd.textContent=value;facts.append(element('dt',label,'col-sm-5 mb-1'),dd);};
+    fact(legacy?'Alias histórico':'Alias de equipo',legacy?record.alias:record.personal_alias||'Pendiente de definir');
     fact('Fotografía','Se muestran iniciales; la foto privada aún no está habilitada.');
-    fact('Posición y color','Asignación no disponible en esta consulta.');
+    const seat=element('span',undefined,'mx-ag-origin-item');if(position){seat.append(element('span',undefined,'mx-ag-origin-dot mx-ag-origin-dot--operator-0'+position),document.createTextNode('Operador 0'+position+(record.presentation_released?' · asignación histórica':'')));}else seat.textContent='Asignación no disponible en esta consulta.';fact('Posición y color',seat);
     if(!legacy){
       fact('Tipo de integrante',record.role_code==='administrator'?'Administrador':'Operador');
       fact('Estado',statuses[status]||'No disponible');
@@ -88,10 +90,11 @@
     const actions=element('div',undefined,'mx-ag-ops-card-foot');
     if(!legacy)detail.append(element('p',invitation?(status==='pending'?'Reserva una plaza hasta su vencimiento. Aún no tiene acceso.':'Esta invitación ya no reserva una plaza.'):revoked?'Fuera del equipo. Su historial se conserva y la plaza está libre.':status==='suspended'?'Acceso pausado. Conserva su plaza y no puede utilizar los permisos.':'Los permisos efectivos dependen del estado actual de la cuenta, del nombramiento y del plan.','small mb-0'));
     if(ui.can_manage&&service&&!legacy){
-      const future=element('details',undefined,'small');future.append(element('summary','Alias y fotografía · pendientes de habilitación'));
-      for(const text of ['Editar alias','Cambiar foto','Quitar foto']){const b=element('button',text,'btn btn-outline-secondary btn-sm me-1 mt-1');b.type='button';b.disabled=true;b.setAttribute('data-ops-unavailable','');future.append(b);}
+      const future=element('details',undefined,'small');future.append(element('summary',aliasReady?'Fotografía · pendiente de habilitación':'Alias y fotografía · pendientes de habilitación'));
+      for(const text of [...(aliasReady?[]:['Editar alias']),'Cambiar foto','Quitar foto']){const b=element('button',text,'btn btn-outline-secondary btn-sm me-1 mt-1');b.type='button';b.disabled=true;b.setAttribute('data-ops-unavailable','');future.append(b);}
       if(!revoked&&!invitation)detail.append(future);
     }
+    if(aliasReady&&!legacy&&!invitation&&status==='active'&&record.presentation_id)actions.append(button('Editar alias',()=>edit(record,'alias')));
     if(ui.can_manage&&service&&!revoked&&!legacy&&(kind==='member'&&['active','suspended'].includes(status)||invitation&&status==='pending')){actions.append(button(invitation?'Cambiar oferta / reexpedir':'Editar permisos',()=>edit(record,kind)));
       if(kind==='member'){actions.append(button(record.status==='suspended'?'Reactivar':'Suspender',async()=>{await command(record.status==='suspended'?'reactivate':'suspend',{membership_id:record.membership_id,expected_revision:record.revision});await refresh();notify('Estado actualizado.');}));actions.append(button('Revocar',async()=>{if(!confirm('¿Revocar el nombramiento y liberar la plaza?'))return;await command('revoke',{membership_id:record.membership_id,expected_revision:record.revision});await refresh();},'btn btn-outline-danger btn-sm'));}
       else actions.append(button('Cancelar invitación',async()=>{await command('cancel',{invitation_id:record.invitation_id});await refresh();}));
@@ -119,7 +122,7 @@
     if(ui.service_ready&&ui.can_manage&&service){
       $('ag_ops_empty_invite').addEventListener('click',()=>{resetEditor();$('ag_ops_email').focus();});
       $('ag_ops_add_btn').addEventListener('click',resetEditor);$('ag_ops_form_cancel_btn').addEventListener('click',resetEditor);$('ag_ops_refresh').addEventListener('click',()=>run(refresh));
-      $('ag_ops_save_btn').addEventListener('click',()=>run(async()=>{notify('Guardando cambios…');const caps=Array.from(document.querySelectorAll('[data-operator-grant]:checked'),e=>e.dataset.operatorGrant);if(!editing){const email=$('ag_ops_email');if(!email.reportValidity()||!email.value.trim())throw new Error('Ingresa el correo del invitado.');await command('invite',{email:email.value.trim(),role:$('ag_ops_role').value,capabilities:caps});}else{const {record,kind}=editing;await command(kind==='invitation'?'reissue':record.grant_status==='review_required'?'review':'grants',kind==='invitation'?{invitation_id:record.invitation_id,email:record.email_normalized,role:record.role_code,capabilities:caps}:{membership_id:record.membership_id,expected_revision:record.revision,capabilities:caps});}resetEditor();await refresh();notify('Cambio guardado y confirmado.');}));
+      $('ag_ops_save_btn').addEventListener('click',()=>run(async()=>{notify('Guardando cambios…');const caps=Array.from(document.querySelectorAll('[data-operator-grant]:checked'),e=>e.dataset.operatorGrant);if(editing?.kind==='alias'){await command('rename',{membership_id:editing.record.membership_id,expected_presentation_revision:editing.record.presentation_revision,alias:$('ag_ops_alias').value});}else if(!editing){const email=$('ag_ops_email');if(!email.reportValidity()||!email.value.trim())throw new Error('Ingresa el correo del invitado.');await command('invite',{email:email.value.trim(),role:$('ag_ops_role').value,capabilities:caps,...(aliasReady?{alias:$('ag_ops_alias').value}:{})});}else{const {record,kind}=editing;await command(kind==='invitation'?'reissue':record.grant_status==='review_required'?'review':'grants',kind==='invitation'?{invitation_id:record.invitation_id,email:record.email_normalized,role:record.role_code,capabilities:caps,...(aliasReady?{alias:$('ag_ops_alias').value}:{})}:{membership_id:record.membership_id,expected_revision:record.revision,capabilities:caps});}resetEditor();await refresh();notify('Cambio guardado y confirmado.');}));
     }else{
       const legacy=ui.legacy;
       // Do not modify, migrate or treat browser cache as Identity authority.

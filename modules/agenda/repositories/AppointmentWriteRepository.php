@@ -62,7 +62,7 @@ class AppointmentWriteRepository
         $this->clinicalEncounterBridge = new ClinicalEncounterBridge($config);
     }
 
-    public function createAppointment(array $payload, ?string $requestKey = null, ?string $requestHash = null): array
+    public function createAppointment(array $payload, ?string $requestKey = null, ?string $requestHash = null, ?\Agenda\Contracts\AppointmentCreatorSnapshot $creator = null): array
     {
         $this->ensureAppointmentsTable();
         $this->ensureEventsTable();
@@ -102,6 +102,13 @@ class AppointmentWriteRepository
         if ($ownsTransaction) $this->pdo->beginTransaction();
         try {
             $this->insert($this->appointmentsTable, $appointmentData);
+            if($creator!==null){
+                $snapshot=$creator->values;
+                if($snapshot['profile_doctor_id']!==$appointmentData['doctor_id']||$snapshot['creator_account_id']!==$appointmentData['created_by_id'])throw new RuntimeException('appointment_creator_scope_mismatch');
+                $snapshot=['appointment_id'=>$appointmentId]+$snapshot;
+                if(array_diff(array_keys($snapshot),$this->getColumns('agenda_appointment_creator_snapshots'))!==[])throw new RuntimeException('appointment_creator_migration_required');
+                $this->insert('agenda_appointment_creator_snapshots',$snapshot);
+            }
             $this->appendEvent($appointmentId, $payload, $createdAt);
             if ($ownsTransaction) $this->pdo->commit(); // commit within the try scope after all inserts succeed
         } catch (PDOException $e) {

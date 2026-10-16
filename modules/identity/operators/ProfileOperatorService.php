@@ -21,14 +21,22 @@ use PDO;
 final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
 {
     private AccountMembershipRepository $memberships;
+    private OperatorPresentationRepository $presentations;
+    private bool $presentationReady;
+    private bool $originReady;
     private const SOURCE = 'owner_operator_invitation';
-    private const ACTIONS = ['invite','reissue','cancel','accept','reject','grants','suspend','reactivate','revoke','review'];
+    private const ACTIONS = ['invite','reissue','cancel','accept','reject','grants','suspend','reactivate','revoke','review','rename'];
 
     private function __construct(private PDO $pdo, private SessionService $sessions,
         private CsrfTokenService $csrf, private CanonicalAuditWriter $audit,
         private \Identity\Contracts\IdentityNotificationPort $notifications, private Clock $clock,
         private string $origin='https://op01.example.invalid')
-    { $this->memberships = new AccountMembershipRepository($pdo); }
+    {
+        $this->memberships = new AccountMembershipRepository($pdo);
+        $this->presentations = new OperatorPresentationRepository($pdo);
+        $this->presentationReady = $this->presentations->ready();
+        $this->originReady = $this->presentationReady && (int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='agenda_appointment_creator_snapshots'")->fetchColumn()===1;
+    }
 
     public static function compose(PDO $pdo, SessionService $sessions, CsrfTokenService $csrf,
         CanonicalAuditWriter $audit, InMemoryIdentityNotificationAdapter $notifications, Clock $clock): self
@@ -67,6 +75,9 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         // Hash the canonical payload, including token digest, without persisting its contents.
         ksort($input,SORT_STRING);
         $requestHash=hash('sha256',json_encode([$action,$input],JSON_THROW_ON_ERROR));
+        foreach(['seat_position','presentation_id','personal_alias','creator_snapshot','creator_account_id','snapshot_version','origin_visual_key'] as $field)
+            if(array_key_exists($field,$input))throw new \InvalidArgumentException('operator_presentation_client_authority_denied');
+        if(!$this->presentationReady&&(array_key_exists('alias',$input)||$action==='rename'))throw new \RuntimeException('operator_presentation_not_ready');
         $notification=null;
         $correlation=$this->uuid();
         try {
@@ -86,18 +97,27 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             if ($isResponse) {
                 $result=$this->respond($actor,$account,$profile,$owner,$action,$input,$correlation);
             } elseif (in_array($action,['invite','reissue'],true)) {
+                $preferredPosition=null;
                 if ($action==='reissue') {
                     $old=$this->invitation($profile,(string)($input['invitation_id']??''));
                     $this->pending($old,$owner);
+                    if($this->presentationReady)$preferredPosition=$this->presentations->invitation($profile,$old['invitation_id'])['seat_position']??null;
                     $this->closeInvitation($old,'cancelled',$actor,$correlation,'OFFER_REPLACED');
                     if (($input['email']??'')!==$old['email_normalized']) throw new \RuntimeException('operator_reissue_contact_changed');
                 }
-                [$result,$notification]=$this->invite($actor,$profile,$owner,$input,$correlation);
+                [$result,$notification]=$this->invite($actor,$profile,$owner,$input,$correlation,$preferredPosition===null?null:(int)$preferredPosition);
             } elseif ($action==='cancel') {
                 $invite=$this->invitation($profile,(string)($input['invitation_id']??''));
                 $this->pending($invite,$owner);
                 $this->closeInvitation($invite,'cancelled',$actor,$correlation,'OWNER_REQUEST');
                 $result=['invitation_id'=>$invite['invitation_id'],'status'=>'cancelled'];
+            } elseif($action==='rename') {
+                $m=$this->memberships->lockProfileMembership((string)($input['membership_id']??''));
+                if(!$m||$m['profile_doctor_id']!==$profile||$m['account_id']===$actor->accountId()||$m['status']!=='active'||$m['assignment_source']!==self::SOURCE||$m['scope_code']!=='profile'||$m['entity_group_id']!==null||!in_array($m['role_code'],['administrator','collaborator'],true))throw new \RuntimeException('operator_membership_denied');
+                if(!is_int($input['expected_presentation_revision']??null))throw new \InvalidArgumentException('operator_presentation_revision_required');
+                $presentation=$this->presentations->rename($profile,$m['membership_id'],$input['expected_presentation_revision'],$input['alias']??null,$this->now());
+                $this->event('rename',$actor,$profile,$correlation,$m['membership_id'],$presentation['invitation_id'],(int)$presentation['revision'],$owner['membership_id'],[],'OWNER_REQUEST',OperatorPresentationRepository::projection($presentation));
+                $result=OperatorPresentationRepository::projection($presentation)+['membership_id'=>$m['membership_id']];
             } else {
                 $result=$this->manage($actor,$profile,$owner,$action,$input,$correlation);
             }
@@ -168,9 +188,10 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             if ($a['email_normalized']!==$i['email_normalized']||!hash_equals($i['token_hash'],$this->tokenHash($id,$profile,$i['offer_hash'],$token)))
                 throw new \RuntimeException('operator_invitation_unavailable');
             $p=$this->one('SELECT display_name FROM profiles_doctors WHERE doctor_id=?',[$profile]);
+            $presentation=$this->presentationReady?$this->presentations->invitation($profile,$id):null;
             $this->pdo->commit();
             return ['invitation_id'=>$id,'profile_id'=>$profile,'physician'=>$p['display_name'],'role'=>$i['role_code'],
-                'capabilities'=>json_decode($i['offered_capabilities'],true,512,JSON_THROW_ON_ERROR),'offer_revision'=>(int)$i['offer_revision'],'expires_at'=>$i['expires_at']];
+                'capabilities'=>json_decode($i['offered_capabilities'],true,512,JSON_THROW_ON_ERROR),'offer_revision'=>(int)$i['offer_revision'],'expires_at'=>$i['expires_at'],'presentation_ready'=>$this->presentationReady]+OperatorPresentationRepository::projection($presentation);
         } catch (\Throwable $e) {if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
 
@@ -193,11 +214,21 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             foreach(ProfileOperatorCapabilityCatalog::KEYS as $key)$caps[$key]=$owner?($plan['feature_access']['agenda_appointments']['available']??false)===true:$this->permits($session,$profile,$profile,$key);
         }
         $inbox=$this->all("SELECT i.invitation_id,i.profile_doctor_id,p.display_name,i.expires_at,i.offered_capabilities,o.opened_at FROM auth_profile_operator_invitations i JOIN auth_operator_invitation_outbox o ON o.invitation_id=i.invitation_id JOIN profiles_doctors p ON p.doctor_id=i.profile_doctor_id WHERE i.email_normalized=? AND i.status='pending' AND i.expires_at>UTC_TIMESTAMP(6) ORDER BY i.created_at",[$account['email_normalized']]);
-        foreach($inbox as &$i)$i['capabilities']=json_decode($i['offered_capabilities'],true);unset($i);
-        return ['account_id'=>$account['account_id'],'alias'=>explode('@',$account['email_normalized'])[0],
+        foreach($inbox as &$i){
+            $i['capabilities']=json_decode($i['offered_capabilities'],true);
+            $p=$this->presentationReady?$this->one('SELECT * FROM auth_profile_operator_presentations WHERE profile_doctor_id=? AND invitation_id=?',[$i['profile_doctor_id'],$i['invitation_id']]):null;
+            $i+=OperatorPresentationRepository::projection($p);
+        }unset($i);
+        $presentation=$this->presentationReady&&$m!==null?$this->one('SELECT * FROM auth_profile_operator_presentations WHERE profile_doctor_id=? AND membership_id=?',[$m['profile_doctor_id'],$m['membership_id']]):null;
+        $roster=[];
+        if($this->presentationReady&&$m!==null&&($owner||in_array(true,$caps,true)))
+            $roster=$this->all("SELECT p.seat_position,p.alias_display personal_alias FROM auth_profile_operator_presentations p JOIN auth_account_memberships m ON m.membership_id=p.membership_id AND m.profile_doctor_id=p.profile_doctor_id WHERE p.profile_doctor_id=? AND p.released_at IS NULL AND m.status IN ('active','suspended') AND m.assignment_source=? ORDER BY p.seat_position",[$m['profile_doctor_id'],self::SOURCE]);
+        foreach($roster as &$row)$row['seat_position']=(int)$row['seat_position'];unset($row);
+        return ['presentation_ready'=>$this->presentationReady,'creator_snapshots_ready'=>$this->originReady,'operator_presentations'=>$roster,
+            'account_id'=>$account['account_id'],'alias'=>$presentation['alias_display']??($owner?explode('@',$account['email_normalized'])[0]:'Operador'),
             'profile'=>$m===null?null:['id'=>$m['profile_doctor_id'],'name'=>$m['display_name']],
             'owner'=>$owner,'membership_id'=>$m['membership_id']??null,'status'=>$m['status']??'unassigned',
-            'grant_revision'=>$owner?0:$revision,'capabilities'=>$caps,'inbox'=>$inbox];
+            'grant_revision'=>$owner?0:$revision,'capabilities'=>$caps,'inbox'=>$inbox]+OperatorPresentationRepository::projection($presentation);
     }
 
     public function overview(string $session,string $profile): array
@@ -208,10 +239,11 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             if($owner['account_id']!==$d->context()->accountId())throw new \RuntimeException('operator_owner_required');
             $this->expire($profile,$d->context(),$this->uuid());
             $pending=$this->all("SELECT invitation_id,email_normalized,role_code,offered_capabilities,created_at,expires_at,offer_revision,status FROM auth_profile_operator_invitations WHERE profile_doctor_id=? AND status='pending' ORDER BY created_at",[$profile]);
-            foreach($pending as &$i){$i['alias']=explode('@',$i['email_normalized'])[0];$i['capabilities']=json_decode($i['offered_capabilities'],true);}unset($i);
+            foreach($pending as &$i){$i['alias']=explode('@',$i['email_normalized'])[0];$i['capabilities']=json_decode($i['offered_capabilities'],true);$i+=OperatorPresentationRepository::projection($this->presentationReady?$this->presentations->invitation($profile,$i['invitation_id']):null);}unset($i);
             $members=$this->all("SELECT m.membership_id,m.account_id,m.role_code,m.status,a.email_normalized,a.status account_status,a.email_verified_at FROM auth_account_memberships m JOIN auth_accounts a ON a.account_id=m.account_id WHERE m.profile_doctor_id=? AND m.assignment_source=? ORDER BY m.created_at",[$profile,self::SOURCE]);
             foreach($members as &$m){$r=$this->one('SELECT * FROM auth_profile_operator_grant_revisions WHERE membership_id=? ORDER BY revision DESC LIMIT 1',[$m['membership_id']]);
-                $m['alias']=explode('@',$m['email_normalized'])[0];
+                $m+=OperatorPresentationRepository::projection($this->presentationReady?$this->presentations->membership($profile,$m['membership_id']):null);
+                $m['alias']=$m['personal_alias']??'Operador sin alias';
                 $m['contact_verified']=$m['email_verified_at']!==null;unset($m['email_normalized'],$m['email_verified_at']);
                 $invitation=$r===null?null:$this->one('SELECT created_at,closed_at,status FROM auth_profile_operator_invitations WHERE invitation_id=? AND profile_doctor_id=? AND accepted_membership_id=?',[$r['invitation_id'],$profile,$m['membership_id']]);
                 $m['invited_at']=$invitation['created_at']??null;
@@ -228,7 +260,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
                     &&($plan['feature_access']['agenda_appointments']['available']??false)===true)?$member['capabilities']:[];
             }unset($member);
             $total=$this->seats($profile);$this->pdo->commit();
-            return ['limit'=>2,'occupied'=>$total-count($pending),'reserved'=>count($pending),'available'=>max(0,2-$total),'invitations'=>$pending,'members'=>$members];
+            return ['presentation_ready'=>$this->presentationReady,'limit'=>2,'occupied'=>$total-count($pending),'reserved'=>count($pending),'available'=>max(0,2-$total),'invitations'=>$pending,'members'=>$members];
         }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
 
@@ -245,7 +277,13 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             if($expectedRevision!==$revision)throw new \RuntimeException('operator_revision_conflict');
             $plan=(new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository($this->pdo),$this->clock->now()))->resolveForEntity('doctor',$profile);
             if(($plan['feature_access']['agenda_appointments']['available']??false)!==true||(!$isOwner&&!$this->permits($session,$profile,$profile,$capability)))throw new \RuntimeException('operator_capability_denied');
-            $result=$business(['account_id'=>$actor->accountId(),'membership_id'=>$m['membership_id'],'role'=>$isOwner?'owner':'operator','grant_revision'=>$revision]);
+            $creator=null;
+            if($this->originReady){
+                require_once dirname(__DIR__,2).'/agenda/contracts/AppointmentCreatorSnapshot.php';
+                $presentation=$isOwner?null:$this->presentations->membership($profile,$m['membership_id']);
+                $creator=\Agenda\Contracts\AppointmentCreatorSnapshot::fromCanonical($actor,$m,$presentation,$this->now());
+            }
+            $result=$business(['creator_snapshot'=>$creator,'account_id'=>$actor->accountId(),'membership_id'=>$m['membership_id'],'role'=>$isOwner?'owner':'operator','grant_revision'=>$revision]);
             if(($result['ok']??false)!==true)throw new \DomainException((string)($result['error']??'agenda_write_failed'));
             $correlation=$this->uuid();
             $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$m['role_code'],'profile',$correlation,$correlation,(string)$actor->session()->sessionId(),null,null,'AGENDA','isolated/operators/agenda');
@@ -260,7 +298,11 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
     {
         if ($transaction!==$this->pdo||!$transaction->inTransaction()) throw new \RuntimeException('operator_owner_boundary_transaction_required');
         $this->lockProfile($profileId);
-        $this->owner($profileId); // Ambiguous/ownerless transitions cannot keep delegation alive.
+        $newOwner=$this->owner($profileId); // Ambiguous/ownerless transitions cannot keep delegation alive.
+        if($this->presentationReady){
+            foreach($this->all("SELECT p.invitation_id FROM auth_profile_operator_presentations p JOIN auth_account_memberships m ON m.membership_id=p.membership_id WHERE p.profile_doctor_id=? AND p.released_at IS NULL AND (m.status='revoked' OR m.account_id=?)",[$profileId,$newOwner['account_id']]) as $row)
+                $this->presentations->release($profileId,$row['invitation_id'],$this->now());
+        }
         if ($this->seats($profileId)>2) throw new \RuntimeException('operator_owner_transition_quota_conflict');
         foreach ($this->all("SELECT * FROM auth_profile_operator_invitations WHERE profile_doctor_id=? AND status='pending' FOR UPDATE",[$profileId]) as $i)
             $this->closeInvitation($i,'cancelled',$actor,$correlation,'OWNER_CHANGED');
@@ -271,7 +313,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         }
     }
 
-    private function invite(AuthenticatedAccessContext $actor,string $profile,array $owner,array $input,string $correlation): array
+    private function invite(AuthenticatedAccessContext $actor,string $profile,array $owner,array $input,string $correlation,?int $preferredPosition=null): array
     {
         $email=IdentityAccount::normalizeEmail((string)($input['email']??''));
         // Synthetic-only composition. Never emit a real address, even if a caller supplies one.
@@ -286,13 +328,15 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             throw new \RuntimeException('operator_invitation_unavailable');
         if ($this->seats($profile)>=2) throw new \RuntimeException('operator_quota_exceeded');
         $id=OneTimeTokenCodec::id('opinvite_');$raw=OneTimeTokenCodec::issue();
-        $offer=hash('sha256',json_encode([$profile,$owner['membership_id'],$role,$caps,1],JSON_THROW_ON_ERROR));
+        $alias=$this->presentationReady?OperatorAlias::normalize($input['alias']??null):['display'=>null,'key'=>null];
+        $offer=hash('sha256',json_encode([$profile,$owner['membership_id'],$role,$caps,1,$this->presentationReady?['presentation_version'=>1,'alias'=>$alias['display']]:null],JSON_THROW_ON_ERROR));
         $created=$this->clock->now();
         $expires=$created->modify('+7 days')->format('Y-m-d H:i:s.u');
         $this->exec('INSERT INTO auth_profile_operator_invitations(invitation_id,profile_doctor_id,owner_membership_id,email_normalized,role_code,offered_capabilities,offer_hash,token_hash,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
             [$id,$profile,$owner['membership_id'],$email,$role,json_encode($caps,JSON_THROW_ON_ERROR),$offer,$this->tokenHash($id,$profile,$offer,$raw),$created->format('Y-m-d H:i:s.u'),$expires]);
-        $this->event('invite',$actor,$profile,$correlation,null,$id,1,$owner['membership_id'],$caps,'OWNER_REQUEST');
-        return [['invitation_id'=>$id,'status'=>'pending','offer_revision'=>1,'role'=>$role,'capabilities'=>$caps,'expires_at'=>$expires],
+        $presentation=$this->presentationReady?$this->presentations->reserve($profile,$id,$alias,$this->now(),$preferredPosition):null;
+        $this->event('invite',$actor,$profile,$correlation,null,$id,1,$owner['membership_id'],$caps,'OWNER_REQUEST',OperatorPresentationRepository::projection($presentation));
+        return [['invitation_id'=>$id,'status'=>'pending','offer_revision'=>1,'role'=>$role,'capabilities'=>$caps,'expires_at'=>$expires]+OperatorPresentationRepository::projection($presentation),
             new NotificationMessage(OneTimeTokenPurpose::OPERATOR_INVITATION,$email,$id.'.'.$raw,$expires)];
     }
 
@@ -315,11 +359,12 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         $this->memberships->create(new AccountMembership($id,$actor->accountId(),CanonicalProfileReference::profile($profile),$i['role_code'],'profile','active',self::SOURCE));
         // Convert reservation to membership while holding the profile lock, never double count.
         $this->exec("UPDATE auth_profile_operator_invitations SET status='accepted',closed_at=?,accepted_membership_id=? WHERE invitation_id=? AND status='pending'",[$this->now(),$id,$i['invitation_id']]);
+        $presentation=$this->presentationReady?$this->presentations->accept($profile,$i['invitation_id'],$id,$input['alias']??null,$this->now()):null;
         $caps=ProfileOperatorCapabilityCatalog::normalize(json_decode($i['offered_capabilities'],true,512,JSON_THROW_ON_ERROR));
         $this->revision($id,$i['invitation_id'],$owner['membership_id'],1,$caps,null);
-        $this->event('accept',$actor,$profile,$correlation,$id,$i['invitation_id'],1,$owner['membership_id'],$caps,'INVITEE_DECISION');
+        $this->event('accept',$actor,$profile,$correlation,$id,$i['invitation_id'],1,$owner['membership_id'],$caps,'INVITEE_DECISION',OperatorPresentationRepository::projection($presentation));
         $this->event('grants',$actor,$profile,$correlation,$id,$i['invitation_id'],1,$owner['membership_id'],$caps,'OFFER_ACCEPTED');
-        return ['invitation_id'=>$i['invitation_id'],'membership_id'=>$id,'status'=>'accepted','grant_revision'=>1];
+        return ['invitation_id'=>$i['invitation_id'],'membership_id'=>$id,'status'=>'accepted','grant_revision'=>1]+OperatorPresentationRepository::projection($presentation);
     }
 
     private function manage(AuthenticatedAccessContext $actor,string $profile,array $owner,string $action,array $input,string $correlation): array
@@ -347,6 +392,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
             $next=['suspend'=>'suspended','reactivate'=>'active','revoke'=>'revoked'][$action];
             if ($next==='active'&&($r['status']!=='active'||$r['owner_membership_id']!==$owner['membership_id'])) throw new \RuntimeException('operator_owner_review_required');
             if (!$this->memberships->transitionOperatorStatus($m['membership_id'],$m['account_id'],$profile,$m['status'],$next)) throw new \RuntimeException('operator_lifecycle_conflict');
+            if($next==='revoked'&&$this->presentationReady)$this->presentations->release($profile,$r['invitation_id'],$this->now());
             if ($next==='revoked') $this->exec("UPDATE auth_profile_operator_grant_revisions SET status='revoked' WHERE revision_id=?",[$r['revision_id']]);
         }
         $this->event($action,$actor,$profile,$correlation,$m['membership_id'],$r['invitation_id'],$newRevision,$owner['membership_id'],$caps,'OWNER_REQUEST');
@@ -420,13 +466,14 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
     {
         if ($this->exec('UPDATE auth_profile_operator_invitations SET status=?,closed_at=? WHERE invitation_id=? AND status=\'pending\'',[$status,$this->now(),$i['invitation_id']])!==1)
             throw new \RuntimeException('operator_invitation_state_conflict');
+        if($this->presentationReady)$this->presentations->release($i['profile_doctor_id'],$i['invitation_id'],$this->now());
         if($this->notifications instanceof IsolatedInvitationOutbox)$this->notifications->retire($i['invitation_id']);
         $this->event($status,$actor,$i['profile_doctor_id'],$correlation,null,$i['invitation_id'],1,$i['owner_membership_id'],[],$reason);
     }
-    private function event(string $action,AuthenticatedAccessContext $actor,string $profile,string $correlation,?string $membership,?string $invitation,int $revision,string $owner,array $caps,string $reason): void
+    private function event(string $action,AuthenticatedAccessContext $actor,string $profile,string $correlation,?string $membership,?string $invitation,int $revision,string $owner,array $caps,string $reason,array $presentation=[]): void
     {
         $types=['invite'=>'INVITATION_CREATED','accept'=>'INVITATION_ACCEPTED','cancelled'=>'INVITATION_REVOKED','rejected'=>'INVITATION_REVOKED','expired'=>'INVITATION_REVOKED',
-            'grants'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','suspend'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','reactivate'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','revoke'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','review'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','owner_review_required'=>'PROFILE_OPERATOR_DELEGATION_CHANGED'];
+            'grants'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','suspend'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','reactivate'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','revoke'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','review'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','owner_review_required'=>'PROFILE_OPERATOR_DELEGATION_CHANGED','rename'=>'PROFILE_OPERATOR_DELEGATION_CHANGED'];
         $type=$types[$action]??throw new \InvalidArgumentException('operator_audit_action_unknown');
         $actorMembership=$this->one("SELECT membership_id,role_code FROM auth_account_memberships WHERE account_id=? AND profile_doctor_id=? AND status='active' ORDER BY membership_id LIMIT 1",[$actor->accountId(),$profile]);
         $staff=$actorMembership===null?$this->one("SELECT governance_class FROM internal_staff WHERE account_id=? AND status='ACTIVE'",[$actor->accountId()]):null;
@@ -436,7 +483,7 @@ final class ProfileOperatorService implements ProfileOperatorOwnershipBoundary
         $this->audit->append(new CanonicalAuditEventInput($type,'SUCCESS',$action==='accept'?'USER_REQUEST':($reason==='OWNER_CHANGED'?'SECURITY_RESPONSE':'ADMIN_DECISION'),
             'profile_doctor',$profile,'profile_doctor',$profile,
             ['operator_action'=>$action,'actor_membership_id'=>$actorMembership['membership_id']??null,'profile_doctor_id'=>$profile,'membership_id'=>$membership,'invitation_id'=>$invitation,'grant_revision'=>$revision,
-                'owner_membership_id'=>$owner,'capabilities'=>$caps,'operation_reason'=>$reason]),$context);
+                'owner_membership_id'=>$owner,'capabilities'=>$caps,'operation_reason'=>$reason]+$presentation),$context);
     }
     private function tokenHash(string $id,string $profile,string $offer,string $token): string
     { return hash('sha256',$id.'|'.$profile.'|'.$offer.'|'.OneTimeTokenCodec::hash($token)); }
