@@ -263,6 +263,8 @@ Valkey adapters remain current architecture/evidence and may be selected only by
 
 ## 6. Physician accreditation
 
+**C4-EV01:** the [protected evidence foundation](../identity/C4-EV01-protected-evidence-foundation.md) implements private versioned intake, canonical email reuse, provider-independent phone OTP, immutable origin, one authorized staff review and independent one-time confirmation. This is source/disposable QA only: no full C4 router, admission/binding issuer, normal-local DDL or real authority activation. Operational SMS/key custody/retention, new-profile resolution and exceptional procedures remain separate dependencies.
+
 **C4-ADM02-IMP01 checkpoint (2026-10-16):** bounded source implementation is authorized; normal-local deployment is not. The [issuer audit](../identity/C4-ADM02-IMP01-issuer-readiness.md) stopped the affected component on protected evidence and unresolved contact/origin prerequisites. No accreditation issuer, professional-binding writer or owner-eligibility runtime connection was completed. Earlier `C4_IMPLEMENTATION_AUTHORIZED=false` markers describe the prior full-phase status; this authorization does not close full C4 or activate signing.
 
 Base accreditation requires official identity plus professional-license validation. Additional evidence is requested only when required. A license match is a strong identifier, not automatic accreditation or ownership.

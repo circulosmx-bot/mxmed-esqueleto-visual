@@ -33,10 +33,14 @@ final class GovernanceDeploymentAuthorization
     public static function sourceHash():string
     {
         $root=dirname(__DIR__,3);$files=[];
-        foreach(['services','adapters','contracts','http','repositories'] as $dir)$files=array_merge($files,glob($root.'/modules/identity/'.$dir.'/*.php'));
+        foreach(['services','adapters','contracts','http','repositories','Accreditation'] as $dir)$files=array_merge($files,glob($root.'/modules/identity/'.$dir.'/*.php'));
         foreach(['api/identity/governance.php','scripts/governance-ceremony.php','scripts/normal-local-https-proxy.py',
             'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql',
-            'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql'] as $path)$files[]=$root.'/'.$path;
+            'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql',
+            'modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql',
+            'modules/media/storage/LocalPersistentPrivateMediaStorage.php','modules/media/contracts/PrivateMediaStoragePort.php',
+            'modules/platform/services/CanonicalAuditPolicyRegistry.php','modules/platform/contracts/CanonicalAuditEventType.php',
+            'modules/platform/services/SourceModuleCatalog.php','modules/platform/services/CorrelatableOperationCatalog.php'] as $path)$files[]=$root.'/'.$path;
         sort($files);$hash=[];foreach($files as $f)$hash[substr($f,strlen($root)+1)]=hash_file('sha256',$f);
         return hash('sha256',json_encode($hash,JSON_THROW_ON_ERROR));
     }

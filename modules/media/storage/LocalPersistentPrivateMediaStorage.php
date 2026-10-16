@@ -44,7 +44,7 @@ final class LocalPersistentPrivateMediaStorage implements PrivateMediaStoragePor
     private function path(string $key, bool $create = false): string
     {
         $uuid = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
-        if (!preg_match('#^private/signatures/[a-f0-9]{64}/'.$uuid.'\.png$#', $key) && !preg_match('#^private/media-review/[a-f0-9]{64}/'.$uuid.'/(?:(?:source|corrected)/'.$uuid.'\.(?:jpeg|png|webp)|(?:review|auto_proposal)/'.$uuid.'\.webp|improvement_input/'.$uuid.'\.png)$#', $key)) {
+        if (!preg_match('#^private/physician-evidence/[a-f0-9]{64}/'.$uuid.'/'.$uuid.'\.enc$#', $key) && !preg_match('#^private/signatures/[a-f0-9]{64}/'.$uuid.'\.png$#', $key) && !preg_match('#^private/media-review/[a-f0-9]{64}/'.$uuid.'/(?:(?:source|corrected)/'.$uuid.'\.(?:jpeg|png|webp)|(?:review|auto_proposal)/'.$uuid.'\.webp|improvement_input/'.$uuid.'\.png)$#', $key)) {
             throw new RuntimeException('invalid_private_media_storage_key');
         }
         $target = $this->root.'/'.$key;
@@ -53,10 +53,10 @@ final class LocalPersistentPrivateMediaStorage implements PrivateMediaStoragePor
             $cursor .= '/'.$component;
             if (is_link($cursor)) throw new RuntimeException('private_media_symlink_forbidden');
             if ($create && !is_dir($cursor)) {
-                if (!mkdir($cursor, 0700) && !is_dir($cursor)) throw new RuntimeException('private_media_directory_failed');
+                if (!@mkdir($cursor, 0700) && !is_dir($cursor)) throw new RuntimeException('private_media_directory_failed');
             }
             if ($create && ($cursor === $this->root || str_starts_with($cursor, $this->root.'/'))) {
-                if (!chmod($cursor, 0700)) throw new RuntimeException('private_media_permissions_failed');
+                if (!@chmod($cursor, 0700)) throw new RuntimeException('private_media_permissions_failed');
             }
         }
         if (is_link($target)) throw new RuntimeException('private_media_symlink_forbidden');
@@ -68,15 +68,16 @@ final class LocalPersistentPrivateMediaStorage implements PrivateMediaStoragePor
         $target = $this->path($storageKey, true);
         $temporary = dirname($target).'/.'.bin2hex(random_bytes(16)).'.tmp';
         try {
-            $handle = fopen($temporary, 'x+b');
+            $handle = @fopen($temporary, 'x+b');
             if ($handle === false) throw new RuntimeException('private_media_temp_failed');
             fclose($handle);
-            if (!chmod($temporary, 0600) || !copy($sourcePath, $temporary)) throw new RuntimeException('private_media_copy_failed');
-            if (hash_file('sha256', $sourcePath) !== hash_file('sha256', $temporary)) throw new RuntimeException('private_media_integrity_failed');
+            if (!@chmod($temporary, 0600) || !@copy($sourcePath, $temporary)) throw new RuntimeException('private_media_copy_failed');
+            $sourceHash=@hash_file('sha256', $sourcePath);$targetHash=@hash_file('sha256', $temporary);
+            if (!is_string($sourceHash) || !is_string($targetHash) || !hash_equals($sourceHash,$targetHash)) throw new RuntimeException('private_media_integrity_failed');
             // Atomic no-clobber materialization on the same filesystem.
             if (!@link($temporary, $target)) throw new RuntimeException('private_media_immutable_store_failed');
         } finally {
-            if (is_file($temporary) && !unlink($temporary)) error_log('private_media_temp_cleanup_failed');
+            if (is_file($temporary) && !@unlink($temporary)) error_log('private_media_temp_cleanup_failed');
         }
     }
 
@@ -91,6 +92,6 @@ final class LocalPersistentPrivateMediaStorage implements PrivateMediaStoragePor
     public function delete(string $storageKey): void
     {
         $path = $this->path($storageKey);
-        if (is_file($path) && !unlink($path)) throw new RuntimeException('private_media_delete_failed');
+        if (is_file($path) && !@unlink($path)) throw new RuntimeException('private_media_delete_failed');
     }
 }
