@@ -31,6 +31,7 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
           <div class="form-actions"><button class="button" type="submit" data-submit>Iniciar sesión</button></div>
           <p class="auth-links" data-form-note aria-live="polite"><a href="recuperar-acceso.php">¿Olvidaste tu contraseña?</a><a href="crear-cuenta.php">Crear una cuenta</a></p>
         </form>
+        <p class="auth-links"><a href="/public/identity/perfil-medico.php">Consultar mi acreditación profesional</a></p>
       </section>
     </main>
     <footer class="prototype-footer"><a href="index.html">Volver al índice del prototipo</a></footer>

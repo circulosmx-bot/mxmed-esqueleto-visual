@@ -39,6 +39,9 @@ final class GovernanceDeploymentAuthorization
             'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql',
             'modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql',
             'modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql',
+            'api/identity/physician-onboarding.php','public/identity/perfil-medico.php',
+            'partials/identity/physician-onboarding.php','assets/js/identity/physician-onboarding.js',
+            'assets/css/physician-onboarding.css','public/identity/identity-access.js','internal/media-review/index.php',
             'modules/media/storage/LocalPersistentPrivateMediaStorage.php','modules/media/contracts/PrivateMediaStoragePort.php',
             'modules/platform/services/CanonicalAuditPolicyRegistry.php','modules/platform/contracts/CanonicalAuditEventType.php',
             'modules/platform/services/SourceModuleCatalog.php','modules/platform/services/CorrelatableOperationCatalog.php'] as $path)$files[]=$root.'/'.$path;

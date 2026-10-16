@@ -26,6 +26,7 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
           <div class="form-actions"><button class="button" type="submit" data-submit>Verificar correo</button></div>
           <p class="auth-links" data-form-note aria-live="polite"><a href="login.html">Volver a iniciar sesión</a></p>
         </form>
+        <p class="auth-links" data-onboarding-next hidden><a href="acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php">Continuar con mi acreditación profesional</a></p>
       </section>
     </main>
     <footer class="prototype-footer"><a href="index.html">Volver al índice del prototipo</a></footer>

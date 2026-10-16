@@ -35,6 +35,7 @@ $passwordMaximum = \Identity\Contracts\PasswordPolicy::MAX_LENGTH;
           <div class="form-actions"><button class="button" type="submit" data-submit>Crear cuenta</button></div>
           <p class="auth-links" data-form-note aria-live="polite"><a href="login.html">¿Ya tienes una cuenta? Inicia sesión</a></p>
         </form>
+        <p class="auth-links" data-onboarding-next hidden>Después de verificar tu correo, <a href="acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php">continúa con tu acreditación profesional</a>.</p>
       </section>
     </main>
     <footer class="prototype-footer"><a href="index.html">Volver al índice del prototipo</a></footer>

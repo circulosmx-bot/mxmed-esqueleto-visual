@@ -59,7 +59,7 @@ if (!$privateAccess->allowed) {
         : 'No fue posible validar el acceso en este momento.';
     echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Acceso no disponible</title>'
         . '<main><h1>Acceso no disponible</h1><p>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>'
-        . '<p><a href="/public/identity/acceso.php">Volver al acceso</a></p></main></html>';
+        . '<p><a href="/public/identity/acceso.php">Volver al acceso</a></p><p><a href="/public/identity/perfil-medico.php">Consultar mi acreditación profesional</a></p></main></html>';
     exit;
 }
 
@@ -1291,6 +1291,11 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
               <div class="tab-pane fade" id="t-info-profesional" role="tabpanel" aria-labelledby="t-info-formacion-tab">
 <p id="professional-information-feedback" class="small text-muted" role="status" aria-live="polite"></p>
+<section class="card mb-3" aria-labelledby="physician-accreditation-link-title"><div class="card-body">
+<h2 class="mx-section-heading" id="physician-accreditation-link-title">ACREDITACIÓN PROFESIONAL</h2>
+<p class="small text-muted">La acreditación profesional está pendiente de habilitación. Puedes consultar los pasos y el estado de tu cuenta. La designación como titular requiere una autorización independiente.</p>
+<a class="btn btn-outline-primary" href="/public/identity/perfil-medico.php">Consultar mi acreditación</a>
+</div></section>
 <div class="mx-professional-section" id="t-info-formacion" role="region" aria-labelledby="mx-professional-formacion-heading">
 <div class="mx-formation-header">
 <h2 class="mx-professional-heading mx-section-heading" id="mx-professional-formacion-heading"><span class="material-symbols-rounded" aria-hidden="true">edit_note</span>FORMACIÓN PROFESIONAL</h2>

@@ -10,6 +10,7 @@ require_once __DIR__.'/../../agenda/contracts/OtpProviderPort.php';
 /** Account/contact/version-bound SMS OTP. Real composition has no default delivery. */
 final class PhoneVerificationService
 {
+    public function usesConnection(PDO $pdo):bool {return $pdo===$this->a->pdo;}
     public function __construct(private EvidenceAuthority $a,private EvidenceCipher $cipher,
         private EvidenceAudit $audit,private OtpProviderPort $delivery=new RejectingOtpProvider())
     { if (!$audit->usesConnection($a->pdo)) throw new \RuntimeException('c4_audit_connection_mismatch'); }

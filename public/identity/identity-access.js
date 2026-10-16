@@ -98,7 +98,9 @@
       const parsed = new URL(raw, window.location.origin);
       if (parsed.origin !== window.location.origin) return '/private-app.php';
       const allowed = parsed.pathname === '/' || parsed.pathname === '/index.html'
-        || parsed.pathname === '/private-app.php' || parsed.pathname === '/provider/';
+        || parsed.pathname === '/private-app.php' || parsed.pathname === '/provider/'
+        || parsed.pathname === '/public/identity/perfil-medico.php'
+        || (parsed.pathname === '/internal/media-review/index.php' && parsed.search === '?section=acreditacion');
       return allowed ? parsed.pathname + parsed.search + parsed.hash : '/private-app.php';
     } catch (_) {
       return '/private-app.php';
@@ -112,7 +114,8 @@
     const session = await response.json().catch(() => ({}));
     if (!response.ok || session.authenticated !== true) throw new Error('session_validation_failed');
     const destination = safePrivateDestination();
-    if (destination !== '/provider/' && session.application_access?.allowed !== true) {
+    const onboarding = destination.startsWith('/public/identity/perfil-medico.php') || destination === '/internal/media-review/index.php?section=acreditacion';
+    if (destination !== '/provider/' && !onboarding && session.application_access?.allowed !== true) {
       throw new Error('professional_access_required');
     }
     const signal = JSON.stringify({ type: 'authenticated', at: Date.now() });
@@ -173,6 +176,10 @@
           return;
         }
         if (state === 'success' && (flow === 'verify' || flow === 'reset')) window.history.replaceState({}, document.title, window.location.pathname);
+        if (state === 'success' && (flow === 'create' || flow === 'verify')) {
+          const next = document.querySelector('[data-onboarding-next]');
+          if (next) next.hidden = false;
+        }
       } catch (_) {
         flowState(flow, 'error');
       } finally {

@@ -22,7 +22,7 @@ class Proxy(http.server.BaseHTTPRequestHandler):
         pass  # URLs may contain recovery tokens; never access-log them.
 
     def do_request(self):
-        if self.headers.get_all('Host') != ['localhost:8443']:
+        if self.headers.get_all('Host') != [self.server.expected_host]:
             self.fail(421)
             return
         if not self.path.startswith('/') or self.path.startswith('//'):
@@ -57,12 +57,12 @@ class Proxy(http.server.BaseHTTPRequestHandler):
                        if k.lower() not in excluded and not k.lower().startswith('x-forwarded-')
                        and not k.lower().startswith('x-mxmed-tls-')
                        and k.lower() not in {'forwarded', 'host', 'content-length'}}
-            headers.update({'Host': 'localhost:8443', 'Connection': 'close'})
+            headers.update({'Host': self.server.expected_host, 'Connection': 'close'})
             # No key is generated at startup. Provisioning is a separate operation.
             key = self.server.governance_transport_key
             if key:
                 stamp, nonce = str(int(time.time())), secrets.token_hex(16)
-                parts = [stamp, nonce, self.command, self.path, 'localhost:8443',
+                parts = [stamp, nonce, self.command, self.path, self.server.expected_host,
                          self.headers.get('Origin', ''), self.headers.get('Referer', ''),
                          self.headers.get('Cookie', ''), self.headers.get('X-CSRF-Token', ''),
                          hashlib.sha256(body or b'').hexdigest()]
@@ -101,10 +101,11 @@ class Proxy(http.server.BaseHTTPRequestHandler):
     do_GET = do_HEAD = do_POST = do_PUT = do_PATCH = do_DELETE = do_OPTIONS = do_request
 
 
-def make_server(cert, key, port=8443, backend_port=8091, views_port=8092):
+def make_server(cert, key, port=8443, backend_port=8091, views_port=8092, expected_host='localhost:8443'):
     server = http.server.ThreadingHTTPServer(('127.0.0.1', port), Proxy)
     server.daemon_threads = True
     server.backend_port = backend_port
+    server.expected_host = expected_host  # Exact trusted host; disposable QA can use its own port.
     server.views_port = views_port
     transport_key = os.environ.get('MXMED_GOVERNANCE_PROXY_KEY', '').encode()
     server.governance_transport_key = transport_key if len(transport_key) >= 32 else None

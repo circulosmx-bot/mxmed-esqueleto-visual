@@ -36,7 +36,7 @@ function evSqlDeny(callable $fn,string $state,string $label):void {
 }
 function evConnect():PDO {
     $c=json_decode(file_get_contents((string)getenv('GOV03B_QA_CONNECTION')),true,32,JSON_THROW_ON_ERROR);
-    if (!preg_match('/^mxmed_gate4d_preview_(?:c4ev_|c4issuer_)[a-f0-9]{10}$/D',$c['db'])) throw new RuntimeException('disposable_only');
+    if (!preg_match('/^mxmed_gate4d_preview_(?:c4ev_|c4issuer_|c4ui_)[a-f0-9]{10}$/D',$c['db'])) throw new RuntimeException('disposable_only');
     return new PDO('mysql:host=127.0.0.1;port=3306;dbname='.$c['db'].';charset=utf8mb4',$c['user'],$c['password'],
         [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
 }

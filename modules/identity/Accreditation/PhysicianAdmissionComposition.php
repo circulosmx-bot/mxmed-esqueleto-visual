@@ -19,7 +19,7 @@ final class PhysicianAdmissionComposition
     public readonly ProfessionalAccountBindingProjection $projection;
     public readonly CanonicalInitialOwnerEligibilityAdapter $eligibility;
     public function __construct(PDO $identityPdo,GovernanceSecurityContext $security,EvidenceCipher $cipher,
-        PrivateMediaStoragePort $storage,StaffMfaService $mfa,Clock $clock=new SystemClock())
+        PrivateMediaStoragePort $storage,private StaffMfaService $mfa,Clock $clock=new SystemClock())
     {
         $authority=new EvidenceAuthority($identityPdo,$security,$clock);
         $this->evidence=new PhysicianEvidenceService($authority,$cipher,$storage,$mfa,new ProfessionalIssuanceWorkflow($identityPdo));
@@ -27,4 +27,5 @@ final class PhysicianAdmissionComposition
         $this->projection=new ProfessionalAccountBindingProjection($identityPdo,$clock,$this->evidence);
         $this->eligibility=new CanonicalInitialOwnerEligibilityAdapter($this->projection);
     }
+    public function mfa():StaffMfaService {return $this->mfa;}
 }
