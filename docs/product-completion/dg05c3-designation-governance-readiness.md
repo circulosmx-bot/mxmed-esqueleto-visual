@@ -1,5 +1,7 @@
 # DG05C3 professional designation: governance discovery and local UI
 
+**C4-ADM02-IMP01 update (2026-10-16):** bounded source implementation was subsequently authorized, without normal-local activation. The [issuer readiness audit](../identity/C4-ADM02-IMP01-issuer-readiness.md) stopped the issuer on the protected accreditation-evidence/contact/origin contract gaps; no issuer or runtime integration was delivered. The deferred status below is historical. Advisor designation editing and real admission remain unavailable; VID01/CRD02 references and synthetic ownership fixtures do not establish human accreditation.
+
 Status: Director-approved visual closeout. Advisor governance remains deferred and blocked by missing canonical physician admission authority. This closeout includes only the approved compact layout, contextual guidance and documentation; no advisor backend edit path, capability, admission authority or audit event was activated.
 
 ## ADM01 accepted governance checkpoint
