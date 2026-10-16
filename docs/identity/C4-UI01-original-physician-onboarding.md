@@ -1,5 +1,7 @@
 # C4-UI01 — acreditación profesional en la UI original
 
+**Seguimiento C4-ACT01:** el [paquete de preparación operativa](C4-ACT01-operational-activation-package.md) concreta SMS, custodia/retención, esquema, staff y composición pendiente, sin activación. Distingue navegación de estado disponible de prueba funcional real aún bloqueada.
+
 2026-10-16. Worktree `mxmed-step2-vitals-r1`, rama `ux/consultation-step2-vitals-r1`, inicio local/upstream/remoto `391bcaa7aeb65f147ba3bc00bf34c5af76175019`, limpio. Implementación de fuente y QA desechable; sin activación, DDL, SMS, documentos, decisiones ni nuevas autoridades reales.
 
 ```text
