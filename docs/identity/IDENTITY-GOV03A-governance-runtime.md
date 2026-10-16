@@ -1,5 +1,7 @@
 # IDENTITY-GOV03A / GOV03B-FIX01 — gobierno de Identity
 
+Propuestas posteriores, **sin ratificar ni implementar**: [GOV03B-DEC01](GOV03B-DEC01-policy-reconciliation.md) reconcilia elegibilidad C4/ADM02 y recuperación extraordinaria de la raíz. Los bloqueos y el estado runtime descritos aquí siguen vigentes; esa documentación no autoriza migraciones, custodias o autoridades reales.
+
 Estado actualizado después de OP-ACT02A y OP-ACT02B. La fuente inicial de FIX01 es `4bb40493faf38195b760254e3fd7c12776891175`. Esta entrega corrige contratos y ensaya exclusivamente cuentas, llaves, bases y sesiones sintéticas desechables. No autoriza crear autoridades humanas ni habilitar normal-local.
 
 | Dimensión | Estado |
