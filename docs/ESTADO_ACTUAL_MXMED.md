@@ -3,17 +3,17 @@
 ## Ancla y alcance
 
 - Fecha de verificación documental: **2026-10-17**.
-- Baseline fuente verificado: `04744a9b3ebf0ff644979e8617d09f67bc4f398f` (CTX-IMP01 publicado sobre ACT03).
-- Rama: `ux/consultation-step2-vitals-r1`; al iniciar ACT04-RECON02, HEAD/upstream/remoto coinciden y worktree limpio.
+- Baseline fuente verificado: `1b8dfccb68a7613b2182507a840454631dbf012a` (ACT04-RECON02 publicado).
+- Rama: `ux/consultation-step2-vitals-r1`; al iniciar CTX-MAP02, HEAD/upstream/remoto coinciden y worktree limpio.
 - Worktree: `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`; no confundir con el checkout hermano `mxmed-esqueleto-visual`.
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
-- ACT04-RECON02 reconcilia componentes y corrige tres tests históricos; no cambia UI, writers ni runtime. El ancla es su baseline, no el hash futuro de este archivo.
+- CTX-MAP02 documenta el sistema existente; no cambia producto, tests ni runtime. El ancla es el HEAD fuente inspeccionado, no el hash futuro de estos mapas.
 
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.
 - Existen Agenda/Consultorio/Maps, Operadores, pacientes/expediente, documentos/Recetas V2, Media, Billing y Suscripciones.
-- Sus UI, servicios y writers se localizan en el [router por dominio](README.md#componentes-y-contratos); su existencia no certifica operación completa de todo el dominio.
+- UI, servicios y writers se localizan en el [router](README.md#mapas-actuales-del-sistema--ctx-map02): 119 capacidades funcionales, 18 componentes AWS y once journeys; existencia no certifica operación completa.
 - La aplicación privada usa Identity y resolución clínica canónicas. Preservar ámbito médico/paciente, sesiones y decisiones visuales existentes.
 - Recetas conserva editor, renderer, firma, historial/snapshots y lifecycle; [evaluación de presentación](clinical/UX-ALIGN01-prescription-presentation-assessment.md).
 - Operadores conserva panel original, alias, historial, dos plazas y cinco grants Agenda; gestión sujeta a owner/servicio habilitado. No hay activación completa acreditada por este documento.
@@ -54,8 +54,9 @@
 - **Selectores globales no montados:** el hecho documentado en [ACT03](identity/ACT03-governed-professional-sources.md#teléfonos-free-contratos-distintos) permanece; por sí solo no demuestra una operación requerida ausente. ACT04-RECON02 no añade un editor global ni cambia PUB-COR02. Consultorio mantiene permisos de escritura owner/administrator; no elevar al collaborator para probarlo.
 - **Maps:** selector existente preservado. La evidencia ACT03 sitúa errores `util/search_impl` del loader externo en visitas CLAIM al perfil público; no demuestra un defecto del selector privado. Sin sesión Safari privada disponible ni configuración efectiva acreditada, su fallo normal-local queda no reproducido; no se cambia proveedor/configuración.
 - **Documentos históricos:** HTML congelado puede compartir CSS actual; cualquier cambio futuro debe evaluar compatibilidad de presentación/paginación y firma.
-- **Billing:** existen perfiles, archivo y borradores; [FISC02B](billing/FISC02B_ISSUANCE_CORE.md) mantiene timbrado sujeto a decisión/contrato PAC. No inferir emisión productiva.
-- Los estados de servicios y datos pueden cambiar después del baseline; revalidar sólo lo necesario dentro del alcance autorizado.
+- **Finanzas:** [mapa Stripe/PAC](contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md) recupera confirmación de pago y activación explícita separadas; writes Identity/retorno/renovación conservan brechas. PAC seleccionado: SW primario, Finkok secundario; adapter/operación pendientes, no selección nueva.
+- **Clínica:** issuer/binding C4 implementado; consumidor profesional todavía deniega incondicionalmente. Alta paciente tiene disparidad de autorización fuente `unresolved`; no se hizo probe ni se cambió autoridad. [Mapa clínico](contexto/FUNCIONES_CLINICAS_MXMED.md).
+- **Infra:** IaC y cierres físicos históricos C3/SES recuperados; packaging actual omite shell/workflows y hay divergencia DB env. AWS/Stripe remotos no verificados. [Mapa AWS](contexto/AWS_Y_ENTORNOS_MXMED.md).
 
 ## Evidencia reciente y reconciliación de tests
 
@@ -68,14 +69,15 @@
 - Los tres tests corregidos pasan; también contratos de Consultorio y visibilidad/contactos FREE. Son correcciones de expectativas/dobles obsoletos, no evidencia de regresión productiva ni nueva activación. El modo histórico de entrega de AUTH02A conserva sus restricciones originales.
 - Contactos administrativos: 14 comprobaciones Chromium/WebKit del markup y módulo JS originales con red sintética en memoria (carga, teléfono/WhatsApp, flags privados, entrada inválida y 403 sin falso éxito). No acredita autoridad/persistencia SQL ni Safari físico; no hubo pestaña privada Safari disponible. Probes negativos conservan rechazo de glifos ausentes y deriva de fixture/pin clínico.
 
-## Foco, autorizaciones y continuidad
+## Cobertura, autorizaciones y continuidad
 
-- Alcance autorizado **ACT04-RECON02**: inspección dirigida, correcciones verificadas de los tres tests y continuidad de este estado; commit/push normal. Contexto CTX-IMP01 preservado.
-- Siguiente paso de producto aprobado: **NONE**. ACT04-RECON02 no autoriza un despliegue ACT04, DDL, SMS, staff/MFA, C4 ni activación de operadores.
-- Decisiones pendientes: sólo si se requiere una operación global distinta de los campos existentes, precisar su propósito/UX; diagnóstico Maps con acceso/configuración apropiados y eventual piloto real con sus prerrequisitos.
-- Anotaciones de README/guías antiguas, nuevos skills/instrucciones anidadas y automatización requieren alcance posterior; no forman parte de CTX-IMP01.
+- CTX-MAP02: censo de 2.967 paths/19 raíces/doce módulos, 183 entradas candidatas y 49 declaraciones literales (no universo dinámico); [cobertura y doce retrieval checks](contexto/COBERTURA_Y_PENDIENTES_MXMED.md).
+- Metadata local READ ONLY: 128 tablas, cero vistas, 1.734 columnas, 138 FK, 35 triggers/once rutinas. Unión fuente/física de 204 nombres; todos con dominio; nueve sin CREATE quedan explícitos y 36 gaps léxicos de writer se reconciliaron por revisión dirigida. [Datos](contexto/DATOS_Y_MIGRACIONES_MXMED.md).
+- Sólo documentación/inventarios; sin filas reales, tests de producto, SQL aplicado, AWS/Stripe, envíos ni reinicios. Se conservan mapas antiguos con avisos de sucesor y ACT04 como tests corregidos.
+- Siguiente acción de producto/piloto: **NONE_PENDING_DIRECTOR_REVIEW**. Director prioriza una brecha; mapas no autorizan despliegue, DDL, SMS/custodias, staff/MFA, C4, owner, firma ni operadores.
+- Incertidumbres: remoto/proveedores/runtime físico; variantes SQL/rutas dinámicas; UI parciales y lineage físico. Decisiones comerciales/seguridad aprobadas no se reabren por README históricos.
 - Inicio de nueva tarea: verificar Git/instrucciones, leer este estado, seguir un dominio del router y contrastar decisión/UI/writer antes de proponer cambios.
 - Cierre: baseline/post HEAD, alcance, comportamiento, pruebas y entorno, límites, referencias y autorizaciones pendientes; usar la [plantilla existente](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md).
-- Mantenimiento **manual y sólo autorizado**: reemplazar el resumen vigente después de un cambio material; anclar fecha/baseline verificados y preservar la historia en Git/contratos.
+- Mantenimiento **manual y sólo autorizado**: actualizar IDs/journeys/objetos afectados y reemplazar este resumen después de un cambio material; anclar fecha/baseline verificados y preservar la historia en Git/contratos.
 - ChatGPT puede consultar los mismos archivos publicados cuando tenga acceso o se adjunten; no hay memoria automática compartida con Codex.
-- [Historia y decisiones](README.md#historia-decisiones-y-continuidad) se recuperan bajo demanda; los documentos antiguos permanecen intactos.
+- [Historia y decisiones](README.md#historia-decisiones-y-continuidad) se recuperan bajo demanda; el contenido histórico se conserva con avisos de sucesor donde corresponde.

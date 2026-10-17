@@ -1,5 +1,7 @@
 # MAPEO AGENDA MXMED
 
+> **Sucesor de inventario — CTX-MAP02 (2026-10-17):** conservar este registro. Para autoridad, writers y disponibilidad/booking/puente opcional consultar [funciones Agenda](contexto/INVENTARIO_FUNCIONAL_MXMED.md#agenda-y-operadores) y [J04](contexto/INTERACCIONES_MXMED.md#j04-consultorio-y-reserva).
+
 ## Adenda de actualización (2026-05-18)
 
 Estado real verificado en shell principal:

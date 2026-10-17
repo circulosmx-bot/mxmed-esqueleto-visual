@@ -1,5 +1,7 @@
 # MXMed AWS CDK foundation
 
+> **Estado temporal sucedido — CTX-MAP02 (2026-10-17):** preservar este contrato/historia. Email/Jobs, readiness, packaging y despliegues/teardown cuentan con implementaciones/evidencia posteriores en [AWS y entornos](../../docs/contexto/AWS_Y_ENTORNOS_MXMED.md). No equivale a inventario remoto actual ni autorización de despliegue.
+
 ## Propósito y estado
 
 Este proyecto implementa la foundation local de Infrastructure as Code, la red V1 y las

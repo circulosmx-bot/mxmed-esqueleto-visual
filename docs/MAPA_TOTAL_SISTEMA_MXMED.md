@@ -1,5 +1,7 @@
 # MAPA TOTAL DEL SISTEMA MXMED
 
+> **Sucesor de inventario — CTX-MAP02 (2026-10-17):** conservar este mapa como referencia de su fase. La fuente actual, UI/writers y límites se recuperan en [inventario funcional](contexto/INVENTARIO_FUNCIONAL_MXMED.md) y [cobertura](contexto/COBERTURA_Y_PENDIENTES_MXMED.md); no interpretar sus estados antiguos como activación actual.
+
 ## 0) Contexto, alcance y método
 - Alcance: mapa verificable del estado actual del repo (arquitectura + evidencia técnica), sin implementar cambios funcionales.
 - Método: inspección de `modules/*`, `api/*`, `assets/js/*`, `index.html`, `docs/*` y utilerías en raíz.

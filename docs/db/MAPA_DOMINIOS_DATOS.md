@@ -1,5 +1,7 @@
 # Mapa Maestro de Dominios de Datos — México Médico
 
+> **Sucesor físico — CTX-MAP02 (2026-10-17):** este modelo se conserva. Para objetos fuente/instalados, writers/readers, FKs y migraciones consultar [datos y metadata](../contexto/DATOS_Y_MIGRACIONES_MXMED.md); asociación conceptual no equivale a FK instalada.
+
 ## A) Principios
 - Este documento NO define tablas ni columnas; describe dominios, quién produce y quién consume cada dato.
 - Cada dominio es la fuente de verdad de sus datos; otros dominios pueden referenciar pero no duplicar.

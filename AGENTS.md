@@ -12,6 +12,7 @@ La UI original y los servicios canónicos son el punto de partida; no reconstrui
 2. No confundir este worktree con un checkout hermano ni cambiar de rama para resolverlo.
 3. Leer [estado actual](docs/ESTADO_ACTUAL_MXMED.md), comprobando fecha y baseline.
 4. Usar el [router de módulos](docs/README.md) para recuperar sólo el contrato pertinente.
+   Para localizar trabajo existente, seguir sus mapas CTX-MAP02 por función/datos/flujo; consultar AWS o pagos sólo si aplican y respetar sus límites de evidencia.
 5. Identificar la decisión aprobada y el alcance autorizado por el Director.
 6. Buscar primero pantalla original, consumidor, servicio, writer, read model y QA previa.
 

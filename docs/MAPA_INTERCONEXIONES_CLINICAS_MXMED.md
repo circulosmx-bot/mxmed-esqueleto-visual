@@ -1,5 +1,7 @@
 # Mapa de Interconexiones Clínicas - MXMed
 
+> **Sucesor de trazas — CTX-MAP02 (2026-10-17):** conservar reglas/historia de esta fase. Las conexiones fuente y gates actuales están en [interacciones clínicas](contexto/INTERACCIONES_CLINICAS_MXMED.md) y [journeys transversales](contexto/INTERACCIONES_MXMED.md).
+
 Este documento define cómo se relacionan entre sí los módulos clínicos del sistema México Médico (MXMed).
 
 Su propósito es evitar integraciones incorrectas y mantener una arquitectura coherente entre pacientes, expediente, consulta, timeline, documentos, órdenes y resultados.

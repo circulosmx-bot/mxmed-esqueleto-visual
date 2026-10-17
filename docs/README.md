@@ -19,6 +19,22 @@ Etiquetas: **CURRENT** = referencia vigente para ese alcance, no certificación 
 **PENDING_AUTHORIZATION** = acción real que requiere aprobación específica.
 Separar decisión, contrato implementado y evidencia QA; una prueba aislada no demuestra activación.
 
+## Mapas actuales del sistema — CTX-MAP02
+
+Baseline fuente `1b8dfccb68a7613b2182507a840454631dbf012a`, 2026-10-17. Elegir un mapa y sus símbolos; no cargar la colección completa. Fuente, conexión, política, verificación y operación se registran por separado. Inventario no equivale a cobertura funcional de tests ni activación.
+
+| Necesidad | Referencia bajo demanda |
+|---|---|
+| Encontrar capacidad, UI original, autoridad y writer | [Inventario funcional](contexto/INVENTARIO_FUNCIONAL_MXMED.md): público, perfil, Identity, Agenda, Operadores, Media, provider, platform y superficies parciales |
+| Paciente/consulta/expediente, estudios, documentos y firma | [Funciones clínicas](contexto/FUNCIONES_CLINICAS_MXMED.md), con gates y 59 capacidades |
+| Seguir conexiones, transacciones, fallos e impacto | [Once journeys e interacciones](contexto/INTERACCIONES_MXMED.md), [trazas clínicas](contexto/INTERACCIONES_CLINICAS_MXMED.md) |
+| Tablas, writers/readers, FK, metadata y migraciones | [Datos y migraciones](contexto/DATOS_Y_MIGRACIONES_MXMED.md), CSV/JSON enlazados por objeto/artefacto |
+| AWS, runtime local, packaging y evidencia de despliegue/teardown | [AWS y entornos](contexto/AWS_Y_ENTORNOS_MXMED.md); remoto actual no verificado |
+| Stripe, activación, facturación/PAC y otros proveedores | [Stripe y servicios externos](contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md); confirmación de pago y activación tienen dueños distintos |
+| Límites, historia, doce preguntas y mantenimiento | [Cobertura y pendientes](contexto/COBERTURA_Y_PENDIENTES_MXMED.md) |
+
+Cobertura medida: 2.967 paths del baseline, doce módulos, 183 entradas candidatas, 119 capacidades funcionales y 18 componentes AWS; metadata local de 128 tablas/204 nombres fuente o físicos. Las 49 declaraciones de rutas extraídas no son el universo de rutas dinámicas. Detalles, exclusiones, refs fuera del baseline e incertidumbres están en cobertura. Próxima acción de producto/piloto: `NONE_PENDING_DIRECTOR_REVIEW`.
+
 ## Componentes y contratos
 
 ### Aplicación privada original — CURRENT
