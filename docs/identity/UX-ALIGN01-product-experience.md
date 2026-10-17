@@ -28,7 +28,7 @@ QA B: 24 aserciones PHP, cuatro regresiones públicas y presentación Chromium/W
 
 ## C — informe de corrección separado del reclamo
 
-Se reutiliza “Sugerir corrección” en el perfil público original, con su gate FREE/no administrado. La disponibilidad de la fuente de membresías ahora se propaga correctamente: una fuente ausente o fallida oculta la acción. El desplegable accesible muestra el perfil exacto, categorías y relación con el profesional, y explica que la recepción sigue pendiente. Sus controles están deshabilitados, no tienen formulario ni envío, y no almacenan datos del visitante. El reclamo y FORMAR PARTE permanecen separados.
+Se reutiliza “Sugerir corrección” en el perfil público original, con su gate FREE/no administrado. La disponibilidad de la fuente de membresías ahora se propaga correctamente: una fuente ausente o fallida oculta la acción. El desplegable accesible muestra el perfil exacto y explica que la recepción sigue pendiente. Prepara catálogos de categoría y relación como opciones deshabilitadas, sin abrir ni seleccionar esos catálogos. Sus controles no tienen formulario ni envío y no almacenan datos del visitante. El reclamo y FORMAR PARTE permanecen separados.
 
 No existe actualmente un backend equivalente de recepción, revisión o aplicación de informes. El [contrato de correcciones](../profiles/UX-ALIGN01-public-correction-contract.md) prepara ese agregado, contexto, privacidad, política de abuso/CSRF, revisión humana y adaptación a escritores autorizados, sin inventar grants ni activar infraestructura. Una alegación de retiro o fallecimiento nunca cambia publicación, cuenta, suscripción, autoridad o propietario automáticamente. La UI informativa está implementada; el flujo de recepción/moderación sigue PARTIAL.
 
@@ -53,3 +53,48 @@ La jerarquía solicitada ya existe en los componentes originales: médico/cédul
 La fixture CLI nueva sólo usa snapshots sintéticos y el renderer nativo, sin runtime clínico, PDO, sesiones o escrituras. Pasan 36 casos en Chromium/WebKit y tres tamaños, con seis snapshots que incluyen opcionales ausentes, sin encabezado, formato anterior y 24 medicamentos. Se verifican preview original, print media, legibilidad y datos privados excluidos. Chromium produce además dos PDF Letter de dos y siete páginas con todos los medicamentos y footer legibles; WebKit no exporta PDF y no se afirma esa aceptación. Se inspeccionaron capturas sintéticas; no hay prueba de emisión, firma, móvil o impresión física.
 
 Pasan nueve contratos existentes. `rec-vis08-contract.test.mjs:36` conserva una expectativa anterior de “Médico responsable” dentro de `hidden`, incompatible con el contrato DOC-REC-STD03 vigente. Sus inputs son idénticos al inicio; no se cambia renderer o test para silenciarla. La evaluación acotada está terminada; no se aplica refinamiento visual al documento ni se declara verde toda la suite histórica. Evidencia en `~/Library/Application Support/MXMED/ux-align01/20261016-review/prescription/`.
+
+## F — verificación integrada y entrega
+
+**Resultado: PARTIAL_MXMED_UX_ALIGN01.** A queda implementada; D concluye su reconciliación y ajuste de texto apoyados en los contratos existentes; E concluye la evaluación y aceptación de presentación sin alterar documentos. B/C entregan presentación original y contratos, pero sus flujos persistentes siguen parciales. Ninguna página renderizada acredita activación o aprobación profesional real.
+
+### Componentes, rutas y navegador
+
+Los runners usan los templates, controllers, renderer, CSS y JavaScript originales con DTOs explícitamente sintéticos. No son otra aplicación entregada. Chromium y WebKit cubren los tres tamaños exigidos en A (48 casos), B (seis casos tras C), C (24), D (74 más doce de referencias) y E (36, pantalla e impresión). El recorrido C4 de 45 comprobaciones reanuda drafts sintéticos y verifica los pasos privados existentes; no sustituye el origen público aún ausente.
+
+Los GET de normal-local verifican el certificado con la CA existente, sin cookies ni métodos mutantes: perfil, listing y API pública 200; entradas `entry=join` y `entry=claim&profile=1` 200; registro/login 200; acreditación privada, sección staff y `private-app.php` anónimos 302; current-session y búsqueda de pacientes anónimos 401. La consulta de claim es navegación de presentación, no una credencial. El perfil real tiene colaborador; no se afirma que sea un caso libre sin administración para todos los gates. Las URLs permanecen:
+
+- `https://localhost:8443/private-app.php`, panel original `#p-ag-operadores`.
+- `https://localhost:8443/profiles/doctor.php?doctor_id=1` y `/profiles/listing.php` con sus filtros originales.
+- `https://localhost:8443/public/identity/perfil-medico.php?entry=join` y la variante de claim generada desde un perfil elegible.
+- `https://localhost:8443/public/identity/acceso.php` y `/public/identity/crear-cuenta.php`.
+- `https://localhost:8443/internal/media-review/index.php?section=acreditacion`, todavía guardada por autorización staff.
+
+Se observó read-only el DOM de la pestaña Safari normal ya autenticada y el DTO GET nontouch del servidor. El DTO contiene la denominación almacenada y el rol anterior; no se recargó la pestaña ni se probó de nuevo todo el shell con los scripts nuevos dentro de esa sesión. No se extraen cookies ni credenciales. **DIRECTOR_PHYSICAL_SAFARI_QA=NOT_RUN.** Una revisión física posterior puede actualizar normalmente la aplicación y observar la denominación bajo el nombre; los envíos públicos, SMS, foto y activaciones continúan pendientes.
+
+### Seguridad, datos y límites de los resultados
+
+Los snapshots completos antes/después de `mxmed` son idénticos: 128 tablas, filas/checksums, DDL, triggers, rutinas y auditoría. También coinciden payloads de sesiones Valkey, configuración normal, journals OP-ACT02A y checksums de QA05, OP02 y UI03. Se preservan cuentas, membresías, propietarios, autoridades, planes, datos clínicos e historia. Los listeners 8091, 8092, 8443 y 6385 siguen activos; no se detienen al entregar. Los runners mutantes usaron bases/usuarios nuevos sintéticos, con cleanup comprobado; cero filas reales importadas en C4. No hay DDL normal, SMS, invitación real, staff nuevo, subida real, firma, receta emitida ni composición operativa nueva.
+
+Los archivos clínicos de producto, writers, fingerprints, renderer/CSS de documentos, guard CLIN-AUTH02A, Agenda, estructura del shell, sesión y autoridades de C4/Operadores permanecen idénticos al baseline. Las excepciones del encabezado son su proyección y renderer `header-account.js` descritos en A; no cambia su estructura visual o autorización. Las cuatro migraciones canónicas C4 y la preparación operativa se conservan sin ejecutar; la propuesta B está en documentación, no en un runner. El manifiesto C4-ACT01 sigue siendo una preparación histórica, no una aprobación vigente; cualquier futuro despliegue deberá renovar fingerprints tras los cambios de fuente UX.
+
+Pasan la regresión CLIN-AUTH02A, el resolver clínico canónico, el contrato Agenda CONS-VIS01, sesión privada/GOV-SIM02, las 80 comprobaciones aisladas normal-local y las suites nativas de Operadores (200 más ocho). El conjunto dirigido estático registra diez de once runners PASS, con el fallo RecVis08 informado abajo. Además pasan las 42 comprobaciones nativas del header, 24 de inscripción pública y 52 de corrección, y los contratos de presentación de documentos descritos en E. Sintaxis de 25 archivos PHP/JS/Python y whitespace del diff completo: PASS. No se amplía una aceptación dirigida a toda la suite histórica.
+
+Deudas previas preservadas y visibles:
+
+| Gate | Estado y evidencia |
+| --- | --- |
+| `PhysicianCredentialAuditPolicyTest.php` | Pin histórico de 52 eventos frente a 54. No modificado ni repetido aquí; evidencia previa `c4-ui01/20261016-review/historical-audit-pins.log`. |
+| `PublicProfileHeroConsultorioContactLayoutTest.php:52` | FAIL literal de iconos, reproducido también con archivo Git del baseline; `correction/hero-baseline-rerun.json`. |
+| `rec-vis08-contract.test.mjs:36` | FAIL de expectativa de modo hidden, inputs idénticos al baseline; `regressions/rec-vis08-baseline-confirmation.json`. |
+| `op-imp07-contract-qa.py` / `op-int04-contract-qa.py` | Pin antiguo de sesión falla también con las fuentes baseline; segundo runner bloqueado por esa dependencia. `operators/baseline-contract-pin-failure.json`. |
+
+Evidencia principal privada: `~/Library/Application Support/MXMED/ux-align01/20261016-review/`, en particular `preservation-result.json`, `normal-before.json`/`normal-after.json`, `state-before.json`/`state-after.json`, `final/normal-readonly-http.json`, manifests, resultados por dominio y logs. Los snapshots no se publican en Git porque contienen datos privados.
+
+### Inventario y siguiente incremento
+
+Son 31 archivos: trece fuentes de producto, trece fixtures/tests/runners y cinco documentos/propuestas. Producto: proyección del header y JS original; controller/repository y dos servicios públicos de presentación/elegibilidad; templates de perfil/listing/onboarding, adaptador de página original y JS de onboarding; CSS acotado del informe y una frase del archivo de Operadores. Las pruebas nuevas son CLI/componentes/datos sintéticos; no son páginas nuevas del producto. Los cambios se dividen en commits independientes de A, compatibilidad de fixture A, B, C, D, E y documentación de cierre.
+
+Los bloqueos exactos pendientes son: almacén preauth de origen inmutable y asociación a cuenta tras login, intake profesional pendiente sin VID01/CRD02 prematuros, resolución revisada sin-match/coincidencia/conflicto y backend de perfil nuevo (B); agregado/endpoint de informes con política de abuso/CSRF, moderación y aplicación tipada autorizada (C). Para operar C4 normal-local siguen faltando los gates de [C4-ACT01](C4-ACT01-operational-activation-package.md): esquema autorizado, proveedor/adaptador SMS, custodia/retención/recuperación, staff/MFA legítimos y factory/guard operacional. No se modifican por este trabajo. Contacto/avatar de operadores requieren su backend privado; un rediseño de Recetas requiere el plan versionado de E.
+
+El siguiente incremento pequeño recomendado es implementar y probar **sólo en datos nuevos desechables** el origen preauth, su asociación autenticada y el intake pendiente de B, usando la propuesta como borrador a revisar. Mantener separadas la resolución final y cualquier autorización posterior de DDL/runtime. Las deudas estáticas deben reconciliarse en una corrección explícita que conserve las pruebas de autoridad y el catálogo real; no se silencian para publicar esta UI. Recepción de informes será un incremento separado. No se declara activación completa de Operadores, gobierno, C4 o firma clínica.
