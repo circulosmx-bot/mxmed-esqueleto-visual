@@ -860,7 +860,43 @@ if (isLocalDevRequest()) {
 
             <div class="mxpp-about-target">
               <?php if ($showSuggestCorrection): ?>
-                <a class="mxpp-action-link mxpp-action-link--summary" href="#" aria-disabled="true">Sugerir corrección</a>
+                <details class="mxpp-correction" id="mxpp-correction">
+                  <summary class="mxpp-action-link mxpp-action-link--summary">Sugerir corrección</summary>
+                  <div class="mxpp-correction__body">
+                    <p><strong>Perfil:</strong> <?= h($displayName ?? 'Perfil médico en validación') ?></p>
+                    <p id="mxpp-correction-status" class="mxpp-correction__notice">La recepción de informes está pendiente de habilitación. Por ahora puedes consultar qué información se podrá comunicar, sin escribir ni enviar datos.</p>
+                    <fieldset disabled aria-describedby="mxpp-correction-status">
+                      <legend>Información del informe</legend>
+                      <label for="mxpp-correction-category">¿Qué información necesita revisión?</label>
+                      <select id="mxpp-correction-category" disabled>
+                        <option value="">Selecciona un motivo</option>
+                        <option>Nueva dirección</option>
+                        <option>Dirección de consultorio incorrecta</option>
+                        <option>Cambio de teléfono de consulta</option>
+                        <option>Contacto desactualizado</option>
+                        <option>Horarios incorrectos</option>
+                        <option>Perfil duplicado</option>
+                        <option>Médico retirado</option>
+                        <option>Médico fallecido</option>
+                        <option>Persona o perfil equivocado</option>
+                        <option>Otra corrección factual</option>
+                      </select>
+                      <label for="mxpp-correction-relation">¿Cuál es tu relación con este profesional?</label>
+                      <select id="mxpp-correction-relation" disabled>
+                        <option value="">Selecciona una relación</option>
+                        <option>Paciente</option><option>Familiar</option><option>Amistad</option>
+                        <option>Colega</option><option>Asistente</option><option>Administración del consultorio</option>
+                        <option>Institución</option><option>Otra</option>
+                      </select>
+                      <label for="mxpp-correction-details">Explicación de la corrección</label>
+                      <textarea id="mxpp-correction-details" rows="3" disabled></textarea>
+                      <label for="mxpp-correction-contact">Correo de contacto (opcional)</label>
+                      <input id="mxpp-correction-contact" type="email" autocomplete="off" disabled />
+                      <button type="button" disabled>Envío pendiente de habilitación</button>
+                    </fieldset>
+                    <p class="mxpp-correction__note">Cada informe requerirá revisión antes de realizar cambios. Un aviso de retiro o fallecimiento no modifica este perfil ni sus accesos por sí solo. No incluyas información clínica o de pacientes.</p>
+                  </div>
+                </details>
               <?php elseif ($bioShort !== null): ?>
                 <p class="mxpp-bio"><?= h($bioShort) ?></p>
               <?php else: ?>

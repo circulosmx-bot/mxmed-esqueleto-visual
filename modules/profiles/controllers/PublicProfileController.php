@@ -78,7 +78,7 @@ final class PublicProfileController
             'has_public_profile' => false,
             'is_claimed' => false,
             'profile_is_administered' => $profileIsAdministered,
-            'ownership_source_ready' => true,
+            'ownership_source_ready' => $membershipAuthorityReady,
             'public_contact_source_ready' => (bool)($publicContact['has_public_contact'] ?? false),
             'claim_source_ready' => false,
             'commercial_source_ready' => false,

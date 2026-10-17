@@ -811,6 +811,63 @@ body {
   border: 0;
 }
 
+.mxpp-correction > summary {
+  display: list-item;
+  list-style-position: inside;
+  min-height: 44px;
+  padding: 0.65rem 0;
+  cursor: pointer;
+}
+
+.mxpp-correction > summary:focus-visible {
+  outline: 2px solid var(--profile-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.mxpp-correction__body {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--mxpp-border);
+  border-radius: 9px;
+  background: var(--mxpp-surface);
+  overflow-wrap: anywhere;
+}
+
+.mxpp-correction__body > p { margin: 0 0 0.85rem; }
+.mxpp-correction__body .mxpp-correction__note { margin: 0.85rem 0 0; }
+.mxpp-correction__notice { font-weight: 600; }
+.mxpp-correction__note { font-size: 0.9rem; }
+
+.mxpp-correction fieldset {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mxpp-correction legend { font-weight: 700; margin-bottom: 0.6rem; }
+.mxpp-correction label { font-weight: 600; }
+.mxpp-correction :is(input, select, textarea, button) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.65rem;
+  border: 1px solid var(--mxpp-border);
+  border-radius: 7px;
+  font: inherit;
+}
+
+.mxpp-correction :is(input, select, textarea, button):disabled {
+  background: #f3f6f7;
+  color: #52636c;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
 .mxpp-hero-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
