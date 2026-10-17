@@ -1,5 +1,7 @@
 # UX-ALIGN01 — experiencia original y contratos pendientes
 
+**Seguimiento PUB-ENR02:** [origen persistido e información inicial privada](PUB-ENR02-pending-enrollment.md), implementados y ensayados en un entorno nuevo desechable. No activa recepción real, C4, owner o firma. El cierre y las limitaciones de UX-ALIGN01 siguientes se conservan como evidencia histórica.
+
 2026-10-16. Worktree `mxmed-step2-vitals-r1`, rama `ux/consultation-step2-vitals-r1`, inicio local/upstream/remoto `e927dcfa86e3bf1fb7cf4e972b4155051d2e51c0`, limpio. Se conserva la aplicación original `https://localhost:8443/private-app.php`, el runtime y las autoridades existentes. No se dispone de los mockups históricos en filesystem y no se inventan rutas para ellos; se aplican las descripciones funcionales del Director con el sistema visual actual.
 
 ## A — identidad del encabezado

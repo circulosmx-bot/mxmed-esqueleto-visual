@@ -1,5 +1,7 @@
 # UX-ALIGN01 — Entradas públicas a incorporación profesional
 
+**Seguimiento PUB-ENR02:** el [origen e intake pendientes](PUB-ENR02-pending-enrollment.md) implementan la persistencia y el regreso autenticado en QA desechable, usando la migración física preparada 05. La propuesta SQL de UX-ALIGN01 permanece histórica y no se aplica. Resolución final, perfil nuevo, C4 operativo y activación normal-local continúan pendientes; las limitaciones siguientes describen el cierre original UX-ALIGN01.
+
 Estado: presentación original implementada; persistencia de origen e inscripción general pendientes. Sin activación C4, DDL normal-local, SMS, acreditación, asignación de titular o cambios de suscripción.
 
 ## Rutas reales y alcance entregado

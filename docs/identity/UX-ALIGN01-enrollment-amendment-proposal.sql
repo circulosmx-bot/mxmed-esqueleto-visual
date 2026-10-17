@@ -1,7 +1,11 @@
 -- UX-ALIGN01 DRAFT ONLY: not a migration, not applied, no runtime consumer.
+-- Historical proposal, superseded for initial origin/intake by prepared migration
+-- modules/identity/db/migrations/2026_10_16_05_public_physician_enrollment.sql.
+-- See PUB-ENR02-pending-enrollment.md. Do NOT apply this draft; final resolution
+-- and request-to-final-evidence handoff still have no authorized mutation consumer.
 -- Future disposable rehearsal after review; same C4 schema after migrations 01..04.
 -- No ALTER/weakening of final evidence, admission, binding or membership rules.
--- Services for account binding, versioning, matching, MFA/audit and handoff are NOT implemented.
+-- The limitations below describe UX-ALIGN01, before PUB-ENR02 source implementation.
 
 CREATE TABLE auth_physician_enrollment_origins (
  origin_id CHAR(36) NOT NULL PRIMARY KEY,
