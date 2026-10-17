@@ -3,6 +3,7 @@
   const root = document.querySelector('[data-onboarding]');
   if (!root) return;
   const boot = document.getElementById('physician-onboarding-state');
+  if (JSON.parse(boot.textContent).enrollment) return;
   const presentation = JSON.parse(boot.textContent).public_entry;
   if (presentation) {
     // Read-only public context never enters the authenticated request adapter.

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../modules/identity/http/IdentityUiBootstrap.php';
 $csrf = \Identity\Http\IdentityUiBootstrap::boot();
+$enrollmentReturn=\Identity\Accreditation\PublicEnrollmentRuntime::identityReturn();
 ?>
 <!doctype html>
 <html lang="es">
@@ -26,7 +27,7 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
           <div class="form-actions"><button class="button" type="submit" data-submit>Verificar correo</button></div>
           <p class="auth-links" data-form-note aria-live="polite"><a href="login.html">Volver a iniciar sesión</a></p>
         </form>
-        <p class="auth-links" data-onboarding-next hidden><a href="acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php">Continuar con mi acreditación profesional</a></p>
+        <p class="auth-links" data-onboarding-next hidden><a href="<?= htmlspecialchars('acceso.php?next='.rawurlencode($enrollmentReturn??'/public/identity/perfil-medico.php'),ENT_QUOTES,'UTF-8') ?>">Continuar con mi acreditación profesional</a></p>
       </section>
     </main>
     <footer class="prototype-footer"><a href="index.html">Volver al índice del prototipo</a></footer>

@@ -13,6 +13,12 @@ final class PhysicianOnboardingPage
         header('X-Content-Type-Options: nosniff');header('Referrer-Policy: no-referrer');header('Cross-Origin-Resource-Policy: same-origin');
         header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; frame-src blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
         if (($_SERVER['REQUEST_METHOD']??'GET')!=='GET'){http_response_code(405);header('Allow: GET');return;}
+        $enrollment=PublicEnrollmentRuntime::current();
+        if(!$staff&&$enrollment!==null&&(isset($_GET['entry'])||isset($_GET['application'])||isset($_GET['enrollment']))){
+            try{$state=$enrollment->page($_GET,$_COOKIE,$_SERVER);$title='Tu solicitud profesional';}
+            catch(\Throwable){http_response_code(403);echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Solicitud no disponible</title><main><h1>No pudimos abrir esta solicitud</h1><p>Puede haber vencido o no estar disponible para tu cuenta.</p><a href="/profiles/listing.php">Volver al directorio y comenzar de nuevo</a><a href="/public/identity/acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php%3Fenrollment%3Dresume">Iniciar sesión para consultar mis solicitudes</a></main></html>';return;}
+            require dirname(__DIR__,3).'/partials/identity/physician-onboarding.php';return;
+        }
         if (!$staff && array_key_exists('entry', $_GET)) {
             require_once dirname(__DIR__,2).'/profiles/services/PublicEnrollmentPresentation.php';
             require_once dirname(__DIR__,2).'/profiles/controllers/PublicProfileController.php';

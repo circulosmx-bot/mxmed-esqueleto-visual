@@ -288,6 +288,7 @@ final class IdentityHttpComposition
         $memberships = new AccountMembershipRepository($pdo);
         $tokens = new OneTimeTokenRepository($pdo);
         $rateLimits = new RateLimitService($pdo, new RateLimitKeyHasher($pepper), $clock);
+        $notifications=\Identity\Accreditation\PublicEnrollmentRuntime::notifications($notifications);
         $registration = new RegistrationService($pdo, $accounts, $credentials, $consents, $tokens, $rateLimits, $notifications, $clock);
         $verification = new EmailVerificationService($pdo, $accounts, $consents, $tokens, $rateLimits, $notifications, $clock);
         $authentication = new CredentialAuthenticationService($accounts, $credentials, $rateLimits, $clock);

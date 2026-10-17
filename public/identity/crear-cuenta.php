@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../modules/identity/http/IdentityUiBootstrap.php';
 $csrf = \Identity\Http\IdentityUiBootstrap::boot();
+$enrollmentReturn=\Identity\Accreditation\PublicEnrollmentRuntime::identityReturn();
 $passwordMinimum = \Identity\Contracts\PasswordPolicy::MIN_LENGTH;
 $passwordMaximum = \Identity\Contracts\PasswordPolicy::MAX_LENGTH;
 ?>
@@ -14,7 +15,7 @@ $passwordMaximum = \Identity\Contracts\PasswordPolicy::MAX_LENGTH;
   <title>Crea tu cuenta · Prototipo UI-3</title>
   <link rel="stylesheet" href="/public/identity/identity-access.css">
 </head>
-<body data-flow="create">
+<body data-flow="create"<?php if($enrollmentReturn!==null): ?> data-enrollment-return="<?= htmlspecialchars($enrollmentReturn,ENT_QUOTES,'UTF-8') ?>"<?php endif; ?>>
   <div class="prototype-shell">
     <header class="prototype-header"><a class="prototype-brand" href="index.html" aria-label="México Médico · inicio del prototipo"><img src="../../../assets/mexico-medico.svg" alt="México Médico"></a><span class="prototype-badge">Prototipo UI-3</span></header>
     <main class="prototype-main">
@@ -35,7 +36,7 @@ $passwordMaximum = \Identity\Contracts\PasswordPolicy::MAX_LENGTH;
           <div class="form-actions"><button class="button" type="submit" data-submit>Crear cuenta</button></div>
           <p class="auth-links" data-form-note aria-live="polite"><a href="login.html">¿Ya tienes una cuenta? Inicia sesión</a></p>
         </form>
-        <p class="auth-links" data-onboarding-next hidden>Después de verificar tu correo, <a href="acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php">continúa con tu acreditación profesional</a>.</p>
+        <p class="auth-links" data-onboarding-next hidden>Después de verificar tu correo, <a href="<?= htmlspecialchars('acceso.php?next='.rawurlencode($enrollmentReturn??'/public/identity/perfil-medico.php'),ENT_QUOTES,'UTF-8') ?>">continúa con tu acreditación profesional</a>.</p>
       </section>
     </main>
     <footer class="prototype-footer"><a href="index.html">Volver al índice del prototipo</a></footer>

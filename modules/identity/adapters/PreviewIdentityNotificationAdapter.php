@@ -24,6 +24,7 @@ final class PreviewIdentityNotificationAdapter implements IdentityNotificationPo
             if (is_array($decoded)) $messages = $decoded;
         }
         $messages[] = ['purpose' => $message->purpose(), 'recipient' => $message->recipient(), 'token' => $message->token(), 'expires_at' => $message->expiresAt()];
+        if($message->continuationPath()!==null)$messages[array_key_last($messages)]['continuation_path']=$message->continuationPath();
         if (file_put_contents($this->path, json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) throw new \RuntimeException('preview_notification_storage_unavailable');
         @chmod($this->path, 0600);
     }

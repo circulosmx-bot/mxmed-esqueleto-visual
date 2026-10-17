@@ -79,6 +79,8 @@
       payload.privacy_notice_accepted = boolValue(form, 'privacy');
       payload.terms_version = 'v2';
       payload.privacy_notice_version = 'v2';
+      const enrollmentReturn=document.body.dataset.enrollmentReturn;
+      if(enrollmentReturn)payload.enrollment_return=enrollmentReturn;
     } else if (flow === 'verify') {
       payload.token = new URLSearchParams(window.location.search).get('token') || '';
     } else if (flow === 'recover') {

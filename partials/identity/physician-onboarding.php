@@ -11,10 +11,11 @@ $entryLogin=$entry?'/public/identity/acceso.php?next='.rawurlencode($entry['cont
 <?php if($staff): ?><link rel="stylesheet" href="/assets/css/media-review-inbox.css"><?php endif; ?>
 <link rel="stylesheet" href="/assets/css/physician-onboarding.css">
 <script src="/assets/js/identity/physician-onboarding.js" defer></script>
+<?php if(isset($state['enrollment'])): ?><script src="/assets/js/identity/physician-enrollment.js" defer></script><?php endif; ?>
 </head><body>
 <div class="prototype-shell">
 <header class="prototype-header"><a class="prototype-brand" href="/private-app.php"><img src="/assets/mexico-medico.svg" alt="México Médico"></a>
-<nav class="onboarding-nav" aria-label="Navegación de cuenta"><?php if($entry): ?><a href="<?= $escape($entry['return_url']) ?>">Volver <?= $entry['mode']==='claim'?'al perfil':'al directorio' ?></a><a href="<?= $escape($entryLogin) ?>">Iniciar sesión</a><?php elseif($staff): ?><a href="/internal/media-review/index.php">Revisión de medios</a><?php else: ?><a href="/private-app.php">Mi aplicación</a><?php endif; ?><?php if(!$entry): ?><button type="button" class="button button--secondary" data-onboarding-logout>Cerrar sesión</button><?php endif; ?></nav></header>
+<nav class="onboarding-nav" aria-label="Navegación de cuenta"><?php if($entry): ?><a href="<?= $escape($entry['return_url']) ?>">Volver <?= $entry['mode']==='claim'?'al perfil':'al directorio' ?></a><a href="<?= $escape($entryLogin) ?>">Iniciar sesión</a><?php elseif(isset($state['enrollment'])): ?><a href="/profiles/listing.php">Volver al directorio</a><?php elseif($staff): ?><a href="/internal/media-review/index.php">Revisión de medios</a><?php else: ?><a href="/private-app.php">Mi aplicación</a><?php endif; ?><?php if(!$entry&&(!isset($state['enrollment'])||$state['enrollment']['authenticated'])): ?><button type="button" class="button button--secondary" data-onboarding-logout>Cerrar sesión</button><?php endif; ?></nav></header>
 <main class="onboarding-main" data-onboarding data-view="<?= $staff?'staff':'physician' ?>">
 <section class="auth-card onboarding-intro"><p class="auth-card__eyebrow"><?= $staff?'México Médico · Equipo interno':'Mi perfil profesional' ?></p><h1><?= $escape($title) ?></h1>
 <p><?= $staff?'La revisión comprueba la relación entre la cuenta solicitante y el perfil profesional.':($entry?'Tu incorporación reúne la verificación de contacto, los datos profesionales y una revisión humana.':'Consulta el avance de tu solicitud y completa los pasos disponibles.') ?> La designación como titular requiere una autorización independiente. El plan Gratuito no exige pago para solicitar la revisión.</p>
@@ -24,6 +25,7 @@ $entryLogin=$entry?'/public/identity/acceso.php?next='.rawurlencode($entry['cont
 <button class="button button--secondary" type="button" data-onboarding-refresh>Actualizar estado</button>
 </section>
 <script type="application/json" id="physician-onboarding-state"><?= json_encode($state,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<?php if(isset($state['enrollment'])): require __DIR__.'/physician-enrollment-intake.php'; else: ?>
 <?php if(!$staff): ?>
 <ol class="onboarding-steps" aria-label="Pasos de acreditación"><li>Cuenta y correo</li><li>Teléfono</li><li>Datos profesionales</li><li>Documentos privados</li><li>Revisión humana</li><li>Confirmación y acceso autorizado</li></ol>
 <div class="onboarding-grid">
@@ -65,6 +67,7 @@ $entryLogin=$entry?'/public/identity/acceso.php?next='.rawurlencode($entry['cont
 <p class="onboarding-notice" data-owner-pending hidden>Acreditación completada. La designación como titular sigue pendiente de una operación independiente y autorizada. Este paso no habilita firmas clínicas ni la administración de operadores.</p>
 </section>
 <?php if($staff): ?><dialog data-evidence-dialog aria-labelledby="evidence-heading"><div class="onboarding-dialog-head"><h2 id="evidence-heading">Documento privado</h2><button type="button" data-evidence-close>Cerrar documento</button></div><p>Uso exclusivo para revisar esta solicitud. El documento no tiene una dirección pública.</p><div data-evidence-content></div></dialog><?php endif; ?>
+<?php endif; ?>
 <noscript><p>Activa JavaScript para utilizar los formularios protegidos. No se ha enviado información.</p></noscript>
 </main><footer class="prototype-footer">México Médico · Identidad y acreditación profesional</footer>
 </div></body></html>

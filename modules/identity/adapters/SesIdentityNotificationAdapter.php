@@ -110,6 +110,7 @@ final class SesIdentityNotificationAdapter implements IdentityNotificationPort
         $url = $message->purpose()===OneTimeTokenPurpose::OPERATOR_INVITATION
             ? \Identity\Operators\OperatorInvitationOrigin::assertPublic($this->identityOrigin).$path.'#operator-invitation='.rawurlencode($message->token())
             : $this->identityOrigin . $path . '?token=' . rawurlencode($message->token());
+        if($message->continuationPath()!==null)$url.='&next='.rawurlencode($message->continuationPath());
         $text = $heading . "\n\n" . $instruction . "\n" . $url . "\n\n" . $expiry
             . "\n\nSi no solicitaste esta acción, puedes ignorar este mensaje.";
         $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
