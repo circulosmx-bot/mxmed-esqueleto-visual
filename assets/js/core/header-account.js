@@ -4,15 +4,16 @@
   function initialize() {
     const header = document.querySelector('.mx-global-header');
     if (!header) return;
-    const context = window.mxmedPrivateSession?.context || {};
-    const professional = context.professional || {};
-    header.querySelector('.mx-gh-identity-name-text').textContent = professional.display_name || '';
-    const specialtySummary = document.getElementById('fs-esp');
-    const syncSpecialty = () => {
-      header.querySelector('.mx-gh-identity-role').textContent = specialtySummary?.textContent?.trim() || professional.role || '';
+    const syncIdentity = () => {
+      const context = window.mxmedPrivateSession?.context || {};
+      // Bounded Agenda operators have their own canonical personal identity renderer.
+      if (context.workspace === 'agenda_operators' || document.body.dataset.operatorComposition === 'canonical') return;
+      const professional = context.professional || {};
+      header.querySelector('.mx-gh-identity-name-text').textContent = professional.display_name || '';
+      header.querySelector('.mx-gh-identity-role').textContent = professional.professional_designation?.trim() || 'Perfil profesional';
     };
-    syncSpecialty();
-    if (specialtySummary) new MutationObserver(syncSpecialty).observe(specialtySummary, { childList: true, characterData: true, subtree: true });
+    syncIdentity();
+    window.addEventListener('mxmed:session-authenticated', syncIdentity);
     // This existing Admin preview is populated only by profile-photo.php current().
     // Never observe the separate candidate/review previews.
     const currentPreview = document.querySelector('#mxpi-photo-preview img');
