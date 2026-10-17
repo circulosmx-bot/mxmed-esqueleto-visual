@@ -2,6 +2,15 @@
   'use strict';
   const root = document.querySelector('[data-onboarding]');
   if (!root) return;
+  const boot = document.getElementById('physician-onboarding-state');
+  const presentation = JSON.parse(boot.textContent).public_entry;
+  if (presentation) {
+    // Read-only public context never enters the authenticated request adapter.
+    boot.textContent = '';
+    root.querySelectorAll('fieldset').forEach(fieldset => { fieldset.disabled = true; });
+    root.querySelector('[data-onboarding-refresh]').addEventListener('click', () => window.location.reload());
+    return;
+  }
   const endpoint = '/api/identity/physician-onboarding.php';
   let state = JSON.parse(document.getElementById('physician-onboarding-state').textContent);
   const initial = { staff: state.staff, expires_at: state.expires_at };
@@ -98,10 +107,6 @@
     if (q('[data-phone-status]')) q('[data-phone-status]').textContent = !state.enabled ? 'La verificación de teléfono estará disponible cuando se habilite el servicio.' : state.phone_verified ? 'Teléfono verificado.' : 'Verifica tu teléfono para continuar.';
     enabled('phone_issue', !state.phone_verified, !state.phone_verified);
     enabled('phone_verify', !!otp, !!otp);
-    enabled('profile_lookup', state.phone_verified && (!r || ['REJECTED', 'REVOKED', 'EXPIRED'].includes(r.status)));
-    enabled('request_create', !!profile, !!profile);
-    const preview = q('[data-profile-preview]');
-    if (preview) { preview.hidden = !profile; preview.replaceChildren(); if (profile) { add(preview, 'strong', profile.display_name); add(preview, 'p', profile.professional_area || 'Datos profesionales verificados'); add(preview, 'p', `Referencia: ${profile.doctor_id}`); } }
     const queue = q('[data-request-list]');
     if (queue) { queue.replaceChildren(); if (!state.enabled) add(queue, 'p', 'La revisión de acreditaciones está pendiente de habilitación.');
       else if (!state.requests.length) add(queue, 'p', 'No hay solicitudes disponibles para tu revisión.');
@@ -110,7 +115,7 @@
     q('[data-request-panel]').hidden = !r;
     const summary = q('[data-request-summary]'); summary.replaceChildren();
     if (r) { add(summary, 'h3', r.display_name); add(summary, 'p', r.professional_name); add(summary, 'p', r.professional_area);
-      add(summary, 'p', `Referencia del perfil: ${r.profile_reference || 'Por resolver'}`);
+      if (initial.staff) add(summary, 'p', `Referencia del perfil: ${r.profile_reference || 'Por resolver'}`);
       if (r.account_reference) add(summary, 'p', `Cuenta solicitante: ${r.account_reference}`);
       add(summary, 'p', r.completed ? 'Acreditación completada.' : statusLabel(r.status));
       if (reasons[r.review_reason]) add(summary, 'p', reasons[r.review_reason]);
@@ -147,8 +152,6 @@
       let data = {};
       if (action === 'phone_issue') { otp = await request(action, fields); form.reset(); forms('phone_verify').hidden = false; feedback('El envío del código fue confirmado. Revisa tu teléfono.'); return; }
       if (action === 'phone_verify') { await request(action, { ...otp, code: fields.code }); await refresh(); return; }
-      if (action === 'profile_lookup') { profile = (await request(action, fields)).profile; return; }
-      if (action === 'request_create') { const result = await request(action, { profile_reference: profile.doctor_id, claim_accepted: values.has('claim_accepted') }); selected = result.request_id; await refresh(); return; }
       if (action === 'document_add') {
         const file = values.get('document'); if (!(file instanceof File) || !file.size || file.size > 8 * 1024 * 1024) throw new Error('Selecciona un archivo PDF, JPG o PNG de hasta 8 MiB.');
         const content = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.onerror = reject; reader.readAsDataURL(file); });
@@ -168,7 +171,6 @@
     });
   }));
   q('[data-onboarding-refresh]').addEventListener('click', () => state.enabled ? run(refresh) : window.location.reload());
-  q('#profile-reference')?.addEventListener('input', () => { profile = null; forms('request_create').reset(); render(); });
   q('[data-evidence-close]')?.addEventListener('click', revokePreviews);
   q('[data-evidence-dialog]')?.addEventListener('cancel', revokePreviews);
   document.querySelector('[data-onboarding-logout]').addEventListener('click', () => run(async () => {

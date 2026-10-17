@@ -82,13 +82,14 @@ def prepare(page,origin,index):
     code=json.loads(pathlib.Path(os.environ['C4_UI_QA_SMS']).read_text())[answer['data']['challenge_id']]
     wrong=('1' if code[0]!='1' else '2')+code[1:];page.locator('#phone-code').fill(wrong);submit(page,'phone_verify',422);assert 'Teléfono verificado.' not in page.locator('[data-phone-status]').inner_text()
     page.locator('#phone-code').fill(code);submit(page,'phone_verify');expect(page.locator('[data-phone-status]')).to_have_text('Teléfono verificado.')
-    if index==0:
-        page.locator('#profile-reference').fill('synthetic-profile-not-present');submit(page,'profile_lookup',404);expect(page.locator(FORM('request_create'))).to_be_hidden()
-    page.locator('#profile-reference').fill(FIXTURE['profiles'][index]);submit(page,'profile_lookup');expect(page.locator('[data-profile-preview]')).to_contain_text(FIXTURE['profiles'][index])
-    if index==0:
-        page.locator('#profile-reference').fill('changed-reference');expect(page.locator(FORM('request_create'))).to_be_hidden()
-        page.locator('#profile-reference').fill(FIXTURE['profiles'][index]);submit(page,'profile_lookup')
-    page.locator(FORM('request_create')+' [name=claim_accepted]').check();created=submit(page,'request_create')['data'];request_id=created['request_id']
+    # UX-ALIGN01 removes internal-ID entry. New public origin persistence remains
+    # unavailable: create ONLY the owned synthetic draft through the native service,
+    # after genuine browser phone verification, then test original UI resume.
+    assert page.locator('#profile-reference,[name=profile_reference]').count()==0
+    setup=subprocess.run(['php',str(ROOT/'modules/identity/tests/PhysicianOnboardingResumeFixture.php'),str(index)],capture_output=True,text=True,env=os.environ)
+    if setup.returncode:raise RuntimeError('owned canonical resume fixture failed: '+setup.stderr[-1500:])
+    created=json.loads(setup.stdout);assert created['fixture_setup_only'] is True;request_id=created['request_id']
+    response(page,'snapshot',lambda:page.locator('[data-onboarding-refresh]').click())
     expect(page.locator('[data-request-panel]')).to_be_visible()
     if index==0:
         page.locator('#evidence-file').set_input_files({'name':'not-an-id.txt','mimeType':'text/plain','buffer':b'SYNTHETIC invalid evidence'});submit(page,'document_add',422)
@@ -131,7 +132,7 @@ def run_suite(origin,mode):
                     doctor=browser.new_context(ignore_https_errors=True,viewport={'width':width,'height':height});staff=browser.new_context(ignore_https_errors=True,viewport={'width':width,'height':height})
                     page=doctor.new_page();review=staff.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));review.on('pageerror',lambda e:errors.append(str(e)))
                     try:
-                        email,request_id=prepare(page,origin,index);passed(STAGE+'_registration_email_phone_profile_documents_submit')
+                        email,request_id=prepare(page,origin,index);passed(STAGE+'_registration_email_phone_fixture_draft_UI_resume_documents_submit')
                         assert api(doctor,origin,'snapshot',csrf=False).status==403
                         assert api(doctor,origin,'snapshot',request_origin='https://other.invalid').status==403
                         assert api(doctor,origin,'document',{'view':'staff','request_id':request_id,'version':4,'file_id':'none'}).status==403
@@ -213,7 +214,8 @@ def main():
             'public/identity/identity-access.css','private-app.php','internal/media-review/index.php',
             'partials/identity/physician-onboarding.php','assets/css/physician-onboarding.css','assets/js/identity/physician-onboarding.js',
             'scripts/normal-local-https-proxy.py','scripts/c4-ui01-browser-qa.py','scripts/gov03b-disposable-qa.py',
-            'modules/identity/tests/support/C4UiQaRouter.php','modules/identity/tests/PhysicianOnboardingUiFixture.php']]]
+            'modules/identity/tests/support/C4UiQaRouter.php','modules/identity/tests/PhysicianOnboardingUiFixture.php',
+            'modules/identity/tests/PhysicianOnboardingResumeFixture.php']]]
     source_manifest={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files}
     spec=importlib.util.spec_from_file_location('c4_ui_proxy',ROOT/'scripts/normal-local-https-proxy.py');proxy=importlib.util.module_from_spec(spec);spec.loader.exec_module(proxy)
     with tempfile.TemporaryDirectory(prefix='mxmed-c4-ui-',dir='/tmp') as d,(OUT/'ui-private-server.log').open('wb') as log:

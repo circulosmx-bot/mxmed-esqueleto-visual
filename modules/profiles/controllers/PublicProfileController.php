@@ -15,6 +15,7 @@ require_once __DIR__ . '/../services/PublicProfileEligibility.php';
 require_once __DIR__ . '/../services/PublicProfilePlanCapabilities.php';
 require_once __DIR__ . '/../services/ProfileThemeCatalog.php';
 require_once __DIR__ . '/../services/PublicNamePresentation.php';
+require_once __DIR__ . '/../services/PublicProfileClaimEligibility.php';
 require_once __DIR__ . '/../../agenda/helpers/consultorio_map.php';
 
 final class PublicProfileController
@@ -109,6 +110,10 @@ final class PublicProfileController
         $isPublic = $hasMinimumPublicData && $isPublicCandidate && $sourceStatus === 'active';
         $profileStatus = $isPublic ? 'active' : 'hidden';
         $planContext['has_public_profile'] = $isPublic;
+        // Local visual plan overrides never make a paid/unknown profile claim-eligible.
+        $claimEntry = \Profiles\Services\PublicProfileClaimEligibility::build($doctorId, $planSource, $isPublic,
+            (array)($snapshot['claim_ownership_source'] ?? []));
+        $planContext['claim_source_ready'] = $claimEntry['eligible'];
         $planContract = PublicProfilePlanCapabilities::build($effectivePlanCode, $planContext);
         $plan = (array)$planContract['plan'];
         $publicVisibility = (array)$planContract['public_visibility'];
@@ -243,7 +248,11 @@ final class PublicProfileController
             'agenda_public' => (array)$planContract['agenda_public'],
             'commercial_visibility' => (array)$planContract['commercial_visibility'],
             'reviews' => (array)$planContract['reviews'],
-            'claim' => (array)$planContract['claim'],
+            'claim' => array_replace((array)$planContract['claim'], [
+                'claim_url' => $claimEntry['url'],
+                'presentation_only' => true,
+                'submission_available' => false,
+            ]),
             'seo' => $seo,
             'json_ld' => null,
             'ecosystem_links' => [

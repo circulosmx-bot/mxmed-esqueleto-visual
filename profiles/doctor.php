@@ -1118,7 +1118,9 @@ if (isLocalDevRequest()) {
 
       <?php if ($showClaimProfile): ?>
         <div class="mxpp-actions-row">
-          <a class="mxpp-action-claim" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
+          <?php if (is_string($claim['claim_url'] ?? null) && str_starts_with($claim['claim_url'], '/public/identity/perfil-medico.php?entry=claim&profile=')): ?>
+          <a class="mxpp-action-claim" href="<?= h($claim['claim_url']) ?>">Soy este médico y quiero administrar mi perfil</a>
+          <?php endif; ?>
         </div>
       <?php endif; ?>
 
@@ -1439,7 +1441,7 @@ if (isLocalDevRequest()) {
     <div class="mxpp-wrap mxpp-footer__top">
       <div class="mxpp-footer__brand">México Médico</div>
       <div class="mxpp-footer__participa">
-        <p>¿como formar parte?</p>
+        <p><a href="/public/identity/perfil-medico.php?entry=join" class="mxpp-action-link">FORMAR PARTE</a></p>
         <small>médicos · aseguradoras · clínicas</small>
       </div>
     </div>

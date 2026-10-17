@@ -47,6 +47,7 @@ final class PublicProfileRepository
             'profile_source' => $this->resolveProfileSource($canonicalProfile),
             'plan_source' => $this->resolvePlanSource($canonicalProfile),
             'ownership_source' => $ownershipSource,
+            'claim_ownership_source' => $this->resolveClaimOwnershipSource($doctorId),
             'identity' => $this->resolveIdentity($canonicalProfile),
             'gallery' => $this->tableExists('media_assets') ? (new \Media\Repositories\MediaAssetsRepository($this->pdo))->listDoctorGallery($doctorId) : [],
             'professional' => $this->resolveProfessional($canonicalProfile),
@@ -88,6 +89,24 @@ final class PublicProfileRepository
         } catch (PDOException $e) {
             return $unavailable;
         }
+    }
+
+    /** Ownerless claim navigation is separate from the broader administered-profile gate. */
+    public function resolveClaimOwnershipSource(string $doctorId): array
+    {
+        $unavailable = ['source_ready' => false, 'has_active_owner' => true];
+        try {
+            if (!$this->tableExists('auth_account_memberships')) return $unavailable;
+            $columns = $this->tableColumns('auth_account_memberships');
+            foreach (['profile_doctor_id', 'role_code', 'scope_code', 'status'] as $required) {
+                if (!in_array($required, $columns, true)) return $unavailable;
+            }
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM auth_account_memberships
+                WHERE profile_doctor_id = ? AND role_code = 'owner' AND status = 'active'
+                AND scope_code IN ('profile', 'profile_doctor')");
+            $stmt->execute([$doctorId]);
+            return ['source_ready' => true, 'has_active_owner' => (int)$stmt->fetchColumn() > 0];
+        } catch (PDOException) { return $unavailable; }
     }
 
     public function findPublicCanonicalRoute(string $entityType, string $entityId): ?array

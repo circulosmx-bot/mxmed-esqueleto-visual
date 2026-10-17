@@ -126,5 +126,6 @@ $totalPages = max(0, (int)($pagination['total_pages'] ?? 0));
     <?php endif; ?>
   <?php endif; ?>
 </main>
+<footer class="shell" aria-label="México Médico"><p>¿Eres profesional de la salud?</p><a class="cta" href="/public/identity/perfil-medico.php?entry=join">FORMAR PARTE</a><p>Conoce los pasos para formar parte de México Médico.</p></footer>
 </body>
 </html>
