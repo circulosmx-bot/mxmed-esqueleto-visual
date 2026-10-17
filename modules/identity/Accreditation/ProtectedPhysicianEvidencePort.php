@@ -10,6 +10,9 @@ interface ProtectedPhysicianEvidencePort
     /** Caller owns this exact PDO transaction. Revalidate under locks on every use.
      * Returns minimized, current authority facts; never bytes, contact data or storage keys.
      * The admission/binding writer must append its own audit and reference request/version.
+     * Linked PUB-ENR03 requests additionally return the immutable enrollment origin,
+     * original profile/null, intake revision and reviewed-resolution case/audit.
+     * REQUEST_NEW_PROFILE is eligible only through that exact revalidated relation.
      */
     public function requireConfirmed(PDO $transaction, string $requestId, int $version,
         string $accountId, string $doctorId): array;

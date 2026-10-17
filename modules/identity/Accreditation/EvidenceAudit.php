@@ -47,6 +47,11 @@ final class EvidenceAudit
         if(!in_array($operation,['ORIGIN_BOUND','INTAKE_SAVED','INTAKE_SUBMITTED','MATCH_CANDIDATES_READ'],true))throw new \InvalidArgumentException('enrollment_audit_operation_invalid');
         return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','physician_enrollment',$operation,$version,$before,$after,null,null,false);
     }
+    public function resolution(AuthenticatedAccessContext $actor,string $target,string $operation,int $version,string $before,string $after,string $caseId,bool $staff=true):string
+    {
+        if(!in_array($operation,['RESOLUTION_CHALLENGE','RESOLUTION_DECIDED','RESOLUTION_READ','RESOLUTION_HANDOFF'],true))throw new \InvalidArgumentException('enrollment_resolution_audit_operation_invalid');
+        return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','physician_enrollment',$operation,$version,$before,$after,$caseId,null,$staff);
+    }
     private function write(AuthenticatedAccessContext $actor,string $target,string $eventType,string $targetType,string $operation,int $version,
         string $before,string $after,?string $caseId,?string $reviewReason,bool $staff):string
     {

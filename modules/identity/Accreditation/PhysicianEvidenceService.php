@@ -44,6 +44,37 @@ final class PhysicianEvidenceService implements ProtectedPhysicianEvidencePort
         });
     }
 
+    /** Explicit internal handoff. All professional references come from the reviewed
+     * server resolution; the applicant supplies only their original application. */
+    public function createFromEnrollment(AuthenticatedAccessContext $actor,string $originId):array
+    {
+        if(!preg_match('/^[a-f0-9-]{36}$/D',$originId))throw new \RuntimeException('enrollment_account_denied');
+        return $this->a->transaction($actor,function()use($actor,$originId){
+            $this->a->applicant($actor->accountId());$this->a->phone($actor->accountId());
+            $o=$this->a->query('SELECT origin_id,account_id FROM auth_physician_enrollment_origins WHERE origin_id=? FOR UPDATE',[$originId])->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($o)||$o['origin_id']!==$originId||$o['account_id']!==$actor->accountId())throw new \RuntimeException('enrollment_account_denied');
+            $resolution=$this->a->query('SELECT resolution_id FROM auth_physician_enrollment_resolutions WHERE origin_id=? ORDER BY resolution_version DESC LIMIT 1 FOR UPDATE',[$originId])->fetchColumn();
+            if(!is_string($resolution))throw new \RuntimeException('enrollment_approved_resolution_required');
+            $r=(new EnrollmentResolutionAuthority($this->a))->current($resolution);
+            $h=$this->a->query('SELECT evidence_request_id,resolution_id FROM auth_physician_enrollment_handoffs WHERE origin_id=? FOR UPDATE',[$originId])->fetch(PDO::FETCH_ASSOC);
+            if(is_array($h)){
+                if($h['resolution_id']!==$resolution)throw new \RuntimeException('enrollment_handoff_scope_denied');
+                $e=$this->a->request($h['evidence_request_id']);(new EnrollmentResolutionAuthority($this->a))->forEvidence($e);
+                return ['request_id'=>$e['request_id'],'version'=>(int)$e['version'],'status'=>$e['status'],'replayed'=>true];
+            }
+            $this->a->query('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE',[$r['resolved_profile_doctor_id']]);
+            if($this->a->query("SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active' FOR UPDATE",[$r['resolved_profile_doctor_id']])->fetchColumn()!==false
+                ||$this->a->query('SELECT binding_id FROM auth_account_professional_bindings WHERE profile_doctor_id=? FOR UPDATE',[$r['resolved_profile_doctor_id']])->fetchColumn()!==false)
+                throw new \RuntimeException('c4_existing_owner_conflict');
+            $id=$this->a->uuid();$audit=$this->audit->append($actor,$id,'REQUEST_CREATED',1,'ABSENT','DRAFT');
+            $this->a->query('INSERT INTO auth_physician_evidence_requests(request_id,account_id,origin,profile_doctor_id,verified_identity_id,professional_credential_id,identity_revision_hash,credential_revision_hash,enrollment_resolution_id,audit_reference,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                [$id,$actor->accountId(),$r['initial_origin'],$r['resolved_profile_doctor_id'],$r['verified_identity_id'],$r['professional_credential_id'],$r['identity_revision_hash'],$r['credential_revision_hash'],$resolution,$audit,$this->a->sqlTime()]);
+            $handoffAudit=$this->audit->resolution($actor,$originId,'RESOLUTION_HANDOFF',(int)$r['resolution_version'],'APPROVED','EVIDENCE_DRAFT',$r['case_id'],false);
+            $this->a->query('INSERT INTO auth_physician_enrollment_handoffs(origin_id,resolution_id,evidence_request_id,audit_reference,created_at) VALUES(?,?,?,?,?)',[$originId,$resolution,$id,$handoffAudit,$this->a->sqlTime()]);
+            return ['request_id'=>$id,'version'=>1,'status'=>'DRAFT','replayed'=>false];
+        });
+    }
+
     public function addDocument(AuthenticatedAccessContext $actor,string $id,int $version,string $kind,string $bytes): array
     {
         if (!in_array($kind,['OFFICIAL_ID','PROFESSIONAL_CREDENTIAL'],true)||strlen($bytes)<1||strlen($bytes)>8*1024*1024)
@@ -81,7 +112,8 @@ final class PhysicianEvidenceService implements ProtectedPhysicianEvidencePort
             $r=$this->own($actor,$id,$version);
             if ($r['status']!=='DRAFT') throw new \RuntimeException('c4_submission_state_denied');
             $phone=$this->a->phone($actor->accountId());$files=$this->files($id);$this->requireKinds($files);
-            if ($r['origin']!=='REQUEST_NEW_PROFILE') $this->assertSources($r);
+            if (($r['enrollment_resolution_id']??null)!==null)(new EnrollmentResolutionAuthority($this->a))->forEvidence($r);
+            if ($r['origin']!=='REQUEST_NEW_PROFILE'||($r['enrollment_resolution_id']??null)!==null) $this->assertSources($r);
             $event=$this->audit->append($actor,$id,'SUBMITTED',$version+1,'DRAFT','SUBMITTED');
             $this->update($r,['status'=>'SUBMITTED','version'=>$version+1,'phone_version'=>(int)$phone['contact_version'],'audit_reference'=>$event]);
             return ['request_id'=>$id,'version'=>$version+1,'status'=>'SUBMITTED'];
@@ -245,9 +277,17 @@ final class PhysicianEvidenceService implements ProtectedPhysicianEvidencePort
         // independently validates its current actor/session and own transaction/operation.
         $this->a->account($accountId,(int)$context['binding']['credential_version']);
         $phone=$this->a->phone($accountId,(int)$r['phone_version']);
-        return array_intersect_key($r,array_flip(['request_id','account_id','origin','profile_doctor_id','verified_identity_id','professional_credential_id',
+        $enrollment=[];
+        if(($r['enrollment_resolution_id']??null)!==null){
+            $resolution=(new EnrollmentResolutionAuthority($this->a))->forEvidence($r);
+            $enrollment=['enrollment_origin_id'=>$resolution['origin_id'],'enrollment_origin_type'=>$resolution['initial_origin'],
+                'enrollment_original_profile_id'=>$resolution['original_profile_doctor_id'],'enrollment_intake_version'=>(int)$resolution['intake_version'],
+                'enrollment_resolution_version'=>(int)$resolution['resolution_version'],'enrollment_reviewer_account_id'=>$resolution['reviewer_account_id'],
+                'enrollment_case_reference'=>$resolution['case_id'],'enrollment_audit_reference'=>$resolution['audit_reference']];
+        }
+        return array_intersect_key($r,array_flip(['request_id','account_id','origin','profile_doctor_id','verified_identity_id','professional_credential_id','enrollment_resolution_id',
             'identity_revision_hash','credential_revision_hash','version','policy_version','phone_version','case_id','reviewer_account_id','reviewed_at','reviewed_version',
-            'review_audit_reference','confirmation_audit_reference','confirmed_at','valid_until','audit_reference']))+['phone_audit_reference'=>$phone['audit_reference']];
+            'review_audit_reference','confirmation_audit_reference','confirmed_at','valid_until','audit_reference']))+['phone_audit_reference'=>$phone['audit_reference']]+$enrollment;
     }
 
     private function own(AuthenticatedAccessContext $actor,string $id,int $version): array

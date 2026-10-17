@@ -9,16 +9,7 @@ require_once $root.'/modules/identity/http/IdentityHttpComposition.php';
 Identity\Http\IdentityHttpComposition::registerAutoloader();
 require_once $root.'/modules/media/storage/LocalPersistentPrivateMediaStorage.php';
 require_once $root.'/modules/agenda/contracts/OtpProviderPort.php';
-final class C4UiSyntheticSms implements Agenda\Contracts\OtpProviderPort {
-    public function providerId():string{return 'disposable-c4-ui-only';}
-    public function configured():bool{return true;}
-    public function deliver(string $channel,string $destination,string $secret,array $context=[]):Agenda\Contracts\OtpDeliveryResult {
-        if($channel!=='sms'||!preg_match('/^\+1555[0-9]{7}$/D',$destination))return new Agenda\Contracts\OtpDeliveryResult(false,'synthetic',null);
-        $path=(string)getenv('C4_UI_QA_SMS');$rows=is_file($path)?json_decode(file_get_contents($path),true):[];
-        $rows[$context['challenge_id']]=$secret;file_put_contents($path,json_encode($rows,JSON_THROW_ON_ERROR),LOCK_EX);chmod($path,0600);
-        return new Agenda\Contracts\OtpDeliveryResult(true,'synthetic',null);
-    }
-}
+require_once __DIR__.'/C4UiSyntheticSms.php';
 $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);
 if (!in_array($path,['/public/identity/perfil-medico.php','/api/identity/physician-onboarding.php','/internal/media-review/index.php'],true))return false;
 $identity=Identity\Http\IdentityHttpComposition::fromProcessEnvironment();$pdo=$identity->pdo();

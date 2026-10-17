@@ -3,6 +3,8 @@
 $escape=static fn(string $s):string=>htmlspecialchars($s,ENT_QUOTES,'UTF-8');
 $entry=is_array($state['public_entry']??null)?$state['public_entry']:null;
 $entryLogin=$entry?'/public/identity/acceso.php?next='.rawurlencode($entry['continue_url']):null;
+$loginDestination=$staff?'/internal/media-review/index.php?section=acreditacion':'/public/identity/perfil-medico.php';
+if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDestination.='?continue_enrollment='.$state['enrollment_application']['application_id'];
 ?>
 <!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow">
@@ -21,11 +23,27 @@ $entryLogin=$entry?'/public/identity/acceso.php?next='.rawurlencode($entry['cont
 <p><?= $staff?'La revisión comprueba la relación entre la cuenta solicitante y el perfil profesional.':($entry?'Tu incorporación reúne la verificación de contacto, los datos profesionales y una revisión humana.':'Consulta el avance de tu solicitud y completa los pasos disponibles.') ?> La designación como titular requiere una autorización independiente. El plan Gratuito no exige pago para solicitar la revisión.</p>
 <p class="onboarding-notice" data-onboarding-status role="status" aria-live="polite"><?= $escape($state['message']) ?></p>
 <p data-onboarding-feedback role="alert" aria-live="assertive"></p>
-<a href="/public/identity/acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php" data-onboarding-login hidden>Iniciar sesión nuevamente</a>
+<a href="/public/identity/acceso.php?next=<?= $escape(rawurlencode($loginDestination)) ?>" data-onboarding-login hidden>Iniciar sesión nuevamente</a>
 <button class="button button--secondary" type="button" data-onboarding-refresh>Actualizar estado</button>
 </section>
 <script type="application/json" id="physician-onboarding-state"><?= json_encode($state,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 <?php if(isset($state['enrollment'])): require __DIR__.'/physician-enrollment-intake.php'; else: ?>
+<?php if(isset($state['enrollment_review'])): ?>
+<section class="auth-card" data-enrollment-review-panel><h2>Solicitudes de incorporación</h2><p>Comprueba el perfil propuesto y registra una decisión explícita. Esta revisión no aprueba por sí sola la acreditación ni asigna titularidad.</p>
+<div data-enrollment-review-list class="onboarding-request-list"></div><div data-enrollment-review-summary></div>
+<form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="enrollment_review_begin"><fieldset disabled><legend>Revisión del perfil solicitado</legend>
+<div class="field"><label for="enrollment-review-decision">Resultado de revisión</label><select id="enrollment-review-decision" name="decision"></select></div>
+<div class="field"><label for="enrollment-review-email">Correo de tu cuenta interna</label><input id="enrollment-review-email" name="email" type="email" autocomplete="username" required></div>
+<div class="field"><label for="enrollment-review-password">Confirma tu contraseña</label><input id="enrollment-review-password" name="password" type="password" autocomplete="current-password" required></div>
+<button type="submit" class="button">Iniciar revisión</button></fieldset></form>
+<form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="enrollment_review_decide" hidden><fieldset disabled><legend>Confirmar decisión de perfil</legend><p>Comprueba que el resultado corresponde a esta solicitud y al perfil mostrado.</p>
+<div class="field"><label for="enrollment-review-mfa">Código de tu autenticador</label><input id="enrollment-review-mfa" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></div>
+<label><input type="checkbox" name="relationship_confirmed"> Confirmo la relación revisada entre solicitante y perfil propuesto.</label>
+<button type="submit" class="button">Registrar decisión</button></fieldset></form></section>
+<?php elseif(isset($state['enrollment_application'])): ?>
+<section class="auth-card" data-enrollment-continuation><h2>Continúa tu solicitud de incorporación</h2><p>Conservamos tu solicitud original. La revisión de perfil y la acreditación profesional son pasos separados.</p>
+<p data-enrollment-continuation-status></p><form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="enrollment_handoff"><fieldset disabled><legend>Continuar con la misma solicitud</legend><p>Verifica primero tu teléfono. Después podrás adjuntar los documentos privados al expediente correspondiente.</p><button class="button" type="submit">Continuar acreditación profesional</button></fieldset></form></section>
+<?php endif; ?>
 <?php if(!$staff): ?>
 <ol class="onboarding-steps" aria-label="Pasos de acreditación"><li>Cuenta y correo</li><li>Teléfono</li><li>Datos profesionales</li><li>Documentos privados</li><li>Revisión humana</li><li>Confirmación y acceso autorizado</li></ol>
 <div class="onboarding-grid">

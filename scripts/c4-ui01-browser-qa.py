@@ -103,7 +103,10 @@ def prepare(page,origin,index):
 def staff_review(page,origin,index,request_id,reject=False):
     login(page,origin,'ui_reviewer_'+str(index)+'@example.invalid',True)
     response(page,'snapshot',lambda:page.locator('[data-request-id="'+request_id+'"]').click())
-    expect(page.locator('[data-request-summary]')).to_contain_text(FIXTURE['profiles'][index])
+    expect(page.locator('[data-request-summary]')).to_contain_text('Synthetic Physician')
+    scoped=api(page.context,origin,'snapshot',{'view':'staff','request_id':request_id})
+    assert scoped.status==200 and scoped.json()['data']['request']['profile_reference']==FIXTURE['profiles'][index]
+    assert FIXTURE['profiles'][index] not in page.locator('body').inner_text()
     if reject:page.locator('#review-decision').select_option('REJECTED')
     page.locator('#review-email').fill('ui_reviewer_'+str(index)+'@example.invalid');page.locator('#review-password').fill(FIXTURE['password']);submit(page,'review_begin')
     for button in page.locator('[data-document-list] button').all():

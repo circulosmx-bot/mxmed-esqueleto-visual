@@ -31,7 +31,12 @@ final class ProfessionalAuthorityIssuer
             if ($w['account_id']!==$actor->accountId()) throw new \RuntimeException('physician_issuer_account_scope_denied');
             // Only this immutable server handoff supplies request/version/account/profile.
             $r=$this->evidence->requireConfirmed($this->a->pdo,$w['evidence_request_id'],(int)$w['evidence_version'],$actor->accountId(),$w['profile_doctor_id']);
-            if ($r['origin']!=='CLAIM_EXISTING_PROFILE'||!hash_equals($w['payload_hash'],ProfessionalIssuanceWorkflow::payloadHash($r)))
+            if(($r['enrollment_resolution_id']??null)!==null){
+                // Explicit verified-resolution case, including REQUEST_NEW_PROFILE.
+                // Never reinterpret general enrollment as an ordinary public claim.
+                (new EnrollmentResolutionAuthority($this->a))->forEvidence($r);
+            } elseif($r['origin']!=='CLAIM_EXISTING_PROFILE')throw new \RuntimeException('physician_reviewed_resolution_required');
+            if (!hash_equals($w['payload_hash'],ProfessionalIssuanceWorkflow::payloadHash($r)))
                 throw new \RuntimeException('physician_command_payload_conflict');
             $result=$w['staged_result']===null?null:json_decode($w['staged_result'],true,32,JSON_THROW_ON_ERROR);
             if ($result===null) {

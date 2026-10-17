@@ -11,7 +11,9 @@ final class ProfessionalIssuanceWorkflow
     public function usesConnection(PDO $pdo):bool {return $pdo===$this->pdo;}
     public static function payloadHash(array $r):string
     {
-        return hash('sha256',json_encode([$r['request_id'],(int)$r['version'],$r['account_id'],$r['profile_doctor_id']],JSON_THROW_ON_ERROR));
+        $facts=[$r['request_id'],(int)$r['version'],$r['account_id'],$r['profile_doctor_id']];
+        if(($r['enrollment_resolution_id']??null)!==null)$facts+=['reviewed_enrollment'=>[$r['origin'],$r['enrollment_resolution_id']]];
+        return hash('sha256',json_encode($facts,JSON_THROW_ON_ERROR));
     }
     public function record(PDO $transaction,ProtectedPhysicianEvidencePort $evidence,string $requestId,int $version):string
     {

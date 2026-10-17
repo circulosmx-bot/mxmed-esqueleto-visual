@@ -32,9 +32,12 @@ final class PhysicianOnboardingPage
             require dirname(__DIR__,3).'/partials/identity/physician-onboarding.php';
             return;
         }
-        try {$state=($http??new PhysicianOnboardingHttp($identity))->page($_COOKIE,$staff);}
+        try {$application=$_GET['continue_enrollment']??null;if($application!==null&&(!is_string($application)||!preg_match('/^[a-f0-9-]{36}$/D',$application)))throw new GovernanceHttpDenied(403);
+            $state=($http??new PhysicianOnboardingHttp($identity))->page($_COOKIE,$staff,$application);}
         catch (GovernanceHttpDenied $e) {
-            if ($e->status===401){$next=$staff?'/internal/media-review/index.php?section=acreditacion':'/public/identity/perfil-medico.php';header('Location: /public/identity/acceso.php?next='.rawurlencode($next),true,302);return;}
+            if ($e->status===401){$next=$staff?'/internal/media-review/index.php?section=acreditacion':'/public/identity/perfil-medico.php';
+                if(!$staff&&is_string($application))$next.='?continue_enrollment='.$application;
+                header('Location: /public/identity/acceso.php?next='.rawurlencode($next),true,302);return;}
             http_response_code(403);echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Acceso restringido</title><main><h1>Acceso restringido</h1><p>Esta revisión requiere autorización del equipo interno.</p><a href="/public/identity/perfil-medico.php">Volver a mi acreditación</a></main></html>';return;
         } catch (\Throwable) {http_response_code(503);echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Servicio no disponible</title><main><h1>No pudimos consultar tu solicitud</h1><p>Intenta de nuevo más tarde.</p></main></html>';return;}
         $title=$staff?'Revisión de acreditación profesional':'Mi acreditación profesional';

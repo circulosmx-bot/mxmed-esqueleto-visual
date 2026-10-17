@@ -17,7 +17,8 @@
   const initial = { staff: state.staff, expires_at: state.expires_at };
   let csrf = state.csrf_token, selected = state.request?.request_id || null;
   document.getElementById('physician-onboarding-state').textContent = '';
-  let busy = false, locked = false, otp = null, confirmation = null, review = null, profile = null;
+  let busy = false, locked = false, otp = null, confirmation = null, review = null, profile = null, enrollmentReview = null;
+  let selectedEnrollment = state.enrollment_review?.application?.application_id || state.enrollment_application?.application_id || null;
   let epoch = 0, deadline = initial.expires_at * 1000, expiryTimer;
   const urls = new Set();
   const q = s => root.querySelector(s);
@@ -53,7 +54,7 @@
     urls.forEach(url => URL.revokeObjectURL(url)); urls.clear();
   }
   function clearSecrets() {
-    otp = confirmation = review = profile = null; revokePreviews();
+    otp = confirmation = review = profile = enrollmentReview = null; revokePreviews();
     root.querySelectorAll('form').forEach(form => form.reset());
   }
   function lock(message) {
@@ -86,7 +87,7 @@
   }
   async function refresh() {
     clearSecrets();
-    const next = await request('snapshot', selected ? { request_id: selected } : {});
+    const next = await request('snapshot', { ...(selected ? { request_id: selected } : {}), ...(selectedEnrollment ? { application_id: selectedEnrollment } : {}) });
     state = next; locked = false; selected = state.request?.request_id || null; render();
   }
   async function run(fn) {
@@ -102,6 +103,7 @@
   }
   function scope() { return { request_id: state.request.request_id, version: state.request.version }; }
   function render() {
+    renderEnrollment();
     const r = state.request, supported = !!r?.supported;
     q('[data-onboarding-status]').textContent = state.message;
     q('[data-onboarding-refresh]').disabled = busy || locked;
@@ -111,13 +113,11 @@
     const queue = q('[data-request-list]');
     if (queue) { queue.replaceChildren(); if (!state.enabled) add(queue, 'p', 'La revisión de acreditaciones está pendiente de habilitación.');
       else if (!state.requests.length) add(queue, 'p', 'No hay solicitudes disponibles para tu revisión.');
-      state.requests.forEach(item => { const button = add(queue, 'button', `${item.display_name} · Referencia: ${item.profile_reference || 'Por resolver'} · ${statusLabel(item.status)}`); button.type = 'button'; button.dataset.requestId = item.request_id; button.className = 'button button--secondary'; button.disabled = busy || locked;
+      state.requests.forEach(item => { const button = add(queue, 'button', `${item.display_name} · ${statusLabel(item.status)}`); button.type = 'button'; button.dataset.requestId = item.request_id; button.className = 'button button--secondary'; button.disabled = busy || locked;
         button.addEventListener('click', () => run(async () => { selected = item.request_id; await refresh(); })); }); }
     q('[data-request-panel]').hidden = !r;
     const summary = q('[data-request-summary]'); summary.replaceChildren();
     if (r) { add(summary, 'h3', r.display_name); add(summary, 'p', r.professional_name); add(summary, 'p', r.professional_area);
-      if (initial.staff) add(summary, 'p', `Referencia del perfil: ${r.profile_reference || 'Por resolver'}`);
-      if (r.account_reference) add(summary, 'p', `Cuenta solicitante: ${r.account_reference}`);
       add(summary, 'p', r.completed ? 'Acreditación completada.' : statusLabel(r.status));
       if (reasons[r.review_reason]) add(summary, 'p', reasons[r.review_reason]);
       if (!supported) add(summary, 'p', 'Este trámite requiere un procedimiento especial. No se puede aprobar desde este formulario.'); }
@@ -146,11 +146,57 @@
         const input = document.createElement('input'); input.type = 'datetime-local'; input.dataset.fileId = file.file_id; input.id = `source-date-${file.file_id}`; label.htmlFor = input.id; div.append(input); }); }
     q('[data-owner-pending]').hidden = !r?.completed;
   }
+  function renderEnrollment() {
+    const panel = state.enrollment_review, app = panel?.application;
+    const queue = q('[data-enrollment-review-list]'), summary = q('[data-enrollment-review-summary]');
+    if (queue) {
+      queue.replaceChildren(); summary.replaceChildren();
+      (panel?.queue || []).forEach(item => {
+        const button = add(queue, 'button', item.label); button.type = 'button'; button.dataset.enrollmentApplicationId = item.application_id; button.className = 'button button--secondary'; button.disabled = busy || locked;
+        button.addEventListener('click', () => run(async () => { selectedEnrollment = item.application_id; await refresh(); }));
+      });
+      if (app) {
+        add(summary, 'h3', app.origin_label); if (app.target_name) add(summary, 'p', `Perfil propuesto para revisión: ${app.target_name}`);
+        add(summary, 'p', `Información declarada por el solicitante: ${app.declared_name}. ${app.declared_specialty}. ${app.declared_location}.`);
+        const labels = { READY_FOR_REVIEW: 'El perfil tiene fuentes profesionales verificadas. La aprobación requiere tu revisión explícita.', PENDING_SOURCES: 'La solicitud sigue pendiente de fuentes profesionales verificadas.', PENDING_NEW_PROFILE: 'No encontramos un perfil correspondiente. La creación de perfil requiere otro trámite autorizado.', CONFLICT: 'El caso requiere revisión especial. No se cambiará el perfil ni su titular.' };
+        add(summary, 'p', app.state === 'APPROVED' ? (app.resolution_current === true ? 'La correspondencia del perfil ya fue revisada. La acreditación conserva su propio estado y sus controles.' : 'La resolución requiere atención: cambiaron sus fuentes o su autorización.') : labels[app.gate] || 'Pendiente de revisión.');
+        add(summary, 'p', { APPROVED: 'Revisión de perfil aprobada. La acreditación todavía requiere sus propios pasos.', REJECTED: 'Solicitud rechazada.', REVOKED: 'La resolución dejó de estar vigente.' }[app.state] || 'Solicitud pendiente.');
+        const select = q('#enrollment-review-decision'), key = `${app.application_id}:${app.review_version}:${app.gate}`;
+        if (select.dataset.selection !== key) {
+          select.replaceChildren(); select.dataset.selection = key;
+          const options = app.state === 'APPROVED' ? [['REVOKED', 'Retirar resolución por revisión de seguridad']] : [[app.gate === 'READY_FOR_REVIEW' ? 'APPROVED' : app.gate, app.gate === 'READY_FOR_REVIEW' ? 'Aprobar correspondencia del perfil' : 'Conservar pendiente o en revisión especial'], ['NEEDS_INFORMATION', 'Solicitar información adicional'], ['PENDING_REVIEW', 'Conservar pendiente de revisión'], ['REJECTED', 'Rechazar solicitud']];
+          options.forEach(([value, label]) => { const option = add(select, 'option', label); option.value = value; });
+        }
+      }
+    }
+    const active = !!app && !['REJECTED', 'REVOKED'].includes(app.state);
+    enabled('enrollment_review_begin', active && !enrollmentReview, active && !enrollmentReview);
+    enabled('enrollment_review_decide', !!enrollmentReview, !!enrollmentReview);
+    const continuation = state.enrollment_application;
+    if (q('[data-enrollment-continuation-status]')) {
+      const copy = { ACCREDITATION_COMPLETED: 'Tu acreditación está completada. La designación como titular sigue pendiente de una autorización independiente.', ACCREDITATION_DRAFT: 'Completa los documentos de tu acreditación.', IN_REVIEW: 'Tu solicitud está en revisión.', APPROVED_PENDING_CONFIRMATION: 'Aprobada, pendiente de tu confirmación.', CONFIRMED: 'Confirmación recibida. Completa el registro de tu acreditación.' };
+      q('[data-enrollment-continuation-status]').textContent = copy[continuation?.state] || (continuation?.handoff_available ? 'La revisión del perfil está aprobada. Completa contacto, documentos y revisión profesional.' : 'Solicitud pendiente de revisión o información adicional.');
+    }
+    enabled('enrollment_handoff', !!continuation?.handoff_available && state.phone_verified && !state.request, !!continuation && !state.request);
+  }
   root.querySelectorAll('[data-onboarding-form]').forEach(form => form.addEventListener('submit', event => {
     event.preventDefault(); const action = form.dataset.onboardingForm;
     const values = new FormData(form), fields = Object.fromEntries(values.entries());
     run(async () => {
       let data = {};
+      if (action === 'enrollment_review_begin') {
+        const app = state.enrollment_review.application;
+        enrollmentReview = await request(action, { application_id: app.application_id, intake_version: app.intake_version, review_version: app.review_version, ...fields });
+        form.reset(); feedback('Confirma la decisión con tu autenticador.'); return;
+      }
+      if (action === 'enrollment_review_decide') {
+        const proof = await request('enrollment_review_verify', { case_id: enrollmentReview.case_id, challenge_id: enrollmentReview.challenge_id, challenge: enrollmentReview.challenge, code: fields.code });
+        await request(action, { case_id: enrollmentReview.case_id, proof_id: proof.proof_id, proof: proof.proof, relationship_confirmed: values.has('relationship_confirmed') });
+        await refresh(); return;
+      }
+      if (action === 'enrollment_handoff') {
+        const result = await request(action, { application_id: state.enrollment_application.application_id }); selected = result.request_id; await refresh(); return;
+      }
       if (action === 'phone_issue') { otp = await request(action, fields); form.reset(); forms('phone_verify').hidden = false; feedback('El envío del código fue confirmado. Revisa tu teléfono.'); return; }
       if (action === 'phone_verify') { await request(action, { ...otp, code: fields.code }); await refresh(); return; }
       if (action === 'document_add') {

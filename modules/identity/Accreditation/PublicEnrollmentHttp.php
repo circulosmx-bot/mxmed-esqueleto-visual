@@ -10,8 +10,9 @@ final class PublicEnrollmentHttp
 {
     private const BROWSER='__Host-mxmed_enrollment_browser';
     private const RETURN_COOKIE='__Host-mxmed_enrollment_return';
-    public function __construct(private IdentityHttpComposition $identity,private PublicEnrollmentService $service,private string $transportKey)
-    {if($identity->pdo()!==$service->a->pdo||strlen($transportKey)<32)throw new \RuntimeException('enrollment_composition_denied');}
+    public function __construct(private IdentityHttpComposition $identity,private PublicEnrollmentService $service,private string $transportKey,
+        private ?ReviewedEnrollmentService $review=null)
+    {if($identity->pdo()!==$service->a->pdo||strlen($transportKey)<32||($review!==null&&!$review->usesConnection($identity->pdo())))throw new \RuntimeException('enrollment_composition_denied');}
     private static function proofCookie(string $id):string{return '__Host-mxmed_enrollment_'.str_replace('-','',$id);}
     private static function value(array $values,string $key):string{return is_string($values[$key]??null)?$values[$key]:'';}
     private function cookie(string $name,string $value):void
@@ -55,6 +56,7 @@ final class PublicEnrollmentHttp
                 }
             }else{$app=$this->service->preview($id,self::value($cookies,self::proofCookie($id)),self::value($cookies,self::BROWSER));}
             $e['application']=$app;$e['bound']=$app['bound'];
+            if($actor!==null&&$app['bound']&&$this->review!==null)$e['review']=$this->review->applicant($actor,$id);
             $e['return_path']='/public/identity/perfil-medico.php?application='.$id;
             $e['profile_name']=$app['original_profile_id']!==null?$this->profileName($app['original_profile_id']):null;
         }else{

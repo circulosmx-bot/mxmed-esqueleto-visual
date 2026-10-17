@@ -85,7 +85,9 @@ final class EvidenceAuthority
     public function currentFacts(array $r,bool $initialApproval=false): void
     {
         $this->applicant($r['account_id']);$this->phone($r['account_id'],(int)$r['phone_version']);
-        if ($r['origin']!=='CLAIM_EXISTING_PROFILE'||$r['profile_doctor_id']===null)
+        if(($r['enrollment_resolution_id']??null)!==null){
+            (new EnrollmentResolutionAuthority($this))->forEvidence($r);
+        } elseif ($r['origin']!=='CLAIM_EXISTING_PROFILE'||$r['profile_doctor_id']===null)
             throw new \RuntimeException('c4_exception_or_new_profile_resolution_required');
         $this->query('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE',[$r['profile_doctor_id']]);
         $owners=$this->query("SELECT account_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active' FOR UPDATE",[$r['profile_doctor_id']])->fetchAll(PDO::FETCH_COLUMN);

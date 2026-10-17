@@ -139,6 +139,15 @@ final class PublicEnrollmentService
     }
     private function scope(array $r,int $version):string{return 'enrollment:'.$r['origin_id'].':'.$r['account_id'].':'.$version;}
     /** Private review discovery only; no HTTP applicant action and no resolution writer. */
+    public function reviewIntakeInTransaction(AuthenticatedAccessContext $reviewer,string $id,int $version):array
+    {
+        if(!$this->a->pdo->inTransaction())throw new \RuntimeException('enrollment_review_transaction_required');
+        $r=$this->row($id);
+        if($r['account_id']===null||$r['intake_state']!=='SUBMITTED'||(int)$r['intake_version']!==$version)throw new \RuntimeException('enrollment_version_conflict');
+        $this->a->reviewer($reviewer->accountId(),$r['account_id'],$reviewer->principal()->credentialVersion());
+        $this->a->applicant($r['account_id']);
+        return ['origin'=>$r,'intake'=>$this->projection($r,true)['intake']];
+    }
     public function reviewCandidates(AuthenticatedAccessContext $reviewer,string $id,int $version):array
     {
         return $this->a->transaction($reviewer,function()use($reviewer,$id,$version){
