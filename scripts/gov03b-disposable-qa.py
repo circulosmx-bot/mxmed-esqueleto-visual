@@ -10,10 +10,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--connection', required=True)
     ap.add_argument('--evidence', required=True)
-    ap.add_argument('--suite', choices=['contracts', 'ceremony', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction'], default='contracts')
+    ap.add_argument('--suite', choices=['contracts', 'ceremony', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application'], default='contracts')
     ap.add_argument('--native-only', action='store_true', help='Run only the new resolution native contract in its owned target')
     args = ap.parse_args()
-    if args.native_only and args.suite not in ['resolution','correction']:
+    if args.native_only and args.suite not in ['resolution','correction','application']:
         ap.error('--native-only is restricted to the resolution/correction suites')
     os.umask(0o077)
     cfg = json.loads(pathlib.Path(args.connection).read_text())
@@ -31,10 +31,10 @@ def main():
         return result.stdout
 
     suffix = secrets.token_hex(5)
-    db = ('mxmed_op01_' if args.suite == 'contracts' else ('mxmed_gate4d_preview_gov03b_' if args.suite == 'ceremony' else ('mxmed_gate4d_preview_c4ev_' if args.suite == 'evidence' else ('mxmed_gate4d_preview_c4issuer_' if args.suite == 'issuer' else ('mxmed_gate4d_preview_cor01_' if args.suite == 'correction' else 'mxmed_gate4d_preview_c4ui_'))))) + suffix
+    db = ('mxmed_op01_' if args.suite == 'contracts' else ('mxmed_gate4d_preview_gov03b_' if args.suite == 'ceremony' else ('mxmed_gate4d_preview_c4ev_' if args.suite == 'evidence' else ('mxmed_gate4d_preview_c4issuer_' if args.suite == 'issuer' else ('mxmed_gate4d_preview_cor01_' if args.suite == 'correction' else ('mxmed_gate4d_preview_cor02_' if args.suite == 'application' else 'mxmed_gate4d_preview_c4ui_')))))) + suffix
     user = 'gov03b_' + suffix
     password = secrets.token_urlsafe(32)
-    assert re.fullmatch(r'mxmed_(?:op01_|gate4d_preview_(?:gov03b_|c4ev_|c4issuer_|c4ui_|cor01_))[a-f0-9]{10}', db)
+    assert re.fullmatch(r'mxmed_(?:op01_|gate4d_preview_(?:gov03b_|c4ev_|c4issuer_|c4ui_|cor01_|cor02_))[a-f0-9]{10}', db)
     sql(f"CREATE DATABASE `{db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     created_user = False
     valkey = None
@@ -59,28 +59,32 @@ def main():
             source = (ROOT/'modules/identity/deployment/op-act01'/file).read_text().replace('{{TARGET_SCHEMA}}', '`'+db+'`').replace('{{RESTRICTED_DEFINER}}', "'"+user+"'@'127.0.0.1'")
             sql('DELIMITER $$\n'+source.rstrip().rstrip(';')+'$$\nDELIMITER ;\n', db)
         sql((ROOT/'modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql').read_text(), db)
-        if args.suite in ['contracts', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction']:
+        if args.suite in ['contracts', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql').read_text(), db)
-        if args.suite in ['evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction']:
+        if args.suite in ['evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql').read_text(), db)
-        if args.suite in ['issuer', 'ui', 'enrollment', 'resolution', 'correction']:
+        if args.suite in ['issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql').read_text(), db)
-        if args.suite in ['enrollment', 'resolution', 'correction']:
+        if args.suite in ['enrollment', 'resolution', 'correction', 'application']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_05_public_physician_enrollment.sql').read_text(), db)
             # Explicit synthetic commercial data; never infer FREE from a missing plan.
             sql('ALTER TABLE profiles_doctors ADD COLUMN plan_code VARCHAR(32) NULL', db)
-        if args.suite in ['resolution','correction']:
+        if args.suite in ['resolution','correction','application']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_06_reviewed_physician_enrollment.sql').read_text(), db)
-        if args.suite == 'correction':
+        if args.suite in ['correction','application']:
             sql((ROOT/'modules/profiles/db/2026_10_16_01_public_correction_reports.sql').read_text(), db)
+        if args.suite == 'application':
+            sql((ROOT/'modules/profiles/db/2026_10_16_02_correction_applications.sql').read_text(), db)
         sql("CREATE TABLE gov03b_qa_faults(enabled INT NOT NULL); INSERT INTO gov03b_qa_faults VALUES(0)", db)
-        sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 OR ((SELECT enabled FROM gov03b_qa_faults)=2 AND NEW.action='PHYSICIAN_AUTHORITY_CHANGED' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation'))='BINDING_ACTIVE') THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
-        if args.suite == 'correction':
+        sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 OR ((SELECT enabled FROM gov03b_qa_faults)=2 AND NEW.action='PHYSICIAN_AUTHORITY_CHANGED' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation'))='BINDING_ACTIVE') OR ((SELECT enabled FROM gov03b_qa_faults)=4 AND NEW.action='PUBLIC_PROFILE_CORRECTION_APPLICATION' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation')) IN ('APPLIED','NO_CHANGE')) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
+        if args.suite in ['correction','application']:
             sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER cor01_fail_rate BEFORE INSERT ON profiles_correction_rate_buckets FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=3 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic rate storage failure'; END IF; END$$\nDELIMITER ;\n", db)
+        if args.suite == 'application':
+            sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER cor02_writer_fault BEFORE UPDATE ON doctor_contact_points FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=5 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic canonical writer failure'; END IF; END$$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER cor02_writer_pause AFTER UPDATE ON doctor_contact_points FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=6 THEN DO SLEEP(2); END IF; END$$\nDELIMITER ;\n", db)
         connection = evidence/'disposable-connection.json'
         connection.write_text(json.dumps({'db': db, 'user': user, 'password': password}))
         test_env = {**os.environ, 'C4_ISSUER_QA':'0','MXMED_OP02_ISOLATED':'0','MXMED_OPERATOR_DEPLOYMENT_REHEARSAL':'0','MXMED_OPERATORS_RUNTIME_ENABLED':'0','MXMED_IDENTITY_GOVERNANCE_ENABLED':'0', 'GOV03B_QA_CONNECTION': str(connection), 'MXMED_AUDIT_IP_HMAC_SECRET': secrets.token_hex(32), 'MXMED_AUDIT_IP_HMAC_KEY_VERSION': 'audit-ip-local-v001'}
-        if args.suite in ['ceremony', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction']:
+        if args.suite in ['ceremony', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application']:
             notification_dir = pathlib.Path(tempfile.mkdtemp(prefix='mxmed-gov03b-notifications-', dir='/tmp')); notification_dir.chmod(0o700)
             with socket.socket() as reservation:
                 reservation.bind(('127.0.0.1', 0)); port = reservation.getsockname()[1]
@@ -99,18 +103,19 @@ def main():
                 'MXMED_PREVIEW_NOTIFICATION_FILE':str(notification_dir/'notifications.json'),'MXMED_GOVERNANCE_CEREMONY_ENABLED':'1',
                 'MXMED_STAFF_MFA_ENCRYPTION_KEY':base64.b64encode(secrets.token_bytes(32)).decode(),'MXMED_STAFF_MFA_KEY_ID':'gov03b-test-only',
                 'MXMED_GOVERNANCE_ORGANIZATION_ID':'mxmed-synthetic','GOV03B_QA_EVIDENCE':str(evidence)})
-        if args.suite in ['evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction']:
+        if args.suite in ['evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application']:
             test_env['MXMED_GOVERNANCE_CEREMONY_ENABLED'] = '0'
             test_env['C4_EV_QA_STORAGE_ROOT'] = str(notification_dir/'private-c4')
         if args.suite in ['issuer', 'resolution']:
             test_env['C4_ISSUER_QA'] = '1'
-        if args.suite in ['ui', 'enrollment', 'resolution', 'correction']:
+        if args.suite in ['ui', 'enrollment', 'resolution', 'correction', 'application']:
             test_env['C4_EV_QA_KEY'] = base64.b64encode(secrets.token_bytes(32)).decode()
             test_env['C4_UI_QA_SMS'] = str(notification_dir/'sms.json')
-        if args.suite in ['enrollment', 'resolution', 'correction']: test_env.update({'PUB_ENR02_QA':'1','PUB_ENR02_DEPLOYMENT_CONNECTION':str(pathlib.Path(args.connection).resolve())})
+        if args.suite in ['enrollment', 'resolution', 'correction', 'application']: test_env.update({'PUB_ENR02_QA':'1','PUB_ENR02_DEPLOYMENT_CONNECTION':str(pathlib.Path(args.connection).resolve())})
         if args.suite == 'resolution': test_env['PUB_ENR03_QA']='1'
-        if args.suite == 'correction': test_env.update({'PUB_COR01_QA':'1','PUB_COR01_KEY':base64.b64encode(secrets.token_bytes(32)).decode()})
-        test_name = {'contracts':'GovernanceGov03BTest.php', 'ceremony':'GovernanceCeremonyIntegrationTest.php', 'evidence':'C4EvidenceIntegrationTest.php', 'issuer':'PhysicianAuthorityIssuerIntegrationTest.php', 'ui':'PhysicianOnboardingUiFixture.php', 'enrollment':'PublicEnrollmentIntegrationTest.php', 'resolution':'ReviewedEnrollmentIntegrationTest.php', 'correction':'../../profiles/tests/CorrectionReportIntegrationTest.php'}[args.suite]
+        if args.suite in ['correction','application']: test_env.update({'PUB_COR01_QA':'1','PUB_COR01_KEY':base64.b64encode(secrets.token_bytes(32)).decode()})
+        if args.suite == 'application': test_env['PUB_COR02_QA']='1'
+        test_name = {'contracts':'GovernanceGov03BTest.php', 'ceremony':'GovernanceCeremonyIntegrationTest.php', 'evidence':'C4EvidenceIntegrationTest.php', 'issuer':'PhysicianAuthorityIssuerIntegrationTest.php', 'ui':'PhysicianOnboardingUiFixture.php', 'enrollment':'PublicEnrollmentIntegrationTest.php', 'resolution':'ReviewedEnrollmentIntegrationTest.php', 'correction':'../../profiles/tests/CorrectionReportIntegrationTest.php', 'application':'../../profiles/tests/CorrectionApplicationIntegrationTest.php'}[args.suite]
         result = subprocess.run(['php', str(ROOT/'modules/identity/tests'/test_name)], cwd=ROOT, env=test_env, capture_output=True, text=True)
         (evidence/'disposable-governance.log').write_text(result.stdout+result.stderr)
         print(result.stdout, end='')
@@ -139,6 +144,11 @@ def main():
             (evidence/'browser-qa.log').write_text(result.stdout+result.stderr)
             print(result.stdout, end='')
             if result.returncode: raise RuntimeError('disposable public enrollment failed; inspect private log')
+        if args.suite == 'application' and not args.native_only:
+            result = subprocess.run(['python3', str(ROOT/'scripts/pub-cor02-browser-qa.py')], cwd=ROOT, env=test_env, capture_output=True, text=True)
+            (evidence/'browser-qa.log').write_text(result.stdout+result.stderr)
+            print(result.stdout, end='')
+            if result.returncode: raise RuntimeError('disposable correction application failed; inspect private log')
         if args.suite == 'correction' and not args.native_only:
             result = subprocess.run(['python3', str(ROOT/'scripts/pub-cor01-browser-qa.py')], cwd=ROOT, env=test_env, capture_output=True, text=True)
             (evidence/'browser-qa.log').write_text(result.stdout+result.stderr)

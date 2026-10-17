@@ -9,6 +9,7 @@ $escape=static fn(string $s):string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITU
 <title>Informes de perfiles · México Médico</title>
 <link rel="stylesheet" href="/assets/css/media-review-inbox.css">
 <link rel="stylesheet" href="/assets/css/profile-correction-review.css">
+<?php if($correctionReviewPage['applications']??false): ?><script src="/assets/js/profile-correction-application.js" defer></script><?php endif; ?>
 <script src="/assets/js/profile-correction-review.js" defer></script>
 </head>
 <body><main class="inbox" data-correction-review data-csrf="<?= $escape($correctionReviewPage['csrf']) ?>">
@@ -45,5 +46,6 @@ $escape=static fn(string $s):string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITU
 <label for="correction-mfa">Código de tu autenticador *</label><input id="correction-mfa" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
 <div class="approval-actions"><button type="submit">Confirmar revisión</button><button type="button" data-edit-decision>Volver a la decisión</button></div></fieldset></form>
 <p data-decision-message role="status" aria-live="polite"></p>
+<?php if($correctionReviewPage['applications']??false)require __DIR__.'/correction-application.php'; ?>
 </section>
 </main></body></html>

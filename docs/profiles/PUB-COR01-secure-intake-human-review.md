@@ -1,5 +1,7 @@
 # PUB-COR01 — informes públicos y revisión humana
 
+**Incremento posterior:** [PUB-COR02](PUB-COR02-governed-typed-application.md) prepara una aplicación tipada separada para un teléfono global ya publicado, con capacidad propia, reauth/MFA y resultado inmutable. No reescribe la migración 01 ni convierte aceptación en autoridad. Su migración 02 y compositor siguen sin aplicar/habilitar en normal-local. El alcance y las cifras de este documento describen el cierre histórico PUB-COR01.
+
 2026-10-16. Baseline `bb7e1c177cf6462b60d2cd3b063f5e3d5aec1e58`, rama `ux/consultation-step2-vitals-r1`, árbol inicial limpio y upstream igual. Implementación acotada sobre `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`; no se modifica el checkout hermano. Resultado de aceptación: `READY_MXMED_PUB_COR01_INTAKE_MODERATION_ISOLATED`.
 
 La recepción y la moderación funcionan con persistencia real en MySQL **sintético y desechable**. Se reutilizan el perfil público y el workspace interno originales. Aceptar un informe sólo registra `ACCEPTED_FOR_APPLICATION`; no aplica cambios. Normal-local continúa inactivo, sin DDL, grants, cuentas, sesiones o datos reales nuevos. No se ejecuta aprobación física de Safari.

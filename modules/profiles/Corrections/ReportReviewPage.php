@@ -12,7 +12,7 @@ final class ReportReviewPage
             if(($_SERVER['REQUEST_METHOD']??'')!=='GET')throw new ReportDenied(405);
             $runtime=ReportRuntime::current();if($runtime===null)throw new ReportDenied(503);
             $actor=$runtime->staffPage($_SERVER,$_COOKIE);
-            $correctionReviewPage=['csrf'=>$runtime->identity->csrf()->issueAuthenticated($actor->session()->tokenDigest())];
+            $correctionReviewPage=['csrf'=>$runtime->identity->csrf()->issueAuthenticated($actor->session()->tokenDigest()),'applications'=>$runtime->applications!==null];
             require dirname(__DIR__,3).'/partials/profiles/correction-review.php';
         }catch(\Throwable $e){
             $status=$e instanceof ReportDenied?$e->status:503;http_response_code($status);

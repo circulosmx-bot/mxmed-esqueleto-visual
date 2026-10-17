@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright,expect
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 OUT=pathlib.Path(os.environ['GOV03B_QA_EVIDENCE'])
 CONN=json.loads(pathlib.Path(os.environ['GOV03B_QA_CONNECTION']).read_text())
-assert os.environ.get('PUB_COR01_QA')=='1' and CONN['db'].startswith('mxmed_gate4d_preview_cor01_')
+assert os.environ.get('PUB_COR01_QA')=='1' and (CONN['db'].startswith('mxmed_gate4d_preview_cor01_') or (os.environ.get('PUB_COR02_QA')=='1' and CONN['db'].startswith('mxmed_gate4d_preview_cor02_')))
 FIXTURE=json.loads((OUT/'cor-fixture.json').read_text());CHECKS=[];STAGE='setup'
 PUBLIC='/api/profiles/public/correction-reports.php';PRIVATE='/api/profiles/internal/correction-review.php'
 WORKSPACE='/internal/media-review/index.php?section=correcciones'

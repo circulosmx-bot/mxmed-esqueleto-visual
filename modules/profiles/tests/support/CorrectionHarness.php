@@ -22,7 +22,7 @@ final class CorPdo extends PDO {
 function corConnect():CorPdo {
     if(getenv('PUB_COR01_QA')!=='1'||getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT')!=='0')throw new RuntimeException('correction_disposable_required');
     $c=json_decode(file_get_contents((string)getenv('GOV03B_QA_CONNECTION')),true,16,JSON_THROW_ON_ERROR);
-    if(!preg_match('/^mxmed_gate4d_preview_cor01_([a-f0-9]{10})$/D',$c['db'],$m)||$c['user']!=='gov03b_'.$m[1])throw new RuntimeException('correction_owned_target_required');
+    if(!preg_match('/^mxmed_gate4d_preview_(cor01|cor02)_([a-f0-9]{10})$/D',$c['db'],$m)||($m[1]==='cor02'&&getenv('PUB_COR02_QA')!=='1')||$c['user']!=='gov03b_'.$m[2])throw new RuntimeException('correction_owned_target_required');
     $p=new CorPdo('mysql:host=127.0.0.1;port=3306;dbname='.$c['db'].';charset=utf8mb4',$c['user'],$c['password'],
         [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
     if($p->query('SELECT DATABASE()')->fetchColumn()!==$c['db']||$p->query('SELECT CURRENT_USER()')->fetchColumn()!==$c['user'].'@127.0.0.1')throw new RuntimeException('correction_target_mismatch');

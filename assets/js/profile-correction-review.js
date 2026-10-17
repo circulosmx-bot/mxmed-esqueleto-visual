@@ -14,6 +14,7 @@
   let busy = false;
   let page = 0;
   function clearPrivate() {
+    window.mxmedCorrectionApplication?.clear();
     for (const selector of ['[data-original-profile]','[data-category]','[data-explanation]','[data-relation]','[data-contact]','[data-report-status]','[data-review-history]']) find(selector).replaceChildren();
     find('[data-profile-link]').removeAttribute('href'); begin.reset(); decide.reset();
   }
@@ -38,7 +39,7 @@
         const card = document.createElement('article'); card.className = 'card';
         const body = document.createElement('div'); body.className = 'card-body';
         const title = document.createElement('h3'); title.textContent = r.display_name;
-        const info = document.createElement('p'); info.textContent = states[r.status] || 'Estado pendiente de consulta';
+        const info = document.createElement('p'); info.textContent = r.application_state === 'APPLIED' ? 'Corrección aplicada' : r.application_state === 'NO_CHANGE' ? 'El dato ya coincide; sin nueva modificación' : states[r.status] || 'Estado pendiente de consulta';
         const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Revisar informe'; button.dataset.reportId = r.report_id;
         button.addEventListener('click', () => open(r.report_id)); body.append(title, info, button); card.append(body); queue.append(card);
       }
@@ -48,14 +49,15 @@
     } catch (error) { queue.replaceChildren(); status.textContent = error.message; detail.hidden = true; selected = null; resetChallenge(); clearPrivate(); }
   }
   async function open(id, focus = true) {
-    if (busy) return;
+    if (busy || root.dataset.applicationBusy === '1') return;
     busy = true;
     selected = null; detail.hidden = true; clearPrivate(); resetChallenge();
     try {
       const r = await api('open', {report_id:id}); selected = r;
       find('[data-original-profile]').textContent = 'Perfil informado: ' + r.profile_name;
       find('[data-profile-link]').href = r.original_route;
-      find('[data-report-status]').textContent = states[r.status];
+      find('[data-report-status]').textContent = r.application?.result?.status === 'APPLIED' ? 'Corrección aplicada' : r.application?.result?.status === 'NO_CHANGE' ? 'El dato ya coincide; sin nueva modificación' : states[r.status];
+      window.mxmedCorrectionApplication?.show(r.application);
       find('[data-category]').textContent = r.payload.category_label;
       find('[data-explanation]').textContent = r.payload.explanation;
       find('[data-relation]').textContent = 'Relación declarada: ' + (r.payload.relation_label || 'No indicada');
@@ -72,7 +74,7 @@
     finally { busy = false; }
   }
   begin.addEventListener('submit', async event => {
-    event.preventDefault(); if (busy || !selected || !begin.reportValidity()) return;
+    event.preventDefault(); if (busy || root.dataset.applicationBusy === '1' || !selected || !begin.reportValidity()) return;
     const data = Object.fromEntries(new FormData(begin));
     const decision = {status:data.status, reason:data.reason, decision_note:data.decision_note,
       evidence_refs:data.evidence_refs.split(',').map(x => x.trim()).filter(Boolean), facts_confirmed:begin.elements.facts_confirmed.checked};
@@ -87,7 +89,7 @@
     finally { begin.elements.password.value = ''; busy = false; }
   });
   decide.addEventListener('submit', async event => {
-    event.preventDefault(); if (busy || !selected || !challenge || !decide.reportValidity()) return;
+    event.preventDefault(); if (busy || root.dataset.applicationBusy === '1' || !selected || !challenge || !decide.reportValidity()) return;
     busy = true; decide.querySelector('fieldset').disabled = true;
     try {
       const data = await api('decide', {...challenge, code:decide.elements.code.value});
@@ -101,8 +103,9 @@
     finally { busy = false; decide.querySelector('fieldset').disabled = false; decide.elements.code.value = ''; }
   });
   find('[data-edit-decision]').addEventListener('click', resetChallenge);
-  find('[data-refresh]').addEventListener('click', () => { if (!busy) { detail.hidden = true; selected = null; resetChallenge(); refresh(); } });
-  for (const [selector,delta] of [['[data-previous]',-1],['[data-next]',1]]) find(selector).addEventListener('click', () => { if (!busy) {page += delta; detail.hidden = true; selected = null; clearPrivate(); resetChallenge(); refresh();} });
+  find('[data-refresh]').addEventListener('click', () => { if (!busy && root.dataset.applicationBusy !== '1') { detail.hidden = true; selected = null; resetChallenge(); refresh(); } });
+  for (const [selector,delta] of [['[data-previous]',-1],['[data-next]',1]]) find(selector).addEventListener('click', () => { if (!busy && root.dataset.applicationBusy !== '1') {page += delta; detail.hidden = true; selected = null; clearPrivate(); resetChallenge(); refresh();} });
   window.addEventListener('pagehide', () => { clearPrivate(); queue.replaceChildren(); detail.hidden = true; selected = null; challenge = null; });
+  root.addEventListener('mxmed:correction-application-updated', async () => { if (selected && !busy) { await open(selected.report_id, false); await refresh(); } });
   refresh();
 })();

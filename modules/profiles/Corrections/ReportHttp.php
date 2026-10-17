@@ -9,7 +9,7 @@ final class ReportHttp
     public const COOKIE='__Host-mxmed_correction_browser';
     public const ACK='Recibimos tu informe. Nuestro equipo revisará la información antes de realizar cualquier cambio.';
     public function __construct(public readonly IdentityHttpComposition $identity,public readonly ReportService $reports,
-        public readonly ReportReviewService $review,private string $transportKey)
+        public readonly ReportReviewService $review,private string $transportKey,public readonly ?ApplicationService $applications=null)
     {if($reports->pdo!==$identity->pdo()||strlen($transportKey)<32)throw new \RuntimeException('correction_http_composition_required');}
     private function transport(array $server,string $raw,bool $post):void
     {
@@ -77,6 +77,9 @@ final class ReportHttp
             'queue'=>['page'], 'open'=>['report_id'],
             'begin'=>['report_id','version','decision','email','password'],
             'decide'=>['report_id','version','case_id','challenge_id','challenge','code'],
+            'application_begin'=>['command','email','password'],
+            'application_authorize'=>['command_id','challenge_id','challenge','code'],
+            'application_execute','application_status'=>['command_id'],
             default=>throw new ReportDenied(400)};
         ReportCatalog::fields($body,['action','csrf_token',...$fields]);
         foreach($fields as $field)if($field!=='page'&&!array_key_exists($field,$body))throw new ReportDenied(400);
@@ -85,9 +88,28 @@ final class ReportHttp
         if(isset($body['version'])&&(!is_int($body['version'])||$body['version']<1))throw new ReportDenied(400);
         if($action==='begin'&&(!is_array($body['decision'])||!is_string($body['email'])||!is_string($body['password'])||strlen($body['email'])>254||strlen($body['password'])>1024))throw new ReportDenied(400);
         if($action==='decide')foreach(['case_id','challenge_id','challenge','code'] as $field)if(!is_string($body[$field])||strlen($body[$field])>128)throw new ReportDenied(400);
+        if(str_starts_with((string)$action,'application_')){
+            if($this->applications===null)throw new ReportDenied(503);
+            if($action==='application_begin'){
+                if(!is_array($body['command'])||!is_string($body['email'])||strlen($body['email'])>254||!is_string($body['password'])||strlen($body['password'])>1024)throw new ReportDenied(400);
+                return $this->applications->begin($actor,$body['command'],$body['email'],$body['password']);
+            }
+            ApplicationCatalog::uuid($body['command_id']);
+            if($action==='application_authorize'){
+                foreach(['challenge_id','challenge','code'] as $field)if(!is_string($body[$field])||strlen($body[$field])>128)throw new ReportDenied(400);
+                return $this->applications->authorize($actor,$body['command_id'],$body['challenge_id'],$body['challenge'],$body['code']);
+            }
+            return $action==='application_execute'?$this->applications->execute($actor,$body['command_id']):$this->applications->reconcile($actor,$body['command_id']);
+        }
+        if($action==='open'){
+            $data=$this->review->open($actor,$body['report_id']);
+            if($this->applications!==null)$data['application']=$this->applications->snapshot($actor,$body['report_id']);return $data;
+        }
+        if($action==='queue'){
+            $data=$this->review->queue($actor,$body['page']??0);
+            return $this->applications===null?$data:$this->applications->decorateQueue($actor,$data);
+        }
         return match($action){
-            'queue'=>$this->review->queue($actor,$body['page']??0),
-            'open'=>$this->review->open($actor,$body['report_id']),
             'begin'=>$this->review->begin($actor,$body['report_id'],$body['version'],$body['decision'],$body['email'],$body['password']),
             'decide'=>$this->review->decide($actor,$body['report_id'],$body['version'],$body['case_id'],$body['challenge_id'],$body['challenge'],$body['code'])};
     }

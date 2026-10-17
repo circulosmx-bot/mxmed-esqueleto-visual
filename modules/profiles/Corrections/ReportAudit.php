@@ -38,4 +38,15 @@ final class ReportAudit
                 'case_id'=>$case,'capability'=>$actor===null?null:ReportCatalog::CAPABILITY]),$context);
         return (string)$event->value('event_id');
     }
+    public function application(AuthenticatedAccessContext $actor,string $command,string $report,string $operation,int $sequence,string $case,?string $readCapability=null):string
+    {
+        if(!$this->pdo->inTransaction()||!in_array($operation,['READ','REQUESTED','AUTHORIZED','APPLY_STARTED','APPLIED','NO_CHANGE','RETRYABLE_FAILURE','CONFLICT','RECONCILIATION_REQUIRED','RECONCILED_RETRYABLE'],true))throw new \RuntimeException('correction_application_audit_denied');
+        $uuid=new RandomAuditUuidProvider();
+        $capability=$operation==='READ'&&in_array($readCapability,[ApplicationCatalog::CAPABILITY,ReportCatalog::CAPABILITY],true)?$readCapability:ApplicationCatalog::CAPABILITY;
+        $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$capability,'public_profile_correction_application',
+            $uuid->generateCanonicalUuid(),$uuid->generateCanonicalUuid(),(string)$actor->session()->sessionId(),null,null,'PROFILE','public-profile-correction-application/'.$operation);
+        $event=$this->writer->append(new CanonicalAuditEventInput('PUBLIC_PROFILE_CORRECTION_APPLICATION','SUCCESS','ADMIN_DECISION','account',$actor->accountId(),
+            'public_profile_correction_application',$command,['operation'=>$operation,'report_id'=>$report,'sequence'=>$sequence,'case_id'=>$case,'field_family'=>ApplicationCatalog::FAMILY]),$context);
+        return (string)$event->value('event_id');
+    }
 }

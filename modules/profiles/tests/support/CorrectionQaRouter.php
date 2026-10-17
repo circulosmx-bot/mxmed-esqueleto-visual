@@ -12,7 +12,8 @@ $cipher=new Profiles\Corrections\ReportCipher('cor-qa-key',['cor-qa-key'=>base64
 $service=new Profiles\Corrections\ReportService($pdo,$cipher,$identity->csrf(),new Profiles\Corrections\ReportRatePolicy($pdo,$cipher,browserLimit:3,peerLimit:100,profileLimit:100));
 $mfa=new Identity\Services\StaffMfaService($pdo,base64_encode(str_repeat('m',32)),'cor-qa-mfa',security:$security);
 $review=new Profiles\Corrections\ReportReviewService($service,$security,$mfa);
-Profiles\Corrections\ReportRuntime::install(new Profiles\Corrections\ReportHttp($identity,$service,$review,(string)getenv('MXMED_GOVERNANCE_PROXY_KEY')));
+$applications=getenv('PUB_COR02_QA')==='1'?new Profiles\Corrections\ApplicationService(new Profiles\Corrections\ApplicationAuthority($service,$security),$mfa):null;
+Profiles\Corrections\ReportRuntime::install(new Profiles\Corrections\ReportHttp($identity,$service,$review,(string)getenv('MXMED_GOVERNANCE_PROXY_KEY'),$applications));
 $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);
 if(preg_match('#^/api/profiles/public/doctor/([A-Za-z0-9._:-]{1,64})$#D',$path,$m)){
     header('Content-Type: application/json');
