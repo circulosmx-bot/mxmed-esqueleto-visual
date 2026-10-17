@@ -120,7 +120,7 @@
     if(!ui.legacy)return;
     const holder=$('ag_ops_legacy_summary');holder.replaceChildren();
     const archive=element('details',undefined,'border rounded p-2 mt-2');archive.id='ag_ops_deployed_legacy';archive.append(element('summary','Registros anteriores · sólo consulta'));
-    archive.append(element('p','Estas referencias no confirman una cuenta Identity ni ocupan plazas canónicas.','small'));
+    archive.append(element('p','Estos registros anteriores se conservan para consulta. No confirman una cuenta vigente ni ocupan plazas del equipo.','small'));
     const records=ui.legacy.records||[];
     for(const r of records)archive.append(band({...r,membership_id:r.source+':'+r.operator_id,capabilities:[]},'legacy'));
     if(ui.legacy.read_status!=='ready')archive.append(element('p','No pudimos consultar el historial anterior.'));
