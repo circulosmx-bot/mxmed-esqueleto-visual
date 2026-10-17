@@ -50,6 +50,18 @@ La UI original y los servicios canónicos son el punto de partida; no reconstrui
 - Distinguir prueba sintética, QA normal-local, aceptación física y activación operacional.
 - Reportar cambios, entorno/commit probado, cobertura, fallos conocidos y límites exactos.
 - Cerrar con baseline/post HEAD, resultado, enlaces de evidencia y autorizaciones pendientes.
-- Actualizar el estado compacto sólo dentro de una operación documental autorizada.
+- La revisión y sincronización de contexto forman parte de cada cambio autorizado, según la regla siguiente.
 - Mantenerlo acotado; conservar historia en Git y contratos, sin transcripciones acumulativas.
 - Estas referencias se comparten mediante Git; no implican memoria automática ChatGPT/Codex.
+
+## Sincronización obligatoria de contexto — CTX-SYNC01
+
+- Orden de consulta: este archivo → estado actual → router → mapa CTX-MAP02/03 pertinente → fuente, decisiones y evidencia. Mantener el inicio acotado y recuperar detalle bajo demanda.
+- **Antes de implementar:** leer el estado vigente, localizar IDs de capacidades/journeys y objetos existentes, identificar mapas/decisiones afectados y contrastar la implementación actual antes de añadir código.
+- **Durante:** preservar IDs estables y dueños de las fuentes de verdad; identificar cambios de UI, API, writers, datos, autoridades, servicios externos e interacciones, con dependencias nuevas y limitaciones reales.
+- **Antes del commit:** revisar el diff completo, incluidos archivos nuevos; identificar y actualizar los documentos de contexto impactados con cambios verificados, pruebas, entorno y estado operacional. Actualizar el estado compacto ante cambios materiales y el router sólo si cambia el enrutamiento documental. Validar enlaces, anchors y paths pertinentes.
+- Conservar contratos/evidencia históricos; marcar afirmaciones sucedidas y enlazar su sucesor verificado. Separar `PRODUCT_POLICY`, `SOURCE_IMPLEMENTATION`, `CONNECTIVITY`, `VERIFICATION` y `OPERATIONAL_STATUS`; QA aislada no acredita activación ni verificación externa. Actualizar sólo IDs/journeys/objetos afectados, sin regenerar inventarios completos.
+- Toda entrega Codex debe completar los diez [campos obligatorios de contexto y su gate](docs/MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md#context-sync). Verificar coherencia entre documentación, implementación entregada, alcance del commit y evidencia; editar Markdown por sí solo no acredita sincronización.
+- Sin impacto real: registrar `CONTEXT_CHANGE=NO_IMPACT` y una razón precisa, sin inventar cambios documentales. `CONTEXT_SYNC_STATUS` debe ser `PASS_UPDATED`, `PASS_NO_IMPACT_WITH_REASON` o `BLOCKED_INCOMPLETE`.
+- Una función cambiada sin revisión de contexto, o una entrega con `CONTEXT_SYNC_STATUS=BLOCKED_INCOMPLETE`, no puede declararse COMPLETE.
+- La revisión se realiza por tarea autorizada; esta política no instala agentes de fondo, daemons ni hooks globales y no amplía la autorización operacional.

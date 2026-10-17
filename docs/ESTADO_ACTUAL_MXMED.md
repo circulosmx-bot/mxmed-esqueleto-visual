@@ -3,8 +3,8 @@
 ## Ancla y alcance
 
 - Fecha de verificación documental: **2026-10-17**.
-- Baseline fuente verificado: `57e0b013fafa3feda69911c96fea501c2f42a118` (inicio ASE-ALIGN01 V2; CTX-MAP03 publicado).
-- Rama: `ux/consultation-step2-vitals-r1`; al iniciar ASE-ALIGN01 V2, HEAD/upstream/remoto coinciden y worktree limpio.
+- Baseline fuente verificado: `ef8a7b4f4e8230c1c047c6b1a2d6e00a14312752` (ASE-ALIGN01 V2 publicado; inicio CTX-SYNC01, sólo gobierno documental).
+- Rama: `ux/consultation-step2-vitals-r1`; al iniciar CTX-SYNC01, HEAD/upstream/remoto coinciden y worktree limpio.
 - Worktree: `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`; no confundir con el checkout hermano `mxmed-esqueleto-visual`.
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
 - ASE-ALIGN01 V2 alinea capacidades individuales de asesores con tres operaciones rutinarias de acreditación; no activa normal-local. El ancla es el HEAD fuente inspeccionado, no el hash futuro del cierre.
@@ -35,6 +35,7 @@
 | ACT02 | Factory/guard, fuente comercial y ensayo integrado implementados; [paquete](identity/ACT02-integrated-public-workflows.md). Descripción del writer gobernado faltante es histórica de ACT02. |
 | ACT03 | **Source provisioning implementado y verificado en QA aislada**; [cierre](identity/ACT03-governed-professional-sources.md#cierre-verificado). Resultado histórico **PARTIAL_MXMED_ACT03** preservado. |
 | ASE-ALIGN01 V2 | Política individual aprobada en [IW01](product-completion/iw01-internal-governance-foundation.md); MFA/consumidores/guard y workspace originales alineados; QA aislada completa. Sin activación real. |
+| CTX-SYNC01 | [Regla permanente](../AGENTS.md#sincronización-obligatoria-de-contexto--ctx-sync01) y [campos/gate de entrega](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md#context-sync) obligatorios en cada cambio autorizado; revisión documental manual, sin nueva QA de producto ni activación. |
 
 ## Estado operacional y migraciones
 
@@ -84,6 +85,6 @@
 - Incertidumbres: remoto/proveedores/runtime físico; variantes SQL/rutas dinámicas; UI parciales, atribución comercial y lineage físico. Decisiones comerciales/seguridad aprobadas no se reabren por README históricos.
 - Inicio de nueva tarea: verificar Git/instrucciones, leer este estado, seguir un dominio del router y contrastar decisión/UI/writer antes de proponer cambios.
 - Cierre: baseline/post HEAD, alcance, comportamiento, pruebas y entorno, límites, referencias y autorizaciones pendientes; usar la [plantilla existente](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md).
-- Mantenimiento **manual y sólo autorizado**: actualizar IDs/journeys/objetos afectados y reemplazar este resumen después de un cambio material; anclar fecha/baseline verificados y preservar la historia en Git/contratos.
+- Mantenimiento **manual y obligatorio como parte de cada cambio autorizado**: revisar contexto, actualizar sólo IDs/journeys/objetos y documentos impactados y este resumen ante cambios materiales. Registrar los diez campos de entrega; `BLOCKED_INCOMPLETE` impide COMPLETE y `NO_IMPACT` requiere razón precisa. Validar coherencia, evidencia y enlaces, conservando historia en Git/contratos.
 - ChatGPT puede consultar los mismos archivos publicados cuando tenga acceso o se adjunten; no hay memoria automática compartida con Codex.
 - [Historia y decisiones](README.md#historia-decisiones-y-continuidad) se recuperan bajo demanda; el contenido histórico se conserva con avisos de sucesor donde corresponde.
