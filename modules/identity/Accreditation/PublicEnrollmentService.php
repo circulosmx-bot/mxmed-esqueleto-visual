@@ -154,6 +154,17 @@ final class PublicEnrollmentService
         $this->a->applicant($r['account_id']);
         return ['origin'=>$r,'intake'=>$this->projection($r,true)['intake']];
     }
+    /** Exact source-verification read, independent from the accreditation-review grant. */
+    public function sourceIntakeInTransaction(AuthenticatedAccessContext $reviewer,string $id,int $version):array
+    {
+        $this->a->scope?->workflow('professional_source_provisioning');
+        if(!$this->a->pdo->inTransaction())throw new \RuntimeException('enrollment_review_transaction_required');
+        $r=$this->row($id);
+        if($r['account_id']===null||$r['intake_state']!=='SUBMITTED'||(int)$r['intake_version']!==$version)throw new \RuntimeException('enrollment_version_conflict');
+        $this->a->sourceReviewer($reviewer->accountId(),$r['account_id'],$reviewer->principal()->credentialVersion());
+        $this->a->applicant($r['account_id']);
+        return ['origin'=>$r,'intake'=>$this->projection($r,true)['intake']];
+    }
     public function reviewCandidates(AuthenticatedAccessContext $reviewer,string $id,int $version):array
     {
         return $this->a->transaction($reviewer,function()use($reviewer,$id,$version){

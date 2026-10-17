@@ -17,7 +17,7 @@ final class ProfessionalSourceReadiness
         $available=false;
         if($sourceWorkflow&&$reviewer!==null){
             try{$a->scope?->workflow('professional_source_provisioning');$a->scope?->staff($reviewer,'professional_source_provision');
-                $available=(int)$a->query("SELECT COUNT(*) FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id WHERE s.account_id=? AND s.status='ACTIVE' AND s.governance_class IN ('DIRECTOR','MASTER_ADMIN') AND g.capability='professional_source_provision' AND g.status='ACTIVE' AND g.revoked_at IS NULL",[$reviewer])->fetchColumn()===1;
+                $available=(int)$a->query("SELECT COUNT(*) FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id WHERE s.account_id=? AND s.status='ACTIVE' AND s.governance_class IN ('DIRECTOR','MASTER_ADMIN','ADVISOR') AND g.capability='professional_source_provision' AND g.status='ACTIVE' AND g.revoked_at IS NULL",[$reviewer])->fetchColumn()===1;
             }catch(WorkflowScopeDenied){}
         }
         return ['ready'=>$ready,'provisioning_available'=>$available,'status'=>$ready?'VERIFIED_CANONICAL_SOURCES':'PENDING_GENUINE_SOURCE_PROVISIONING',

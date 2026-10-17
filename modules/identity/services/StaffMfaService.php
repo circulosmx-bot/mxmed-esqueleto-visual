@@ -61,7 +61,7 @@ final class StaffMfaService
         if($this->security===null)throw new \RuntimeException('staff_mfa_canonical_security_required');
         foreach([$actor,$target,$beneficiary] as $id)$this->assertId($id);$this->assertReference($caseId);
         if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY'],true))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
-        $this->assertActiveStaff($actor);if($this->security!==null){if(($reauthentication['account_id']??null)!==$actor)throw new \RuntimeException('staff_mfa_reauthentication_required');$this->security->assertLive($reauthentication,true);}
+        $this->assertOperationAuthority($actor,$operation);if($this->security!==null){if(($reauthentication['account_id']??null)!==$actor)throw new \RuntimeException('staff_mfa_reauthentication_required');$this->security->assertLive($reauthentication,true);}
         $now=$this->clock->now();$raw=rtrim(strtr(base64_encode(random_bytes(32)),'+/','-_'),'=');
         $id='challenge_'.bin2hex(random_bytes(16));$s=$this->pdo->prepare("INSERT INTO auth_staff_mfa_challenges(challenge_id,actor_account_id,operation,case_id,target_account_id,beneficiary_account_id,profile_doctor_id,nonce_hash,status,expires_at) VALUES(?,?,?,?,?,?,?,?,'PENDING',?)");
         $s->execute([$id,$actor,$operation,$caseId,$target,$beneficiary,$profile,hash('sha256',$raw),$this->sql($now->modify('+5 minutes'))]);
@@ -80,7 +80,8 @@ final class StaffMfaService
                 throw new \RuntimeException('staff_mfa_verification_denied');
             if($this->security!==null)$this->assertChallengeContext($c,$actor,$sessionId,$credentialVersion);
             $a=$this->pdo->prepare("SELECT a.status,c.credential_version,s.status staff_status,s.governance_class FROM auth_accounts a JOIN auth_account_credentials c ON c.account_id=a.account_id JOIN internal_staff s ON s.account_id=a.account_id WHERE a.account_id=? FOR UPDATE");$a->execute([$actor]);$authority=$a->fetch(PDO::FETCH_ASSOC);
-            if(!is_array($authority)||$authority['status']!=='active'||$authority['staff_status']!=='ACTIVE'||!in_array($authority['governance_class'],['DIRECTOR','MASTER_ADMIN'],true)||(int)$authority['credential_version']!==$credentialVersion)
+            if(!is_array($authority)||$authority['status']!=='active'||$authority['staff_status']!=='ACTIVE'
+                ||!$this->operationAllowed($authority['governance_class'],$actor,$c['operation'])||(int)$authority['credential_version']!==$credentialVersion)
                 throw new \RuntimeException('staff_mfa_verification_denied');
             $f=$this->pdo->prepare("SELECT * FROM auth_staff_mfa_factors WHERE account_id=? AND status='ACTIVE' FOR UPDATE");$f->execute([$actor]);$factor=$f->fetch(PDO::FETCH_ASSOC);
             $factorState=is_array($factor)?json_decode((string)$factor['enrollment_context'],true,32,JSON_THROW_ON_ERROR):null;
@@ -114,6 +115,8 @@ final class StaffMfaService
             &&($p['profile_doctor_id']??null)===$profile&&$p['status']==='VERIFIED'&&hash_equals($p['proof_hash'],hash('sha256',$rawProof))
             &&new \DateTimeImmutable($p['expires_at'],new \DateTimeZone('UTC'))>$now;
         if(!$exact)throw new \RuntimeException('staff_mfa_proof_denied');
+        // Recheck the individual grant on consumption too: a proof is not durable authority.
+        $this->assertOperationAuthority($actor,$operation);
         if($this->security!==null){$s=$this->pdo->prepare('SELECT * FROM auth_staff_mfa_challenges WHERE challenge_id=?');$s->execute([$p['challenge_id']]);$this->assertChallengeContext($s->fetch(PDO::FETCH_ASSOC),$actor,$sessionId,$credentialVersion);$s=$this->pdo->prepare("SELECT factor_id FROM auth_staff_mfa_factors WHERE factor_id=? AND status='ACTIVE' FOR UPDATE");$s->execute([$p['factor_id']]);if($s->fetchColumn()===false)throw new \RuntimeException('staff_mfa_factor_revoked');}
         $u=$this->pdo->prepare("UPDATE auth_staff_mfa_proofs SET status='CONSUMED',consumed_at=?,consumed_by_reference=? WHERE proof_id=? AND status='VERIFIED'");$u->execute([$this->sql($now),$consumedBy,$proofId]);if($u->rowCount()!==1)throw new \RuntimeException('staff_mfa_proof_replay');
         return $p;
@@ -143,10 +146,25 @@ final class StaffMfaService
         foreach($bindings as $binding){
             $s=$this->pdo->prepare("SELECT a.status,a.email_verified_at,c.credential_version,i.status staff_status,i.governance_class FROM auth_accounts a JOIN auth_account_credentials c ON c.account_id=a.account_id JOIN internal_staff i ON i.account_id=a.account_id WHERE a.account_id=? FOR UPDATE");$s->execute([$binding['account_id']]);$row=$s->fetch(PDO::FETCH_ASSOC);
             if(!is_array($row)||$row['status']!=='active'||$row['email_verified_at']===null||$row['staff_status']!=='ACTIVE'
-                ||!in_array($row['governance_class'],['DIRECTOR','MASTER_ADMIN'],true)||(int)$row['credential_version']!==$binding['credential_version'])throw new \RuntimeException('staff_mfa_enrollment_authority_changed');
+                ||(!in_array($row['governance_class'],['DIRECTOR','MASTER_ADMIN'],true)
+                    && !($binding['account_id']===$account&&$row['governance_class']==='ADVISOR'
+                        &&StaffRoutineOperationPolicy::eligibleAdvisorSubject($this->pdo,$account)))
+                ||(int)$row['credential_version']!==$binding['credential_version'])throw new \RuntimeException('staff_mfa_enrollment_authority_changed');
         }
         $this->security->assertLive($context['subject'],true);$this->security->assertLive($context['registrar'],true);
-        foreach([$account,$context['registrar']['account_id']] as $id){$this->assertActiveStaff($id);$s=$this->pdo->prepare("SELECT governance_class FROM internal_staff WHERE account_id=? AND status='ACTIVE' AND governance_class IN ('DIRECTOR','MASTER_ADMIN')");$s->execute([$id]);if($s->fetchColumn()===false)throw new \RuntimeException('staff_mfa_enrollment_authority_denied');}
+        foreach([$account,$context['registrar']['account_id']] as $id)$this->assertActiveStaff($id);
+    }
+    private function operationAllowed(string $staffClass,string $actor,string $operation):bool
+    {
+        return in_array($staffClass,['DIRECTOR','MASTER_ADMIN'],true)
+            ||($staffClass==='ADVISOR'&&StaffRoutineOperationPolicy::allowAdvisor($this->pdo,$actor,$operation));
+    }
+    private function assertOperationAuthority(string $actor,string $operation):void
+    {
+        $this->assertActiveStaff($actor);
+        $q=$this->pdo->prepare("SELECT s.governance_class FROM auth_accounts a JOIN auth_account_credentials c ON c.account_id=a.account_id JOIN internal_staff s ON s.account_id=a.account_id WHERE a.account_id=? AND a.status='active' AND a.email_verified_at IS NOT NULL AND s.status='ACTIVE' FOR UPDATE");$q->execute([$actor]);
+        $staffClass=$q->fetchColumn();
+        if(!is_string($staffClass)||!$this->operationAllowed($staffClass,$actor,$operation))throw new \RuntimeException('staff_mfa_operation_authority_denied');
     }
     private function assertChallengeContext(array $challenge,string $actor,string $session,int $version):void
     {

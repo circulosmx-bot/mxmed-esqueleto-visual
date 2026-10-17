@@ -55,6 +55,18 @@ final class EvidenceAuthority
             AND g.status='ACTIVE' AND g.revoked_at IS NULL FOR UPDATE",[$id])->fetchColumn()===false)
             throw new \RuntimeException('c4_reviewer_capability_required');
     }
+    /** Source verification is a separate delegation; it never grants accreditation review. */
+    public function sourceReviewer(string $id,string $beneficiary,?int $version=null):array
+    {
+        $this->scope?->staff($id,'professional_source_provision');
+        $this->account($id,$version);
+        if($id===$beneficiary)throw new \RuntimeException('source_self_verification_denied');
+        $rows=$this->query("SELECT s.governance_class,g.grant_id FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id
+            WHERE s.account_id=? AND s.status='ACTIVE' AND s.governance_class IN ('DIRECTOR','MASTER_ADMIN','ADVISOR')
+            AND g.capability='professional_source_provision' AND g.status='ACTIVE' AND g.revoked_at IS NULL FOR UPDATE",[$id])->fetchAll(PDO::FETCH_ASSOC);
+        if(count($rows)!==1)throw new \RuntimeException('source_capability_denied');
+        return $rows[0];
+    }
     public function phone(string $account,?int $expectedVersion=null): array
     {
         $r=$this->query("SELECT contact_version,status,verified_at,delivery_accepted,audit_reference FROM auth_account_phone_verifications WHERE account_id=? FOR UPDATE",[$account])->fetch(PDO::FETCH_ASSOC);

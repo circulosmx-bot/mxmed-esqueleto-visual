@@ -44,6 +44,28 @@ No se implementa reemplazo extraordinario del primer Director si ya existe o no 
 
 ## MFA de staff
 
+**ASE-ALIGN01 V2 (2026-10-17):** un ADVISOR activo puede ser sujeto de esta
+ceremonia si tiene un grant individual vigente de `physician_accreditation_review`
+o `professional_source_provision`. El registrador sigue siendo otra cuenta
+DIRECTOR/MASTER_ADMIN activa, nominada por despliegue, autenticada y
+reautenticada independientemente; su autorización se verifica también al activar.
+La activación auditada conserva al sujeto como actor y sólo admite su propio
+factor y la sesión/credencial exactas de la ceremonia. Fallar auditoría revierte
+la activación. Esto no permite al asesor administrar grants ni registrar factores
+ajenos o sin registrador.
+
+El uso del factor tiene un contrato separado y cerrado en
+`StaffRoutineOperationPolicy`: `PHYSICIAN_ENROLLMENT_REVIEW` y
+`PHYSICIAN_EVIDENCE_REVIEW` requieren `physician_accreditation_review`;
+`PROFESSIONAL_SOURCE_PROVISION` requiere `professional_source_provision`.
+Se revalida el grant al emitir/verificar challenge y consumir proof, además de
+la autorización independiente del servicio consumidor. Dentro de la transacción
+se usa una lectura actual con bloqueo: una snapshot REPEATABLE READ anterior
+no puede conservar autoridad revocada por otra conexión. Las demás operaciones,
+incluidos bootstrap, recuperación, ownership, cambios de autoridad profesional
+y correcciones, conservan las restricciones previas. Esta alineación de fuente
+no autoriza enrollment MFA real ni activa normal-local.
+
 `GovernanceStaffMfaCeremony` compone `StaffMfaService`. Las mutaciones MFA y los casos R3 rechazan la construcción/ejecución sin sus dependencias canónicas; no existe un fallback v1 sin reautenticación. Requiere sujeto y registrador distintos, ambos staff activo de clase elegible, sesiones canónicas actuales y reautenticación independiente. Además, el registrador debe estar nombrado en la autorización de despliegue. Una cuenta médica no se transforma en staff mediante MFA. Las operaciones de nombramiento/grants siguen perteneciendo al escritor `InternalGovernanceService`; esta CLI no inventa autoridad para efectuarlas ni las siembra.
 
 El inicio cifra el secreto y guarda el vínculo al sujeto, registrador, sesiones y versiones, con expiración de cinco minutos. No permite otro factor ACTIVE/PENDING sin cancelación/recuperación explícita. La entrega clara ocurre sólo en el artifact privado exclusivo, nunca en stdout, logs, URLs de terceros ni Git. El URI otpauth es material secreto para uso presencial/controlado por el titular, no un enlace público. Si falla la entrega del archivo, no se reporta éxito: inspeccionar el factor PENDING y cancelarlo por la ceremonia aprobada antes de reintentar.

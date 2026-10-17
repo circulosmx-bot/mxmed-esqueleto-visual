@@ -14,7 +14,10 @@ def main():
     ap.add_argument('--act03',action='store_true',help='New synthetic ACT03 sources; implies ACT02, resolution suite only')
     ap.add_argument('--act02', action='store_true', help='Exercise shared ACT02 factory on new synthetic application/resolution targets')
     ap.add_argument('--native-only', action='store_true', help='Run only the new resolution native contract in its owned target')
+    ap.add_argument('--ase-align01', action='store_true', help='Owned advisor capability/MFA alignment; resolution plus ACT03 only')
     args = ap.parse_args()
+    if args.ase_align01 and (args.suite != 'resolution' or not args.act03):
+        ap.error('--ase-align01 requires --suite resolution --act03')
     if args.act03:
         args.act02=True
         if args.suite!='resolution':ap.error('--act03 requires resolution')
@@ -59,12 +62,14 @@ def main():
         dump = subprocess.check_output(['mysqldump', *mysql_args, '--no-data', '--skip-triggers', '--skip-add-drop-table', '--set-gtid-purged=OFF', '--column-statistics=0', '--skip-comments', 'mxmed'], env=env, text=True)
         dump = re.sub(r'AUTO_INCREMENT=\d+', '', dump).replace('`mxmed`.', '`' + db + '`.')
         assert 'INSERT INTO ' not in dump and 'USE `mxmed`' not in dump
+        assert not re.search(r'(?i)(?<![A-Za-z0-9_])(?:`mxmed`|mxmed)\s*\.', dump), 'normal schema qualifier remains in clone'
         sql(dump, db)
         names = sql("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='mxmed' ORDER BY TRIGGER_NAME").splitlines()
         for name in names:
             assert re.fullmatch(r'[A-Za-z0-9_]+', name)
             row = sql("SELECT JSON_QUOTE(ACTION_STATEMENT),EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='mxmed' AND TRIGGER_NAME='" + name + "'").strip().split('\t')
             body = json.loads(row[0]).replace('`mxmed`.', '`' + db + '`.')
+            assert not re.search(r'(?i)(?<![A-Za-z0-9_])(?:`mxmed`|mxmed)\s*\.', body), 'normal schema qualifier remains in trigger'
             sql(f"DELIMITER $$\nCREATE DEFINER={trigger_definer} TRIGGER `{name}` {row[3]} {row[1]} ON `{row[2]}` FOR EACH ROW {body}$$\nDELIMITER ;\n", db)
         for file in ['05_audit_lock.sql', '06_audit_cas.sql']:
             source = (ROOT/'modules/identity/deployment/op-act01'/file).read_text().replace('{{TARGET_SCHEMA}}', '`'+db+'`').replace('{{RESTRICTED_DEFINER}}', "'"+user+"'@'127.0.0.1'")
@@ -134,6 +139,7 @@ def main():
         if args.suite in ['enrollment', 'resolution', 'correction', 'application']: test_env.update({'PUB_ENR02_QA':'1','PUB_ENR02_DEPLOYMENT_CONNECTION':str(pathlib.Path(args.connection).resolve())})
         if args.suite == 'resolution': test_env['PUB_ENR03_QA']='1'
         if args.act03:test_env['ACT03_QA']='1'
+        if args.ase_align01:test_env['ASE_ALIGN01_QA']='1'
         if args.act02:
             test_env['ACT02_QA']='1'
             test_env['ACT02_QA_SUITE']=args.suite
@@ -156,6 +162,13 @@ def main():
                 result=subprocess.run(['php',str(ROOT/'modules/identity/tests/Act03IntegrationTest.php'),'--fixture'],cwd=ROOT,env=test_env,capture_output=True,text=True)
                 (evidence/'act03-fixture.log').write_text(result.stdout+result.stderr)
                 if result.returncode:raise RuntimeError('ACT03 fixture failed; inspect private evidence')
+            if args.ase_align01:
+                # Canonical governance must run before the deliberately restricted
+                # runtime principal loses staff/grant writes. Still this fresh DB only.
+                result=subprocess.run(['php',str(ROOT/'modules/identity/tests/AdvisorRoutineCapabilityIntegrationTest.php')],cwd=ROOT,env=test_env,capture_output=True,text=True)
+                (evidence/'ase-align01-native.log').write_text(result.stdout+result.stderr)
+                print(result.stdout,end='')
+                if result.returncode:raise RuntimeError('ASE-ALIGN01 isolated native acceptance failed; inspect private evidence')
             spec=importlib.util.spec_from_file_location('principal',ROOT/'scripts/act02-principal.py');principal=importlib.util.module_from_spec(spec);spec.loader.exec_module(principal);principal.restrict(sql,db,user,synthetic=True,professional_sources=args.act03)
             result=subprocess.run(['php',str(ROOT/'modules/identity/tests/Act02IntegrationTest.php')],cwd=ROOT,env=test_env,capture_output=True,text=True)
             (evidence/'act02-native.log').write_text(result.stdout+result.stderr)
@@ -195,7 +208,12 @@ def main():
             print(result.stdout, end='')
             if result.returncode: raise RuntimeError('disposable original UI failed; inspect private log')
         if args.suite in ['enrollment', 'resolution'] and not args.native_only:
-            if args.act03 and os.environ.get('PUB_ENR03_BROWSER_SMOKE')!='1' and 'ACT03_BROWSER_SHARD' not in os.environ:
+            if args.ase_align01:
+                result=subprocess.run(['python3',str(ROOT/'scripts/ase-align01-browser-qa.py')],cwd=ROOT,env=test_env,capture_output=True,text=True)
+                (evidence/'ase-align01-browser.log').write_text(result.stdout+result.stderr)
+                print(result.stdout,end='')
+                if result.returncode:raise RuntimeError('ASE-ALIGN01 isolated original workspace browser acceptance failed; inspect private evidence')
+            elif args.act03 and os.environ.get('PUB_ENR03_BROWSER_SMOKE')!='1' and 'ACT03_BROWSER_SHARD' not in os.environ:
                 # Independent disposable DB/principal/Valkey and transport per shard.
                 # Never reset an MFA factor to accelerate browser tests.
                 def browser_shard(target):

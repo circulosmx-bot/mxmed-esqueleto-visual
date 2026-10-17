@@ -11,9 +11,22 @@ en CLAIM cuando la revisión encuentra un perfil existente.
 La operación requiere sesión Identity vigente, cuenta activa y correo verificado,
 credencial actual, alcance del piloto firmado y la capacidad específica
 `professional_source_provision`. La pantalla original de acreditación también
-conserva su requisito `physician_accreditation_review`; esa capacidad por sí sola
+admite desde **ASE-ALIGN01 V2** un ADVISOR con ese grant exacto sin exigir
+`physician_accreditation_review`: sólo recibe la cola/intake mínimo de fuentes
+en su alcance. La revisión de enrollment y evidencia C4 sigue exigiendo su grant
+independiente `physician_accreditation_review`; esa capacidad por sí sola
 no permite provisionar fuentes. No se crean grants, personal interno ni factores
 reales. El sujeto no puede revisar sus propias fuentes.
+
+La política individual de asesores y futura matriz gráfica está registrada en
+[IW01](../product-completion/iw01-internal-governance-foundation.md).
+El [contrato MFA](IDENTITY-GOV03A-governance-runtime.md#mfa-de-staff) distingue
+el asesor como sujeto elegible del registrador DIRECTOR/MASTER_ADMIN independiente.
+El guard de despliegue acepta el grant rutinario exacto del asesor para los tres
+workflows aprobados, conservando firmas, cohortes, fingerprints, schema y principal
+SQL restringido. `c4_issuer` mantiene cobertura DIRECTOR/MASTER_ADMIN y los cambios
+de autoridad profesional no se amplían al asesor. Los resultados históricos ACT03
+de este documento se conservan; ASE-ALIGN01 no activa ese runtime ni sus proveedores.
 
 Un solo revisor ordinario autorizado registra la comprobación. El registrador
 independiente de MFA mantiene su función separada y el contrato existente. Cada

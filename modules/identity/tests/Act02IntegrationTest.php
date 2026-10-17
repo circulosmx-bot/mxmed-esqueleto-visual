@@ -17,6 +17,37 @@ try{
         return;
     }
     $bundle=$run($x['secrets'],$x['sms']);actCheck(isset($bundle['enrollment'],$bundle['reports'],$bundle['onboarding']),'shared_factory_positive_signed_synthetic_case');
+    if(getenv('ASE_ALIGN01_QA')==='1'){
+        $advisors=[];$governanceReviewer=null;
+        foreach($p->query("SELECT s.account_id,s.governance_class,g.capability FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id WHERE s.status='ACTIVE' AND g.status='ACTIVE' AND g.revoked_at IS NULL AND EXISTS(SELECT 1 FROM auth_staff_mfa_factors f WHERE f.account_id=s.account_id AND f.status='ACTIVE') ORDER BY s.account_id")->fetchAll(PDO::FETCH_ASSOC) as $r){
+            if($r['governance_class']==='ADVISOR'&&$r['capability']==='public_profile_correction_review'&&in_array($r['account_id'],$a['accounts'],true))$advisors[$r['capability']]??=$r['account_id'];
+            if(!in_array($r['capability'],$a['staff'][$r['account_id']]??[],true))continue;
+            if($r['governance_class']==='ADVISOR')$advisors[$r['capability']]??=$r['account_id'];
+            elseif(in_array($r['governance_class'],['DIRECTOR','MASTER_ADMIN'],true)&&$r['capability']==='physician_accreditation_review')$governanceReviewer??=$r['account_id'];
+        }
+        actCheck(isset($advisors['physician_accreditation_review'],$advisors['professional_source_provision'],$advisors['public_profile_correction_review'])&&$governanceReviewer!==null,'advisor_guard_fixtures_have_independent_MFA_and_grants');
+        $guard=function(array $approval)use($identity,$x):array{
+            Act02SyntheticComposition::sign($x['authorization'],$approval,$x['signing_secret']);
+            return ActivationGuard::verify($identity,$x['authorization'],$x['trust'],$x['secrets']);
+        };
+        // The principal is restricted for the full ACT03 selection. Keep that
+        // selection: narrowing workflows would correctly reject its source INSERT grants.
+        $review=$a;$review['staff']=[$governanceReviewer=>['physician_accreditation_review']];
+        foreach(['physician_accreditation_review','professional_source_provision'] as $cap)$review['staff'][$advisors[$cap]][]=$cap;
+        actCheck($guard($review)['staff']===$review['staff'],'guard_accepts_individually_approved_routine_review_advisor');
+        $sources=$a;
+        $sources['staff']=[$governanceReviewer=>['physician_accreditation_review'],$advisors['professional_source_provision']=>['professional_source_provision']];
+        actCheck($guard($sources)['staff']===$sources['staff'],'guard_accepts_individually_approved_source_advisor');
+        foreach([['issuer_only',['c4_issuer'],'act02_staff_capability_or_MFA_missing'],['issuer_and_review',['enrollment_review','c4_evidence','c4_issuer'],'act02_staff_coverage_missing']] as [$label,$workflows,$denial]){
+            $bad=$a;$bad['workflows']=$workflows;$bad['staff']=[$advisors['physician_accreditation_review']=>['physician_accreditation_review']];
+            try{$guard($bad);throw new LogicException('advisor authorized issuer');}
+            catch(RuntimeException $e){actCheck($e->getMessage()===$denial,'guard_rejects_advisor_as_reserved_issuer_staff_'.$label);}
+        }
+        $bad=$a;$bad['workflows']=['correction_review'];$bad['staff']=[$advisors['public_profile_correction_review']=>['public_profile_correction_review']];
+        try{$guard($bad);throw new LogicException('advisor correction activation broadened');}
+        catch(RuntimeException $e){actCheck($e->getMessage()==='act02_staff_capability_or_MFA_missing','guard_preserves_correction_staff_class_restriction');}
+        $guard($a);
+    }
     $tampered=json_decode(file_get_contents($x['authorization']),true,32,JSON_THROW_ON_ERROR);$tampered['signature']=base64_encode(str_repeat('0',64));file_put_contents($x['authorization'],json_encode($tampered,JSON_THROW_ON_ERROR));
     try{$run($x['secrets'],$x['sms']);throw new LogicException('invalid signature accepted');}
     catch(RuntimeException $e){actCheck($e->getMessage()==='act02_signature_required','guard_denies_invalid_approval_signature');}
@@ -62,7 +93,11 @@ try{
         actCheck(!in_array($outside[1],array_column($state['requests'],'request_id'),true),'actual_C4_queue_excludes_outside_account_on_approved_profile');
         foreach($state['enrollment_review']['queue'] as $row){$q=$p->prepare('SELECT account_id FROM auth_physician_enrollment_origins WHERE origin_id=?');$q->execute([$row['application_id']]);if($q->fetchColumn()===$outside[0])throw new RuntimeException('enrollment_queue_outside_account');}
         actCheck(true,'actual_enrollment_queue_excludes_outside_account');
-        $narrow=$a;unset($narrow['staff']['enr_reviewer']);Act02SyntheticComposition::sign($x['authorization'],$narrow,$x['signing_secret']);$limited=$run($x['secrets'],$x['sms']);
+        $narrow=$a;unset($narrow['staff']['enr_reviewer']);
+        // ASE's remaining reviewers are advisors. This consumer omission test
+        // exercises evidence reads only; it does not request issuer activation.
+        if(getenv('ASE_ALIGN01_QA')==='1')$narrow['workflows']=array_values(array_diff($narrow['workflows'],['c4_issuer']));
+        Act02SyntheticComposition::sign($x['authorization'],$narrow,$x['signing_secret']);$limited=$run($x['secrets'],$x['sms']);
         try{$limited['onboarding']->page($cookies,true);throw new LogicException('unapproved C4 reviewer allowed');}
         catch(RuntimeException $e){actCheck($e->getMessage()==='act02_staff_outside_approved_capability','actual_C4_denies_valid_staff_omitted_from_pilot_approval');}
         Act02SyntheticComposition::sign($x['authorization'],$a,$x['signing_secret']);

@@ -30,7 +30,7 @@ final class PhysicianOnboardingHttp
         $decision=$this->identity->sessions()->validate($cookies['__Host-mxmed_session']??null);
         if (in_array($decision->reasonCode(),[\Identity\Contracts\ReasonCode::SESSION_STORE_UNAVAILABLE,\Identity\Contracts\ReasonCode::STORAGE_UNAVAILABLE],true))throw new \RuntimeException('onboarding_session_unavailable');
         if (!$decision->allowed()||$decision->context()===null||$decision->record()===null) throw new GovernanceHttpDenied(401);
-        $actor=$decision->context();$this->scope?->account($actor->accountId());if ($staff)$this->staff($actor);
+        $actor=$decision->context();$this->scope?->account($actor->accountId());
         $state=$this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,null),$application);
         return $this->sourceState($state,$cookies,$staff,$state['enrollment_review']['application']['application_id']??$state['enrollment_application']['application_id']??null)+['csrf_token'=>$this->identity->csrf()->issueAuthenticated($actor->session()->tokenDigest()),
             'expires_at'=>$decision->record()->expiresAt()->getTimestamp()];
@@ -49,8 +49,12 @@ final class PhysicianOnboardingHttp
             if(!is_string($b['action']??null)||isset($b['view'])&&!is_string($b['view']))throw new \InvalidArgumentException('onboarding_input_invalid');
             $action=$b['action'];$staff=($b['view']??'physician')==='staff';
             $this->scope?->account($actor->accountId());
-            $this->scope?->workflow(str_starts_with($action,'source_')?'professional_source_provisioning':(str_starts_with($action,'enrollment_')?'enrollment_review':($action==='complete'?'c4_issuer':'c4_evidence')));
-            if ($staff)$this->staff($actor);
+            // Workspace entry can expose separately authorized functions. This
+            // union never authorizes a command or access to C4 evidence.
+            if($action!=='snapshot'){
+                $this->scope?->workflow(str_starts_with($action,'source_')?'professional_source_provisioning':(str_starts_with($action,'enrollment_')?'enrollment_review':($action==='complete'?'c4_issuer':'c4_evidence')));
+                if($staff)$this->staff($actor,str_starts_with($action,'source_')?'professional_source_provision':'physician_accreditation_review');
+            }
             if ($action==='snapshot')return ['status'=>200,'body'=>['ok'=>true,'data'=>$this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,$b['request_id']??null),$b['application_id']??null)]];
             if ($this->services===null) return $this->error(503,'La acreditación profesional está pendiente de habilitación. Por ahora puedes consultar los pasos.');
             $data=null;
@@ -179,6 +183,7 @@ final class PhysicianOnboardingHttp
     public function sourceState(array $state,array $cookies,bool $staff,?string $application):array
     {
         if($this->sources===null)return $state;
+        if($staff&&($state['staff_capabilities']['professional_source_provision']??false)!==true){$state['professional_sources']=['available'=>false];return $state;}
         $state['professional_sources_enabled']=true;if($application===null)return $state;
         $d=$this->identity->sessions()->validate($cookies['__Host-mxmed_session']??null);
         if(!$d->allowed()||$d->context()===null)throw new GovernanceHttpDenied(401);
@@ -187,19 +192,35 @@ final class PhysicianOnboardingHttp
         catch(\RuntimeException $e){if($e->getMessage()!=='source_capability_denied')throw $e;$state['professional_sources']=['available'=>false];}
         return $state;
     }
-    private function staff(AuthenticatedAccessContext $actor):void
+    private function staff(AuthenticatedAccessContext $actor,string $capability='physician_accreditation_review'):void
     {
-        $this->scope?->staff($actor->accountId(),'physician_accreditation_review');
+        if(!in_array($capability,['physician_accreditation_review','professional_source_provision'],true))throw new GovernanceHttpDenied(403);
+        $this->scope?->staff($actor->accountId(),$capability);
         $q=$this->a->query("SELECT s.account_id FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id
             JOIN auth_accounts a ON a.account_id=s.account_id JOIN auth_account_credentials c ON c.account_id=a.account_id
             WHERE s.account_id=? AND s.status='ACTIVE' AND a.status='active' AND a.email_verified_at IS NOT NULL AND c.credential_version=?
-            AND g.capability='physician_accreditation_review' AND g.status='ACTIVE' AND g.revoked_at IS NULL",[$actor->accountId(),$actor->principal()->credentialVersion()]);
+            AND g.capability=? AND g.status='ACTIVE' AND g.revoked_at IS NULL",[$actor->accountId(),$actor->principal()->credentialVersion(),$capability]);
         if ($q->fetchColumn()!==$actor->accountId())throw new GovernanceHttpDenied(403);
+    }
+    private function staffCapabilities(AuthenticatedAccessContext $actor):array
+    {
+        $allowed=[];$denial=null;
+        foreach(['physician_accreditation_review','professional_source_provision'] as $capability){
+            try{$this->staff($actor,$capability);$allowed[$capability]=true;}
+            catch(GovernanceHttpDenied|\Identity\Operational\WorkflowScopeDenied $e){$allowed[$capability]=false;$denial??=$e;}
+        }
+        if(!in_array(true,$allowed,true))throw $denial??new GovernanceHttpDenied(403);
+        return $allowed;
     }
     private function withEnrollment(AuthenticatedAccessContext $actor,bool $staff,array $state,?string $application):array
     {
+        if($staff){
+            if(($state['staff_capabilities']['physician_accreditation_review']??false)===true){
+                if($this->enrollmentReview!==null)$state['enrollment_review']=$this->enrollmentReview->staff($actor,$application)+['review_allowed'=>true];
+            }elseif($this->sources!==null)$state['enrollment_review']=$this->sources->staffQueue($actor,$application)+['review_allowed'=>false];
+            return $state;
+        }
         if($this->enrollmentReview===null)return $state;
-        if($staff){$state['enrollment_review']=$this->enrollmentReview->staff($actor,$application);return $state;}
         if($application===null){
             $q=$this->a->query("SELECT origin_id FROM auth_physician_enrollment_origins WHERE account_id=? AND intake_state='SUBMITTED' ORDER BY bound_at DESC,origin_id DESC LIMIT 1",[$actor->accountId()]);
             $application=$q->fetchColumn();if(!is_string($application))return $state;
@@ -239,6 +260,16 @@ final class PhysicianOnboardingHttp
     {
         $base=['enabled'=>$this->services!==null,'staff'=>$staff,'email_verified'=>true,'phone_verified'=>false,'requests'=>[],'request'=>null,
             'message'=>$staff?'La revisión de acreditaciones está pendiente de habilitación.':'La acreditación profesional está pendiente de habilitación. Por ahora puedes consultar los pasos.'];
+        if($staff){
+            $base['staff_capabilities']=$this->staffCapabilities($actor);
+            if($base['staff_capabilities']['physician_accreditation_review']!==true){
+                if($selected!==null)throw new GovernanceHttpDenied(403);
+                $this->scope?->workflow('professional_source_provisioning');
+                if($this->sources!==null)$base['message']='Consulta las solicitudes y verifica sus fuentes profesionales. La revisión de acreditación requiere una autorización distinta.';
+                return $base;
+            }
+        }
+        $this->scope?->workflow('c4_evidence');
         if ($this->services===null)return $base;
         return $this->a->transaction($actor,function()use($actor,$staff,$selected,$base):array {
             if ($staff)$this->staff($actor);else $this->a->applicant($actor->accountId());

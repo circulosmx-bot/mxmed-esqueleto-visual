@@ -148,7 +148,7 @@
     q('[data-owner-pending]').hidden = !r?.completed;
   }
   function renderEnrollment() {
-    const panel = state.enrollment_review, app = panel?.application;
+    const panel = state.enrollment_review, app = panel?.application, canReview = panel?.review_allowed === true;
     const queue = q('[data-enrollment-review-list]'), summary = q('[data-enrollment-review-summary]');
     if (queue) {
       queue.replaceChildren(); summary.replaceChildren();
@@ -160,20 +160,22 @@
         add(summary, 'h3', app.origin_label); if (app.target_name) add(summary, 'p', `Perfil propuesto para revisión: ${app.target_name}`);
         add(summary, 'p', `Información declarada por el solicitante: ${app.declared_name}. ${app.declared_specialty}. ${app.declared_location}.`);
         const labels = { READY_FOR_REVIEW: 'El perfil tiene fuentes profesionales verificadas. La aprobación requiere tu revisión explícita.', PENDING_SOURCES: 'La solicitud sigue pendiente de fuentes profesionales verificadas.', PENDING_NEW_PROFILE: 'No encontramos un perfil correspondiente. La creación de perfil requiere otro trámite autorizado.', CONFLICT: 'El caso requiere revisión especial. No se cambiará el perfil ni su titular.' };
-        add(summary, 'p', app.state === 'APPROVED' ? (app.resolution_current === true ? 'La correspondencia del perfil ya fue revisada. La acreditación conserva su propio estado y sus controles.' : 'La resolución requiere atención: cambiaron sus fuentes o su autorización.') : labels[app.gate] || 'Pendiente de revisión.');
-        if (app.source_readiness?.message) add(summary, 'p', app.source_readiness.message);
-        add(summary, 'p', { APPROVED: 'Revisión de perfil aprobada. La acreditación todavía requiere sus propios pasos.', REJECTED: 'Solicitud rechazada.', REVOKED: 'La resolución dejó de estar vigente.' }[app.state] || 'Solicitud pendiente.');
+        if (canReview) {
+          add(summary, 'p', app.state === 'APPROVED' ? (app.resolution_current === true ? 'La correspondencia del perfil ya fue revisada. La acreditación conserva su propio estado y sus controles.' : 'La resolución requiere atención: cambiaron sus fuentes o su autorización.') : labels[app.gate] || 'Pendiente de revisión.');
+          if (app.source_readiness?.message) add(summary, 'p', app.source_readiness.message);
+          add(summary, 'p', { APPROVED: 'Revisión de perfil aprobada. La acreditación todavía requiere sus propios pasos.', REJECTED: 'Solicitud rechazada.', REVOKED: 'La resolución dejó de estar vigente.' }[app.state] || 'Solicitud pendiente.');
+        } else add(summary, 'p', 'Tu autorización permite verificar fuentes profesionales. La decisión de incorporación requiere otro permiso.');
         const select = q('#enrollment-review-decision'), key = `${app.application_id}:${app.review_version}:${app.gate}`;
-        if (select.dataset.selection !== key) {
+        if (canReview && select.dataset.selection !== key) {
           select.replaceChildren(); select.dataset.selection = key;
           const options = app.state === 'APPROVED' ? [['REVOKED', 'Retirar resolución por revisión de seguridad']] : [[app.gate === 'READY_FOR_REVIEW' ? 'APPROVED' : app.gate, app.gate === 'READY_FOR_REVIEW' ? 'Aprobar correspondencia del perfil' : 'Conservar pendiente o en revisión especial'], ['NEEDS_INFORMATION', 'Solicitar información adicional'], ['PENDING_REVIEW', 'Conservar pendiente de revisión'], ['REJECTED', 'Rechazar solicitud']];
           options.forEach(([value, label]) => { const option = add(select, 'option', label); option.value = value; });
         }
       }
     }
-    const active = !!app && !['REJECTED', 'REVOKED'].includes(app.state);
+    const active = canReview && !!app && !['REJECTED', 'REVOKED'].includes(app.state);
     enabled('enrollment_review_begin', active && !enrollmentReview, active && !enrollmentReview);
-    enabled('enrollment_review_decide', !!enrollmentReview, !!enrollmentReview);
+    enabled('enrollment_review_decide', canReview && !!enrollmentReview, canReview && !!enrollmentReview);
     const continuation = state.enrollment_application;
     if (q('[data-enrollment-continuation-status]')) {
       const copy = { ACCREDITATION_COMPLETED: 'Tu acreditación está completada. La designación como titular sigue pendiente de una autorización independiente.', ACCREDITATION_DRAFT: 'Completa los documentos de tu acreditación.', IN_REVIEW: 'Tu solicitud está en revisión.', APPROVED_PENDING_CONFIRMATION: 'Aprobada, pendiente de tu confirmación.', CONFIRMED: 'Confirmación recibida. Completa el registro de tu acreditación.' };

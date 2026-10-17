@@ -32,6 +32,7 @@ final class GovernanceStaffMfaCeremony
     {
         $this->security->binding($subject);
         $q=$this->pdo->prepare("SELECT enrollment_context FROM auth_staff_mfa_factors WHERE factor_id=? AND account_id=? AND status='PENDING'");$q->execute([$factor,$subject->accountId()]);$context=json_decode((string)$q->fetchColumn(),true,32,JSON_THROW_ON_ERROR);
+        if(!in_array($context['registrar']['account_id']??null,$this->approvedRegistrars,true))throw new \RuntimeException('mfa_registrar_not_deployment_approved');
         if(($context['subject']['session_id']??null)!==(string)$subject->session()->sessionId()
             ||($context['subject']['credential_version']??null)!==$subject->principal()->credentialVersion())throw new \RuntimeException('mfa_enrollment_session_changed');
         $this->mfa->activateEnrollment($subject->accountId(),$factor,$code,

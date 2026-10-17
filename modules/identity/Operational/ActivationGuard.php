@@ -4,6 +4,7 @@ namespace Identity\Operational;
 use PDO;
 use Identity\Http\IdentityHttpComposition;
 use Identity\Operators\OperatorDeploymentSchema;
+use Identity\Services\StaffRoutineOperationPolicy;
 
 /** Signed, private, short-lived authorization. No approval creation or env selector. */
 final class ActivationGuard
@@ -66,13 +67,24 @@ final class ActivationGuard
         if(array_intersect($a['workflows'],['enrollment_review','c4_evidence','c4_issuer']))$required[]='physician_accreditation_review';
         if(in_array('correction_review',$a['workflows'],true))$required[]='public_profile_correction_review';
         if(in_array('correction_apply',$a['workflows'],true))$required[]='public_profile_correction_apply';
+        $advisorOperations=['enrollment_review'=>'PHYSICIAN_ENROLLMENT_REVIEW','c4_evidence'=>'PHYSICIAN_EVIDENCE_REVIEW',
+            'professional_source_provisioning'=>'PROFESSIONAL_SOURCE_PROVISION'];
+        $issuerStaff=false;
         foreach($a['staff'] as $account=>$caps){
             if(!in_array($account,$a['accounts'],true)||!is_array($caps))throw new \RuntimeException('act02_staff_scope_required');
             foreach($caps as $cap){if(!in_array($cap,$required,true))throw new \RuntimeException('act02_unrelated_staff_capability');
-                $q=$pdo->prepare("SELECT COUNT(*) FROM internal_staff s JOIN auth_accounts a ON a.account_id=s.account_id JOIN auth_account_credentials c ON c.account_id=s.account_id JOIN internal_operator_grants g ON g.account_id=s.account_id WHERE s.account_id=? AND s.status='ACTIVE' AND s.governance_class IN ('DIRECTOR','MASTER_ADMIN') AND a.status='active' AND a.email_verified_at IS NOT NULL AND g.capability=? AND g.status='ACTIVE' AND g.revoked_at IS NULL AND EXISTS(SELECT 1 FROM auth_staff_mfa_factors f WHERE f.account_id=s.account_id AND f.status='ACTIVE')");$q->execute([$account,$cap]);if((int)$q->fetchColumn()!==1)throw new \RuntimeException('act02_staff_capability_or_MFA_missing');
+                $q=$pdo->prepare("SELECT s.governance_class FROM internal_staff s JOIN auth_accounts a ON a.account_id=s.account_id JOIN auth_account_credentials c ON c.account_id=s.account_id JOIN internal_operator_grants g ON g.account_id=s.account_id WHERE s.account_id=? AND s.status='ACTIVE' AND a.status='active' AND a.email_verified_at IS NOT NULL AND c.credential_version>0 AND g.capability=? AND g.status='ACTIVE' AND g.revoked_at IS NULL AND EXISTS(SELECT 1 FROM auth_staff_mfa_factors f WHERE f.account_id=s.account_id AND f.status='ACTIVE')");$q->execute([$account,$cap]);$classes=$q->fetchAll(PDO::FETCH_COLUMN);
+                if(count($classes)!==1)throw new \RuntimeException('act02_staff_capability_or_MFA_missing');
+                $governance=in_array($classes[0],['DIRECTOR','MASTER_ADMIN'],true);$routine=false;
+                if($classes[0]==='ADVISOR')foreach($advisorOperations as $workflow=>$operation)
+                    if(in_array($workflow,$a['workflows'],true)&&StaffRoutineOperationPolicy::capability($operation)===$cap)$routine=true;
+                if(!$governance&&!$routine)throw new \RuntimeException('act02_staff_capability_or_MFA_missing');
+                if($governance&&$cap==='physician_accreditation_review')$issuerStaff=true;
             }
         }
         foreach($required as $cap){if(!array_filter($a['staff'],fn($caps)=>in_array($cap,$caps,true)))throw new \RuntimeException('act02_staff_coverage_missing');}
+        // Routine review delegation does not authorize professional authority lifecycle changes.
+        if(in_array('c4_issuer',$a['workflows'],true)&&!$issuerStaff)throw new \RuntimeException('act02_staff_coverage_missing');
         $grants=$pdo->query('SHOW GRANTS')->fetchAll(PDO::FETCH_COLUMN);
         foreach($grants as $g){
             $privileges=explode(' ON ',$g,2)[0];

@@ -30,11 +30,8 @@ final class SourceProvisioningService
     private static function hash(mixed $v):string{return hash('sha256',json_encode($v,JSON_THROW_ON_ERROR));}
     private function staff(AuthenticatedAccessContext $actor,string $beneficiary):string
     {
-        $this->a->scope?->workflow(self::WORKFLOW);$this->a->scope?->staff($actor->accountId(),self::CAPABILITY);
-        $this->a->account($actor->accountId(),$actor->principal()->credentialVersion());
-        if($actor->accountId()===$beneficiary)throw new \RuntimeException('source_self_verification_denied');
-        $rows=$this->a->query("SELECT s.governance_class,g.grant_id FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id WHERE s.account_id=? AND s.status='ACTIVE' AND s.governance_class IN ('DIRECTOR','MASTER_ADMIN') AND g.capability=? AND g.status='ACTIVE' AND g.revoked_at IS NULL FOR UPDATE",[$actor->accountId(),self::CAPABILITY])->fetchAll(PDO::FETCH_ASSOC);
-        if(count($rows)!==1)throw new \RuntimeException('source_capability_denied');return self::hash($rows[0]);
+        $this->a->scope?->workflow(self::WORKFLOW);
+        return self::hash($this->a->sourceReviewer($actor->accountId(),$beneficiary,$actor->principal()->credentialVersion()));
     }
     private function origin(string $id):array
     {
@@ -46,7 +43,7 @@ final class SourceProvisioningService
     private function context(AuthenticatedAccessContext $actor,string $id):array
     {
         $o=$this->origin($id);$grant=$this->staff($actor,$o['account_id']);
-        $d=$this->enrollment->reviewIntakeInTransaction($actor,$id,(int)$o['intake_version'])['intake'];
+        $d=$this->enrollment->sourceIntakeInTransaction($actor,$id,(int)$o['intake_version'])['intake'];
         $matches=ProfessionalMatchCandidates::find($this->a,$d['professional_license'],$d['given_names'],$d['first_surname'],$d['specialty'],$d['state'],$d['city']);
         $target=$o['original_profile_doctor_id'];
         if($matches['ambiguous']||($target!==null&&$matches['candidate_profile_ids']!==[]&&$matches['candidate_profile_ids']!==[$target]))throw new \RuntimeException('source_profile_conflict');
@@ -319,4 +316,27 @@ final class SourceProvisioningService
     }
     public function status(AuthenticatedAccessContext $actor,string $origin,bool $staff):array
     {return $this->a->transaction($actor,fn()=>$this->statusInTransaction($actor,$origin,$staff));}
+    /** Reuse the original workspace without inheriting accreditation-review authority. */
+    public function staffQueue(AuthenticatedAccessContext $actor,?string $selected=null):array
+    {
+        return $this->a->transaction($actor,function()use($actor,$selected){
+            $this->staff($actor,'@source-queue');
+            [$where,$args]=$this->a->scope?->sqlCohort('o.original_profile_doctor_id','o.account_id')??['1=1',[]];
+            $rows=$this->a->query("SELECT o.origin_id,p.display_name FROM auth_physician_enrollment_origins o LEFT JOIN profiles_doctors p ON p.doctor_id=o.original_profile_doctor_id
+                WHERE o.intake_state='SUBMITTED' AND o.account_id<>? AND $where ORDER BY o.bound_at DESC,o.origin_id DESC LIMIT 30",array_merge([$actor->accountId()],$args))->fetchAll(PDO::FETCH_ASSOC);
+            $queue=array_map(static fn($r)=>['application_id'=>$r['origin_id'],'label'=>$r['display_name']??'Formar parte de México Médico'],$rows);
+            $selected??=$rows[0]['origin_id']??null;
+            if($selected===null)return ['queue'=>$queue,'application'=>null];
+            $o=$this->origin($selected);
+            $d=$this->enrollment->sourceIntakeInTransaction($actor,$selected,(int)$o['intake_version'])['intake'];
+            $this->a->scope?->profile($o['original_profile_doctor_id']);
+            $name=$o['original_profile_doctor_id']===null?null:$this->a->query('SELECT display_name FROM profiles_doctors WHERE doctor_id=?',[$o['original_profile_doctor_id']])->fetchColumn();
+            $this->audit->source($actor,$selected,'INTAKE_READ',(int)$o['intake_version']);
+            return ['queue'=>$queue,'application'=>['application_id'=>$selected,'intake_version'=>(int)$o['intake_version'],'review_version'=>0,
+                'state'=>'PENDING_SOURCES','gate'=>'PENDING_SOURCES','review_allowed'=>false,
+                'origin_label'=>$o['initial_origin']==='CLAIM_EXISTING_PROFILE'?'Solicitud del perfil público original':'Formar parte de México Médico',
+                'target_name'=>is_string($name)?$name:null,'declared_name'=>trim(implode(' ',[$d['given_names'],$d['first_surname'],$d['second_surname']])),
+                'declared_specialty'=>$d['specialty'],'declared_location'=>$d['city'].', '.$d['state']]];
+        });
+    }
 }

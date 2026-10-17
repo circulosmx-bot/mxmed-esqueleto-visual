@@ -142,8 +142,10 @@ $uiClock=new EvClock(new DateTimeImmutable('-2 minutes',new DateTimeZone('UTC'))
 $uiCeremony=new Identity\Services\GovernanceStaffMfaCeremony($p,$uiStack['mfa'],$uiStack['security'],new Identity\Adapters\CanonicalGovernanceAuditAdapter($p),$uiClock,['res_director']);
 for($n=0;$n<12;$n++){
  $id='res_ui_reviewer_'.$n;resAccount($p,$id,$hash);
- $p->prepare("INSERT INTO internal_staff(account_id,governance_class,status) VALUES(?,'MASTER_ADMIN','ACTIVE')")->execute([$id]);
- $p->prepare("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),?,'physician_accreditation_review','ACTIVE')")->execute([$id]);
+ $ase=getenv('ASE_ALIGN01_QA')==='1';
+ $p->prepare("INSERT INTO internal_staff(account_id,governance_class,status) VALUES(?,?,'ACTIVE')")->execute([$id,$ase?'ADVISOR':'MASTER_ADMIN']);
+ $cap=$ase&&$n<6?'professional_source_provision':'physician_accreditation_review';
+ $p->prepare("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),?,?,'ACTIVE')")->execute([$id,$cap]);
  $uiReviewer=evLogin($uiStack,$id.'@example.invalid');$uf=$uiCeremony->begin($uiReviewer['context'],$uiDirector['context'],$uiReviewer['email'],EV_PASSWORD,$uiDirector['email'],EV_PASSWORD);
  $uiCeremony->activate($uiReviewer['context'],$uf['factor_id'],StaffMfaService::totp(str_repeat('e',20),intdiv($uiClock->now()->getTimestamp(),30)));
 }

@@ -54,7 +54,7 @@ final class EvidenceAudit
     }
     public function source(AuthenticatedAccessContext $actor,string $target,string $operation,int $version,?string $caseId=null,bool $staff=true):string
     {
-        if(!in_array($operation,['CHALLENGE','COLLECTION_OPENED','FILE_ADDED','FILE_READ','AUTHORIZED','VID01_RECORDED','CRD02_RECORDED','COMPLETE','RECOVERY_AUTHORIZED','REVOKED','C4_REFERENCE_LINKED'],true))throw new \InvalidArgumentException('source_audit_operation_invalid');
+        if(!in_array($operation,['INTAKE_READ','CHALLENGE','COLLECTION_OPENED','FILE_ADDED','FILE_READ','AUTHORIZED','VID01_RECORDED','CRD02_RECORDED','COMPLETE','RECOVERY_AUTHORIZED','REVOKED','C4_REFERENCE_LINKED'],true))throw new \InvalidArgumentException('source_audit_operation_invalid');
         return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','professional_source',$operation,$version,'SOURCE_REVIEW',$operation,$caseId,null,$staff,'professional_source_provision');
     }
     private function write(AuthenticatedAccessContext $actor,string $target,string $eventType,string $targetType,string $operation,int $version,

@@ -4,6 +4,7 @@ $escape=static fn(string $s):string=>htmlspecialchars($s,ENT_QUOTES,'UTF-8');
 $entry=is_array($state['public_entry']??null)?$state['public_entry']:null;
 $entryLogin=$entry?'/public/identity/acceso.php?next='.rawurlencode($entry['continue_url']):null;
 $loginDestination=$staff?'/internal/media-review/index.php?section=acreditacion':'/public/identity/perfil-medico.php';
+$reviewAuthorized=$staff&&($state['staff_capabilities']['physician_accreditation_review']??false)===true;
 if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDestination.='?continue_enrollment='.$state['enrollment_application']['application_id'];
 ?>
 <!doctype html><html lang="es"><head>
@@ -31,8 +32,9 @@ if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDest
 <?php require __DIR__.'/professional-sources.php'; ?>
 <?php if(isset($state['enrollment'])): require __DIR__.'/physician-enrollment-intake.php'; else: ?>
 <?php if(isset($state['enrollment_review'])): ?>
-<section class="auth-card" data-enrollment-review-panel><h2>Solicitudes de incorporación</h2><p>Comprueba el perfil propuesto y registra una decisión explícita. Esta revisión no aprueba por sí sola la acreditación ni asigna titularidad.</p>
+<section class="auth-card" data-enrollment-review-panel><h2>Solicitudes de incorporación</h2><p><?= $reviewAuthorized?'Comprueba el perfil propuesto y registra una decisión explícita. Esta revisión no aprueba por sí sola la acreditación ni asigna titularidad.':'Consulta la solicitud exacta para verificar sus fuentes profesionales. Esta autorización no permite resolver la incorporación ni la acreditación.' ?></p>
 <div data-enrollment-review-list class="onboarding-request-list"></div><div data-enrollment-review-summary></div>
+<?php if($reviewAuthorized): ?>
 <form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="enrollment_review_begin"><fieldset disabled><legend>Revisión del perfil solicitado</legend>
 <div class="field"><label for="enrollment-review-decision">Resultado de revisión</label><select id="enrollment-review-decision" name="decision"></select></div>
 <div class="field"><label for="enrollment-review-email">Correo de tu cuenta interna</label><input id="enrollment-review-email" name="email" type="email" autocomplete="username" required></div>
@@ -41,7 +43,8 @@ if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDest
 <form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="enrollment_review_decide" hidden><fieldset disabled><legend>Confirmar decisión de perfil</legend><p>Comprueba que el resultado corresponde a esta solicitud y al perfil mostrado.</p>
 <div class="field"><label for="enrollment-review-mfa">Código de tu autenticador</label><input id="enrollment-review-mfa" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></div>
 <label><input type="checkbox" name="relationship_confirmed"> Confirmo la relación revisada entre solicitante y perfil propuesto.</label>
-<button type="submit" class="button">Registrar decisión</button></fieldset></form></section>
+<button type="submit" class="button">Registrar decisión</button></fieldset></form>
+<?php endif; ?></section>
 <?php elseif(isset($state['enrollment_application'])): ?>
 <section class="auth-card" data-enrollment-continuation><h2>Continúa tu solicitud de incorporación</h2><p>Conservamos tu solicitud original. La revisión de perfil y la acreditación profesional son pasos separados.</p>
 <p data-enrollment-continuation-status></p><form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="enrollment_handoff"><fieldset disabled><legend>Continuar con la misma solicitud</legend><p>Verifica primero tu teléfono. Después podrás adjuntar los documentos privados al expediente correspondiente.</p><button class="button" type="submit">Continuar acreditación profesional</button></fieldset></form></section>
@@ -67,7 +70,7 @@ if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDest
 <details><summary>Perfil nuevo, coincidencias y transferencias</summary><p>Crear un perfil nuevo requiere acreditación y una comprobación final de duplicados. Los casos con coincidencias, conflictos o un titular actual requieren revisión específica. Estos trámites están pendientes de habilitación; no se elegirá ni sustituirá un perfil automáticamente.</p></details>
 </section>
 </div>
-<?php else: ?>
+<?php elseif($reviewAuthorized): ?>
 <section class="auth-card"><h2>Solicitudes de acreditación</h2><p>Consulta únicamente los expedientes para los que tienes autorización. La revisión profesional no asigna un titular.</p><div data-request-list class="onboarding-request-list"></div></section>
 <?php endif; ?>
 <section class="auth-card" data-request-panel hidden aria-labelledby="request-heading"><h2 id="request-heading">Solicitud profesional</h2><div data-request-summary></div><div data-document-list class="onboarding-document-list"></div>
@@ -80,7 +83,7 @@ if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDest
 <form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="confirmation_issue"><fieldset disabled><legend>Autorizar la confirmación</legend><div class="field"><label for="confirmation-email">Correo de tu cuenta</label><input id="confirmation-email" name="email" type="email" autocomplete="username" required></div><div class="field"><label for="confirmation-password">Confirma tu contraseña</label><input id="confirmation-password" name="password" type="password" autocomplete="current-password" required></div><button class="button button--secondary" type="submit">Autorizar confirmación</button></fieldset></form>
 <form method="post" action="/api/identity/physician-onboarding.php" data-onboarding-form="confirmation_accept" hidden><fieldset disabled><legend>Confirmar mi solicitud</legend><label class="consent"><input type="checkbox" name="accepted" required> Confirmo que esta solicitud corresponde a mi cuenta, mi identidad y el perfil indicado.</label><button class="button" type="submit">Confirmar acreditación</button></fieldset></form></section>
 <form method="post" action="/api/identity/physician-onboarding.php" data-onboarding-form="complete" hidden><fieldset disabled><legend>Completar acreditación</legend><p>Tu confirmación fue recibida. Falta completar el registro de la acreditación. Si hubo una interrupción, puedes reintentar este paso sin volver a confirmar.</p><button class="button" type="submit">Completar acreditación</button></fieldset></form>
-<?php else: ?>
+<?php elseif($reviewAuthorized): ?>
 <form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="review_begin" hidden><fieldset disabled><legend>Preparar revisión protegida</legend><div class="field"><label for="review-decision">Decisión</label><select id="review-decision" name="decision"><option value="APPROVED">Aprobar relación profesional</option><option value="REJECTED">Rechazar solicitud</option></select></div><div class="field"><label for="review-reason">Motivo del rechazo</label><select id="review-reason" name="reason"><option value="ACCOUNT_PERSON_MISMATCH">No se acreditó la relación con la cuenta</option><option value="DOCUMENT_IDENTITY_MISMATCH">La identificación no corresponde</option><option value="DOCUMENT_UNREADABLE">El documento no es legible</option><option value="PROFILE_CONFLICT">Se requiere resolver un conflicto de perfil</option></select></div><div class="field"><label for="review-email">Correo de tu cuenta interna</label><input id="review-email" name="email" type="email" autocomplete="username" required></div><div class="field"><label for="review-password">Confirma tu contraseña</label><input id="review-password" name="password" type="password" autocomplete="current-password" required></div><button class="button" type="submit">Iniciar revisión segura</button></fieldset></form>
 <form method="post" action="/api/identity/physician-onboarding.php" class="auth-form" data-onboarding-form="review_decide" hidden><fieldset disabled><legend>Resolver el expediente exacto</legend><p>Abre y examina cada documento después de iniciar la revisión. Indica su vencimiento real, si lo tiene; no se impone una renovación anual.</p><div data-document-facts></div><label class="consent"><input type="checkbox" name="relationship_confirmed"> He revisado los documentos y confirmo la relación exacta entre cuenta, persona y perfil.</label><div class="field"><label for="review-mfa">Código de tu autenticador</label><input id="review-mfa" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></div><button class="button" type="submit">Registrar decisión</button></fieldset></form>
 <?php endif; ?>

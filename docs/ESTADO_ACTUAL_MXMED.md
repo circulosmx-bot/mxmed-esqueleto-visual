@@ -3,11 +3,11 @@
 ## Ancla y alcance
 
 - Fecha de verificación documental: **2026-10-17**.
-- Baseline fuente verificado: `0bea8195ce75c309a54cba35acb4605ba290ee00` (CTX-MAP02 publicado; producto preservado).
-- Rama: `ux/consultation-step2-vitals-r1`; al iniciar CTX-MAP03, HEAD/upstream/remoto coinciden y worktree limpio.
+- Baseline fuente verificado: `57e0b013fafa3feda69911c96fea501c2f42a118` (inicio ASE-ALIGN01 V2; CTX-MAP03 publicado).
+- Rama: `ux/consultation-step2-vitals-r1`; al iniciar ASE-ALIGN01 V2, HEAD/upstream/remoto coinciden y worktree limpio.
 - Worktree: `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`; no confundir con el checkout hermano `mxmed-esqueleto-visual`.
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
-- CTX-MAP03 amplía casos de negocio de CTX-MAP02; no cambia producto, tests ni runtime. El ancla es el HEAD fuente inspeccionado, no el hash futuro de estos mapas.
+- ASE-ALIGN01 V2 alinea capacidades individuales de asesores con tres operaciones rutinarias de acreditación; no activa normal-local. El ancla es el HEAD fuente inspeccionado, no el hash futuro del cierre.
 
 ## Producto existente
 
@@ -33,7 +33,8 @@
 | PUB-COR01 | Intake seguro y revisión humana implementados; [contrato](profiles/PUB-COR01-secure-intake-human-review.md). Normal-local inactivo. |
 | PUB-COR02 | Aplicación tipada y recuperación implementadas para teléfono global publicado; [contrato](profiles/PUB-COR02-governed-typed-application.md). No aplica teléfonos FREE ocultos. |
 | ACT02 | Factory/guard, fuente comercial y ensayo integrado implementados; [paquete](identity/ACT02-integrated-public-workflows.md). Descripción del writer gobernado faltante es histórica de ACT02. |
-| ACT03 | **Source provisioning implementado y verificado en QA aislada**; [cierre](identity/ACT03-governed-professional-sources.md#cierre-verificado). Resultado global permanece **PARTIAL_MXMED_ACT03**. |
+| ACT03 | **Source provisioning implementado y verificado en QA aislada**; [cierre](identity/ACT03-governed-professional-sources.md#cierre-verificado). Resultado histórico **PARTIAL_MXMED_ACT03** preservado. |
+| ASE-ALIGN01 V2 | Política individual aprobada en [IW01](product-completion/iw01-internal-governance-foundation.md); MFA/consumidores/guard y workspace originales alineados; QA aislada completa. Sin activación real. |
 
 ## Estado operacional y migraciones
 
@@ -58,17 +59,19 @@
 - **Clínica:** issuer/binding C4 implementado; consumidor profesional todavía deniega incondicionalmente. Alta paciente tiene disparidad de autorización fuente `unresolved`; no se hizo probe ni se cambió autoridad. [Mapa clínico](contexto/FUNCIONES_CLINICAS_MXMED.md).
 - **Infra:** IaC y cierres físicos históricos C3/SES recuperados; packaging actual omite shell/workflows y hay divergencia DB env. AWS/Stripe remotos no verificados. [Mapa AWS](contexto/AWS_Y_ENTORNOS_MXMED.md).
 - **Casos Agenda:** [CTX-MAP03](contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md) traza CTA integrado público y matriz por acción; waitlist/no-show no están en los cinco grants de operador. Call Center conserva contrato futuro y consumidor no acreditado; política por rol, scope waitlist y atribución ordinaria tienen brechas fuente explícitas, sin probes ni permisos nuevos.
-- **Comercial/asesores:** [CTX-MAP03](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) separa enrollment, captación, venta, soporte, revisor y aceptante. Cupón UI no acredita validación/snapshot/descuento canónico. Workspace staff y gobierno se reutilizan; no hay panel comercial completo acreditado.
+- **Comercial/asesores:** [trazabilidad](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) preserva ventas, captación, Call Center, cupones y Billing separados. ASE-ALIGN01 aprueba combinaciones individuales sin subtipos ni cupo arbitrario de asesores/capacidades; no heredan las dos plazas del operador médico. Director/MASTER delegado conservan gobierno, ADVISOR no recibe autoridad por clase ni autogrants. Matriz de checkboxes aprobada sólo como política futura; no construida. Grants de revisión/fuentes y revocación son independientes; MFA sujeto/uso se separan del registrador independiente y operaciones sensibles. Runtime real sigue inactivo.
 
 ## Evidencia reciente y reconciliación de tests
 
 - [ACT03](identity/ACT03-governed-professional-sources.md#cierre-verificado) registra 127 checks nativos de fuentes, 16 de contactos FREE y 12 journeys de fuente → PUB-ENR03 → C4 en Chromium/WebKit y tres tamaños.
 - Documenta también regresiones aisladas Identity, Operadores, Agenda, VID01/CRD02 y correcciones; no son QA física Safari del Director ni activación real.
-- Evidencia detallada privada/manifiestos: ubicación en el cierre ACT03; no copiar logs, documentos, conexiones o secretos a Git.
+- ASE-ALIGN01 V2: **464 checks nativos** (139 asesores/MFA/MVCC, 132 ACT03, 50 guard, dos schema, 89 enrollment, 36 comercial y 16 contactos) y seis recorridos pareados Chromium/WebKit en tres tamaños pasan. Workspace original, grants independientes y operaciones sensibles preservados; cero datos reales importados/escritos y recursos de ensayo eliminados.
+- Regresiones suplementarias: gobierno/ceremonia/HTTP y 200 checks de Operadores con nueve subtests pasan; checksums `mxmed`/QA05 iguales. AUTH02A actual falla sólo por README histórico en su gate de diff: test/pins intactos pasan completos en copia temporal con ese README original y 250 fuentes clínicas actuales idénticas; copia eliminada. Sin relajación de pins.
+- Evidencia ASE privada: `~/Library/Application Support/MXMED/ase-align01-v2/20261017T211943Z/final-acceptance`; no copiar fixtures, conexiones, documentos o secretos a Git. Evidencia histórica ACT03 permanece en su cierre.
 - ACT04-RECON02: [test de auditoría](../modules/platform/tests/PhysicianCredentialAuditPolicyTest.php) actualizado al catálogo de 57, conservando digest de las 52 políticas publicadas y metadata OP-IMP07 exacta. Doble PDO adaptado a lectura de target/rutinas; cinco denegaciones de deriva verificadas, cero conexiones SQL reales.
 - [Test de hero/contactos](../modules/profiles/tests/PublicProfileHeroConsultorioContactLayoutTest.php): comprueba glifos requeridos en la solicitud de fuente correcta, admitiendo orden/glifos adicionales; conserva las demás assertions de presentación y privacidad.
 - [AUTH02A_29](../modules/clinical/qa/clin_auth02a_contract.php), modo `--security-regression`: admite sólo la fixture UX-ALIGN01 exacta, ligada por SHA-256 a su entrega. No cambia baseline productivo, pins clínicos, writer, autoridad ni exclusiones generales.
-- Los tres tests corregidos pasan; también contratos de Consultorio y visibilidad/contactos FREE. Son correcciones de expectativas/dobles obsoletos, no evidencia de regresión productiva ni nueva activación. El modo histórico de entrega de AUTH02A conserva sus restricciones originales.
+- En ACT04 pasaron los tres tests corregidos, Consultorio y visibilidad/contactos FREE. Son evidencia histórica de expectativas/dobles, no activación. Para la ejecución AUTH02A de ASE rige el caveat de README anterior; el modo histórico de entrega conserva sus restricciones originales.
 - Contactos administrativos: 14 comprobaciones Chromium/WebKit del markup y módulo JS originales con red sintética en memoria (carga, teléfono/WhatsApp, flags privados, entrada inválida y 403 sin falso éxito). No acredita autoridad/persistencia SQL ni Safari físico; no hubo pestaña privada Safari disponible. Probes negativos conservan rechazo de glifos ausentes y deriva de fixture/pin clínico.
 
 ## Cobertura, autorizaciones y continuidad
@@ -77,7 +80,7 @@
 - CTX-MAP03: 35 casos (diez Agenda, quince Billing, diez comerciales), matriz de cinco canales y nueve ejemplos documentales; [respuestas y validación](contexto/COBERTURA_Y_PENDIENTES_MXMED.md#ctx-map03). No son nuevas funciones ni tests de producto.
 - Metadata heredada de CTX-MAP02, no consultada de nuevo en SQL: 128 tablas, cero vistas, 1.734 columnas, 138 FK, 35 triggers/once rutinas. Unión fuente/física de 204 nombres; todos con dominio; nueve sin CREATE quedan explícitos y 36 gaps léxicos de writer se reconciliaron por revisión dirigida. [Datos](contexto/DATOS_Y_MIGRACIONES_MXMED.md).
 - CTX-MAP03 sólo documentación y lectura dirigida de fuente/metadata ya publicada; sin filas reales, conexión SQL nueva, tests de producto, AWS/Stripe, envíos ni reinicios. Se conservan mapas antiguos con avisos de sucesor y ACT04 como tests corregidos.
-- Siguiente acción de producto/piloto: **NONE_PENDING_DIRECTOR_REVIEW**. Director prioriza una brecha; mapas no autorizan despliegue, DDL, SMS/custodias, staff/MFA, C4, owner, firma ni operadores.
+- Siguiente autorización operacional: despliegue/cohortes/staff/MFA/custodias/proveedores reales por separado; ASE-ALIGN01 V2 no los habilita. La futura matriz de asesores conserva su alcance conceptual y requiere una fase UI específica. Los mapas no autorizan DDL, C4, owner, firma ni operadores.
 - Incertidumbres: remoto/proveedores/runtime físico; variantes SQL/rutas dinámicas; UI parciales, atribución comercial y lineage físico. Decisiones comerciales/seguridad aprobadas no se reabren por README históricos.
 - Inicio de nueva tarea: verificar Git/instrucciones, leer este estado, seguir un dominio del router y contrastar decisión/UI/writer antes de proponer cambios.
 - Cierre: baseline/post HEAD, alcance, comportamiento, pruebas y entorno, límites, referencias y autorizaciones pendientes; usar la [plantilla existente](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md).
