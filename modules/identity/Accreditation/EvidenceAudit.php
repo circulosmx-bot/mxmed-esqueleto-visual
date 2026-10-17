@@ -40,6 +40,13 @@ final class EvidenceAudit
             'BINDING_REJECTED','BINDING_SUSPENDED','BINDING_REVOKED','BINDING_EXPIRED'],true)) throw new \InvalidArgumentException('physician_audit_operation_invalid');
         return $this->write($actor,$target,'PHYSICIAN_AUTHORITY_CHANGED','physician_authority',$operation,$version,$before,$after,$caseId,$reason,$staff);
     }
+    /** Unverified enrollment intake, distinguished by target and finite operations.
+     * Reuses the canonical evidence lifecycle event; never an approval/authority event. */
+    public function enrollment(AuthenticatedAccessContext $actor,string $target,string $operation,int $version,string $before,string $after):string
+    {
+        if(!in_array($operation,['ORIGIN_BOUND','INTAKE_SAVED','INTAKE_SUBMITTED','MATCH_CANDIDATES_READ'],true))throw new \InvalidArgumentException('enrollment_audit_operation_invalid');
+        return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','physician_enrollment',$operation,$version,$before,$after,null,null,false);
+    }
     private function write(AuthenticatedAccessContext $actor,string $target,string $eventType,string $targetType,string $operation,int $version,
         string $before,string $after,?string $caseId,?string $reviewReason,bool $staff):string
     {

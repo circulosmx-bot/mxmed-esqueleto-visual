@@ -1,0 +1,91 @@
+<?php
+declare(strict_types=1);
+if(PHP_SAPI!=='cli')exit(1);
+require_once __DIR__.'/../http/IdentityHttpComposition.php';
+Identity\Http\IdentityHttpComposition::registerAutoloader();
+require_once __DIR__.'/../../media/storage/LocalPersistentPrivateMediaStorage.php';
+require_once __DIR__.'/../../agenda/contracts/OtpProviderPort.php';
+require_once __DIR__.'/support/C4EvidenceHarness.php';
+use Identity\Accreditation\{PublicEnrollmentService,PublicEnrollmentHttp,EvidenceCipher};
+$p=evConnect();$db=$p->query('SELECT DATABASE()')->fetchColumn();
+if(getenv('PUB_ENR02_QA')!=='1'||!preg_match('/^mxmed_gate4d_preview_c4ui_([a-f0-9]{10})$/D',$db,$m)||$p->query('SELECT CURRENT_USER()')->fetchColumn()!=='gov03b_'.$m[1].'@127.0.0.1')throw new RuntimeException('new_disposable_only');
+if((int)$p->query('SELECT COUNT(*) FROM auth_accounts')->fetchColumn()!==0)throw new RuntimeException('fresh_fixture_required');
+$hash=password_hash(EV_PASSWORD,PASSWORD_ARGON2ID);
+foreach(['enr_a','enr_b','enr_operator','enr_reviewer','enr_disabled','enr_unverified','enr_parallel'] as $id){
+    $q=$p->prepare('INSERT INTO auth_accounts(account_id,email_address,email_normalized,status,email_verified_at) VALUES(?,?,?,?,?)');
+    $q->execute([$id,$id.'@example.invalid',$id.'@example.invalid',$id==='enr_unverified'?'pending_verification':'active',$id==='enr_unverified'?null:gmdate('Y-m-d H:i:s')]);
+    $p->prepare('INSERT INTO auth_account_credentials(account_id,password_hash,password_changed_at,credential_version) VALUES(?,?,UTC_TIMESTAMP(),1)')->execute([$id,$hash]);
+}
+for($i=0;$i<20;$i++){
+    $p->prepare("INSERT INTO profiles_doctors(doctor_id,display_name,professional_license,specialty_primary,profile_status,is_public_candidate,plan_code) VALUES(?,?,?,?,'active',1,?)")
+        ->execute(['enr_profile_'.$i,'Profesional sintético '.$i,'SYNTHETIC-LICENSE-'.$i,'Especialidad sintética',$i===1?'optimum':'free']);
+    $p->prepare('INSERT INTO consultorios(doctor_id,consultorio_id,titulo,municipio,estado) VALUES(?,?,?,?,?)')->execute(['enr_profile_'.$i,'synthetic-office','Consultorio sintético','Ciudad sintética','Estado sintético']);
+}
+$p->exec("INSERT INTO auth_account_memberships(membership_id,account_id,profile_doctor_id,role_code,scope_code,status,assignment_source) VALUES('enr-owner','enr_b','enr_profile_2','owner','profile','active','manual_review'),('enr-operator','enr_operator','enr_profile_2','collaborator','profile','active','owner_operator_invitation')");
+$p->exec("INSERT INTO internal_staff(account_id,governance_class,status) VALUES('enr_reviewer','MASTER_ADMIN','ACTIVE')");
+$p->exec("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'enr_reviewer','physician_accreditation_review','ACTIVE')");
+$clock=new EvClock(new DateTimeImmutable('now',new DateTimeZone('UTC')));$s=evStack($p,$clock);
+$svc=new PublicEnrollmentService($s['authority'],$s['cipher'],str_repeat('q',64));
+$a=evLogin($s,'enr_a@example.invalid');$b=evLogin($s,'enr_b@example.invalid');$operator=evLogin($s,'enr_operator@example.invalid');$reviewer=evLogin($s,'enr_reviewer@example.invalid');
+$parallel=evLogin($s,'enr_parallel@example.invalid');
+function origin(PublicEnrollmentService $svc,string $browser,?string $profile=null):array{
+ $ticket=$svc->ticket($profile===null?'REQUEST_NEW_PROFILE':'CLAIM_EXISTING_PROFILE',$profile,'/profiles/listing.php',$browser);
+ return $svc->start($ticket,$browser)+['ticket'=>$ticket,'browser'=>$browser];
+}
+$browser=PublicEnrollmentService::opaque();$o=origin($svc,$browser,'enr_profile_0');
+evCheck($svc->preview($o['application_id'],$o['handle'],$browser)['original_profile_id']==='enr_profile_0','A_free_public_profile_origin');
+evDeny(fn()=>$svc->ticket('CLAIM_EXISTING_PROFILE','enr_profile_1','/profiles/listing.php',$browser),'enrollment_claim_unavailable','B_paid_denied');
+evDeny(fn()=>$svc->ticket('CLAIM_EXISTING_PROFILE','enr_profile_2','/profiles/listing.php',$browser),'enrollment_claim_unavailable','C_owner_denied');
+evDeny(fn()=>$svc->claim('ENR_PROFILE_0'),'enrollment_claim_unavailable','canonical_profile_ID_exact_not_collation_alias');
+evCheck((int)$p->query('SELECT COUNT(*) FROM profiles_verified_identities')->fetchColumn()===0&&(int)$p->query('SELECT COUNT(*) FROM profiles_doctor_credentials')->fetchColumn()===0,'E_preloaded_without_verified_sources');
+$bound=$svc->bind($a['context'],$o['application_id'],$o['handle'],$browser);
+evCheck($bound['bound']&&$bound['pending']&&!$bound['medical_access'],'E_pending_binding_no_medical_access');
+evCheck($svc->bind($a['context'],$o['application_id'],$o['handle'],$browser)===$bound,'binding_same_account_retry_idempotent');
+evDeny(fn()=>$svc->bind($b['context'],$o['application_id'],$o['handle'],$browser),'enrollment_account_denied','I_cross_account_adoption_denied');
+evDeny(fn()=>$svc->bind($a['context'],$o['application_id'],$o['handle'],PublicEnrollmentService::opaque()),'enrollment_proof_denied','forced_binding_other_browser_denied');
+evDeny(fn()=>$svc->snapshot($b['context'],$o['application_id']),'enrollment_account_denied','Q_private_intake_account_scope');
+evDeny(fn()=>$svc->start(substr($o['ticket'],0,-1).(str_ends_with($o['ticket'],'0')?'1':'0'),$browser),'enrollment_proof_denied','K_tampered_intent_denied');
+evDeny(fn()=>$s['evidence']->create($a['context'],'CLAIM_EXISTING_PROFILE','enr_profile_0',0,0),'c4_phone_verification_required','F_initial_intake_not_final_evidence');
+$data=['given_names'=>'Persona sintética','first_surname'=>'Prueba','second_surname'=>'','professional_license'=>'SYNTHETIC-LICENSE-5','specialty'=>'Especialidad sintética','state'=>'Estado sintético','city'=>'Ciudad sintética'];
+$command=$s['authority']->uuid();$saved=$svc->save($a['context'],$o['application_id'],0,$command,$data);
+evCheck($saved['version']===1,'versioned_draft_saved');
+evCheck($svc->save($a['context'],$o['application_id'],0,$command,$data)['replayed']===true,'R_exact_command_retry_no_duplicate');
+evDeny(fn()=>$svc->save($a['context'],$o['application_id'],0,$command,array_replace($data,['given_names'=>'Different'])),'enrollment_command_conflict','R_same_key_different_payload_rejected');
+evDeny(fn()=>$svc->save($a['context'],$o['application_id'],0,$s['authority']->uuid(),$data),'enrollment_version_conflict','S_CAS_conflict_honest');
+$snap=$svc->snapshot($a['context'],$o['application_id']);evCheck($snap['intake']===$data&&$snap['original_profile_id']==='enr_profile_0','G_H_exact_profile_and_private_resume');
+$stored=$p->query('SELECT intake_ciphertext FROM auth_physician_enrollment_intake_revisions LIMIT 1')->fetchColumn();evCheck(!str_contains($stored,$data['given_names'])&&!str_contains($stored,$data['professional_license']),'private_intake_encrypted');
+$p->exec('UPDATE gov03b_qa_faults SET enabled=1');
+evSqlDeny(fn()=>$svc->save($a['context'],$o['application_id'],1,$s['authority']->uuid(),$data,true),'45000','T_audit_failure_rolls_back');
+$p->exec('UPDATE gov03b_qa_faults SET enabled=0');
+evCheck($svc->snapshot($a['context'],$o['application_id'])['version']===1,'T_no_partial_revision_after_failure');
+$submitted=$svc->save($a['context'],$o['application_id'],1,$s['authority']->uuid(),$data,true);evCheck($submitted['state']==='SUBMITTED','explicit_submission_pending');
+evDeny(fn()=>$svc->save($a['context'],$o['application_id'],2,$s['authority']->uuid(),$data),'enrollment_submitted_immutable','submitted_revision_immutable');
+$c=$svc->reviewCandidates($reviewer['context'],$o['application_id'],2);
+evCheck($c['candidate_profile_ids']===['enr_profile_5']&&$c['original_profile_id']==='enr_profile_0'&&$c['selected_profile_id']===null,'O_matching_never_retargets_claim');
+evDeny(fn()=>$svc->reviewCandidates($b['context'],$o['application_id'],2),'c4_reviewer_capability_required','P_missing_matching_authority_denied');
+$general=origin($svc,PublicEnrollmentService::opaque());$svc->bind($a['context'],$general['application_id'],$general['handle'],$general['browser']);
+$svc->save($a['context'],$general['application_id'],0,$s['authority']->uuid(),$data,true);
+$g=$svc->snapshot($a['context'],$general['application_id']);
+evCheck($g['initial_origin']==='REQUEST_NEW_PROFILE'&&$g['original_profile_id']===null&&$g['intake']===$data,'L_M_N_general_pending_saved_resumed_immutable_origin');
+$c=$svc->reviewCandidates($reviewer['context'],$general['application_id'],1);evCheck($c['candidate_profile_ids']===['enr_profile_5']&&$c['initial_origin']==='REQUEST_NEW_PROFILE'&&!$c['resolution_available'],'O_general_match_not_resolution');
+$op=origin($svc,PublicEnrollmentService::opaque(),'enr_profile_3');evDeny(fn()=>$svc->bind($operator['context'],$op['application_id'],$op['handle'],$op['browser']),'c4_nonmedical_operator_denied','W_operator_cannot_start_applicant_authority');
+$expired=origin($svc,PublicEnrollmentService::opaque(),'enr_profile_4');$clock->advance('+1801 seconds');
+evDeny(fn()=>$svc->bind($a['context'],$expired['application_id'],$expired['handle'],$expired['browser']),'enrollment_expired','J_expired_origin_denied');
+evCheck($svc->snapshot($a['context'],$o['application_id'])['state']==='SUBMITTED','bound_application_resumes_after_public_proof_expiry');
+$clock->advance('-1801 seconds');
+evSqlDeny(fn()=>$p->prepare("UPDATE auth_physician_enrollment_origins SET original_profile_doctor_id='enr_profile_6',revision=revision+1 WHERE origin_id=?")->execute([$o['application_id']]),'45000','physical_origin_trigger_immutable');
+evSqlDeny(fn()=>$p->exec("UPDATE auth_physician_enrollment_intake_revisions SET key_id='changed'"),'45000','physical_intake_append_only');
+evSqlDeny(fn()=>$p->exec('DELETE FROM auth_physician_enrollment_commands'),'45000','physical_commands_immutable');
+evDeny(fn()=>$svc->save($a['context'],$general['application_id'],1,$s['authority']->uuid(),$data+['verified'=>true]),'enrollment_input_invalid','client_professional_verification_rejected');
+$p->exec("UPDATE auth_account_credentials SET credential_version=2 WHERE account_id='enr_a'");
+evDeny(fn()=>$svc->snapshot($a['context'],$general['application_id']),'governance_session_invalidated','stale_credential_denied');
+$p->exec("UPDATE auth_accounts SET status='disabled' WHERE account_id='enr_disabled'");
+evCheck(!$s['auth']->authenticate('enr_unverified@example.invalid',EV_PASSWORD,[])->isAllowed(),'pending_email_cannot_login');
+evCheck(!$s['auth']->authenticate('enr_disabled@example.invalid',EV_PASSWORD,[])->isAllowed(),'disabled_account_cannot_login');
+$audit=(string)$p->query("SELECT GROUP_CONCAT(metadata_json) FROM platform_audit_events WHERE action='PHYSICIAN_EVIDENCE_CHANGED'")->fetchColumn();
+evCheck(!str_contains($audit,$data['given_names'])&&!str_contains($audit,$data['professional_license'])&&!str_contains($audit,$o['handle']),'audit_no_intake_or_raw_proof');
+evCheck((int)$p->query('SELECT COUNT(*) FROM profiles_physician_admissions')->fetchColumn()===0&&(int)$p->query('SELECT COUNT(*) FROM auth_account_professional_bindings')->fetchColumn()===0,'U_no_final_authorities');
+evCheck(Identity\Contracts\SessionPolicy::IDLE_TTL_SECONDS===3600&&Identity\Contracts\SessionPolicy::ABSOLUTE_TTL_SECONDS===43200,'identity_TTL_unchanged');
+$race=origin($svc,PublicEnrollmentService::opaque(),'enr_profile_7');
+file_put_contents((string)getenv('GOV03B_QA_EVIDENCE').'/enrollment-race.json',json_encode($race+['command'=>$s['authority']->uuid(),'intake'=>$data,'session_token'=>$parallel['token']],JSON_THROW_ON_ERROR));
+echo "PUB_ENR02_NATIVE=PASS\n";
