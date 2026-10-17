@@ -60,7 +60,7 @@ final class StaffMfaService
     {
         if($this->security===null)throw new \RuntimeException('staff_mfa_canonical_security_required');
         foreach([$actor,$target,$beneficiary] as $id)$this->assertId($id);$this->assertReference($caseId);
-        if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW'],true))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
+        if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PUBLIC_PROFILE_CORRECTION_REVIEW'],true))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
         $this->assertActiveStaff($actor);if($this->security!==null){if(($reauthentication['account_id']??null)!==$actor)throw new \RuntimeException('staff_mfa_reauthentication_required');$this->security->assertLive($reauthentication,true);}
         $now=$this->clock->now();$raw=rtrim(strtr(base64_encode(random_bytes(32)),'+/','-_'),'=');
         $id='challenge_'.bin2hex(random_bytes(16));$s=$this->pdo->prepare("INSERT INTO auth_staff_mfa_challenges(challenge_id,actor_account_id,operation,case_id,target_account_id,beneficiary_account_id,profile_doctor_id,nonce_hash,status,expires_at) VALUES(?,?,?,?,?,?,?,?,'PENDING',?)");

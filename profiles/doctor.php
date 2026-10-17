@@ -7,6 +7,7 @@ require_once __DIR__ . '/../modules/profiles/services/PublicProfilePanelContent.
 require_once __DIR__ . '/../modules/profiles/services/PublicBookingDoctorReference.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePortrait.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicNamePresentation.php';
+require_once __DIR__ . '/../modules/profiles/Corrections/bootstrap.php';
 
 function h($value): string
 {
@@ -588,6 +589,8 @@ $showClaimProfile = (
     || toBool($claim['claim_allowed'] ?? false)
 );
 $showSuggestCorrection = toBool($publicVisibility['show_suggest_correction'] ?? false);
+$correctionForm = $showSuggestCorrection
+    ? \Profiles\Corrections\ReportRuntime::form($doctorId, (string)($_SERVER['REQUEST_URI'] ?? '')) : null;
 $showAboutAction = toBool($publicVisibility['show_about_action'] ?? false);
 $showConsultaAction = toBool($publicVisibility['show_consulta_action'] ?? false);
 $showFee = toBool($publicVisibility['show_consultation_fee'] ?? false);
@@ -864,6 +867,9 @@ if (isLocalDevRequest()) {
                   <summary class="mxpp-action-link mxpp-action-link--summary">Sugerir corrección</summary>
                   <div class="mxpp-correction__body">
                     <p><strong>Perfil:</strong> <?= h($displayName ?? 'Perfil médico en validación') ?></p>
+                    <?php if ($correctionForm !== null): ?>
+                      <?php require __DIR__.'/../partials/profiles/correction-form.php'; ?>
+                    <?php else: ?>
                     <p id="mxpp-correction-status" class="mxpp-correction__notice">La recepción de informes está pendiente de habilitación. Por ahora puedes consultar qué información se podrá comunicar, sin escribir ni enviar datos.</p>
                     <fieldset disabled aria-describedby="mxpp-correction-status">
                       <legend>Información del informe</legend>
@@ -894,6 +900,7 @@ if (isLocalDevRequest()) {
                       <input id="mxpp-correction-contact" type="email" autocomplete="off" disabled />
                       <button type="button" disabled>Envío pendiente de habilitación</button>
                     </fieldset>
+                    <?php endif; ?>
                     <p class="mxpp-correction__note">Cada informe requerirá revisión antes de realizar cambios. Un aviso de retiro o fallecimiento no modifica este perfil ni sus accesos por sí solo. No incluyas información clínica o de pacientes.</p>
                   </div>
                 </details>

@@ -102,7 +102,8 @@
       const allowed = parsed.pathname === '/' || parsed.pathname === '/index.html'
         || parsed.pathname === '/private-app.php' || parsed.pathname === '/provider/'
         || parsed.pathname === '/public/identity/perfil-medico.php'
-        || (parsed.pathname === '/internal/media-review/index.php' && parsed.search === '?section=acreditacion');
+        || (parsed.pathname === '/internal/media-review/index.php' && parsed.search === '?section=acreditacion')
+        || (parsed.pathname === '/internal/media-review/index.php' && parsed.search === '?section=correcciones' && !parsed.hash);
       return allowed ? parsed.pathname + parsed.search + parsed.hash : '/private-app.php';
     } catch (_) {
       return '/private-app.php';
@@ -117,7 +118,8 @@
     if (!response.ok || session.authenticated !== true) throw new Error('session_validation_failed');
     const destination = safePrivateDestination();
     const onboarding = destination.startsWith('/public/identity/perfil-medico.php') || destination === '/internal/media-review/index.php?section=acreditacion';
-    if (destination !== '/provider/' && !onboarding && session.application_access?.allowed !== true) {
+    const correctionReview = destination === '/internal/media-review/index.php?section=correcciones';
+    if (destination !== '/provider/' && !onboarding && !correctionReview && session.application_access?.allowed !== true) {
       throw new Error('professional_access_required');
     }
     const signal = JSON.stringify({ type: 'authenticated', at: Date.now() });

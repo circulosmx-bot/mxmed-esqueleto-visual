@@ -850,6 +850,10 @@ body {
 
 .mxpp-correction legend { font-weight: 700; margin-bottom: 0.6rem; }
 .mxpp-correction label { font-weight: 600; }
+.mxpp-correction .mxpp-correction__ack { display:flex; align-items:flex-start; gap:0.6rem; margin:0.7rem 0; font-weight:400; }
+.mxpp-correction .mxpp-correction__ack input { width:1.2rem; min-width:1.2rem; min-height:1.2rem; margin-top:0.15rem; padding:0; }
+.mxpp-correction [data-correction-report] button { background:var(--profile-accent); color:#fff; font-weight:700; cursor:pointer; }
+.mxpp-correction [data-correction-report] :focus-visible { outline:2px solid var(--profile-accent); outline-offset:2px; }
 .mxpp-correction :is(input, select, textarea, button) {
   box-sizing: border-box;
   width: 100%;

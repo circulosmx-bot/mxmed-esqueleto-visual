@@ -1,5 +1,7 @@
 # UX-ALIGN01 — informes públicos de corrección de perfiles
 
+**Incremento posterior:** [PUB-COR01](PUB-COR01-secure-intake-human-review.md) implementa y verifica recepción cifrada y decisiones humanas exclusivamente en QA desechable. Este documento conserva la auditoría inicial como antecedente. La aplicación de cambios y la activación normal-local siguen pendientes; el permiso de revisión no concede publicación, ownership ni autoridad clínica.
+
 Fecha: 2026-10-16. Auditoría sobre el baseline `e927dcfa86e3bf1fb7cf4e972b4155051d2e51c0`. Este documento prepara el contrato pendiente de la fase C. No implementa persistencia, moderación, permisos nuevos, migraciones ni activación normal-local.
 
 ## Superficie original y estado comprobado

@@ -1,0 +1,22 @@
+<?php
+declare(strict_types=1);
+// Only the owning disposable runner can install this composition. No normal selector.
+if(PHP_SAPI!=='cli-server'){http_response_code(403);exit;}
+require_once __DIR__.'/CorrectionHarness.php';
+$guard=corConnect();$root=dirname(__DIR__,4);
+$identity=Identity\Http\IdentityHttpComposition::fromProcessEnvironment();$pdo=$identity->pdo();
+if($pdo->query('SELECT DATABASE()')->fetchColumn()!==$guard->query('SELECT DATABASE()')->fetchColumn()
+    ||$pdo->query('SELECT CURRENT_USER()')->fetchColumn()!==$guard->query('SELECT CURRENT_USER()')->fetchColumn()){http_response_code(403);exit;}
+$security=new Identity\Services\GovernanceSecurityContext($identity->sessions(),$identity->authentication());
+$cipher=new Profiles\Corrections\ReportCipher('cor-qa-key',['cor-qa-key'=>base64_decode((string)getenv('PUB_COR01_KEY'),true)],'synthetic-only-no-real-retention-approval');
+$service=new Profiles\Corrections\ReportService($pdo,$cipher,$identity->csrf(),new Profiles\Corrections\ReportRatePolicy($pdo,$cipher,browserLimit:3,peerLimit:100,profileLimit:100));
+$mfa=new Identity\Services\StaffMfaService($pdo,base64_encode(str_repeat('m',32)),'cor-qa-mfa',security:$security);
+$review=new Profiles\Corrections\ReportReviewService($service,$security,$mfa);
+Profiles\Corrections\ReportRuntime::install(new Profiles\Corrections\ReportHttp($identity,$service,$review,(string)getenv('MXMED_GOVERNANCE_PROXY_KEY')));
+$path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);
+if(preg_match('#^/api/profiles/public/doctor/([A-Za-z0-9._:-]{1,64})$#D',$path,$m)){
+    header('Content-Type: application/json');
+    $dto=(new Profiles\Controllers\PublicProfileController(new Profiles\Repositories\PublicProfileRepository($pdo)))->showByDoctorId($m[1]);
+    echo json_encode($dto,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);return true;
+}
+return false;
