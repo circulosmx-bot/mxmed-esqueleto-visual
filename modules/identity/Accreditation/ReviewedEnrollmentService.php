@@ -30,6 +30,7 @@ final class ReviewedEnrollmentService
     /** Recomputes matching from the exact encrypted submitted revision, never browser data. */
     private function facts(AuthenticatedAccessContext $actor,string $id,int $version):array
     {
+        $this->a->scope?->workflow('enrollment_review');
         ['origin'=>$o,'intake'=>$d]=$this->enrollment->reviewIntakeInTransaction($actor,$id,$version);
         $m=ProfessionalMatchCandidates::find($this->a,$d['professional_license'],$d['given_names'],$d['first_surname'],$d['specialty'],$d['state'],$d['city']);
         sort($m['candidate_profile_ids'],SORT_STRING);
@@ -39,6 +40,7 @@ final class ReviewedEnrollmentService
         elseif($target===null&&$m['candidate_profile_ids']===[])$gate='PENDING_NEW_PROFILE';
         else{
             $target=$target??$m['candidate_profile_ids'][0];
+            $this->a->scope?->profile($target);
             $this->a->query('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE',[$target]);
             require_once dirname(__DIR__,2).'/profiles/controllers/PublicProfileController.php';
             $dto=(new \Profiles\Controllers\PublicProfileController(new \Profiles\Repositories\PublicProfileRepository($this->a->pdo)))->showByDoctorId($target);
@@ -175,7 +177,8 @@ final class ReviewedEnrollmentService
         return $this->a->transaction($actor,function()use($actor,$selected){
             // A capability check even when the queue is empty. No broad staff fallback.
             $this->a->reviewer($actor->accountId(),'@enrollment-queue',$actor->principal()->credentialVersion());
-            $rows=$this->a->query("SELECT o.origin_id,o.intake_version,o.initial_origin,p.display_name FROM auth_physician_enrollment_origins o LEFT JOIN profiles_doctors p ON p.doctor_id=o.original_profile_doctor_id WHERE o.intake_state='SUBMITTED' AND o.account_id<>? ORDER BY o.bound_at DESC,o.origin_id DESC LIMIT 30",[$actor->accountId()])->fetchAll(PDO::FETCH_ASSOC);
+            [$where,$args]=$this->a->scope?->sqlCohort('o.original_profile_doctor_id','o.account_id')??['1=1',[]];
+            $rows=$this->a->query("SELECT o.origin_id,o.intake_version,o.initial_origin,p.display_name FROM auth_physician_enrollment_origins o LEFT JOIN profiles_doctors p ON p.doctor_id=o.original_profile_doctor_id WHERE o.intake_state='SUBMITTED' AND o.account_id<>? AND $where ORDER BY o.bound_at DESC,o.origin_id DESC LIMIT 30",array_merge([$actor->accountId()],$args))->fetchAll(PDO::FETCH_ASSOC);
             $queue=array_map(static fn($r)=>['application_id'=>$r['origin_id'],'label'=>$r['display_name']??'Formar parte de México Médico'],$rows);
             $selected=$selected??($rows[0]['origin_id']??null);if($selected===null)return ['queue'=>$queue,'application'=>null];
             $row=$this->a->query('SELECT intake_version FROM auth_physician_enrollment_origins WHERE origin_id=? FOR UPDATE',[$selected])->fetch(PDO::FETCH_ASSOC);
@@ -191,6 +194,7 @@ final class ReviewedEnrollmentService
             }
             return ['queue'=>$queue,'application'=>['application_id'=>$selected,'intake_version'=>$f['intake_version'],'review_version'=>(int)($h['resolution_version']??0),'state'=>$h['state']??'PENDING_REVIEW','gate'=>$f['gate'],
                 'resolution_current'=>$current,
+                'source_readiness'=>\Identity\Operational\ProfessionalSourceReadiness::inspect($this->a,$f['resolved_profile_doctor_id']),
                 'origin_label'=>$f['initial_origin']==='CLAIM_EXISTING_PROFILE'?'Solicitud del perfil público original':'Formar parte de México Médico','target_name'=>is_string($name)?$name:null,
                 'declared_name'=>trim(implode(' ',[$declared['given_names'],$declared['first_surname'],$declared['second_surname']])),
                 'declared_specialty'=>$declared['specialty'],'declared_location'=>$declared['city'].', '.$declared['state']]];

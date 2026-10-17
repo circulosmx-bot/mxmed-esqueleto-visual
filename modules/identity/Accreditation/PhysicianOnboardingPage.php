@@ -9,6 +9,7 @@ final class PhysicianOnboardingPage
 {
     public static function show(IdentityHttpComposition $identity,bool $staff=false,?PhysicianOnboardingHttp $http=null):void
     {
+        $http??=\Identity\Operational\OperationalRuntime::onboarding();
         header('Content-Type: text/html; charset=utf-8');header('Cache-Control: no-store, private');header('Pragma: no-cache');
         header('X-Content-Type-Options: nosniff');header('Referrer-Policy: no-referrer');header('Cross-Origin-Resource-Policy: same-origin');
         header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; frame-src blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
@@ -34,7 +35,7 @@ final class PhysicianOnboardingPage
         }
         try {$application=$_GET['continue_enrollment']??null;if($application!==null&&(!is_string($application)||!preg_match('/^[a-f0-9-]{36}$/D',$application)))throw new GovernanceHttpDenied(403);
             $state=($http??new PhysicianOnboardingHttp($identity))->page($_COOKIE,$staff,$application);}
-        catch (GovernanceHttpDenied $e) {
+        catch (GovernanceHttpDenied|\Identity\Operational\WorkflowScopeDenied $e) {
             if ($e->status===401){$next=$staff?'/internal/media-review/index.php?section=acreditacion':'/public/identity/perfil-medico.php';
                 if(!$staff&&is_string($application))$next.='?continue_enrollment='.$application;
                 header('Location: /public/identity/acceso.php?next='.rawurlencode($next),true,302);return;}

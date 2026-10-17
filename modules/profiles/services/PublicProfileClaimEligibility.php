@@ -8,7 +8,7 @@ final class PublicProfileClaimEligibility
     public static function build(string $doctorId, array $planSource, bool $isPublic, array $ownership): array
     {
         $storedPlan = strtolower(trim((string)($planSource['plan_code'] ?? '')));
-        $free = ($planSource['source'] ?? null) === 'profiles_doctors'
+        $free = in_array($planSource['source'] ?? null, ['profiles_doctors','profile_subscriptions'], true)
             && in_array($storedPlan, ['free', 'gratuito'], true);
         $eligible = $isPublic && $free && ($ownership['source_ready'] ?? false) === true
             && ($ownership['has_active_owner'] ?? true) === false

@@ -110,7 +110,7 @@ final class PublicEnrollmentHttp
                 'snapshot'=>$this->service->snapshot($actor,$id),
                 default=>$this->save($actor,$id,$b,$action==='submit')};
             return ['status'=>200,'body'=>['ok'=>true,'data'=>$result]];
-        }catch(GovernanceHttpDenied $e){return $this->error($e->status);}
+        }catch(GovernanceHttpDenied|\Identity\Operational\WorkflowScopeDenied $e){return $this->error($e->status);}
         catch(\InvalidArgumentException|\JsonException|\TypeError){return $this->error(422);}
         catch(\PDOException $e){return $this->error($e->getCode()==='23000'?409:503);}
         catch(\RuntimeException $e){return $this->error(match($e->getMessage()){

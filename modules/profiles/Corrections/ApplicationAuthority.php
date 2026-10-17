@@ -11,6 +11,7 @@ final class ApplicationAuthority
     public function __construct(public readonly ReportService $reports,public readonly GovernanceSecurityContext $security){}
     public function transaction(AuthenticatedAccessContext $actor,callable $fn,bool $read=false):mixed
     {
+        if(!$read)$this->reports->scope?->workflow('correction_apply');$this->reports->scope?->account($actor->accountId());
         $p=$this->reports->pdo;if($p->inTransaction())throw new ReportDenied(503);
         $binding=$this->security->binding($actor);
         for($attempt=0;$attempt<4;$attempt++){
@@ -37,7 +38,10 @@ final class ApplicationAuthority
             ||!in_array($r['governance_class'],['DIRECTOR','MASTER_ADMIN'],true)||(int)$r['credential_version']!==$actor->principal()->credentialVersion())throw new ReportDenied(403);
         $rows=$this->reports->query("SELECT grant_id,capability FROM internal_operator_grants WHERE account_id=? AND capability IN (?,?) AND status='ACTIVE' AND revoked_at IS NULL ORDER BY capability FOR UPDATE",
             [$actor->accountId(),ApplicationCatalog::CAPABILITY,ReportCatalog::CAPABILITY])->fetchAll(PDO::FETCH_ASSOC);$grants=[];
-        foreach($rows as $row){if(isset($grants[$row['capability']]))throw new ReportDenied(403);$grants[$row['capability']]=hash('sha256',json_encode([$r,$row],JSON_THROW_ON_ERROR));}
+        foreach($rows as $row){
+            if($this->reports->scope!==null&&!$this->reports->scope->allowsStaff($actor->accountId(),$row['capability']))continue;
+            if(isset($grants[$row['capability']]))throw new ReportDenied(403);$grants[$row['capability']]=hash('sha256',json_encode([$r,$row],JSON_THROW_ON_ERROR));
+        }
         if(!isset($grants[ApplicationCatalog::CAPABILITY])&&(!$read||!isset($grants[ReportCatalog::CAPABILITY])))throw new ReportDenied(403);
         return $grants;
     }

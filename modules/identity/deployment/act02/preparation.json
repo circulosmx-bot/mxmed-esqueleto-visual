@@ -1,0 +1,81 @@
+{
+  "contract": "MXMED-ACT02.1",
+  "precondition": "Current normal-local OP-ACT02A schema, C4 authority tables absent/empty as migration 04 requires",
+  "steps": [
+    {
+      "sequence": 1,
+      "file": "modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql",
+      "sha256": "037cd1177994c1c1cc6d9e474c7425ef818d30811db9f80c8410a25cfe6af3c3",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 2,
+      "file": "modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql",
+      "sha256": "317f5ec8e1dd4e987ad6c4b1119ab3214e9e33b9e8997815b7a38969f62047fe",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 3,
+      "file": "modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql",
+      "sha256": "ede00dfd4fd64444c852510566b3288fd7ce1bbe144d30efd443120bea2d03bf",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 4,
+      "file": "modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql",
+      "sha256": "35276ac95a46e697afa22adf3ba83a034c90bc2e16036d4a8a79eafdceb35744",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 5,
+      "file": "modules/identity/db/migrations/2026_10_16_05_public_physician_enrollment.sql",
+      "sha256": "d0c36d925f9244e41b87e7e78b68f576a3922a8241b9f506e1321cbdfe735ae3",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 6,
+      "file": "modules/identity/db/migrations/2026_10_16_06_reviewed_physician_enrollment.sql",
+      "sha256": "fd109ea502ebf07afe33f3cc5b26eaeb934ee806298ef6897a2892cfc69704c9",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 7,
+      "file": "modules/profiles/db/2026_10_16_01_public_correction_reports.sql",
+      "sha256": "cfa8041e897751c2b40178d611338319e4cbbb5561f1f17efede014d87cfb447",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 8,
+      "file": "modules/profiles/db/2026_10_16_02_correction_applications.sql",
+      "sha256": "0e30262d4e4023ab7e7372f06706c43f57bb8b910003cf8b6615e2b25575ef84",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 9,
+      "file": "modules/subscriptions/db/2026_10_16_01_preloaded_public_free_source.sql",
+      "sha256": "5f162e3e3ac7ffd7edc3a550656412278b4a25742071fc4fdf205beb631fb67b",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    },
+    {
+      "sequence": 10,
+      "file": "modules/identity/deployment/act02/metadata.sql",
+      "sha256": "cb9dbcf0808bc83f89982ed4d9666462a3543129a0fb661a068b045e1afa405d",
+      "before": "Verify previous checkpoint and preserved original-column data hashes",
+      "after": "Record schema fingerprint, data hashes, FK/trigger checks; no blind replay"
+    }
+  ],
+  "authorization": null,
+  "activation": false,
+  "partial_DDL_recovery": "Stop. Do not rerun a partially executed migration. Restore the full verified backup to a fresh target, verify preflight fingerprint, then start at step 1.",
+  "runtime_principal": "Dedicated non-root, no global privileges or DDL; exact table DML and native audit procedure EXECUTE only",
+  "rollback": "Restore the complete consistent backup. Do not remove additive tables after accepting new writes."
+}

@@ -19,9 +19,9 @@ final class PhysicianAdmissionComposition
     public readonly ProfessionalAccountBindingProjection $projection;
     public readonly CanonicalInitialOwnerEligibilityAdapter $eligibility;
     public function __construct(PDO $identityPdo,GovernanceSecurityContext $security,EvidenceCipher $cipher,
-        PrivateMediaStoragePort $storage,private StaffMfaService $mfa,Clock $clock=new SystemClock())
+        PrivateMediaStoragePort $storage,private StaffMfaService $mfa,Clock $clock=new SystemClock(),?\Identity\Operational\WorkflowScope $scope=null)
     {
-        $authority=new EvidenceAuthority($identityPdo,$security,$clock);
+        $authority=new EvidenceAuthority($identityPdo,$security,$clock,$scope);
         $this->evidence=new PhysicianEvidenceService($authority,$cipher,$storage,$mfa,new ProfessionalIssuanceWorkflow($identityPdo));
         $this->issuer=new ProfessionalAuthorityIssuer($authority,$this->evidence,$mfa);
         $this->projection=new ProfessionalAccountBindingProjection($identityPdo,$clock,$this->evidence);

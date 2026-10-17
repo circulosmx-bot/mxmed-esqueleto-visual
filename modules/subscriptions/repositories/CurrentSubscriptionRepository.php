@@ -117,7 +117,7 @@ final class CurrentSubscriptionRepository
         return is_array($row) ? $row : null;
     }
 
-    public function findCurrentCandidateForEntity(string $entityType, string $entityId): ?array
+    public function findCurrentCandidateForEntity(string $entityType, string $entityId, bool $throwOnUnavailable = false): ?array
     {
         $entityType = trim($entityType);
         $entityId = trim($entityId);
@@ -179,6 +179,9 @@ final class CurrentSubscriptionRepository
             ]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
+            if ($throwOnUnavailable) {
+                throw new RuntimeException('current_subscription_check_unavailable', 0, $e);
+            }
             return null;
         }
 

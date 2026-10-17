@@ -11,7 +11,7 @@ final class ReportService
     public readonly ReportEligibility $eligibility;
     public readonly ReportAudit $audit;
     public function __construct(public readonly PDO $pdo,public readonly ReportCipher $cipher,private CsrfTokenService $csrf,
-        public readonly ReportRatePolicy $rates,public readonly Clock $clock=new SystemClock())
+        public readonly ReportRatePolicy $rates,public readonly Clock $clock=new SystemClock(),public readonly ?\Identity\Operational\WorkflowScope $scope=null)
     {
         if(!$rates->usesConnection($pdo))throw new \RuntimeException('correction_shared_rate_storage_required');
         $this->eligibility=new ReportEligibility($pdo);$this->audit=new ReportAudit($pdo);
@@ -22,6 +22,7 @@ final class ReportService
     {$q=$this->pdo->prepare($sql);$q->execute($args);return $q;}
     public function intent(string $profile,string $route,string $browser):array
     {
+        $this->scope?->workflow('correction_intake');$this->scope?->profile($profile);
         $context=$this->eligibility->resolve($profile);
         if($route!==$context['route']||!preg_match('/^[a-f0-9]{64}$/D',$browser))throw new ReportDenied(403);
         $csrf=$this->csrf->issuePreAuth();
@@ -46,6 +47,7 @@ final class ReportService
     public function submit(string $ticket,string $csrf,string $browser,string $peer,string $refererRoute,array $input):array
     {
         $origin=$this->origin($ticket,$csrf,$browser,$refererRoute);$payload=ReportCatalog::payload($input);
+        $this->scope?->workflow('correction_intake');$this->scope?->profile($origin['profile']);
         $intent=$this->cipher->digest('idempotency',$ticket);$command=$this->cipher->digest('command',json_encode($payload,JSON_THROW_ON_ERROR));
         $this->eligibility->resolve($origin['profile']);
         $existing=$this->query('SELECT report_id,command_digest FROM profiles_correction_reports WHERE intent_digest=?',[$intent])->fetch(PDO::FETCH_ASSOC);
@@ -73,6 +75,7 @@ final class ReportService
         if(!$this->pdo->inTransaction()||!preg_match('/^[a-f0-9-]{36}$/D',$id))throw new ReportDenied(404);
         $r=$this->query('SELECT * FROM profiles_correction_reports WHERE report_id=? FOR UPDATE',[$id])->fetch(PDO::FETCH_ASSOC);
         if(!is_array($r))throw new ReportDenied(404);
+        $this->scope?->profile($r['profile_doctor_id']);
         $last=$this->query('SELECT version,status FROM profiles_correction_decisions WHERE report_id=? ORDER BY version DESC LIMIT 1',[$id])->fetch(PDO::FETCH_ASSOC);
         $r['version']=(int)($last['version']??1);$r['status']=$last['status']??'PENDING_REVIEW';
         if($version!==null&&$r['version']!==$version)throw new ReportDenied(409);

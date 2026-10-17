@@ -184,6 +184,19 @@ final class IdentityHttpComposition
         return self::assembleNormalLocal($configuration, $pdo);
     }
 
+    /** Same canonical Identity/session configuration, a separately authorized PDO.
+     * ACT02's guard must validate this connection before any workflow is installed.
+     * Does not replace the application's clinical/development connection or env.
+     */
+    public static function operationalNormalLocal(PDO $pdo):self
+    {
+        self::registerAutoloader();
+        $configuration=NormalLocalIdentityConfiguration::fromProcessEnvironment();
+        if($pdo->query('SELECT DATABASE()')->fetchColumn()!=='mxmed'
+            ||!str_contains((string)$pdo->getAttribute(PDO::ATTR_CONNECTION_STATUS),'127.0.0.1'))throw new \RuntimeException('operational_identity_target_denied');
+        return self::assembleNormalLocal($configuration,$pdo);
+    }
+
     /** Separate assembly seam permits isolated database tests without a runtime DB override. */
     private static function assembleNormalLocal(NormalLocalIdentityConfiguration $configuration, PDO $pdo): self
     {
@@ -387,6 +400,9 @@ final class IdentityHttpComposition
             foreach ($prefixes as $prefix => $base) {
                 if (!str_starts_with($class, $prefix)) continue;
                 $relative = str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+                // Subscription directories are lowercase. Use the same canonical
+                // spelling as their explicit imports (also on case-insensitive macOS).
+                if($prefix==='Subscriptions\\')$relative=preg_replace_callback('~^[^/]+~',static fn(array $m):string=>strtolower($m[0]),$relative);
                 $file = $base . $relative;
                 if (is_file($file)) require_once $file;
             }

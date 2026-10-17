@@ -46,7 +46,7 @@ def run(origin):
                 if entry=='claim':page.locator('a[href*="entry=claim"]').click()
                 enr.submit(page,'start',lambda:page.locator('[data-enrollment-start]').click());page.wait_for_url('**/public/identity/perfil-medico.php?application=*')
                 app=parse_qs(urlsplit(page.url).query)['application'][0];app_path='/public/identity/perfil-medico.php?application='+app
-                page.locator('[data-enrollment-register]').click();email='res_browser_'+str(index)+'@example.invalid'
+                page.locator('[data-enrollment-register]').click();page.wait_for_load_state('load');email='res_browser_'+str(index)+'@example.invalid'
                 page.locator('#create-email').fill(email);page.locator('#create-password').fill(FIXTURE['password']);page.locator('#create-confirm').fill(FIXTURE['password']);page.locator('#terms').check();page.locator('#privacy').check();page.locator('[data-submit]').click()
                 expect(page.locator('[data-state-title]')).to_have_text('Solicitud de cuenta enviada')
                 message=next(m for m in reversed(json.loads(pathlib.Path(os.environ['MXMED_PREVIEW_NOTIFICATION_FILE']).read_text())) if m['recipient']==email)
@@ -112,6 +112,10 @@ def run(origin):
                     passed('canonical_logout_and_login_preserves_exact_C4_application')
                 assert not errors,errors
                 passed(STAGE+'_human_resolution_C4_same_reviewer_documents_confirmation_issuer_no_owner')
+              except Exception:
+                (OUT/(STAGE+'-browser-diagnostic.json')).write_text(json.dumps({'errors':errors,'body':page.locator('body').inner_text(),'buttons':page.locator('button').evaluate_all('es=>es.map(e=>({text:e.textContent,disabled:e.disabled}))')},indent=2))
+                page.screenshot(path=str(OUT/(STAGE+'-failure.png')),full_page=True)
+                raise
               finally:doctor.close();staff.close()
         finally:browser.close()
 

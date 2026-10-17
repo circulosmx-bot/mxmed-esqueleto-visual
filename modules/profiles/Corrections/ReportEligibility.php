@@ -24,7 +24,7 @@ final class ReportEligibility
         $dto=(new \Profiles\Controllers\PublicProfileController($repo))->showByDoctorId($profile);
         $source=$snapshot['plan_source']??[];$ownership=$snapshot['ownership_source']??[];
         if(($dto['ok']??false)!==true||($dto['data']['profile']['is_public']??false)!==true
-            ||($source['source']??null)!=='profiles_doctors'||!in_array(strtolower((string)($source['plan_code']??'')),['free','gratuito'],true)
+            ||!in_array($source['source']??null,['profiles_doctors','profile_subscriptions'],true)||!in_array(strtolower((string)($source['plan_code']??'')),['free','gratuito'],true)
             ||($ownership['source_ready']??false)!==true||($ownership['is_administered']??true)!==false
             ||($dto['data']['public_visibility']['show_suggest_correction']??false)!==true)throw new ReportDenied(403);
         return ['profile'=>$profile,'route'=>self::route($profile),'name'=>$snapshot['identity']['display_name']??$profile];

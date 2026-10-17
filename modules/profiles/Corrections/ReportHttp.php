@@ -66,7 +66,7 @@ final class ReportHttp
             }
             return [200,['ok'=>true,'data'=>$result]];
         }catch(ReportDenied $e){return [$e->status,['ok'=>false]];}
-        catch(\Identity\Http\GovernanceHttpDenied $e){return [$e->status,['ok'=>false]];}
+        catch(\Identity\Http\GovernanceHttpDenied|\Identity\Operational\WorkflowScopeDenied $e){return [$e->status,['ok'=>false]];}
         catch(\JsonException|\TypeError){return [400,['ok'=>false]];}
         catch(\Throwable){return [503,['ok'=>false]];}
     }

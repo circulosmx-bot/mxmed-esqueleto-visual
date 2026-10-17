@@ -1,0 +1,12 @@
+{
+  "contract": "MXMED-ACT02-PREPARATION-ONLY",
+  "activation_authorized": false,
+  "DDL_authorized": false,
+  "D01_real_sms_provider": null,
+  "D02_key_custody_and_recovery": null,
+  "D03_retention_legal_hold_disposal": null,
+  "D04_legitimate_staff_grants_MFA_and_source_review_policy": null,
+  "D05_pilot_accounts_profiles_actions_and_FREE_mapping": null,
+  "operational_authorization": null,
+  "installation": null
+}

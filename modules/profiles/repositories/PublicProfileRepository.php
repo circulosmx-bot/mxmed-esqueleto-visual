@@ -469,6 +469,9 @@ final class PublicProfileRepository
             'plan_name',
             'subscription_plan',
             'commercial_plan',
+            'preloaded_free_plan',
+            'preloaded_free_reference',
+            'preloaded_free_recorded_at',
             'profile_status',
             'is_public_candidate',
             'updated_at',
@@ -521,6 +524,11 @@ final class PublicProfileRepository
 
     private function resolvePlanSource(?array $profileRow): array
     {
+        // The additive source is inactive until its separately authorized schema exists.
+        if(is_array($profileRow)&&array_key_exists('preloaded_free_plan',$profileRow)){
+            if(!class_exists(\Subscriptions\Services\PublicCommercialPlanSource::class))require_once __DIR__.'/../../subscriptions/services/PublicCommercialPlanSource.php';
+            return (new \Subscriptions\Services\PublicCommercialPlanSource($this->pdo))->resolve($profileRow);
+        }
         $source = [
             'plan_code' => null,
             'source' => 'default_free',

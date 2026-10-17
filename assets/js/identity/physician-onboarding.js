@@ -160,6 +160,7 @@
         add(summary, 'p', `Información declarada por el solicitante: ${app.declared_name}. ${app.declared_specialty}. ${app.declared_location}.`);
         const labels = { READY_FOR_REVIEW: 'El perfil tiene fuentes profesionales verificadas. La aprobación requiere tu revisión explícita.', PENDING_SOURCES: 'La solicitud sigue pendiente de fuentes profesionales verificadas.', PENDING_NEW_PROFILE: 'No encontramos un perfil correspondiente. La creación de perfil requiere otro trámite autorizado.', CONFLICT: 'El caso requiere revisión especial. No se cambiará el perfil ni su titular.' };
         add(summary, 'p', app.state === 'APPROVED' ? (app.resolution_current === true ? 'La correspondencia del perfil ya fue revisada. La acreditación conserva su propio estado y sus controles.' : 'La resolución requiere atención: cambiaron sus fuentes o su autorización.') : labels[app.gate] || 'Pendiente de revisión.');
+        if (app.source_readiness?.message) add(summary, 'p', app.source_readiness.message);
         add(summary, 'p', { APPROVED: 'Revisión de perfil aprobada. La acreditación todavía requiere sus propios pasos.', REJECTED: 'Solicitud rechazada.', REVOKED: 'La resolución dejó de estar vigente.' }[app.state] || 'Solicitud pendiente.');
         const select = q('#enrollment-review-decision'), key = `${app.application_id}:${app.review_version}:${app.gate}`;
         if (select.dataset.selection !== key) {

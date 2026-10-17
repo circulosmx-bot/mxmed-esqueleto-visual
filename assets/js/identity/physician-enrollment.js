@@ -34,6 +34,9 @@
       if(action==='submit')form.querySelector('fieldset').disabled=true;
     });
   });
+  // Navigation may render before deferred scripts finish. Enable only after
+  // the canonical command handlers are attached; an early click must not vanish.
+  root.querySelectorAll('[data-enrollment-start],[data-enrollment-bind]').forEach(control=>{control.disabled=false;});
   if(e.authenticated){
     const signal=value=>{if(['logout','logged-out','expired','revoked','authenticated'].includes(value?.type)){clear();feedback.textContent='La sesión cambió. Inicia sesión o actualiza la página para retomar tu solicitud.';}};
     try{const channel=new BroadcastChannel('mxmed-session');channel.onmessage=event=>signal(event.data);}catch(_){}

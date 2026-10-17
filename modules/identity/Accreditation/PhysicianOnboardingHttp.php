@@ -17,9 +17,9 @@ final class PhysicianOnboardingHttp
     private EvidenceAuthority $a;
     public function __construct(private IdentityHttpComposition $identity,
         private ?PhysicianAdmissionComposition $services=null,private ?PhoneVerificationService $phone=null,
-        private ?ReviewedEnrollmentService $enrollmentReview=null)
+        private ?ReviewedEnrollmentService $enrollmentReview=null,private ?\Identity\Operational\WorkflowScope $scope=null)
     {
-        $this->a=new EvidenceAuthority($identity->pdo(),new GovernanceSecurityContext($identity->sessions(),$identity->authentication()));
+        $this->a=new EvidenceAuthority($identity->pdo(),new GovernanceSecurityContext($identity->sessions(),$identity->authentication()),scope:$scope);
         if ($services!==null&&!$services->projection->usesConnection($identity->pdo())) throw new \RuntimeException('onboarding_connection_mismatch');
         if (($services===null)!==($phone===null)) throw new \RuntimeException('onboarding_incomplete_composition');
         if ($phone!==null&&!$phone->usesConnection($identity->pdo())) throw new \RuntimeException('onboarding_phone_connection_mismatch');
@@ -30,7 +30,7 @@ final class PhysicianOnboardingHttp
         $decision=$this->identity->sessions()->validate($cookies['__Host-mxmed_session']??null);
         if (in_array($decision->reasonCode(),[\Identity\Contracts\ReasonCode::SESSION_STORE_UNAVAILABLE,\Identity\Contracts\ReasonCode::STORAGE_UNAVAILABLE],true))throw new \RuntimeException('onboarding_session_unavailable');
         if (!$decision->allowed()||$decision->context()===null||$decision->record()===null) throw new GovernanceHttpDenied(401);
-        $actor=$decision->context();if ($staff)$this->staff($actor);
+        $actor=$decision->context();$this->scope?->account($actor->accountId());if ($staff)$this->staff($actor);
         return $this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,null),$application)+['csrf_token'=>$this->identity->csrf()->issueAuthenticated($actor->session()->tokenDigest()),
             'expires_at'=>$decision->record()->expiresAt()->getTimestamp()];
     }
@@ -47,6 +47,8 @@ final class PhysicianOnboardingHttp
                 if (array_key_exists($forbidden,$b)) return $this->error(400,'La solicitud incluye datos que no se pueden modificar.');
             if(!is_string($b['action']??null)||isset($b['view'])&&!is_string($b['view']))throw new \InvalidArgumentException('onboarding_input_invalid');
             $action=$b['action'];$staff=($b['view']??'physician')==='staff';
+            $this->scope?->account($actor->accountId());
+            $this->scope?->workflow(str_starts_with($action,'enrollment_')?'enrollment_review':($action==='complete'?'c4_issuer':'c4_evidence'));
             if ($staff)$this->staff($actor);
             if ($action==='snapshot')return ['status'=>200,'body'=>['ok'=>true,'data'=>$this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,$b['request_id']??null),$b['application_id']??null)]];
             if ($this->services===null) return $this->error(503,'La acreditación profesional está pendiente de habilitación. Por ahora puedes consultar los pasos.');
@@ -159,6 +161,7 @@ final class PhysicianOnboardingHttp
     }
     private function staff(AuthenticatedAccessContext $actor):void
     {
+        $this->scope?->staff($actor->accountId(),'physician_accreditation_review');
         $q=$this->a->query("SELECT s.account_id FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id
             JOIN auth_accounts a ON a.account_id=s.account_id JOIN auth_account_credentials c ON c.account_id=a.account_id
             WHERE s.account_id=? AND s.status='ACTIVE' AND a.status='active' AND a.email_verified_at IS NOT NULL AND c.credential_version=?
@@ -197,6 +200,7 @@ final class PhysicianOnboardingHttp
                 FROM profiles_doctors d JOIN profiles_verified_identities i ON i.doctor_id=d.doctor_id JOIN profiles_doctor_credentials c ON c.doctor_id=d.doctor_id
                 WHERE d.doctor_id=? AND c.credential_type='PROFESSIONAL' AND c.verification_status='VERIFIED' AND c.lifecycle_status='ACTIVE' FOR UPDATE",[$id])->fetchAll(PDO::FETCH_ASSOC);
             if (count($p)!==1||$p[0]['doctor_id']!==$id)throw new GovernanceHttpDenied(404);
+            $this->scope?->profile($id);
             if ($this->a->query("SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active' LIMIT 1 FOR UPDATE",[$id])->fetchColumn()!==false)
                 throw new \RuntimeException('c4_existing_owner_conflict');
             $this->a->sources($id,(int)$p[0]['identity_id'],(int)$p[0]['credential_id']);
@@ -214,8 +218,9 @@ final class PhysicianOnboardingHttp
                 :'Completa los pasos de tu solicitud. La acreditación y la designación como titular son procesos separados.';
             $phone=$this->a->query('SELECT status FROM auth_account_phone_verifications WHERE account_id=? FOR UPDATE',[$actor->accountId()])->fetchColumn();$base['phone_verified']=$phone==='VERIFIED';
             $where=$staff?'r.account_id<>?':'r.account_id=?';
+            [$cohort,$args]=$this->scope?->sqlCohort('r.profile_doctor_id','r.account_id')??['1=1',[]];
             $rows=$this->a->query("SELECT r.request_id,r.version,r.status,r.origin,r.profile_doctor_id,d.display_name FROM auth_physician_evidence_requests r
-                LEFT JOIN profiles_doctors d ON d.doctor_id=r.profile_doctor_id WHERE $where ORDER BY r.created_at DESC,r.request_id DESC LIMIT 30",[$actor->accountId()])->fetchAll(PDO::FETCH_ASSOC);
+                LEFT JOIN profiles_doctors d ON d.doctor_id=r.profile_doctor_id WHERE $where AND $cohort ORDER BY r.created_at DESC,r.request_id DESC LIMIT 30",array_merge([$actor->accountId()],$args))->fetchAll(PDO::FETCH_ASSOC);
             $base['requests']=array_map(static fn($r)=>['request_id'=>$r['request_id'],'version'=>(int)$r['version'],'status'=>$r['status'],'display_name'=>$r['display_name']??'Perfil por resolver','profile_reference'=>$r['profile_doctor_id']],$rows);
             $id=$selected??($rows[0]['request_id']??null);if ($id===null)return $base;
             $r=$this->a->request($id);

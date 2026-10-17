@@ -117,6 +117,10 @@ final class PublicProfileController
         $planContract = PublicProfilePlanCapabilities::build($effectivePlanCode, $planContext);
         $plan = (array)$planContract['plan'];
         $publicVisibility = (array)$planContract['public_visibility'];
+        if(($planSource['authority_model']??null)==='ACT02.1'
+            &&(!in_array($planSource['source']??null,['profiles_doctors','profile_subscriptions'],true)
+                ||!in_array(strtolower(trim((string)($planSource['plan_code']??''))),['free','gratuito'],true)))
+            $publicVisibility['show_suggest_correction']=false;
         $contact = $this->mergeContactCapabilities((array)$planContract['contact'], $publicContact, $publicVisibility);
         $featureFlags = (array)$planContract['feature_flags'];
         $featureFlags['has_public_contact'] = (bool)($contact['has_public_contact'] ?? false);

@@ -11,7 +11,7 @@ use PDO;
 final class EvidenceAuthority
 {
     public function __construct(public readonly PDO $pdo,public readonly GovernanceSecurityContext $security,
-        public readonly Clock $clock=new SystemClock()) {}
+        public readonly Clock $clock=new SystemClock(),public readonly ?\Identity\Operational\WorkflowScope $scope=null) {}
     public function sqlTime(?\DateTimeImmutable $at=null): string
     { return ($at??$this->clock->now())->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u'); }
     public function uuid(): string { return (new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(); }
@@ -30,6 +30,7 @@ final class EvidenceAuthority
     }
     public function account(string $id,?int $version=null): array
     {
+        $this->scope?->account($id);
         if (!$this->pdo->inTransaction()) throw new \RuntimeException('c4_transaction_required');
         $r=$this->query("SELECT a.account_id,a.status,a.email_verified_at,c.credential_version FROM auth_accounts a
             JOIN auth_account_credentials c ON c.account_id=a.account_id WHERE a.account_id=? FOR UPDATE",[$id])->fetch(PDO::FETCH_ASSOC);
@@ -46,6 +47,7 @@ final class EvidenceAuthority
     }
     public function reviewer(string $id,string $beneficiary,?int $version=null): void
     {
+        $this->scope?->staff($id,'physician_accreditation_review');
         if ($id===$beneficiary) throw new \RuntimeException('c4_self_review_denied');
         $this->account($id,$version);
         if ($this->query("SELECT g.grant_id FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id
@@ -63,6 +65,7 @@ final class EvidenceAuthority
     }
     public function sources(string $doctor,int $identityId,int $credentialId): array
     {
+        $this->scope?->profile($doctor);
         $i=$this->query('SELECT * FROM profiles_verified_identities WHERE verified_identity_id=? FOR UPDATE',[$identityId])->fetch(PDO::FETCH_ASSOC);
         $c=$this->query('SELECT * FROM profiles_doctor_credentials WHERE credential_id=? FOR UPDATE',[$credentialId])->fetch(PDO::FETCH_ASSOC);
         if (!is_array($i)||!is_array($c)||$i['doctor_id']!==$doctor||$c['doctor_id']!==$doctor
@@ -80,6 +83,7 @@ final class EvidenceAuthority
         $r=$this->query('SELECT * FROM auth_physician_evidence_requests WHERE request_id=? FOR UPDATE',[$id])->fetch(PDO::FETCH_ASSOC);
         if (!is_array($r)||$r['request_id']!==$id||($version!==null&&(int)$r['version']!==$version))
             throw new \RuntimeException('c4_request_missing_or_stale');
+        $this->scope?->profile($r['profile_doctor_id']);$this->scope?->account($r['account_id']);
         return $r;
     }
     public function currentFacts(array $r,bool $initialApproval=false): void

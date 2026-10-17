@@ -26,6 +26,7 @@ final class PublicEnrollmentService
     /** The public selector is re-resolved here and again inside every claim mutation. */
     public function claim(string $id):array
     {
+        $this->a->scope?->profile($id);
         if($this->a->query('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=?',[$id])->fetchColumn()!==$id)throw new \RuntimeException('enrollment_claim_unavailable');
         require_once dirname(__DIR__,2).'/profiles/controllers/PublicProfileController.php';
         $dto=(new \Profiles\Controllers\PublicProfileController(new \Profiles\Repositories\PublicProfileRepository($this->a->pdo)))->showByDoctorId($id);
@@ -43,6 +44,7 @@ final class PublicEnrollmentService
     }
     public function ticket(string $type,?string $profile,string $route,string $browser):string
     {
+        $this->a->scope?->workflow('public_enrollment');$this->a->scope?->profile($profile);
         if($type==='CLAIM_EXISTING_PROFILE'){$this->claim((string)$profile);$route='/profiles/doctor.php?doctor_id='.rawurlencode((string)$profile);}
         elseif($type!=='REQUEST_NEW_PROFILE'||$profile!==null)throw new \InvalidArgumentException('enrollment_input_invalid');
         if(!self::publicRoute($route))throw new \InvalidArgumentException('enrollment_input_invalid');
@@ -73,7 +75,9 @@ final class PublicEnrollmentService
      * Only digests are stored. The handle is never a session/authentication token. */
     public function start(string $ticket,string $browser):array
     {
-        $t=$this->decode($ticket,$browser);$start=$this->digest('start',$ticket);$handle=$this->digest('handle',$t['nonce'].':'.$t['browser']);
+        $this->a->scope?->workflow('public_enrollment');
+        $t=$this->decode($ticket,$browser);$this->a->scope?->profile($t['profile']);
+        $start=$this->digest('start',$ticket);$handle=$this->digest('handle',$t['nonce'].':'.$t['browser']);
         $p=$this->a->pdo;if($p->inTransaction())throw new \RuntimeException('enrollment_transaction_required');
         try{$p->beginTransaction();
             $r=$this->a->query('SELECT * FROM auth_physician_enrollment_origins WHERE start_digest=? FOR UPDATE',[$start])->fetch(PDO::FETCH_ASSOC);
@@ -95,7 +99,9 @@ final class PublicEnrollmentService
     {
         if(!preg_match('/^[a-f0-9-]{36}$/D',$id))throw new \RuntimeException('enrollment_not_found');
         $r=$this->a->query('SELECT * FROM auth_physician_enrollment_origins WHERE origin_id=? FOR UPDATE',[$id])->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($r)||$r['origin_id']!==$id)throw new \RuntimeException('enrollment_not_found');return $r;
+        if(!is_array($r)||$r['origin_id']!==$id)throw new \RuntimeException('enrollment_not_found');
+        $this->a->scope?->profile($r['original_profile_doctor_id']);
+        if($r['account_id']!==null)$this->a->scope?->account($r['account_id']);return $r;
     }
     private function proof(array $r,string $handle,string $browser):void
     {

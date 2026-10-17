@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Schema-only clone, fresh synthetic identities, native audit in an owned DB.
 Never points a web server at mxmed; never imports normal-local rows."""
-import argparse, pathlib, json, os, secrets, subprocess, re, socket, signal, time, base64, tempfile, shutil
+import argparse, pathlib, json, os, secrets, subprocess, re, socket, signal, time, base64, tempfile, shutil, importlib.util
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -11,10 +11,12 @@ def main():
     ap.add_argument('--connection', required=True)
     ap.add_argument('--evidence', required=True)
     ap.add_argument('--suite', choices=['contracts', 'ceremony', 'evidence', 'issuer', 'ui', 'enrollment', 'resolution', 'correction', 'application'], default='contracts')
+    ap.add_argument('--act02', action='store_true', help='Exercise shared ACT02 factory on new synthetic application/resolution targets')
     ap.add_argument('--native-only', action='store_true', help='Run only the new resolution native contract in its owned target')
     args = ap.parse_args()
     if args.native_only and args.suite not in ['resolution','correction','application']:
         ap.error('--native-only is restricted to the resolution/correction suites')
+    if args.act02 and args.suite not in ['application','resolution']: ap.error('--act02 requires application or resolution')
     os.umask(0o077)
     cfg = json.loads(pathlib.Path(args.connection).read_text())
     assert cfg['MXMED_DB_HOST'] == '127.0.0.1' and str(cfg['MXMED_DB_PORT']) == '3306' and cfg['MXMED_DB_NAME'] == 'mxmed'
@@ -37,14 +39,19 @@ def main():
     assert re.fullmatch(r'mxmed_(?:op01_|gate4d_preview_(?:gov03b_|c4ev_|c4issuer_|c4ui_|cor01_|cor02_))[a-f0-9]{10}', db)
     sql(f"CREATE DATABASE `{db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     created_user = False
+    metadata_user = None
     valkey = None
     valkey_log = None
     notification_dir = None
     try:
         sql(f"CREATE USER '{user}'@'127.0.0.1' IDENTIFIED BY '{password}'")
         created_user = True
-        sql(f"GRANT SELECT,INSERT,UPDATE,DELETE,EXECUTE,TRIGGER ON `{db}`.* TO '{user}'@'127.0.0.1'")
-        sql(f"GRANT SHOW_ROUTINE ON *.* TO '{user}'@'127.0.0.1'")
+        sql(f"GRANT SELECT,INSERT,UPDATE,DELETE,EXECUTE{'' if args.act02 else ',TRIGGER'} ON `{db}`.* TO '{user}'@'127.0.0.1'")
+        trigger_definer=f"'{user}'@'127.0.0.1'"
+        if args.act02:
+            principal=sql('SELECT CURRENT_USER()').strip().split('@');assert len(principal)==2 and all(re.fullmatch(r'[A-Za-z0-9_.%]+',v) for v in principal)
+            trigger_definer="'"+principal[0]+"'@'"+principal[1]+"'"
+        if not args.act02: sql(f"GRANT SHOW_ROUTINE ON *.* TO '{user}'@'127.0.0.1'")
         dump = subprocess.check_output(['mysqldump', *mysql_args, '--no-data', '--skip-triggers', '--skip-add-drop-table', '--set-gtid-purged=OFF', '--column-statistics=0', '--skip-comments', 'mxmed'], env=env, text=True)
         dump = re.sub(r'AUTO_INCREMENT=\d+', '', dump).replace('`mxmed`.', '`' + db + '`.')
         assert 'INSERT INTO ' not in dump and 'USE `mxmed`' not in dump
@@ -54,7 +61,7 @@ def main():
             assert re.fullmatch(r'[A-Za-z0-9_]+', name)
             row = sql("SELECT JSON_QUOTE(ACTION_STATEMENT),EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='mxmed' AND TRIGGER_NAME='" + name + "'").strip().split('\t')
             body = json.loads(row[0]).replace('`mxmed`.', '`' + db + '`.')
-            sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER `{name}` {row[3]} {row[1]} ON `{row[2]}` FOR EACH ROW {body}$$\nDELIMITER ;\n", db)
+            sql(f"DELIMITER $$\nCREATE DEFINER={trigger_definer} TRIGGER `{name}` {row[3]} {row[1]} ON `{row[2]}` FOR EACH ROW {body}$$\nDELIMITER ;\n", db)
         for file in ['05_audit_lock.sql', '06_audit_cas.sql']:
             source = (ROOT/'modules/identity/deployment/op-act01'/file).read_text().replace('{{TARGET_SCHEMA}}', '`'+db+'`').replace('{{RESTRICTED_DEFINER}}', "'"+user+"'@'127.0.0.1'")
             sql('DELIMITER $$\n'+source.rstrip().rstrip(';')+'$$\nDELIMITER ;\n', db)
@@ -71,16 +78,22 @@ def main():
             sql('ALTER TABLE profiles_doctors ADD COLUMN plan_code VARCHAR(32) NULL', db)
         if args.suite in ['resolution','correction','application']:
             sql((ROOT/'modules/identity/db/migrations/2026_10_16_06_reviewed_physician_enrollment.sql').read_text(), db)
-        if args.suite in ['correction','application']:
+        if args.suite in ['correction','application'] or args.act02:
             sql((ROOT/'modules/profiles/db/2026_10_16_01_public_correction_reports.sql').read_text(), db)
-        if args.suite == 'application':
+        if args.suite == 'application' or args.act02:
             sql((ROOT/'modules/profiles/db/2026_10_16_02_correction_applications.sql').read_text(), db)
+        if args.act02:
+            sql((ROOT/'modules/subscriptions/db/2026_10_16_01_preloaded_public_free_source.sql').read_text(), db)
+            metadata_user='act02meta_'+suffix
+            sql(f"CREATE USER '{metadata_user}'@'localhost' IDENTIFIED BY '{secrets.token_urlsafe(32)}' ACCOUNT LOCK")
+            sql(f"GRANT TRIGGER ON `{db}`.* TO '{metadata_user}'@'localhost'")
+            sql((ROOT/'modules/identity/deployment/act02/metadata.sql').read_text().replace('{{METADATA_DEFINER}}',f"'{metadata_user}'@'localhost'").replace('{{TARGET_SCHEMA_NAME}}',db),db)
         sql("CREATE TABLE gov03b_qa_faults(enabled INT NOT NULL); INSERT INTO gov03b_qa_faults VALUES(0)", db)
-        sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 OR ((SELECT enabled FROM gov03b_qa_faults)=2 AND NEW.action='PHYSICIAN_AUTHORITY_CHANGED' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation'))='BINDING_ACTIVE') OR ((SELECT enabled FROM gov03b_qa_faults)=4 AND NEW.action='PUBLIC_PROFILE_CORRECTION_APPLICATION' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation')) IN ('APPLIED','NO_CHANGE')) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
+        sql(f"DELIMITER $$\nCREATE DEFINER={trigger_definer} TRIGGER gov03b_fail_audit BEFORE INSERT ON platform_audit_events FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=1 OR ((SELECT enabled FROM gov03b_qa_faults)=2 AND NEW.action='PHYSICIAN_AUTHORITY_CHANGED' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation'))='BINDING_ACTIVE') OR ((SELECT enabled FROM gov03b_qa_faults)=4 AND NEW.action='PUBLIC_PROFILE_CORRECTION_APPLICATION' AND JSON_UNQUOTE(JSON_EXTRACT(NEW.metadata_json,'$.producer_metadata.operation')) IN ('APPLIED','NO_CHANGE')) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic audit failure'; END IF; END$$\nDELIMITER ;\n", db)
         if args.suite in ['correction','application']:
-            sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER cor01_fail_rate BEFORE INSERT ON profiles_correction_rate_buckets FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=3 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic rate storage failure'; END IF; END$$\nDELIMITER ;\n", db)
+            sql(f"DELIMITER $$\nCREATE DEFINER={trigger_definer} TRIGGER cor01_fail_rate BEFORE INSERT ON profiles_correction_rate_buckets FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=3 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic rate storage failure'; END IF; END$$\nDELIMITER ;\n", db)
         if args.suite == 'application':
-            sql(f"DELIMITER $$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER cor02_writer_fault BEFORE UPDATE ON doctor_contact_points FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=5 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic canonical writer failure'; END IF; END$$\nCREATE DEFINER='{user}'@'127.0.0.1' TRIGGER cor02_writer_pause AFTER UPDATE ON doctor_contact_points FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=6 THEN DO SLEEP(2); END IF; END$$\nDELIMITER ;\n", db)
+            sql(f"DELIMITER $$\nCREATE DEFINER={trigger_definer} TRIGGER cor02_writer_fault BEFORE UPDATE ON doctor_contact_points FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=5 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic canonical writer failure'; END IF; END$$\nCREATE DEFINER={trigger_definer} TRIGGER cor02_writer_pause AFTER UPDATE ON doctor_contact_points FOR EACH ROW BEGIN IF (SELECT enabled FROM gov03b_qa_faults)=6 THEN DO SLEEP(2); END IF; END$$\nDELIMITER ;\n", db)
         connection = evidence/'disposable-connection.json'
         connection.write_text(json.dumps({'db': db, 'user': user, 'password': password}))
         test_env = {**os.environ, 'C4_ISSUER_QA':'0','MXMED_OP02_ISOLATED':'0','MXMED_OPERATOR_DEPLOYMENT_REHEARSAL':'0','MXMED_OPERATORS_RUNTIME_ENABLED':'0','MXMED_IDENTITY_GOVERNANCE_ENABLED':'0', 'GOV03B_QA_CONNECTION': str(connection), 'MXMED_AUDIT_IP_HMAC_SECRET': secrets.token_hex(32), 'MXMED_AUDIT_IP_HMAC_KEY_VERSION': 'audit-ip-local-v001'}
@@ -113,6 +126,10 @@ def main():
             test_env['C4_UI_QA_SMS'] = str(notification_dir/'sms.json')
         if args.suite in ['enrollment', 'resolution', 'correction', 'application']: test_env.update({'PUB_ENR02_QA':'1','PUB_ENR02_DEPLOYMENT_CONNECTION':str(pathlib.Path(args.connection).resolve())})
         if args.suite == 'resolution': test_env['PUB_ENR03_QA']='1'
+        if args.act02:
+            test_env['ACT02_QA']='1'
+            test_env['ACT02_QA_SUITE']=args.suite
+            test_env['PUB_COR01_KEY']=base64.b64encode(secrets.token_bytes(32)).decode()
         if args.suite in ['correction','application']: test_env.update({'PUB_COR01_QA':'1','PUB_COR01_KEY':base64.b64encode(secrets.token_bytes(32)).decode()})
         if args.suite == 'application': test_env['PUB_COR02_QA']='1'
         test_name = {'contracts':'GovernanceGov03BTest.php', 'ceremony':'GovernanceCeremonyIntegrationTest.php', 'evidence':'C4EvidenceIntegrationTest.php', 'issuer':'PhysicianAuthorityIssuerIntegrationTest.php', 'ui':'PhysicianOnboardingUiFixture.php', 'enrollment':'PublicEnrollmentIntegrationTest.php', 'resolution':'ReviewedEnrollmentIntegrationTest.php', 'correction':'../../profiles/tests/CorrectionReportIntegrationTest.php', 'application':'../../profiles/tests/CorrectionApplicationIntegrationTest.php'}[args.suite]
@@ -122,6 +139,23 @@ def main():
         if result.returncode:
             print('DISPOSABLE_GOVERNANCE=FAIL; inspect private log')
             raise SystemExit(result.returncode)
+        if args.act02:
+            result=subprocess.run(['php',str(ROOT/'modules/identity/tests/Act02CommercialIntegrationTest.php')],cwd=ROOT,env=test_env,capture_output=True,text=True)
+            (evidence/'act02-commercial.log').write_text(result.stdout+result.stderr)
+            print(result.stdout,end='')
+            if result.returncode:raise RuntimeError('ACT02 commercial source failed; inspect private evidence')
+            spec=importlib.util.spec_from_file_location('principal',ROOT/'scripts/act02-principal.py');principal=importlib.util.module_from_spec(spec);spec.loader.exec_module(principal);principal.restrict(sql,db,user,synthetic=True)
+            result=subprocess.run(['php',str(ROOT/'modules/identity/tests/Act02IntegrationTest.php')],cwd=ROOT,env=test_env,capture_output=True,text=True)
+            (evidence/'act02-native.log').write_text(result.stdout+result.stderr)
+            print(result.stdout,end='')
+            if result.returncode:raise RuntimeError('ACT02 native acceptance failed; inspect private evidence')
+            sql('RENAME TABLE auth_physician_enrollment_handoffs TO act02_partial_handoffs',db)
+            try:
+                result=subprocess.run(['php',str(ROOT/'modules/identity/tests/Act02IntegrationTest.php')],cwd=ROOT,env={**test_env,'ACT02_QA_PARTIAL_SCHEMA':'1'},capture_output=True,text=True)
+                (evidence/'act02-partial-schema.log').write_text(result.stdout+result.stderr)
+                print(result.stdout,end='')
+                if result.returncode:raise RuntimeError('ACT02 partial schema denial failed; inspect private evidence')
+            finally:sql('RENAME TABLE act02_partial_handoffs TO auth_physician_enrollment_handoffs',db)
         if args.suite == 'issuer':
             # The application principal deliberately has NO DDL or temporary-table grant.
             # Only this owning runner rehearses migrations, always against its fresh DB.
@@ -164,7 +198,9 @@ def main():
             os.killpg(valkey.pid, signal.SIGTERM); valkey.wait(timeout=10)
         if valkey_log is not None: valkey_log.close()
         if notification_dir is not None: shutil.rmtree(notification_dir)
+        if args.act02 and (evidence/'activation-synthetic').exists(): shutil.rmtree(evidence/'activation-synthetic')
         sql(f"DROP DATABASE `{db}`")
+        if metadata_user: sql(f"DROP USER '{metadata_user}'@'localhost'")
         if created_user: sql(f"DROP USER '{user}'@'127.0.0.1'")
         if (evidence/'disposable-connection.json').exists(): (evidence/'disposable-connection.json').unlink()
         (evidence/'disposal.json').write_text(json.dumps({'database_deleted': True, 'temporary_sql_user_deleted': created_user, 'normal_rows_imported': 0, 'normal_sql_writes': 0, 'audit_routines_target': db, 'persistent_qa_touched': False}, indent=2))

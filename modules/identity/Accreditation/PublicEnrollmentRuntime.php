@@ -9,8 +9,8 @@ final class PublicEnrollmentRuntime
     private static ?PublicEnrollmentHttp $http=null;
     public static function install(PublicEnrollmentHttp $http):void
     {if(self::$http!==null)throw new \RuntimeException('enrollment_composition_already_installed');self::$http=$http;}
-    public static function current():?PublicEnrollmentHttp{return self::$http;}
-    public static function identityReturn():?string{return self::$http?->returnPath($_GET,$_COOKIE);}
+    public static function current():?PublicEnrollmentHttp{\Identity\Operational\OperationalRuntime::boot();return self::$http;}
+    public static function identityReturn():?string{return self::current()?->returnPath($_GET,$_COOKIE);}
     public static function notifications(\Identity\Contracts\IdentityNotificationPort $inner):\Identity\Contracts\IdentityNotificationPort
-    {return self::$http===null?$inner:new EnrollmentNotificationAdapter($inner,self::$http);}
+    {return self::current()===null?$inner:new EnrollmentNotificationAdapter($inner,self::current());}
 }

@@ -12,6 +12,7 @@ final class ReportReviewService
     {if(!$mfa->usesConnection($reports->pdo))throw new \RuntimeException('correction_shared_transaction_required');}
     private function authority(AuthenticatedAccessContext $actor):string
     {
+        $this->reports->scope?->workflow('correction_review');$this->reports->scope?->staff($actor->accountId(),ReportCatalog::CAPABILITY);
         $r=$this->reports->query("SELECT a.status,a.email_verified_at,c.credential_version,s.governance_class,g.grant_id
             FROM auth_accounts a JOIN auth_account_credentials c ON c.account_id=a.account_id
             JOIN internal_staff s ON s.account_id=a.account_id JOIN internal_operator_grants g ON g.account_id=s.account_id
@@ -34,12 +35,13 @@ final class ReportReviewService
     {
         if($page<0||$page>100000)throw new ReportDenied(400);
         return $this->transaction($actor,function()use($actor,$page):array{
+            [$where,$args]=$this->reports->scope?->sqlProfiles('r.profile_doctor_id')??['1=1',[]];
             $rows=$this->reports->query("SELECT r.report_id,r.profile_doctor_id,r.category,r.created_at,p.display_name,
                 COALESCE(d.status,'PENDING_REVIEW') status,COALESCE(d.version,1) version FROM profiles_correction_reports r
                 JOIN profiles_doctors p ON p.doctor_id=r.profile_doctor_id
                 LEFT JOIN profiles_correction_decisions d ON d.report_id=r.report_id AND d.version=(SELECT MAX(x.version) FROM profiles_correction_decisions x WHERE x.report_id=r.report_id)
-                ORDER BY CASE WHEN COALESCE(d.status,'PENDING_REVIEW')='PENDING_REVIEW' THEN 0 WHEN d.status='NEEDS_CLARIFICATION' THEN 1 ELSE 2 END,
-                r.created_at,r.report_id LIMIT 51 OFFSET ".($page*50))->fetchAll(PDO::FETCH_ASSOC);
+                WHERE $where ORDER BY CASE WHEN COALESCE(d.status,'PENDING_REVIEW')='PENDING_REVIEW' THEN 0 WHEN d.status='NEEDS_CLARIFICATION' THEN 1 ELSE 2 END,
+                r.created_at,r.report_id LIMIT 51 OFFSET ".($page*50),$args)->fetchAll(PDO::FETCH_ASSOC);
             $this->reports->audit->append('review-queue','QUEUE_READ',0,'NONE','NONE',$actor);
             return ['reports'=>array_slice($rows,0,50),'page'=>$page,'has_more'=>count($rows)>50];
         });
