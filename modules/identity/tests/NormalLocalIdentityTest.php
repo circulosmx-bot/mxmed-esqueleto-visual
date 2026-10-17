@@ -108,7 +108,7 @@ try {
     check('C07',(int)$pdo->query('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()')->fetchColumn()===0);
     foreach ([$qa,$gate] as $name) {
         $db=$pdoFor($name);
-        $db->exec('CREATE TABLE profiles_doctors (doctor_id VARCHAR(64) PRIMARY KEY, display_name VARCHAR(160) NOT NULL) ENGINE=InnoDB');
+        $db->exec('CREATE TABLE profiles_doctors (doctor_id VARCHAR(64) PRIMARY KEY, display_name VARCHAR(160) NOT NULL, professional_designation VARCHAR(120) NULL) ENGINE=InnoDB');
         $db->exec('CREATE TABLE medical_groups (group_id VARCHAR(64) PRIMARY KEY) ENGINE=InnoDB');
         foreach (['2026_07_19_01_create_auth_accounts.sql','2026_07_19_03_create_auth_account_memberships.sql',
             '2026_07_19_02_create_auth_account_consents.sql','2026_07_20_04_create_auth_account_credentials.sql',
