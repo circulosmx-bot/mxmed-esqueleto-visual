@@ -104,6 +104,7 @@
   function scope() { return { request_id: state.request.request_id, version: state.request.version }; }
   function render() {
     renderEnrollment();
+    document.dispatchEvent(new CustomEvent('mxmed:professional-sources-context', { detail: { applicationId: selectedEnrollment } }));
     const r = state.request, supported = !!r?.supported;
     q('[data-onboarding-status]').textContent = state.message;
     q('[data-onboarding-refresh]').disabled = busy || locked;
@@ -254,4 +255,5 @@
   }
   armDeadline();
   render();
+  document.addEventListener('mxmed:professional-sources-changed', () => run(refresh));
 })();

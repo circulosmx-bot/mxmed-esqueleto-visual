@@ -30,15 +30,16 @@ final class WorkflowFactory
         $admission=new PhysicianAdmissionComposition($p,$security,$cipher,$storage,$mfa,scope:$scope);
         $authority=new EvidenceAuthority($p,$security,scope:$scope);
         $enrollment=new PublicEnrollmentService($authority,$cipher,$secrets['proof_key']);
-        $review=new ReviewedEnrollmentService($enrollment,$mfa,$admission->projection);
+        $sources=in_array('professional_source_provisioning',$a['workflows'],true)?new \Identity\ProfessionalSources\SourceProvisioningService($enrollment,$cipher,$storage,$mfa):null;
+        $review=new ReviewedEnrollmentService($enrollment,$mfa,$admission->projection,$sources!==null);
         $phone=new PhoneVerificationService($authority,$cipher,new EvidenceAudit($p),$sms);
         $reportCipher=new ReportCipher($secrets['report_key_id'],[$secrets['report_key_id']=>$secrets['report_key']],$a['policies']['retention']);
         $reports=new ReportService($p,$reportCipher,$identity->csrf(),new ReportRatePolicy($p,$reportCipher,browserLimit:$a['rate_limits']['browser'],peerLimit:$a['rate_limits']['peer'],profileLimit:$a['rate_limits']['profile']),scope:$scope);
         $reportReview=new ReportReviewService($reports,$security,$mfa);
         return ['enrollment'=>new PublicEnrollmentHttp($identity,$enrollment,$secrets['transport_key'],$review),
-            'onboarding'=>new PhysicianOnboardingHttp($identity,$admission,$phone,$review,$scope),
+            'onboarding'=>new PhysicianOnboardingHttp($identity,$admission,$phone,$review,$scope,$sources),
             'reports'=>new ReportHttp($identity,$reports,$reportReview,$secrets['transport_key'],
                 in_array('correction_apply',$a['workflows'],true)?new ApplicationService(new ApplicationAuthority($reports,$security),$mfa):null),
-            'scope'=>$scope];
+            'sources'=>$sources,'scope'=>$scope];
     }
 }

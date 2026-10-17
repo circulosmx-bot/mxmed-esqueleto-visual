@@ -12,6 +12,7 @@ if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDest
 <link rel="stylesheet" href="/public/identity/identity-access.css">
 <?php if($staff): ?><link rel="stylesheet" href="/assets/css/media-review-inbox.css"><?php endif; ?>
 <link rel="stylesheet" href="/assets/css/physician-onboarding.css">
+<script src="/assets/js/identity/professional-sources.js" defer></script>
 <script src="/assets/js/identity/physician-onboarding.js" defer></script>
 <?php if(isset($state['enrollment'])): ?><script src="/assets/js/identity/physician-enrollment.js" defer></script><?php endif; ?>
 </head><body>
@@ -27,6 +28,7 @@ if(!$staff&&isset($state['enrollment_application']['application_id']))$loginDest
 <button class="button button--secondary" type="button" data-onboarding-refresh>Actualizar estado</button>
 </section>
 <script type="application/json" id="physician-onboarding-state"><?= json_encode($state,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<?php require __DIR__.'/professional-sources.php'; ?>
 <?php if(isset($state['enrollment'])): require __DIR__.'/physician-enrollment-intake.php'; else: ?>
 <?php if(isset($state['enrollment_review'])): ?>
 <section class="auth-card" data-enrollment-review-panel><h2>Solicitudes de incorporación</h2><p>Comprueba el perfil propuesto y registra una decisión explícita. Esta revisión no aprueba por sí sola la acreditación ni asigna titularidad.</p>

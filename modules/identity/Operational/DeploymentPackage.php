@@ -39,6 +39,16 @@ final class DeploymentPackage
         $target=\Platform\Repositories\CanonicalAuditDatabaseTarget::fromConnection($pdo);
         foreach(['audit_mp01c_lock_stream_head_v1','audit_mp01c_advance_stream_head_cas_v1'] as $r)$target->routine($pdo,$r);
     }
+    public static function professionalSourceMigrations():array
+    {return [...self::migrations(),'modules/identity/db/migrations/2026_10_17_07_professional_source_provisioning.sql'];}
+    public static function assertProfessionalSources(PDO $p):void
+    {
+        foreach(['auth_professional_source_requests','auth_professional_source_files','auth_professional_source_reads','auth_professional_source_operations','auth_professional_source_journal'] as $table)$p->query('SELECT 1 FROM `'.$table.'` LIMIT 0');
+        $p->query('SELECT result_identity_id,result_credential_id,frozen_hash,payload_ciphertext,authorization_case_id,reviewer_account_id,result_json FROM auth_professional_source_operations LIMIT 0');
+        $p->query('SELECT professional_source_file_id FROM auth_physician_evidence_files LIMIT 0');
+        $names=array_column(self::triggerMetadata($p)[0],'TRIGGER_NAME');
+        foreach(['source_files_no_update','source_files_no_delete','source_journal_no_update','source_journal_no_delete','source_request_binding_guard','source_operation_frozen_guard','source_c4_reference_guard'] as $name)if(!in_array($name,$names,true))throw new \RuntimeException('act03_source_trigger_missing');
+    }
     public static function inspect(PDO $pdo):array
     {
         $hash=[];foreach(self::migrations() as $f)$hash[$f]=hash_file('sha256',self::root().'/'.$f);

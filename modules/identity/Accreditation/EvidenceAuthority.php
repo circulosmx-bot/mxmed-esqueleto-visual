@@ -75,6 +75,7 @@ final class EvidenceAuthority
             ||new \DateTimeImmutable($i['verified_at'],new \DateTimeZone('UTC'))>$this->clock->now()
             ||new \DateTimeImmutable($c['verified_at'],new \DateTimeZone('UTC'))>$this->clock->now())
             throw new \RuntimeException('c4_professional_sources_denied');
+        foreach([$i,$c] as $source)\Identity\ProfessionalSources\SourceEvidenceReference::assertCanonical($this->pdo,(string)$source['source_reference'],$doctor);
         return ['identity_hash'=>ProfessionalAccountBindingProjection::identityRevision($i),
             'credential_hash'=>ProfessionalAccountBindingProjection::credentialRevision($c),'credential'=>$c];
     }

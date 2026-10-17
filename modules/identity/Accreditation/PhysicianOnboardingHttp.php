@@ -17,7 +17,7 @@ final class PhysicianOnboardingHttp
     private EvidenceAuthority $a;
     public function __construct(private IdentityHttpComposition $identity,
         private ?PhysicianAdmissionComposition $services=null,private ?PhoneVerificationService $phone=null,
-        private ?ReviewedEnrollmentService $enrollmentReview=null,private ?\Identity\Operational\WorkflowScope $scope=null)
+        private ?ReviewedEnrollmentService $enrollmentReview=null,private ?\Identity\Operational\WorkflowScope $scope=null,private ?\Identity\ProfessionalSources\SourceProvisioningService $sources=null)
     {
         $this->a=new EvidenceAuthority($identity->pdo(),new GovernanceSecurityContext($identity->sessions(),$identity->authentication()),scope:$scope);
         if ($services!==null&&!$services->projection->usesConnection($identity->pdo())) throw new \RuntimeException('onboarding_connection_mismatch');
@@ -31,7 +31,8 @@ final class PhysicianOnboardingHttp
         if (in_array($decision->reasonCode(),[\Identity\Contracts\ReasonCode::SESSION_STORE_UNAVAILABLE,\Identity\Contracts\ReasonCode::STORAGE_UNAVAILABLE],true))throw new \RuntimeException('onboarding_session_unavailable');
         if (!$decision->allowed()||$decision->context()===null||$decision->record()===null) throw new GovernanceHttpDenied(401);
         $actor=$decision->context();$this->scope?->account($actor->accountId());if ($staff)$this->staff($actor);
-        return $this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,null),$application)+['csrf_token'=>$this->identity->csrf()->issueAuthenticated($actor->session()->tokenDigest()),
+        $state=$this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,null),$application);
+        return $this->sourceState($state,$cookies,$staff,$state['enrollment_review']['application']['application_id']??$state['enrollment_application']['application_id']??null)+['csrf_token'=>$this->identity->csrf()->issueAuthenticated($actor->session()->tokenDigest()),
             'expires_at'=>$decision->record()->expiresAt()->getTimestamp()];
     }
     public function handle(array $server,array $cookies,string $raw):array
@@ -48,12 +49,25 @@ final class PhysicianOnboardingHttp
             if(!is_string($b['action']??null)||isset($b['view'])&&!is_string($b['view']))throw new \InvalidArgumentException('onboarding_input_invalid');
             $action=$b['action'];$staff=($b['view']??'physician')==='staff';
             $this->scope?->account($actor->accountId());
-            $this->scope?->workflow(str_starts_with($action,'enrollment_')?'enrollment_review':($action==='complete'?'c4_issuer':'c4_evidence'));
+            $this->scope?->workflow(str_starts_with($action,'source_')?'professional_source_provisioning':(str_starts_with($action,'enrollment_')?'enrollment_review':($action==='complete'?'c4_issuer':'c4_evidence')));
             if ($staff)$this->staff($actor);
             if ($action==='snapshot')return ['status'=>200,'body'=>['ok'=>true,'data'=>$this->withEnrollment($actor,$staff,$this->snapshot($actor,$staff,$b['request_id']??null),$b['application_id']??null)]];
             if ($this->services===null) return $this->error(503,'La acreditación profesional está pendiente de habilitación. Por ahora puedes consultar los pasos.');
             $data=null;
-            if(str_starts_with((string)$action,'enrollment_')){
+            if(str_starts_with($action,'source_')){
+                if($this->sources===null)throw new GovernanceHttpDenied(503);
+                $fields=match($action){'source_status'=>['application_id'],'source_begin'=>['application_id','source_action','facts','email','password'],'source_verify'=>['case_id','challenge_id','challenge','code'],'source_decide'=>['case_id','proof_id','proof'],'source_execute'=>['application_id'],'source_document'=>['application_id','file_id'],'source_upload'=>['application_id','version','kind','content_base64','email','password'],default=>throw new \InvalidArgumentException('source_action_invalid')};
+                if(array_diff(array_keys($b),['action','view','csrf_token',...$fields])!==[]||array_diff($fields,array_keys($b))!==[])throw new \InvalidArgumentException('source_fields_invalid');
+                foreach($fields as $key)if(!in_array($key,['facts','version'],true)&&(!is_string($b[$key])||($key!=='content_base64'&&strlen($b[$key])>1024)))throw new \InvalidArgumentException('source_input_invalid');
+                if($action==='source_document'){$d=$this->sources->document($actor,$b['application_id'],$b['file_id']);return ['status'=>200,'bytes'=>$d['bytes'],'headers'=>$d['headers']+['Content-Type'=>$d['mime_type'],'Cross-Origin-Resource-Policy'=>'same-origin']];}
+                $data=match($action){
+                    'source_status'=>$this->sources->status($actor,$b['application_id'],$staff),
+                    'source_begin'=>is_array($b['facts'])?$this->sources->begin($actor,$b['application_id'],$b['source_action'],$b['facts'],$b['email'],$b['password']):throw new \InvalidArgumentException('source_facts_invalid'),
+                    'source_verify'=>$this->sources->verify($actor,$b['case_id'],$b['challenge_id'],$b['challenge'],$b['code']),
+                    'source_decide'=>$this->sources->authorize($actor,$b['case_id'],$b['proof_id'],$b['proof']),
+                    'source_execute'=>$this->sources->execute($actor,$b['application_id']),
+                    'source_upload'=>is_int($b['version'])?$this->sources->upload($actor,$b['application_id'],$b['version'],$b['kind'],base64_decode($b['content_base64'],true)?:'',$b['email'],$b['password']):throw new \InvalidArgumentException('source_version_invalid')};
+            } elseif(str_starts_with((string)$action,'enrollment_')){
                 if($this->enrollmentReview===null)throw new GovernanceHttpDenied(503);
                 $allowed=match($action){
                     'enrollment_handoff'=>['application_id'],
@@ -67,7 +81,10 @@ final class PhysicianOnboardingHttp
                     if(!is_string($b[$key]??null)||strlen($b[$key])>1024)throw new \InvalidArgumentException('enrollment_input_invalid');
                 }
                 if(isset($b['relationship_confirmed'])&&!is_bool($b['relationship_confirmed']))throw new \InvalidArgumentException('enrollment_input_invalid');
-                if($action==='enrollment_handoff')$data=$this->services->evidence->createFromEnrollment($actor,(string)($b['application_id']??''));
+                if($action==='enrollment_handoff'){
+                    $data=$this->services->evidence->createFromEnrollment($actor,(string)($b['application_id']??''));
+                    if($this->sources!==null&&$this->sources->status($actor,$b['application_id'],false)['state']==='COMPLETE')$data=$this->sources->attachToC4($actor,$b['application_id'],$data['request_id']);
+                }
                 else{
                     $this->staff($actor);
                     if($action==='enrollment_review_begin'){
@@ -158,6 +175,17 @@ final class PhysicianOnboardingHttp
         if (isset($r['bytes'])){header('Content-Length: '.strlen($r['bytes']));echo $r['bytes'];}
         else {header('Content-Type: application/json; charset=utf-8');echo json_encode($r['body'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
         exit;
+    }
+    public function sourceState(array $state,array $cookies,bool $staff,?string $application):array
+    {
+        if($this->sources===null)return $state;
+        $state['professional_sources_enabled']=true;if($application===null)return $state;
+        $d=$this->identity->sessions()->validate($cookies['__Host-mxmed_session']??null);
+        if(!$d->allowed()||$d->context()===null)throw new GovernanceHttpDenied(401);
+        try{$state['professional_sources']=$this->sources->status($d->context(),$application,$staff);}
+        catch(\Identity\Operational\WorkflowScopeDenied){$state['professional_sources']=['available'=>false];}
+        catch(\RuntimeException $e){if($e->getMessage()!=='source_capability_denied')throw $e;$state['professional_sources']=['available'=>false];}
+        return $state;
     }
     private function staff(AuthenticatedAccessContext $actor):void
     {

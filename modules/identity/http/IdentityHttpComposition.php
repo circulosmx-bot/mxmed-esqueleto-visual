@@ -396,13 +396,13 @@ final class IdentityHttpComposition
         $registered = true;
         $root = dirname(__DIR__, 2);
         spl_autoload_register(static function (string $class) use ($root): void {
-            $prefixes = ['Identity\\' => $root . '/identity/', 'Subscriptions\\' => $root . '/subscriptions/', 'Platform\\' => $root . '/platform/'];
+            $prefixes = ['Identity\\' => $root . '/identity/', 'Profiles\\' => $root . '/profiles/', 'Subscriptions\\' => $root . '/subscriptions/', 'Platform\\' => $root . '/platform/'];
             foreach ($prefixes as $prefix => $base) {
                 if (!str_starts_with($class, $prefix)) continue;
                 $relative = str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-                // Subscription directories are lowercase. Use the same canonical
+                // Shared service directories are lowercase. Use the same canonical
                 // spelling as their explicit imports (also on case-insensitive macOS).
-                if($prefix==='Subscriptions\\')$relative=preg_replace_callback('~^[^/]+~',static fn(array $m):string=>strtolower($m[0]),$relative);
+                if(in_array($prefix,['Subscriptions\\','Profiles\\','Platform\\'],true)&&preg_match('~^(?:Services|Repositories|Controllers|Contracts)/~',$relative))$relative=preg_replace_callback('~^[^/]+~',static fn(array $m):string=>strtolower($m[0]),$relative);
                 $file = $base . $relative;
                 if (is_file($file)) require_once $file;
             }

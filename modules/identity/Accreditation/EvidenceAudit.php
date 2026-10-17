@@ -52,16 +52,21 @@ final class EvidenceAudit
         if(!in_array($operation,['RESOLUTION_CHALLENGE','RESOLUTION_DECIDED','RESOLUTION_READ','RESOLUTION_HANDOFF'],true))throw new \InvalidArgumentException('enrollment_resolution_audit_operation_invalid');
         return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','physician_enrollment',$operation,$version,$before,$after,$caseId,null,$staff);
     }
+    public function source(AuthenticatedAccessContext $actor,string $target,string $operation,int $version,?string $caseId=null,bool $staff=true):string
+    {
+        if(!in_array($operation,['CHALLENGE','COLLECTION_OPENED','FILE_ADDED','FILE_READ','AUTHORIZED','VID01_RECORDED','CRD02_RECORDED','COMPLETE','RECOVERY_AUTHORIZED','REVOKED','C4_REFERENCE_LINKED'],true))throw new \InvalidArgumentException('source_audit_operation_invalid');
+        return $this->write($actor,$target,'PHYSICIAN_EVIDENCE_CHANGED','professional_source',$operation,$version,'SOURCE_REVIEW',$operation,$caseId,null,$staff,'professional_source_provision');
+    }
     private function write(AuthenticatedAccessContext $actor,string $target,string $eventType,string $targetType,string $operation,int $version,
-        string $before,string $after,?string $caseId,?string $reviewReason,bool $staff):string
+        string $before,string $after,?string $caseId,?string $reviewReason,bool $staff,string $capability='physician_accreditation_review'):string
     {
         if (!$this->pdo->inTransaction()) throw new \RuntimeException('c4_audit_transaction_required');
         $ids=new RandomAuditUuidProvider();
         $role='authenticated_account';
         if ($staff) {
             $q=$this->pdo->prepare("SELECT s.governance_class FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id
-                WHERE s.account_id=? AND s.status='ACTIVE' AND g.capability='physician_accreditation_review' AND g.status='ACTIVE' AND g.revoked_at IS NULL FOR UPDATE");
-            $q->execute([$actor->accountId()]);$role=$q->fetchColumn();
+                WHERE s.account_id=? AND s.status='ACTIVE' AND g.capability=? AND g.status='ACTIVE' AND g.revoked_at IS NULL FOR UPDATE");
+            $q->execute([$actor->accountId(),$capability]);$role=$q->fetchColumn();
             if (!is_string($role)) throw new \RuntimeException('c4_audit_staff_authority_required');
         }
         $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$role,$targetType,
@@ -70,7 +75,7 @@ final class EvidenceAudit
         $event=$this->writer->append(new CanonicalAuditEventInput($eventType,'SUCCESS',$reason,
             'account',$actor->accountId(),$targetType,$target,
             ['operation'=>$operation,'version'=>$version,'previous_status'=>$before,'new_status'=>$after,'case_id'=>$caseId,
-                'review_reason'=>$reviewReason,'capability'=>$staff?'physician_accreditation_review':null]),$context);
+                'review_reason'=>$reviewReason,'capability'=>$staff?$capability:null]),$context);
         return (string)$event->value('event_id');
     }
 }

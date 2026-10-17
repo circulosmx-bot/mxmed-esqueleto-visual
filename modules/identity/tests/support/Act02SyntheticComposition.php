@@ -14,7 +14,8 @@ final class Act02SyntheticComposition
         if(!is_dir($dir))mkdir($dir,0700);$secretFile=$dir.'/signing.key';
         if(!is_file($secretFile)){file_put_contents($secretFile,sodium_crypto_sign_secretkey(sodium_crypto_sign_keypair()));chmod($secretFile,0600);}
         $secret=\Identity\Operational\ActivationGuard::privateFile($secretFile);$key=sodium_crypto_sign_publickey_from_secretkey($secret);
-        $report=$m[1]==='cor02';$workflows=$report?\Identity\Operational\ActivationGuard::WORKFLOWS:['public_enrollment','enrollment_review','c4_evidence','c4_issuer'];
+        $report=$m[1]==='cor02';$workflows=$report?array_values(array_diff(\Identity\Operational\ActivationGuard::WORKFLOWS,['professional_source_provisioning'])):['public_enrollment','enrollment_review','c4_evidence','c4_issuer'];
+        if(getenv('ACT03_QA')==='1')$workflows[]='professional_source_provisioning';
         $secrets=['evidence_key'=>base64_decode((string)getenv('C4_EV_QA_KEY'),true),'evidence_key_id'=>'c4-qa-key',
             'report_key'=>base64_decode((string)getenv('PUB_COR01_KEY'),true),'report_key_id'=>'cor-qa-key',
             'proof_key'=>getenv('PUB_ENR02_QA_PROOF_KEY')?:str_repeat('q',64),'mfa_key'=>str_repeat('m',32),'mfa_key_id'=>$report?'cor-qa-mfa':'c4-qa-mfa',
@@ -25,6 +26,7 @@ final class Act02SyntheticComposition
         foreach(['evidence_key','report_key','proof_key','mfa_key','transport_key','audit_key'] as $name)$encoded[$name]=base64_encode($encoded[$name]);
         file_put_contents($source,json_encode($encoded,JSON_THROW_ON_ERROR));chmod($source,0600);$secrets['_source_path']=$source;
         $staff=[];$caps=$report?['physician_accreditation_review','public_profile_correction_review','public_profile_correction_apply']:['physician_accreditation_review'];
+        if(getenv('ACT03_QA')==='1')$caps[]='professional_source_provision';
         foreach($p->query("SELECT s.account_id,g.capability FROM internal_staff s JOIN internal_operator_grants g ON g.account_id=s.account_id JOIN auth_accounts a ON a.account_id=s.account_id WHERE s.status='ACTIVE' AND a.status='active' AND g.status='ACTIVE' AND g.revoked_at IS NULL AND EXISTS(SELECT 1 FROM auth_staff_mfa_factors f WHERE f.account_id=s.account_id AND f.status='ACTIVE') ORDER BY s.account_id,g.capability")->fetchAll(PDO::FETCH_ASSOC) as $r)
             if(in_array($r['capability'],$caps,true))$staff[$r['account_id']][]=$r['capability'];
         $payload=['contract'=>'MXMED-ACT02.1','state'=>'approved_pilot','mode'=>'synthetic','issued_at'=>time(),'expires_at'=>time()+3600,

@@ -340,6 +340,7 @@ final class PhysicianEvidenceService implements ProtectedPhysicianEvidencePort
     }
     private function documentBytes(array $f): string
     {
+        if(($f['professional_source_file_id']??null)!==null)return \Identity\ProfessionalSources\SourceEvidenceReference::open($this->a->pdo,$f,$this->cipher,$this->storage);
         $opened=$this->storage->openReadStream($f['storage_key']);
         try { $ciphertext=stream_get_contents($opened['stream'],8*1024*1024+128); }
         finally { fclose($opened['stream']); }

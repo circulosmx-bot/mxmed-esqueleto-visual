@@ -24,6 +24,17 @@ final class VerifiedDoctorCredentialService
             new JoinedPdoCanonicalAuditTransactionAdapter($repository->connection()),new CanonicalAuditSealer(new CanonicalAuditSerializer()),new AuditV1PhysicalMapper());
     }
     public function provisionFromTrustedAuthority(array $input,TrustedAuditContext $context): array
+    { return $this->provision($input,$context); }
+
+    /** Explicit managed boundary: the caller owns commit/reconciliation and must
+     * revalidate its governed authorization before AND after the canonical writer.
+     * Ordinary callers retain the original outer-transaction rejection. */
+    public function provisionInGovernedTransaction(array $input,TrustedAuditContext $context,\PDO $transaction,callable $validate):array
+    {
+        if($transaction!==$this->repository->connection()||!$transaction->inTransaction())throw new RuntimeException('credential_managed_transaction_required');
+        return $this->provision($input,$context,$validate);
+    }
+    private function provision(array $input,TrustedAuditContext $context,?callable $managed=null): array
     {
         return $this->mutate($context,function() use($input,$context): array {
             $row=[
@@ -40,7 +51,7 @@ final class VerifiedDoctorCredentialService
             if ($row['verification_status']==='VERIFIED') $row=$this->verified($row,$context);
             $created=$this->repository->create($row);
             return [$created,'PROVISIONED',['credential_type'=>$row['credential_type'],'new_verification_status'=>$row['verification_status'],'new_lifecycle_status'=>'ACTIVE']];
-        });
+        },$managed);
     }
     public function verify(string $id,array $review,TrustedAuditContext $context): array { return $this->transition($id,'VERIFIED',$context,$review); }
     public function reject(string $id,TrustedAuditContext $context): array { return $this->transition($id,'REJECTED',$context); }
@@ -71,20 +82,21 @@ final class VerifiedDoctorCredentialService
             return [$this->repository->persistTransition($id,$row),$event,$metadata];
         });
     }
-    private function mutate(TrustedAuditContext $context,callable $operation): array
+    private function mutate(TrustedAuditContext $context,callable $operation,?callable $managed=null): array
     {
         $pdo=$this->repository->connection();
-        if ($pdo->inTransaction()) throw new RuntimeException('credential_outer_transaction_not_supported');
-        $pdo->beginTransaction();
+        if ($managed===null&&$pdo->inTransaction()) throw new RuntimeException('credential_outer_transaction_not_supported');
+        if($managed!==null&&!$pdo->inTransaction())throw new RuntimeException('credential_managed_transaction_required');
+        if($managed===null)$pdo->beginTransaction();else $managed();
         try {
             if ($context->actorType!=='account' || trim($context->sessionId??'')==='' ||
                 !$this->repository->isActiveInternalApprover($context->actorIdentityId)) throw new RuntimeException('credential_untrusted_authority');
             [$row,$event,$metadata]=$operation();
             $this->audit->append(new CanonicalAuditEventInput('PHYSICIAN_CREDENTIAL_'.$event,'SUCCESS','ADMIN_DECISION',
                 'doctor',(string)$row['doctor_id'],'PHYSICIAN_CREDENTIAL',(string)$row['credential_id'],$metadata),$context);
-            $pdo->commit();return $row;
+            if($managed===null)$pdo->commit();else $managed();return $row;
         } catch (Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($managed===null&&$pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
     }

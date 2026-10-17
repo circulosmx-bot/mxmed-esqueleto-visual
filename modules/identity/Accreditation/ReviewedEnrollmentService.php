@@ -13,7 +13,7 @@ final class ReviewedEnrollmentService
     private EvidenceAuthority $a;
     private EvidenceAudit $audit;
     public function __construct(private PublicEnrollmentService $enrollment,private StaffMfaService $mfa,
-        private ?\Identity\Repositories\ProfessionalAccountBindingProjection $projection=null)
+        private ?\Identity\Repositories\ProfessionalAccountBindingProjection $projection=null,private bool $sourceWorkflow=false)
     {
         $this->a=$enrollment->a;
         if(!$mfa->usesConnection($this->a->pdo))throw new \RuntimeException('enrollment_review_connection_mismatch');
@@ -194,7 +194,7 @@ final class ReviewedEnrollmentService
             }
             return ['queue'=>$queue,'application'=>['application_id'=>$selected,'intake_version'=>$f['intake_version'],'review_version'=>(int)($h['resolution_version']??0),'state'=>$h['state']??'PENDING_REVIEW','gate'=>$f['gate'],
                 'resolution_current'=>$current,
-                'source_readiness'=>\Identity\Operational\ProfessionalSourceReadiness::inspect($this->a,$f['resolved_profile_doctor_id']),
+                'source_readiness'=>\Identity\Operational\ProfessionalSourceReadiness::inspect($this->a,$f['resolved_profile_doctor_id'],$actor->accountId(),$this->sourceWorkflow),
                 'origin_label'=>$f['initial_origin']==='CLAIM_EXISTING_PROFILE'?'Solicitud del perfil público original':'Formar parte de México Médico','target_name'=>is_string($name)?$name:null,
                 'declared_name'=>trim(implode(' ',[$declared['given_names'],$declared['first_surname'],$declared['second_surname']])),
                 'declared_specialty'=>$declared['specialty'],'declared_location'=>$declared['city'].', '.$declared['state']]];

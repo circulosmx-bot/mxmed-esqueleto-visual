@@ -18,6 +18,7 @@ final class PhysicianOnboardingPage
         if(!$staff&&$enrollment!==null&&(isset($_GET['entry'])||isset($_GET['application'])||isset($_GET['enrollment']))){
             try{$state=$enrollment->page($_GET,$_COOKIE,$_SERVER);$title='Tu solicitud profesional';}
             catch(\Throwable){http_response_code(403);echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Solicitud no disponible</title><main><h1>No pudimos abrir esta solicitud</h1><p>Puede haber vencido o no estar disponible para tu cuenta.</p><a href="/profiles/listing.php">Volver al directorio y comenzar de nuevo</a><a href="/public/identity/acceso.php?next=%2Fpublic%2Fidentity%2Fperfil-medico.php%3Fenrollment%3Dresume">Iniciar sesión para consultar mis solicitudes</a></main></html>';return;}
+            if($http!==null&&($state['enrollment']['authenticated']??false)&&($state['enrollment']['application']['state']??null)==='SUBMITTED')$state=$http->sourceState($state,$_COOKIE,false,$state['enrollment']['application']['application_id']);
             require dirname(__DIR__,3).'/partials/identity/physician-onboarding.php';return;
         }
         if (!$staff && array_key_exists('entry', $_GET)) {

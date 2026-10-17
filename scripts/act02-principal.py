@@ -1,6 +1,6 @@
 """Table grants for the disposable ACT02 restricted application principal only."""
 import re
-def restrict(sql,db,user,synthetic=False):
+def restrict(sql,db,user,synthetic=False,professional_sources=False):
  assert re.fullmatch(r'mxmed_gate4d_preview_(?:act02|cor02|c4ui)_[a-f0-9]{10}',db)
  assert re.fullmatch(r'(?:act02|gov03b)_[a-f0-9]{10}',user) and user.endswith(db.rsplit('_',1)[1])
  who="'"+user+"'@'127.0.0.1'"
@@ -15,6 +15,9 @@ def restrict(sql,db,user,synthetic=False):
  writable=[t for t in names if t.startswith(('profiles_correction_','auth_physician_')) or t in ['profiles_physician_admissions','auth_account_professional_bindings','profiles_contact_correction_versions','doctor_contact_points','auth_accounts','auth_account_credentials','auth_account_consents','auth_account_one_time_tokens','auth_rate_limit_buckets','auth_identity_notification_deliveries','auth_account_phone_verifications','auth_staff_mfa_challenges','auth_staff_mfa_proofs','auth_governance_cases','platform_audit_events','platform_audit_stream_heads']]
  for t in readonly:sql('GRANT SELECT ON `'+db+'`.`'+t+'` TO '+who)
  for t in writable:sql('GRANT INSERT,UPDATE ON `'+db+'`.`'+t+'` TO '+who)
+ if professional_sources:
+  for t in ['auth_professional_source_requests','auth_professional_source_operations']:sql('GRANT INSERT,UPDATE ON `'+db+'`.`'+t+'` TO '+who)
+  for t in ['auth_professional_source_files','auth_professional_source_reads','auth_professional_source_journal','profiles_verified_identities','profiles_doctor_credentials']:sql('GRANT INSERT ON `'+db+'`.`'+t+'` TO '+who)
  # Runtime verifies existing factors; enrollment/recovery require another principal.
  sql('GRANT UPDATE(last_totp_time_step,enrollment_context) ON `'+db+'`.`auth_staff_mfa_factors` TO '+who)
  sql('GRANT EXECUTE ON PROCEDURE `'+db+'`.`act02_trigger_metadata` TO '+who)

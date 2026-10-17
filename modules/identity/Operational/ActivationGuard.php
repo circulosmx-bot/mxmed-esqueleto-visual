@@ -8,7 +8,7 @@ use Identity\Operators\OperatorDeploymentSchema;
 /** Signed, private, short-lived authorization. No approval creation or env selector. */
 final class ActivationGuard
 {
-    public const WORKFLOWS=['public_enrollment','enrollment_review','c4_evidence','c4_issuer','correction_intake','correction_review','correction_apply'];
+    public const WORKFLOWS=['public_enrollment','enrollment_review','c4_evidence','c4_issuer','correction_intake','correction_review','correction_apply','professional_source_provisioning'];
     public static function privateFile(string $path):string
     {
         $real=realpath($path);$root=DeploymentPackage::root();$parent=realpath(dirname($path));
@@ -45,10 +45,12 @@ final class ActivationGuard
         if(!is_string($a['deployment_principal']??null)||strlen($a['deployment_principal'])<3)throw new \RuntimeException('act02_deployment_principal_required');
         if(($a['source_hash']??null)!==DeploymentPackage::sourceHash()||($a['schema_fingerprint']??null)!==DeploymentPackage::schemaFingerprint($pdo))throw new \RuntimeException('act02_source_or_schema_drift');
         DeploymentPackage::assertSchema($pdo);
+        if(in_array('professional_source_provisioning',$a['workflows']??[],true))DeploymentPackage::assertProfessionalSources($pdo);
         foreach(['privacy','custody','recovery','retention','legal_hold','disposal','staff','pilot','abuse'] as $p)
             if(!is_string($a['policies'][$p]??null)||!preg_match('/^[A-Za-z0-9_.:-]{8,128}$/D',$a['policies'][$p]))throw new \RuntimeException('act02_policy_required');
         foreach(['accounts','profiles','workflows'] as $list){if(!is_array($a[$list]??null)||!array_is_list($a[$list])||count($a[$list])<1||count($a[$list])>100)throw new \RuntimeException('act02_bounded_cohort_required');foreach($a[$list] as $v)if(!is_string($v)||!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$v))throw new \RuntimeException('act02_cohort_invalid');}
         if(array_diff($a['workflows'],self::WORKFLOWS)!==[])throw new \RuntimeException('act02_unknown_workflow');
+        if(in_array('professional_source_provisioning',$a['workflows'],true)&&array_diff(['public_enrollment','enrollment_review'],$a['workflows'])!==[])throw new \RuntimeException('act03_source_enrollment_workflows_required');
         foreach(['browser'=>3,'peer'=>100,'profile'=>20] as $key=>$max)if(!is_int($a['rate_limits'][$key]??null)||$a['rate_limits'][$key]<1||$a['rate_limits'][$key]>$max)throw new \RuntimeException('act02_rate_policy_required');
         foreach(['evidence_key','report_key','proof_key','mfa_key','transport_key','audit_key'] as $name){
             $value=$secrets[$name]??null;if(!is_string($value)||strlen($value)<32||($a['secret_hashes'][$name]??null)!==hash('sha256',$value))throw new \RuntimeException('act02_secret_required');
@@ -60,6 +62,7 @@ final class ActivationGuard
         if(!hash_equals($secrets['transport_key'],(string)getenv('MXMED_GOVERNANCE_PROXY_KEY'))||!hash_equals($secrets['audit_key'],(string)getenv('MXMED_AUDIT_IP_HMAC_SECRET')))throw new \RuntimeException('act02_existing_transport_audit_binding_required');
         if(!is_array($a['staff']??null)||$a['staff']===[])throw new \RuntimeException('act02_staff_required');
         $required=[];
+        if(in_array('professional_source_provisioning',$a['workflows'],true))$required[]='professional_source_provision';
         if(array_intersect($a['workflows'],['enrollment_review','c4_evidence','c4_issuer']))$required[]='physician_accreditation_review';
         if(in_array('correction_review',$a['workflows'],true))$required[]='public_profile_correction_review';
         if(in_array('correction_apply',$a['workflows'],true))$required[]='public_profile_correction_apply';
@@ -73,9 +76,10 @@ final class ActivationGuard
         $grants=$pdo->query('SHOW GRANTS')->fetchAll(PDO::FETCH_COLUMN);
         foreach($grants as $g){
             $privileges=explode(' ON ',$g,2)[0];
+            $sourceInsert=in_array('professional_source_provisioning',$a['workflows'],true)&&preg_match('/^GRANT (?:SELECT, INSERT|INSERT) ON `'.preg_quote($actual['db'],'/').'`\.`(?:profiles_verified_identities|profiles_doctor_credentials)` TO /',$g);
             if(!str_contains($g,' ON ')||preg_match('/ALL PRIVILEGES|GRANT OPTION|CREATE |ALTER|DROP|SUPER|SYSTEM_USER|ROLE |TRIGGER|PROXY/i',$privileges)||str_contains($g,'WITH GRANT OPTION')||(!str_contains($g,'GRANT USAGE ON *.*')&&str_contains($g,' ON *.*'))
-                ||(preg_match('/(?:INSERT|UPDATE|DELETE).* ON `[^`]+`\.\*/i',$g))
-                ||(preg_match('/(?:INSERT|UPDATE|DELETE).* ON `[^`]+`\.`(?:internal_staff|internal_operator_grants|clinical_[^`]+|auth_account_memberships|profiles_verified_identities|profiles_doctor_credentials|profiles_doctors|profile_subscriptions)`/i',$g)))throw new \RuntimeException('act02_runtime_privileges_too_broad');
+                ||(!$sourceInsert&&preg_match('/(?:INSERT|UPDATE|DELETE).* ON `[^`]+`\.\*/i',$g))
+                ||(!$sourceInsert&&preg_match('/(?:INSERT|UPDATE|DELETE).* ON `[^`]+`\.`(?:internal_staff|internal_operator_grants|clinical_[^`]+|auth_account_memberships|profiles_verified_identities|profiles_doctor_credentials|profiles_doctors|profile_subscriptions)`/i',$g)))throw new \RuntimeException('act02_runtime_privileges_too_broad');
         }
         return $a;
     }
