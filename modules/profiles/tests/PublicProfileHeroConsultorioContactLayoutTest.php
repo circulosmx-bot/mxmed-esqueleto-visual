@@ -42,6 +42,23 @@ $pageSource = (string)file_get_contents(__DIR__ . '/../../../profiles/doctor.php
 $cssSource = (string)file_get_contents(__DIR__ . '/../../../assets/css/public-profile.css');
 $controllerSource = (string)file_get_contents(__DIR__ . '/../controllers/PublicProfileController.php');
 
+// Verify the requested glyphs in their actual font request. Later approved
+// actions may add glyphs or reorder the query without removing hero icons.
+$fontGlyphs = [];
+preg_match_all('/<link\b[^>]*href="([^"]+)"[^>]*>/', $pageSource, $fontLinks);
+foreach ($fontLinks[1] as $href) {
+    $url = html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    if (parse_url($url, PHP_URL_HOST) !== 'fonts.googleapis.com') continue;
+    parse_str((string)parse_url($url, PHP_URL_QUERY), $query);
+    foreach (['Rounded', 'Outlined'] as $variant) {
+        if (str_starts_with((string)($query['family'] ?? ''), 'Material Symbols ' . $variant . ':')) {
+            $fontGlyphs[$variant] = array_merge($fontGlyphs[$variant] ?? [], explode(',', (string)($query['icon_names'] ?? '')));
+        }
+    }
+}
+$requiredHeroGlyphs = ['badge','call','event','event_available','groups','health_and_safety',
+    'monitor_heart','payments','person','person_text','school','stethoscope','translate','work_history','workspace_premium'];
+
 // Hero: accepted PDB-04C composition plus the two bounded navigation actions.
 pdb04dAssert(str_contains($pageSource, 'mxpp-license-inline--professional'), 'professional license remains beside the name');
 pdb04dAssert(str_contains($pageSource, 'mxpp-license-inline--specialty'), 'specialty license remains beside the specialty');
@@ -49,8 +66,8 @@ pdb04dAssert(!str_contains($pageSource, 'mxpp-licenses-inline') && !str_contains
 pdb04dAssert(str_contains($pageSource, 'class="mxpp-rating-pill"'), 'compact review bar remains in use');
 pdb04dAssert(str_contains($pageSource, 'data-mxpp-profile-view-trigger="about"') && str_contains($pageSource, '<span>Sobre mí</span>'), 'about action switches the shared panel in place');
 pdb04dAssert(str_contains($pageSource, '<?php if ($showConsultaAction): ?>') && str_contains($pageSource, 'data-mxpp-profile-view-trigger="consultation"'), 'consultation action uses its plan-safe target');
-pdb04dAssert(str_contains($pageSource, 'icon_names=badge,call,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,school,stethoscope,translate,work_history,workspace_premium') && str_contains($pageSource, '>person_text</span>') && str_contains($pageSource, '>event</span>'), 'hero actions use the requested Material Symbols glyphs');
-pdb04dAssert(str_contains($pageSource, 'Material+Symbols+Outlined:') && str_contains($pageSource, 'icon_names=alarm,credit_card,group'), 'requested consultation outlined icon font is loaded');
+pdb04dAssert(array_diff($requiredHeroGlyphs, $fontGlyphs['Rounded'] ?? []) === [] && str_contains($pageSource, '>person_text</span>') && str_contains($pageSource, '>event</span>'), 'hero actions use the requested Material Symbols glyphs');
+pdb04dAssert(array_diff(['alarm','credit_card','group'], $fontGlyphs['Outlined'] ?? []) === [], 'requested consultation outlined icon font is loaded');
 pdb04dAssert(str_contains($cssSource, '--mxpp-action-label-color: var(--profile-accent);') && str_contains($cssSource, 'color: var(--mxpp-action-label-color);'), 'hero action labels consume the resolved profile theme accent');
 pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action__icon {') && str_contains($cssSource, 'height: 70px;') && str_contains($cssSource, 'width: auto;') && str_contains($cssSource, 'color: #505052;') && str_contains($cssSource, 'font-size: 70px;'), 'hero action icon sizing is fixed-height 70 and color is #505052');
 pdb04dAssert(!str_contains($cssSource, 'mxpp-hero-action__icon--about::') && !str_contains($cssSource, 'mxpp-hero-action__icon--consult::'), 'legacy CSS-drawn hero icons are absent');

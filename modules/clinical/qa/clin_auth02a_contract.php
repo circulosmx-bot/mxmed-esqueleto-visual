@@ -122,6 +122,14 @@ if (in_array('--security-regression', $argv ?? [], true)) {
         if(hash_file('sha256',$root.'/'.$path)!==$expected)throw new RuntimeException('AUTH02A_GOV_SIM02_SOURCE_DRIFT');
         $guardPaths[]=':(exclude)'.$path;
     }
+    // UX-ALIGN01 (4429f414) added this CLI-only, renderer-only synthetic fixture.
+    // Admit only its exact reviewed bytes; do not exclude the QA directory or
+    // move the production baseline. All existing clinical pins remain intact.
+    $presentationFixture='modules/clinical/qa/ux_align01_presentation_fixture.php';
+    auth02a(hash_file('sha256',$root.'/'.$presentationFixture)
+        ==='ee45179d87ea8144a378c25d422975c432c62f8ff8c076e6f158fc9726ada6b3',
+        'AUTH02A_REVIEWED_PRESENTATION_FIXTURE');
+    $guardPaths[]=':(exclude)'.$presentationFixture;
     exec('cd '.escapeshellarg($root).' && git diff --quiet aa7184c8c49b171f89a969226acbb605e94a0eb6 -- '
         .implode(' ',array_map('escapeshellarg',$guardPaths)), $guardOutput, $guardDiff);
     auth02a($guardDiff === 0, 'AUTH02A_29', 'PASS_PRODUCTION_CLINICAL_GUARDS_PINNED_WITH_SIM02_CONTAINMENT');

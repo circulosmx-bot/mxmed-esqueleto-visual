@@ -31,12 +31,23 @@ final class CredentialAuditPdoProbe extends PDO {
     public int $commits = 0;
     public int $rollbacks = 0;
     public array $calls = [];
+    public array $targetQueries = [];
     public array $eventRows = [];
+    public string $database = 'mxmed_gate4d_preview_act04_audit';
+    public bool $changeTarget = false;
+    public bool $routineSecurityDrift = false;
+    public bool $routineBodyDrift = false;
+    public bool $routineSignatureDrift = false;
     public function __construct() {}
     public function beginTransaction(): bool { $this->active=true; return true; }
     public function inTransaction(): bool { return $this->active; }
     public function commit(): bool { $this->commits++; $this->active=false; return true; }
     public function rollBack(): bool { $this->rollbacks++; $this->active=false; return true; }
+    public function query(string $query, ?int $fetchMode=null, mixed ...$fetchModeArgs): PDOStatement|false {
+        check($this->active && $query==='SELECT DATABASE()', 'only transaction-scoped database inspection');
+        $this->targetQueries[]=$query;
+        return new CredentialAuditStatementProbe($this, $query);
+    }
     public function prepare(string $query, array $options=[]): PDOStatement|false {
         check($this->active, 'SQL outside caller transaction');
         $this->calls[]=$query;
@@ -45,8 +56,10 @@ final class CredentialAuditPdoProbe extends PDO {
 }
 final class CredentialAuditStatementProbe extends PDOStatement {
     private bool $fetched=false;
+    private array $params=[];
     public function __construct(private CredentialAuditPdoProbe $owner, private string $sql) {}
     public function execute(?array $params=null): bool {
+        $this->params=$params??[];
         if (str_starts_with($this->sql,'INSERT INTO platform_audit_events')) {
             if ($this->owner->failInsert) throw new RuntimeException('synthetic_insert_failure');
             $this->owner->eventRows[]=$params;
@@ -57,9 +70,48 @@ final class CredentialAuditStatementProbe extends PDOStatement {
         return true;
     }
     public function fetch(int $mode=PDO::FETCH_DEFAULT, int $cursorOrientation=PDO::FETCH_ORI_NEXT, int $cursorOffset=0): mixed {
+        if (str_contains($this->sql,'information_schema.ROUTINES')) {
+            $name=$this->params[1]??'';
+            check(($this->params[0]??'')===$this->owner->database, 'metadata uses the connected synthetic target');
+            $file=match($name){
+                'audit_mp01c_lock_stream_head_v1'=>'audit_mp01c_r2_lock.sql',
+                'audit_mp01c_advance_stream_head_cas_v1'=>'audit_mp01c_r2_cas.sql',
+                default=>throw new RuntimeException('unexpected routine lookup'),
+            };
+            // Driver fixture reports the shipped routine body; no SQL is executed.
+            $source=(string)file_get_contents(__DIR__.'/../db/routines/'.$file);
+            $body=substr($source,strpos($source,"\nBEGIN")+1);
+            $body=(string)preg_replace('/END\s*\$\$.*\z/s','END',$body);
+            $body=str_replace('\\\\','\\',$body);
+            $body=str_replace('`mxmed`.`platform_audit_stream_heads`',
+                '`'.$this->owner->database.'`.`platform_audit_stream_heads`',$body);
+            return ['ROUTINE_DEFINITION'=>$body.($this->owner->routineBodyDrift?' DRIFT':''),
+                'SECURITY_TYPE'=>$this->owner->routineSecurityDrift?'INVOKER':'DEFINER',
+                'SQL_DATA_ACCESS'=>$name==='audit_mp01c_lock_stream_head_v1'?'READS SQL DATA':'MODIFIES SQL DATA'];
+        }
         if (!str_contains($this->sql,'lock_stream_head') || $this->fetched) return false;
         $this->fetched=true;
         return ['last_sequence_number'=>0,'last_event_hash'=>CanonicalAuditWriter::GENESIS_HASH,'hash_version'=>'sha256-hex-v1','updated_at'=>null];
+    }
+    public function fetchColumn(int $column=0): mixed {
+        check($this->sql==='SELECT DATABASE()' && $column===0, 'expected target read');
+        return $this->owner->changeTarget && count($this->owner->targetQueries)>1
+            ? 'mxmed_gate4d_preview_changed' : $this->owner->database;
+    }
+    public function fetchAll(int $mode=PDO::FETCH_DEFAULT, mixed ...$args): array {
+        check(str_contains($this->sql,'information_schema.PARAMETERS') && $mode===PDO::FETCH_NUM, 'expected routine signature inspection');
+        check(($this->params[0]??'')===$this->owner->database, 'signature uses the connected synthetic target');
+        $signature=[['IN','p_stream_key','varchar(191)','utf8mb4','utf8mb4_unicode_ci']];
+        if (($this->params[1]??'')==='audit_mp01c_advance_stream_head_cas_v1') {
+            foreach (['p_expected_sequence'=>'bigint','p_expected_hash'=>'char(64)',
+                'p_expected_hash_version'=>'varchar(32)','p_expected_updated_at'=>'varchar(27)',
+                'p_new_sequence'=>'bigint','p_new_hash'=>'char(64)',
+                'p_new_hash_version'=>'varchar(32)','p_new_updated_at'=>'varchar(27)'] as $name=>$type) {
+                $signature[]=['IN',$name,$type,$type==='bigint'?null:'utf8mb4',$type==='bigint'?null:'utf8mb4_unicode_ci'];
+            }
+        } else check(($this->params[1]??'')==='audit_mp01c_lock_stream_head_v1', 'expected lock signature');
+        if ($this->owner->routineSignatureDrift) $signature[0][2]='varchar(190)';
+        return $signature;
     }
     public function nextRowset(): bool { return false; }
     public function closeCursor(): bool { return true; }
@@ -79,16 +131,23 @@ $metadata=[
     'PHYSICIAN_CREDENTIAL_REVOKED'=>['credential_type'=>'SPECIALTY','previous_lifecycle_status'=>'ACTIVE','new_lifecycle_status'=>'REVOKED'],
 ];
 $rows=CanonicalAuditPolicyRegistry::canonicalRows();
-check(count($rows)===52 && count(CanonicalAuditEventType::all())===52,'52 events/policies including OP-IMP02');
+$laterEvents=['PHYSICIAN_EVIDENCE_CHANGED','PHYSICIAN_AUTHORITY_CHANGED',
+    'PUBLIC_PROFILE_CORRECTION_RECEIVED','PUBLIC_PROFILE_CORRECTION_REVIEWED','PUBLIC_PROFILE_CORRECTION_APPLICATION'];
+check(count($rows)===57 && count(CanonicalAuditEventType::all())===57,'57 reviewed events/policies through PUB-COR02');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
+// The reviewed OP-IMP07 catalog at d195328b had 52 rows. Later C4 and
+// public-correction events are append-only, not changes to credential policy.
+check(hash('sha256',json_encode(array_slice($rows,0,52),JSON_UNESCAPED_SLASHES))
+    ==='2444b5ba944db0bc0a29390a073699e1b85efe4e061376bf6375c781df6db581','published 52-policy prefix unchanged');
+check(array_slice(CanonicalAuditEventType::all(),52)===$laterEvents,'exact reviewed C4 and correction extensions');
 check(array_slice(CanonicalAuditEventType::all(),38,5)===array_keys($metadata),'exactly five new events');
-// OP-IMP01 extends only invitation metadata in these historical rows. Keep the
-// published a18cc367 baseline digest after removing exactly that extension.
+// OP-IMP01 and OP-IMP07 extend only invitation metadata in these historical
+// rows. Keep the published a18cc367 digest after removing those exact additions.
 // The older QA02B digest was stale already at the published starting HEAD.
 $historical=array_slice($rows,0,38);
 foreach ($historical as &$row) {
     if (in_array($row['event_type'],['INVITATION_CREATED','INVITATION_ACCEPTED','INVITATION_REVOKED'],true)) {
-        check($row['allowed_producer_metadata']===['operator_action','actor_membership_id','profile_doctor_id','membership_id','invitation_id','grant_revision','owner_membership_id','capabilities','operation_reason'],'OP-IMP01 exact invitation metadata extension');
+        check($row['allowed_producer_metadata']===['operator_action','actor_membership_id','profile_doctor_id','membership_id','invitation_id','grant_revision','owner_membership_id','capabilities','operation_reason','presentation_version','presentation_id','personal_alias','seat_position','presentation_revision','presentation_released'],'OP-IMP01/07 exact invitation metadata extensions');
         $row['allowed_producer_metadata']=[];
     }
 }
@@ -116,7 +175,8 @@ foreach ($metadata as $event=>$fields) {
         $input=new CanonicalAuditEventInput($event,$result,$reason,'doctor','synthetic-doctor','PHYSICIAN_CREDENTIAL','123',$fields);
         $envelope=writer($pdo)->append($input,$context);
         check($pdo->active && $pdo->commits===0,'writer does not commit caller transaction');
-        check(count($pdo->eventRows)===1 && count($pdo->calls)===4,'existing SQL adapter protocol');
+        check(count($pdo->eventRows)===1 && count($pdo->calls)===8
+            && count($pdo->targetQueries)===4,'SQL adapter protocol includes target/body/security/signature validation');
         check($envelope->value('target_id')==='123' && $envelope->value('target_type')==='PHYSICIAN_CREDENTIAL','credential target');
         check($envelope->value('effective_entity_id')==='synthetic-doctor','doctor context');
         check($envelope->value('session_id')==='synthetic-session','session retained');
@@ -148,5 +208,19 @@ foreach ($metadata as $event=>$fields) {
     check($pdo->commits===1 && !$pdo->active,'caller commit accepted');
     echo $event."_ACCEPTED=true\n";
 }
+// Exercise the current production target/routine validation through the driver
+// boundary, rather than bypassing it to make the historical probe pass.
+$input=new CanonicalAuditEventInput('PHYSICIAN_CREDENTIAL_VERIFIED','SUCCESS','ADMIN_DECISION',
+    'doctor','synthetic-doctor','PHYSICIAN_CREDENTIAL','123',$metadata['PHYSICIAN_CREDENTIAL_VERIFIED']);
+foreach (['database'=>'audit_database_target_denied','changeTarget'=>'audit_database_target_changed',
+    'routineSecurityDrift'=>'audit_routine_security_drift','routineBodyDrift'=>'audit_routine_drift',
+    'routineSignatureDrift'=>'audit_routine_signature_drift'] as $flag=>$error) {
+    $pdo=new CredentialAuditPdoProbe();
+    $pdo->$flag=$flag==='database'?'unapproved_database':true;
+    $pdo->beginTransaction();
+    denied(fn()=>writer($pdo)->append($input,$context),$error);
+    check($pdo->eventRows===[] && $pdo->rollbacks===1 && $pdo->commits===0,'invalid database/routine denied before event insert and rolled back');
+}
+echo "AUDIT_TARGET_AND_ROUTINE_DRIFT_REJECTIONS=5_PASS\n";
 echo "AUDCRD01_POLICY_AND_WRITER=PASS\nQA02B_AUTHORIZED_OWNERSHIP_POLICIES_ENRICHED=3\n";
 echo "JOINED_PDO_TRANSACTION_PROTOCOL=PASS\nPHYSICAL_DATABASE_TEST=NOT_RUN\nDB_WRITES=0\n";
