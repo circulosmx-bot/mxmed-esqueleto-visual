@@ -2,6 +2,8 @@
 
 Baseline fuente `1b8dfccb68a7613b2182507a840454631dbf012a`, 2026-10-17. [Funciones](INVENTARIO_FUNCIONAL_MXMED.md), [clínica](FUNCIONES_CLINICAS_MXMED.md), [datos](DATOS_Y_MIGRACIONES_MXMED.md), [finanzas](STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md), [entornos](AWS_Y_ENTORNOS_MXMED.md), [cobertura](COBERTURA_Y_PENDIENTES_MXMED.md).
 
+Ampliación CTX-MAP03: revisión dirigida sobre `0bea8195ce75c309a54cba35acb4605ba290ee00`, misma fecha, sin ejecución funcional. [Canales Agenda](AGENDA_CANALES_Y_PERMISOS_MXMED.md) y [casos comerciales/asesores](TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) refinan actores y límites de estos journeys sin rehacer el censo CTX-MAP02.
+
 Estos once recorridos reconstruyen conexiones de fuente y evidencia previa. No son once pruebas ejecutadas ni once procesos activos. Cada paso conserva su autoridad: un click, una aceptación humana, un webhook y un commit SQL son hechos distintos. Los cinco ejes de estado se consultan en las capacidades enlazadas; donde falta composición/permiso/proveedor se detiene la operación, sin concluir que falte todo el módulo.
 
 <a id="j01-claim-existente"></a>
@@ -42,7 +44,11 @@ Estos once recorridos reconstruyen conexiones de fuente y evidencia previa. No s
 
 ## J04 — Consultorio, disponibilidad y cita
 
-**Edición de sede/horario.** Consultorio original `#p-consultorio` → [multisede.js](../../assets/js/perfil/consultorio/multisede.js) (`collectPanePayload`, confirmación de coordenadas) / [Agenda UI](../../assets/js/agenda/) → PUT ramas de consultorio/horarios en [gateway Agenda](../../api/agenda/index.php) → [PrivateAgendaRoutePolicy](../../modules/agenda/security/PrivateAgendaRoutePolicy.php) + contexto perfil → [ConsultoriosController](../../modules/agenda/controllers/ConsultoriosController.php) / [ScheduleController](../../modules/agenda/controllers/ScheduleController.php) → repositorios y tablas `consultorios/consultorio_schedule`.
+**Canal original verificado en fuente CTX-MAP03.** La reserva integrada del [perfil público](../../profiles/doctor.php) usa `submitInlineBooking` → `/public/appointments/reserve` → `requestBookingOtp` → `/public/otp/request` → `verifyBookingOtp` → `/public/appointments/confirm`. [AGENDA-PUB01](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-pub01) identifica médico/sede, solicitante distinto del paciente, campos persistidos y fallos; las páginas legacy no son su prueba de conexión. La [matriz por acción](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-matriz) separa médico, operador, Call Center y sistema/IA.
+
+**Edición de sede/horario.** Consultorio original `#p-consultorio` → [multisede.js](../../assets/js/perfil/consultorio/multisede.js) (`collectPanePayload`, confirmación de coordenadas) / [Agenda UI](../../assets/js/agenda/) → PUT ramas de consultorio/horarios en [gateway Agenda](../../api/agenda/index.php) → gate actual [PrivateApplicationAccessResolver](../../modules/identity/http/PrivateApplicationAccessResolver.php) del gateway + contexto perfil → [ConsultoriosController](../../modules/agenda/controllers/ConsultoriosController.php) / [ScheduleController](../../modules/agenda/controllers/ScheduleController.php) → repositorios y tablas `consultorios/consultorio_schedule`.
+
+**Política preparada:** [PrivateAgendaRoutePolicy](../../modules/agenda/security/PrivateAgendaRoutePolicy.php) y la raíz R0 no equivalen al dispatch actual ni acreditan enforcement por método/rol en cada controller. La matriz CTX-MAP03 separa esas piezas y la autorización efectiva del operador canónico.
 
 **Lectura y reserva.** Dirección/coordenadas confirmadas y flags alimentan DTO público; cambiar Maps en pantalla sin persistencia no cambia la ubicación pública. [AvailabilityController](../../modules/agenda/controllers/AvailabilityController.php) y sus repositorios combinan horario, zona/overrides, bloqueos y ocupación. Reserva pública → [PublicAppointmentsController](../../modules/agenda/controllers/PublicAppointmentsController.php), hold/OTP/delivery/verificación → `PublicAppointmentsController::reserve/confirm`, [PublicBookingPatientIdentityResolver](../../modules/patients/services/PublicBookingPatientIdentityResolver.php) y writer de cita. Es otra autoridad distinta del editor owner/administrator. [Contratos P2/P3/P4](../agenda/PUBLIC_BOOKING_P3.md) definen hold, expiración, cancelación y feedback.
 
@@ -50,7 +56,7 @@ Estos once recorridos reconstruyen conexiones de fuente y evidencia previa. No s
 
 **Cita/paciente/encounter.** Escritura privada usa [AppointmentWriteController](../../modules/agenda/controllers/AppointmentWriteController.php) / [AppointmentWriteRepository](../../modules/agenda/repositories/AppointmentWriteRepository.php), lock/colisiones/versionado e idempotencia; snapshots de origen se conservan. La resolución del paciente pertenece a `PatientsRepository`; [ClinicalEncounterBridge](../../modules/agenda/services/ClinicalEncounterBridge.php) sólo intenta enlazar encounter con `AGENDA_ENABLE_CLINICAL_ENCOUNTER_BRIDGE=1`, estado `completed` y gate M6, por HTTP separado con error capturado/log; la [decisión de Agenda](../clinical/DECISION_AGENDA_CREATES_CLINICAL_ENCOUNTER_V1.md) explica su propósito, no elimina esos gates. No asumir transacción distribuida entre guardado de sede, OTP, cita y consulta: son comandos/etapas separados, con conflictos y recuperación propios.
 
-**Resultado/estado.** Read models Agenda/público vuelven a consultar disponibilidad/cita; un hold o mensaje enviado no es cita confirmada. Si falla proveedor, token o slot, se informa fallo/expiración/conflicto, sin duplicar cita. Autoridad de operador sólo dentro de grants exactos y no inicia actos profesionales. [AG-01..07 y PRF-03..05](INVENTARIO_FUNCIONAL_MXMED.md), [mapa Agenda histórico](../MAPEO_AGENDA_MXMED.md); actual ejecución/delivery no revalidada aquí.
+**Resultado/estado.** Read models Agenda/público vuelven a consultar disponibilidad/cita; un hold o mensaje enviado no es cita confirmada. Proveedor, token o slot inválidos tienen respuestas de fallo/expiración/conflicto. Replay confirmado se trata por su etapa; no se acredita consistencia global de todos los reintentos de reserva/flow. Waitlist asigna por otro consumidor: faltan paridad de controles/atomicidad global y guard equivalente en actualización por ID; ver AGENDA-ESP. Autoridad de operador sólo dentro de grants exactos y no inicia actos profesionales. [AG-01..07 y PRF-03..05](INVENTARIO_FUNCIONAL_MXMED.md), [mapa Agenda histórico](../MAPEO_AGENDA_MXMED.md); actual ejecución/delivery no revalidada aquí.
 
 <a id="j05-paciente-consulta-y-expediente"></a>
 
@@ -72,6 +78,8 @@ Cada familia conserva writer, autoridad y estrategia de snapshot; un PNG de firm
 
 ## J07 — Owner, operador y Agenda original
 
+**Precisiones CTX-MAP03.** [AGENDA-OP01](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-op01) recupera las rutas efectivas del adapter, no toda acción de Agenda por analogía; [identidades y atribución](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-identidad) separa creador original, alias actual, editor posterior, canal, solicitante, paciente y médico. [Waitlist](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-esp01) y [Call Center](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-cc01) conservan fronteras diferentes; personal de plataforma no ocupa las dos plazas por ese motivo.
+
 **Cadena.** `#p-ag-operadores` → [canonical-operators.js](../../assets/js/agenda/canonical-operators.js) / [operators-panel.js](../../assets/js/agenda/operators-panel.js) → [API operadores](../../api/profile-operators/index.php) → [OperatorHttp](../../modules/identity/operators/OperatorHttp.php) → [ProfileOperatorService](../../modules/identity/operators/ProfileOperatorService.php). Bootstrap/overview son lectura; command es escritura gobernada; invitado debe identificarse como destinatario exacto para aceptar/rechazar. Sólo owner administra, sin elevar al collaborator existente.
 
 **Transacción/delivery.** Sesión/CSRF, cuenta, membership vigente, entitlement, command digest y cupo se revalidan bajo lock de perfil. Invitaciones/grants/revisiones + auditoría se escriben atómicamente según comando; entrega usa adaptador separado, no browser ni insert manual. Pending/active/suspended reservan plaza de las dos; revoked libera conservando historia. Repetición y concurrencia se resuelven por comando/revisión, no por email/alias.
@@ -83,6 +91,8 @@ Cada familia conserva writer, autoridad y estrategia de snapshot; un PNG de firm
 <a id="j08-plan-stripe-y-activación"></a>
 
 ## J08 — Plan, Stripe y activación
+
+CTX-MAP03 amplía [descuento y contrato COM-09](TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#descuentos-com-09): el control de cupón no prueba validación ni persistencia. [COM-01..08](TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#casos-com-01-a-com-08) separa procedencia comercial, asesor de venta/soporte, revisor, aceptante y actor técnico; aceptación contractual no atribuye automáticamente una venta.
 
 Traza detallada [J08 financiero](STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#j08--plan--pago--evento--activación--entitlements): catálogo/precio/aceptación → ruta/checkout snapshot servidor → PaymentIntent → montaje browser (confirmación/retorno incompletos) → webhook firmado/deduplicado → pago confirmado → activación explícita en otra transacción → `profile_subscriptions` → capacidades/DTO público.
 
@@ -103,6 +113,8 @@ La confirmación pertenece a `ProcessStripeSubscriptionWebhookService`; la activ
 <a id="j10-facturación-clínica-y-frontera-fiscal"></a>
 
 ## J10 — Facturación clínica y frontera fiscal
+
+CTX-MAP03 detalla operaciones de BILL-01..06 y su matriz médico/operador/staff en el [mapa financiero](STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md). Selección paciente/link, defaults fiscales, emisor/CSD, borradores/revisiones, archivo privado y PAC no comparten automáticamente permisos ni la misma revalidación de lectura. Un descuento de concepto fiscal tampoco es cupón de suscripción MXMED.
 
 Traza detallada [J10 financiero](STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#j10--contexto-clínico--receptoremisor--borradorarchivo--límite-pac): paciente/contexto → perfil fiscal receptor y emisor/CSD → borrador/items/impuestos/preview → archivo importado o frontera PAC → estados/audit/reconciliación.
 

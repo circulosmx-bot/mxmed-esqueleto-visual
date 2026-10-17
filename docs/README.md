@@ -32,8 +32,12 @@ Baseline fuente `1b8dfccb68a7613b2182507a840454631dbf012a`, 2026-10-17. Elegir u
 | AWS, runtime local, packaging y evidencia de despliegue/teardown | [AWS y entornos](contexto/AWS_Y_ENTORNOS_MXMED.md); remoto actual no verificado |
 | Stripe, activación, facturación/PAC y otros proveedores | [Stripe y servicios externos](contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md); confirmación de pago y activación tienen dueños distintos |
 | Límites, historia, doce preguntas y mantenimiento | [Cobertura y pendientes](contexto/COBERTURA_Y_PENDIENTES_MXMED.md) |
+| Casos de negocio por canal/actor de Agenda, waitlist y Call Center | [Matriz CTX-MAP03](contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md): CTA integrado del perfil, médico, operador y límites de atribución |
+| Captación comercial, asesor de venta/soporte, cupones y workspace interno | [Trazabilidad comercial CTX-MAP03](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md): evidencia por caso y readiness, separadas de enrollment/C4 |
 
 Cobertura medida: 2.967 paths del baseline, doce módulos, 183 entradas candidatas, 119 capacidades funcionales y 18 componentes AWS; metadata local de 128 tablas/204 nombres fuente o físicos. Las 49 declaraciones de rutas extraídas no son el universo de rutas dinámicas. Detalles, exclusiones, refs fuera del baseline e incertidumbres están en cobertura. Próxima acción de producto/piloto: `NONE_PENDING_DIRECTOR_REVIEW`.
+
+CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee00`; conserva el censo/metadata de CTX-MAP02 sin reejecutarlo. La [traza fiscal BILL-01..06](contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md) distingue médico, operador y staff. Fuente conectada no acredita operación física ni crea una nueva política comercial o delegación.
 
 ## Componentes y contratos
 
@@ -114,7 +118,7 @@ Cobertura medida: 2.967 paths del baseline, doce módulos, 183 entradas candidat
 - UI/API: [Facturación original](../private-app.php), [perfiles fiscales](../api/billing/patient-profiles.php), [emisión](../api/billing/issuance.php).
 - Servicios: [PatientBillingProfilesService](../modules/billing/services/PatientBillingProfilesService.php), [InvoiceDraftService](../modules/billing/services/InvoiceDraftService.php); writers/readers [perfiles](../modules/billing/repositories/PatientBillingProfilesRepository.php), [archivo](../modules/billing/repositories/InvoiceRepository.php).
 - Contratos: [Billing](../modules/billing/README.md), [FISC02B](billing/FISC02B_ISSUANCE_CORE.md), [decisión PAC](billing/PAC_DEC01_PROVIDER_SELECTION_AND_INTEGRATION_STRATEGY.md). QA: [IssuanceCoreTest](../modules/billing/tests/IssuanceCoreTest.php).
-- Límite: borrador no es CFDI timbrado; selección/contrato PAC y operación fiscal requieren autorización específica.
+- Límite: borrador no es CFDI timbrado. PAC-DEC01 eligió SW primario y Finkok alternativo; adaptar/configurar el proveedor y operar fiscalmente requiere autorización específica, no una nueva selección.
 
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
 - UI/API: [workspace staff original](../internal/media-review/index.php), [servicios Identity](../modules/identity/services/).

@@ -353,6 +353,65 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
 
 ## BILL — facturación clínica, archivo y límite PAC
 
+**Ampliación CTX-MAP03 · 2026-10-17 · baseline `0bea8195ce75c309a54cba35acb4605ba290ee00`.**
+Los IDs `BILL-01`…`BILL-06` se conservan; `UC-BILL-*` identifica las preguntas de negocio
+concretas añadidas. Se inspeccionaron los tres entrypoints Billing, sus cuatro módulos JS,
+servicios/repositorios, DDL fiscal y contratos enlazados. Se reutiliza la
+[metadata local CTX-MAP02](METADATOS_LOCALES_MXMED.json), no se consultaron filas, HTTP,
+navegadores, SAT o PAC ni se ejecutaron tests. Sus diez tablas `billing_*` constan instaladas
+**en ese snapshot**; no se verifica instalación ni operación actuales por leerlo.
+
+#### Autoridad compartida y actores por operación
+
+Las tres APIs llaman a [GallerySessionScope::resolve](../../modules/media/services/GallerySessionScope.php#L10).
+En runtime canónico revalida la cookie Identity mediante
+[PrivateApplicationAccessResolver::resolve](../../modules/identity/http/PrivateApplicationAccessResolver.php#L38)
+y [CanonicalDoctorMembershipPolicy::select](../../modules/identity/http/CanonicalClinicalIdentityResolver.php#L40):
+una membresía médica elegible, activa, scope `profile|profile_doctor`, rol
+`owner|administrator|collaborator`, sin grupo y sin ambigüedad. El origen
+`owner_operator_invitation` se deniega expresamente, aunque su etiqueta de rol cambie.
+Esto resuelve contexto de aplicación médica; no comprueba una capacidad fiscal individual,
+acreditación profesional C4, titularidad del RFC ni autorización del emisor por sí solo.
+Las capacidades clínicas que el resolver incluye en su DTO no son un gate fiscal en estos entrypoints.
+
+En la rama legacy del mismo resolver se exige usuario/médico coherentes y se rechaza
+`operator_id` o rol distinto de `doctor|medico|principal|owner`; no se usa una marca
+`billing` del registro Agenda como autoridad. Los servicios fiscales reciben `doctor_id`,
+no un comando delegado con `account_id/session_id/grant_id`. El usuario resuelto se usa
+para ligar el CSRF a usuario+médico, no se persiste como actor de negocio.
+
+| Caso/operación | Médico/contexto elegible actual | Operador nombrado por médico | Staff interno México Médico |
+|---|---|---|---|
+| UC-BILL-01A buscar/seleccionar paciente | Scope del médico de sesión; búsqueda reutilizada | Sin grant fiscal; su nombramiento no pasa el resolver médico | Su relación/grant IW01 no pasa como contexto médico |
+| UC-BILL-01B crear/editar/default/archivar receptor | Misma autoridad + relación/paciente activos + CSRF escritura | No conectado; Agenda no concede `billing.receivers.*` | Sin consumidor fiscal interno |
+| UC-BILL-02A preview XML/PDF | Misma autoridad + relación activa; perfil opcional de esa relación | No conectado | Sin consumidor fiscal interno |
+| UC-BILL-02B confirmar/importar histórico | Misma autoridad + lock relación + CSRF + hashes confirmados | No conectado | Sin consumidor fiscal interno |
+| UC-BILL-02C listar/detalle/descargar | Médico propietario + paciente/vínculo activos; scope del documento | No conectado; read/download no se heredan de Agenda | Sin consumidor fiscal interno |
+| UC-BILL-03A administrar/default/archivar emisor | Contexto médico + emisor propio + CSRF | No grant ratificado para CSD/emisor; no conectado | No por clase Director/Master/Advisor |
+| UC-BILL-03B preferencias y sugerencias | Contexto médico + emisor activo propio + CSRF al guardar | No conectado | Sin consumidor fiscal interno |
+| UC-BILL-03C listar/registrar certificado | Contexto médico + emisor propio; CSRF y custodia al registrar | No conectado; nunca implica acceso a llaves/contraseña | No por capacidad de acreditación/revisión |
+| UC-BILL-04A crear/actualizar conceptos y totales | Contexto médico + relación activa al guardar + revisión/CSRF | No grant draft/preview implementado | Sin consumidor fiscal interno |
+| UC-BILL-04B cargar/listar/preview borrador | Filtro médico; diferencias de revalidación detalladas abajo | No conectado; bootstrap no es DTO fiscal mínimo delegado | Sin consumidor fiscal interno |
+| UC-BILL-04C confirmar para emitir | Checkbox UI; no comando de confirmación persistida | No conectado | No implementado |
+| UC-BILL-05A certificar | API existe, siempre bloquea 409 | No grant issue implementado | No consumidor de emisión |
+| UC-BILL-05B reconciliar resultado PAC | Puerto preparado, sin ruta/conexión operativa | No implementado | No consumidor de reconciliación |
+| UC-BILL-06A cancelar CFDI/ver canceladas verificadas | Pestaña informativa, sin autoridad SAT/handler | No implementado | No consumidor fiscal interno |
+| UC-BILL-06B cobrar/refund/CFDI de pagos | No writer localizado en Billing inspeccionado | No implementado | No consumidor fiscal interno |
+
+Un staff que además tuviera una membresía médica elegible entraría por **esa membresía**,
+no por ser staff; no se hizo un probe de cuentas reales ni se infirió tal relación.
+[IW01](../product-completion/iw01-internal-governance-foundation.md) separa gobierno interno
+y operaciones; [OP-POL02, matriz fiscal y Q08](../identity/OP-POL02_NONMEDICAL_OPERATOR_IMPLEMENTATION_READINESS.md#4-mapa-por-operación-capacidades-endpoints-y-cambios-mínimos)
+plantea `billing.receivers.read/edit`, `billing.invoices.draft/preview/issue/read/download/import`
+como consumidores futuros con DTO/actor mínimos y decisiones Q08 pendientes. No son grants
+entregados ni permiso para habilitarlos. El
+[catálogo canónico actual](../../modules/identity/services/ProfileOperatorCapabilityCatalog.php#L8)
+contiene sólo cinco grants Agenda. El
+[catálogo interno](../../modules/identity/services/InternalCapabilityCatalog.php#L13)
+no contiene una operación de facturación de pacientes. Reutilizar los servicios fiscales
+exigiría un consumidor delegado explícito, autorización por acción, proyección mínima,
+identidad del actor y auditoría; no ampliar el bootstrap médico ni copiar el rol amplio legacy.
+
 ### BILL-01 — perfiles fiscales del receptor
 
 - **Actor/UI:** médico autorizado respecto de paciente activo; Facturación → Pacientes,
@@ -370,6 +429,36 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   Implemented/wired/source-inspected; [contrato FISC01](../../modules/billing/README.md) y
   [test](../../modules/billing/tests/PatientBillingProfilesTest.php) histórico/inspeccionado,
   sin nueva ejecución ni lectura de filas reales.
+
+#### UC-BILL-01A / UC-BILL-01B — ¿a quién factura y qué receptor se usa?
+
+- **Política:** [FISC01](../../modules/billing/README.md) hace al receptor propiedad de la
+  relación médico–paciente, no de la identidad global ni del pagador de suscripción.
+  El paciente clínico y la persona física/moral receptora pueden tener nombres distintos;
+  la aplicación no los equipara ni verifica la inscripción fiscal ante SAT.
+- **UC-BILL-01A, pantalla→lectura:** `#mx-billing-patient-search` submit →
+  [handler de búsqueda](../../assets/js/billing/patient-profiles.js#L92) →
+  `GET /api/billing/patient-profiles.php?action=search&q=…` →
+  [PatientsRepository::searchPatientsByDoctorId](../../api/billing/patient-profiles.php#L48).
+  Devuelve hasta 25 referencias `patient_id/display_name/sex`; `selectPatient` carga
+  `GET ?patient_id=…` y emite `mxmed:billing-patient-selected` a archivo/compositor.
+  Seleccionar en navegador no crea relación ni factura; no persiste una selección global.
+  La proyección contiene sexo para el icono: no asumirla suficiente/minimizada para un futuro delegado.
+- **UC-BILL-01B, controles→writer:** formulario `#mx-billing-profile-editor`, acciones
+  Editar/Hacer predeterminado/Eliminar → [handlers](../../assets/js/billing/patient-profiles.js#L108)
+  → `POST` crear, `PUT` editar, `POST action=set_default`, `DELETE` archivar en la misma API
+  → [PatientBillingProfilesService::create/update/makeDefault/archive](../../modules/billing/services/PatientBillingProfilesService.php#L23)
+  → [repositorio](../../modules/billing/repositories/PatientBillingProfilesRepository.php#L24).
+  Persiste `billing_patient_profiles.{billing_profile_id,doctor_id,patient_id,alias,
+  receiver_legal_name,rfc,fiscal_zip_code,fiscal_regime_code,default_cfdi_use_code,
+  billing_email,is_default,archived_at,created_at,updated_at}`. Esos son nombres de campos,
+  no un payload ni valores reales. Default del primero o explícito; lock del vínculo y
+  unique generado `(doctor_id,patient_id,active_default_slot)` impiden dos activos.
+- **Lectores/efectos/historia:** `list/findActive` exige vínculo y paciente activos;
+  compositor elige default o primer perfil y guarda el ID. Al archivar se oculta, no se
+  borra; receptor snapshot de CFDI importado no cambia. No se halló ledger de cambios de
+  receptor con cuenta/sesión en servicio/repositorio/DDL inspeccionados; timestamps no
+  identifican quién editó. Reutilizar este maestro, no inventar otro receptor por pantalla.
 
 ### BILL-02 — importar y consultar CFDI histórico
 
@@ -390,12 +479,51 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   Implemented/wired/source-inspected; [FISC02A](../../modules/billing/README.md),
   [test archivo](../../modules/billing/tests/InvoiceArchiveTest.php); no PAC llamado ni factura emitida.
 
+#### UC-BILL-02A / UC-BILL-02B / UC-BILL-02C — archivo, confirmación y descarga privada
+
+- **Política:** [FISC02A](../../modules/billing/README.md#fisc02a--archivo-de-facturas-históricas)
+  archiva evidencia histórica sin convertirla en emisión propia ni afirmar vigencia SAT.
+  Pantallas originales `#mx-billing-invoices-panel` y `#cfdi-listar`; no son la factura
+  de México Médico por un plan ni un recibo de Stripe.
+- **UC-BILL-02A:** `#mx-invoice-import-form` submit →
+  [invoices.js: preview/importData](../../assets/js/billing/invoices.js#L83) →
+  `POST multipart /api/billing/invoices.php action=preview` (`patient_id`, perfil opcional,
+  XML obligatorio/PDF opcional) →
+  [InvoiceArchiveService::preview](../../modules/billing/services/InvoiceArchiveService.php#L16).
+  Revalida scope, formato, duplicado y hashes; no escribe factura ni storage durable.
+- **UC-BILL-02B:** «Confirmar importación» `#mx-invoice-confirm` →
+  [handler de confirmación](../../assets/js/billing/invoices.js#L89) →
+  `POST multipart action=import` con `confirmed_xml_sha256/confirmed_pdf_sha256` →
+  [InvoiceArchiveService::import](../../modules/billing/services/InvoiceArchiveService.php#L37).
+  Repite parseo/alcance/duplicado, exige exactamente los archivos vistos, inicia transacción,
+  bloquea vínculo, guarda privados inmutables e inserta `billing_invoices`.
+  `(doctor_id,cfdi_uuid)` y `(doctor_id,xml_sha256)` son únicos; un fallo compensa sólo los
+  objetos recién guardados si no existe factura comprometida. No hay actualización/borrado HTTP.
+- **Persistencia/lectores:** `billing_invoices` conserva `invoice_id,doctor_id,patient_id,
+  billing_profile_id?,source_type=HISTORICAL_IMPORT,status=UNKNOWN,cfdi_uuid`, importes,
+  `receiver_*_snapshot,cfdi_use_code_snapshot`, claves privadas `xml/pdf_storage_key`,
+  `xml/pdf_sha256,xml/pdf_bytes,created_at`. Snapshot viene del XML, no del receptor actual;
+  no hay `imported_by_account_id/session_id` en este writer/DDL. El XML/PDF y su contexto
+  identifican documento/origen, no el humano importador.
+- **UC-BILL-02C:** tabs/lista → `GET action=list`, filtros fiscales por
+  `POST application/json action=search` para no poner RFC/receptor en URL; Ver detalles →
+  `GET action=detail&invoice_id=…&patient_id=…`; Descargar XML/PDF →
+  `GET action=download&invoice_id=…&patient_id=…&kind=xml|pdf` →
+  [InvoiceRepository::get/list](../../modules/billing/repositories/InvoiceRepository.php#L45)
+  (join médico/vínculo/paciente activos; `patient_id` adicional puede omitirse en API sin
+  perder el filtro médico) →
+  [InvoiceArchiveService::document](../../modules/billing/services/InvoiceArchiveService.php#L102)
+  comprueba clave esperada, hash/tamaño y sirve `attachment`; no devuelve URL pública.
+  No se halló auditoría de acceso/descarga por cuenta en estas rutas. Reutilizar archivo,
+  parser y storage; una futura auditoría/grant de lectura es distinta de importar o emitir.
+
 ### BILL-03 — emisor, preferencias y custodia CSD
 
 - **Actor/UI/route:** médico; `#cfdi-perfil-fiscal` y
   [fiscal-profile.js](../../assets/js/billing/fiscal-profile.js);
   [issuance.php](../../api/billing/issuance.php) GET bootstrap/issuer_csd,
-  POST create/default/register_csd, PUT update/preferences, DELETE archive.
+  POST create_issuer/default_issuer/register_csd,
+  PUT update_issuer/save_issuer_preferences, DELETE archive_issuer.
 - **Servicios/writer/read:** [IssuerProfileService](../../modules/billing/services/IssuerProfileService.php),
   [IssuerPreferencesService](../../modules/billing/services/IssuerPreferencesService.php),
   [CsdCredentialService](../../modules/billing/services/CsdCredentialService.php).
@@ -410,6 +538,47 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   sin llave cierra503. Implemented/wired/source-inspected, QA CSD sintética FISC02B;
   operación real/custodia productiva no verificadas.
 
+#### UC-BILL-03A / UC-BILL-03B / UC-BILL-03C — emisor autorizado y secretos
+
+- **Política:** [FISC02B](../billing/FISC02B_ISSUANCE_CORE.md#autoridades) y
+  [FISC-UX02](../billing/FISC-UX02_ISSUER_PREFERENCES.md) separan persona fiscal emisora,
+  perfil médico publicado, sugerencias UX y certificado. Las referencias PAC viejas se
+  leen con sucesor [PAC-DEC01](../billing/PAC_DEC01_PROVIDER_SELECTION_AND_INTEGRATION_STRATEGY.md).
+- **UC-BILL-03A:** `#mx-fiscal-editor`, tarjetas/default/archivo del módulo
+  [fiscal-profile.js](../../assets/js/billing/fiscal-profile.js#L99) →
+  `/api/billing/issuance.php`: `GET action=bootstrap`, `POST create_issuer/default_issuer`,
+  `PUT update_issuer`, `DELETE archive_issuer` →
+  [IssuerProfileService](../../modules/billing/services/IssuerProfileService.php#L26).
+  Persiste `billing_issuer_profiles.{issuer_profile_id,doctor_id,alias,issuer_legal_name,
+  rfc,fiscal_regime_code,expedition_postal_code,is_default,archived_at}`; lock médico +
+  unique `(doctor_id,active_default_slot)` preservan máximo un predeterminado activo;
+  archivar el predeterminado lo deja en cero y no nombra automáticamente otro.
+  `ISSUER_CREATED/UPDATED/DEFAULT_CHANGED/ARCHIVED` se registran
+  por médico/recurso. No es permiso para hacer owner a un collaborator ni prueba de mandato fiscal.
+- **UC-BILL-03B:** `#mx-fiscal-preferences` →
+  [submit](../../assets/js/billing/fiscal-profile.js#L114) →
+  `PUT action=save_issuer_preferences` →
+  [IssuerPreferencesService::save/list/suggestion](../../modules/billing/services/IssuerPreferencesService.php#L23).
+  `billing_issuer_preferences` usa `(issuer_profile_id,doctor_id)` y campos
+  `default_concept_description,habitual_unit_price,invoice_logo_mode,updated_at`.
+  El lector JS sólo propone descripción/precio al primer concepto no editado; al guardar,
+  el borrador toma valores explícitos. Nunca infiere clave SAT, impuestos ni reescribe
+  borradores/facturas previos. `suggestion` consulta credenciales profesionales verificadas
+  activas; fallback «Servicios profesionales». Logo refiere medio aprobado READY,
+  no archivo/CSD; render PDF fiscal pendiente. Save no emite evento de auditoría en el servicio inspeccionado.
+- **UC-BILL-03C:** formulario CSD → [submit multipart](../../assets/js/billing/fiscal-profile.js#L120)
+  → `POST action=register_csd` (`certificate/private_key/password`), consulta metadata
+  `GET action=issuer_csd&issuer_id=…` →
+  [CsdCredentialService::register/list](../../modules/billing/services/CsdCredentialService.php#L14).
+  `billing_csd_credentials` guarda `credential_id,issuer_profile_id,doctor_id,
+  certificate_serial,certificate_rfc,certificate_sha256,valid_from,valid_to,
+  certificate_type=UNVERIFIED` y referencias de custodia, no claves/password en columnas.
+  `EncryptedLocalCsdStore` cifra cer/key/password; rollback compensa objetos nuevos.
+  Registro comprueba RFC si se pudo extraer del sujeto; no garantiza haberlo extraído.
+  No hay writer entregado que promueva `UNVERIFIED` a `CSD_VERIFIED`; el validador previo
+  exige este último y vigencia. `CSD_REGISTERED` registra recurso/resultado sin material secreto.
+  Reutilizar el puerto de custodia, no exponer el bootstrap/CSD al delegado.
+
 ### BILL-04 — compositor, cálculo exacto y preview de borrador
 
 - **Actor/UI/route:** médico/relación paciente válida, `#cfdi-crear`,
@@ -420,7 +589,7 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   [ExactInvoiceMath](../../modules/billing/services/ExactInvoiceMath.php),
   [CfdiPreStampValidator](../../modules/billing/services/CfdiPreStampValidator.php),
   [CfdiDraftXmlBuilder](../../modules/billing/services/CfdiDraftXmlBuilder.php).
-- **Transacción/datos:** `billing_invoice_drafts/items/item_taxes`, lock scope, revisión
+- **Transacción/datos:** `billing_invoice_drafts/items/item_taxes`, lock scope al guardar, revisión
   optimista, conceptos/impuestos y sumas DECIMAL18,6/BCMath servidor; no float cliente como
   autoridad. Guarda `DRAFT`, lectura devuelve cálculos y validaciones. XML estructural sin sello.
   `billing_invoice_issuance_events` registra metadata de acción sin secretos/XML.
@@ -430,6 +599,48 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   [FISC02B](../billing/FISC02B_ISSUANCE_CORE.md),
   [IssuanceCoreTest](../../modules/billing/tests/IssuanceCoreTest.php), QA histórica16sept2026;
   no acredita `CERTIFIED` ni cálculo ejecutado en este audit.
+
+#### UC-BILL-04A / UC-BILL-04B / UC-BILL-04C — conceptos, revisión y confirmación
+
+- **UC-BILL-04A, productor:** `#cfdi-crear` → selección recibida por
+  `mxmed:billing-patient-selected`, emisor/default receptor → formulario
+  `#mx-issuance-draft-form` → [readDraft/submit](../../assets/js/billing/issuance.js#L86)
+  → `POST action=create_draft` o `PUT action=update_draft` en `issuance.php` →
+  [InvoiceDraftService::save](../../modules/billing/services/InvoiceDraftService.php#L33).
+  Se comprueban paciente/vínculo activos, emisor propio y receptor activo de esa misma
+  relación; IDs de solicitud no sustituyen el médico de sesión. Campo `revision` requerido
+  al editar; lock + comparación exacta o `draft_revision_conflict`409.
+- **Cálculo/persistencia:** [ExactInvoiceMath::compute](../../modules/billing/services/ExactInvoiceMath.php#L21)
+  recibe cantidades/valores/descuentos como strings decimales, admite 1–100 conceptos,
+  valida descuento ≤ subtotal y calcula traslados/retenciones (`Tasa|Cuota|Exento`) con
+  BCMath a seis decimales, sin autoridad del total del navegador.
+  `billing_invoice_drafts` guarda scope/IDs, uso/moneda/método/forma/serie/folio,
+  `state=DRAFT,revision,subtotal,discount,tax_total,total`; `billing_invoice_draft_items`
+  guarda `line_no,product_service_code,description,quantity,unit_code,unit_value,discount,
+  line_subtotal,line_total,tax_object_code`; `billing_invoice_draft_item_taxes` guarda
+  `direction,tax_code,factor_code,rate,tax_base,amount`. Cada actualización sustituye
+  items/impuestos y aumenta revisión; no conserva todos los contenidos anteriores como
+  versiones inmutables. Evento `DRAFT_CREATED/UPDATED` se une a la transacción.
+  **Descuento fiscal por concepto no es cupón del plan**, promoción Stripe, comisión ni
+  atribución de asesor; no se deduce ninguna conexión comercial de esos campos.
+- **UC-BILL-04B, lectores:** `GET action=bootstrap` lista borradores médicos;
+  `GET action=draft&draft_id=…` →
+  [InvoiceDraftService::list/get](../../modules/billing/services/InvoiceDraftService.php#L17)
+  filtra doctor, pero esos métodos no vuelven a exigir vínculo/paciente activo.
+  `GET action=preview` →
+  [CfdiPreStampValidator::inspect](../../modules/billing/services/CfdiPreStampValidator.php#L14)
+  comprueba vínculo activo, receptor/emisor, CSD verificado, catálogos e importes y devuelve
+  incidencias como datos; `issuance.php` responde preview200 incluso con errores de validación.
+  No tratarlo como denegación403 de lectura ni como borrador READY autorizado.
+  El preview consulta emisor/receptor actuales: `DRAFT` tiene referencias y cantidades
+  guardadas, no snapshot fiscal final del emisor/receptor aceptado para emitir.
+- **UC-BILL-04C, primer límite:** el renderer de
+  [issuance.js](../../assets/js/billing/issuance.js#L22) ofrece checkbox
+  `#mx-issuance-confirm` y botón `#mx-issuance-stamp` permanentemente disabled.
+  No se encontró handler de ese checkbox que persista confirmación, identidad del aceptante
+  o revisión confirmada para timbrar. «Guardar borrador y revisar» sí guarda y abre preview;
+  no equivale a aceptar emisión. Reutilizar compositor, revisión, validación y archivo
+  antes de definir un futuro comando certificado; el contrato exacto de confirmación fiscal sigue pendiente.
 
 ### BILL-05 — timbrado, timeout y reconciliación PAC: frontera preparada
 
@@ -441,7 +652,8 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   No reabrir selección por el copy antiguo de FISC02B ni por el nombre del error runtime.
 - **Puerto/estado/datos:** [CfdiCertificationProviderPort](../../modules/billing/services/CfdiCertificationProviderPort.php)
   `certify/reconcile`, adaptador actual `UnconfiguredPacAdapter` rechaza ambos.
-  `billing_invoice_certification_attempts` reserva `(draft_id,revision)` e idempotency única;
+  DDL de `billing_invoice_certification_attempts` prepara unicidad de
+  `(draft_id,draft_revision)` e idempotency única; no hay writer HTTP de reserva entregado.
   `CERTIFICATION_PENDING/CERTIFIED/CERTIFICATION_FAILED/RECONCILIATION_REQUIRED` están modelados,
   no una transición HTTP entregada de certificación. `SwProvider` no existe.
 - **Contrato de fallo:** timeout ambiguo exige reconciliar identidad de emisión estable;
@@ -452,6 +664,23 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   No sandbox ni producción PAC realizados aquí; contrato de firma, cancelación ordinaria,
   respuestas SAT, multi-RFC, auth y compras aún requieren implementación/QA/autorización.
 
+#### UC-BILL-05A / UC-BILL-05B — ¿se puede timbrar o resolver una respuesta ambigua?
+
+- **UC-BILL-05A:** [dispatcher certify](../../api/billing/issuance.php#L93) no invoca
+  validador, puerto PAC ni writer de tentativa: sólo registra `CERTIFICATION_BLOCKED`
+  con `PAC_UNCONFIGURED` y responde409. Bootstrap mantiene `pac_provider_selected=false`
+  y `certification_enabled=false`: describe integración runtime, no revoca la selección SW.
+  El botón disabled no es una certificación parcialmente exitosa.
+- **UC-BILL-05B:** [CfdiCertificationProviderPort::reconcile](../../modules/billing/services/CfdiCertificationProviderPort.php#L11)
+  existe, pero [UnconfiguredPacAdapter::reconcile](../../modules/billing/services/UnconfiguredPacAdapter.php#L10)
+  rechaza; no se halló action HTTP `reconcile`, worker reconciliador ni writer productivo
+  de `billing_invoice_certification_attempts` en `api/billing`, servicios Billing y JS inspeccionados.
+  Tabla/estados/idempotencia son preparación, no historial de un PAC ejecutado.
+- **Recuperación/decisión:** PAC-DEC01 exige reutilizar identidad estable y reconciliar
+  timeout sin duplicar; integración SW primaria y Finkok alternativa requieren autorización,
+  adapter/custodia/modelo de firma, validación de respuesta, snapshot final y transacción
+  tentativa+factura+objetos. No se reabre selección ni se propone llamar al proveedor para completar este mapa.
+
 ### BILL-06 — facturas canceladas, CFDI pagos y cobro al paciente
 
 - **Actor/UI:** médico; `#cfdi-canceladas` es informativo. No handler de cancelación fiscal,
@@ -461,6 +690,42 @@ y `confirm-mock` están limitados a DEV/local; tampoco son confirmación de Stri
   pagos nuevo por una pestaña o enum existente.
 - **Estado:** partial/absent para ejecución fiscal, disconnected, source-inspected,
   authorization-pending. La mínima siguiente acción depende de autorización PAC, no de Stripe.
+
+#### UC-BILL-06A / UC-BILL-06B — cancelación y cobro son casos distintos
+
+- **UC-BILL-06A:** [pestaña original `#cfdi-canceladas`](../../private-app.php#L10306)
+  advierte que necesita verificación fiscal confiable. El archivo puede leer
+  `status=VERIFIED_CANCELED` como filtro/enum, pero import siempre escribe `UNKNOWN`;
+  no se encontró verificador SAT, comando de cancelación, motivo/sustitución/acuse ni
+  writer que cambie el estado fiscal en `api/billing`, `modules/billing` y JS Billing.
+  No interpretar enum, pestaña o XML importado como cancelación ejecutable/confirmada.
+- **UC-BILL-06B:** método/forma de pago CFDI describen la factura; no capturan dinero.
+  En esas mismas áreas se buscaron `cancel`, `cancelar`, `refund`, `payment`, `pago`,
+  `reconcile`, `certify`, `PAC` y sus dispatchers/servicios. No se localizó cobro a paciente,
+  refund o complemento CFDI de pagos funcional. Ésta es ausencia en el alcance inspeccionado,
+  no afirmación universal sobre todos los proveedores/rutas históricas del repositorio.
+  [SUBS-04](#subs-04--crear-paymentintent-stripe-desde-snapshot-servidor) procesa el plan
+  del médico para México Médico; no reutilizarlo como cobro clínico por coincidencia de términos.
+
+#### Estado por caso y límites de evidencia CTX-MAP03
+
+| Casos | PRODUCT_POLICY | SOURCE_IMPLEMENTATION | CONNECTION | VERIFICATION / entorno | OPERATION |
+|---|---|---|---|---|---|
+| UC-BILL-01A/01B | FISC01; delegación Q08 no decidida | IMPLEMENTED_AND_WIRED para contexto médico | UI/API/servicio/maestro conectados en fuente | SOURCE_INSPECTED `0bea8195`; tests FISC01 existentes/históricos, no corridos | UNVERIFIED normal-local actual |
+| UC-BILL-02A/02B/02C | FISC02A archivo privado | IMPLEMENTED_AND_WIRED para contexto médico | Preview→confirmación→archivo→download; sin actor delegado | SOURCE_INSPECTED; QA histórica FISC02A local 16sept2026; sin reejecución | UNVERIFIED normal-local actual; no emisión |
+| UC-BILL-03A/03B | FISC02B/FISC-UX02; no grant de operador emisor | IMPLEMENTED_AND_WIRED | Emisor/default/preferencias→compositor; PDF logo pendiente | SOURCE_INSPECTED; tests IssuerPreferencesSuggestion/IssuanceCore existentes | UNVERIFIED normal-local actual |
+| UC-BILL-03C | FISC02B custodia; promoción CSD pendiente | IMPLEMENTED_AND_WIRED registro; PREPARED_BUT_INACTIVE emisión | CSD registra UNVERIFIED; no writer de verificación SAT localizado | SOURCE_INSPECTED; certificados sintéticos QA histórica, ninguno real usado | UNVERIFIED custodia actual; emisión inactiva |
+| UC-BILL-04A/04B | FISC02B borrador/validación | IMPLEMENTED_AND_WIRED con diferencias de scope de lectura explícitas | Guardar→revisión→preview; sin snapshot final fiscal | SOURCE_INSPECTED; QA FISC02B 16sept2026 histórica; no test actual | UNVERIFIED normal-local actual |
+| UC-BILL-04C | Confirmación final requiere contrato técnico fiscal | UI_ONLY | Checkbox sin writer/handler de aceptación | SOURCE_INSPECTED del JS/dispatcher | Inactiva |
+| UC-BILL-05A/05B | PAC-DEC01 SW primario/Finkok alternativa aprobado | PREPARED_BUT_INACTIVE; certify bloqueado; puerto/DDL preparados | Sin adapter SW, ruta reconcile ni writer de tentativa localizado | SOURCE_INSPECTED; sin PAC/SAT remoto ni sandbox actual | Inactiva; autorización pendiente |
+| UC-BILL-06A/06B | Extensión fiscal/cobro fuera de entrega FISC02B | UI_ONLY canceladas; NOT_FOUND_IN_INSPECTED_SCOPE comandos | Sin escritor fiscal/de cobro localizado | SOURCE_INSPECTED en áreas/alternativas de búsqueda citadas | No ejecución operativa entregada en este scope |
+
+La auditoría [BillingIssuanceAudit::record](../../modules/billing/services/BillingIssuanceAudit.php#L12)
+y [DDL de eventos](../../modules/billing/db/2026_09_16_03_create_invoice_issuance_core.sql#L166)
+guardan `event_id,doctor_id,patient_id?,draft_id?,invoice_id?,issuer_profile_id?,
+billing_profile_id?,action,result,occurred_at`, sin cuenta/sesión/grant. La revisión del
+borrador tampoco equivale a versionado íntegro de contenido. Preservar estas diferencias
+es requisito previo a una delegación futura, no instrucción para migrar o modificar datos ahora.
 
 ## Journeys representativos 8 y 10
 

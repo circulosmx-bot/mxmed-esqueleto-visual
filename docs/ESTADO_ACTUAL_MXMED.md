@@ -3,11 +3,11 @@
 ## Ancla y alcance
 
 - Fecha de verificación documental: **2026-10-17**.
-- Baseline fuente verificado: `1b8dfccb68a7613b2182507a840454631dbf012a` (ACT04-RECON02 publicado).
-- Rama: `ux/consultation-step2-vitals-r1`; al iniciar CTX-MAP02, HEAD/upstream/remoto coinciden y worktree limpio.
+- Baseline fuente verificado: `0bea8195ce75c309a54cba35acb4605ba290ee00` (CTX-MAP02 publicado; producto preservado).
+- Rama: `ux/consultation-step2-vitals-r1`; al iniciar CTX-MAP03, HEAD/upstream/remoto coinciden y worktree limpio.
 - Worktree: `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`; no confundir con el checkout hermano `mxmed-esqueleto-visual`.
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
-- CTX-MAP02 documenta el sistema existente; no cambia producto, tests ni runtime. El ancla es el HEAD fuente inspeccionado, no el hash futuro de estos mapas.
+- CTX-MAP03 amplía casos de negocio de CTX-MAP02; no cambia producto, tests ni runtime. El ancla es el HEAD fuente inspeccionado, no el hash futuro de estos mapas.
 
 ## Producto existente
 
@@ -51,12 +51,14 @@
 ## Brechas técnicas vigentes
 
 - **Contactos privados:** Información personal ya conecta teléfono/WhatsApp administrativos con `doctor_contact_points`; Consultorio conecta teléfonos/WhatsApp de consulta con `consultorios.telefonos_json/whatsapp`. Seguridad/OTP conserva su autoridad separada. FREE puede almacenar datos privados; el DTO público conserva el ocultamiento por plan.
-- **Selectores globales no montados:** el hecho documentado en [ACT03](identity/ACT03-governed-professional-sources.md#teléfonos-free-contratos-distintos) permanece; por sí solo no demuestra una operación requerida ausente. ACT04-RECON02 no añade un editor global ni cambia PUB-COR02. Consultorio mantiene permisos de escritura owner/administrator; no elevar al collaborator para probarlo.
+- **Selectores globales no montados:** el hecho documentado en [ACT03](identity/ACT03-governed-professional-sources.md#teléfonos-free-contratos-distintos) permanece; por sí solo no demuestra una operación requerida ausente. ACT04-RECON02 no añade un editor global ni cambia PUB-COR02. Owner/administrator es la política preparada de escritura de Consultorio; CTX-MAP03 distingue su falta de enforcement por rol en el consumidor ordinario actual. No elevar roles ni interpretar esa brecha como aprobación de permisos.
 - **Maps:** selector existente preservado. La evidencia ACT03 sitúa errores `util/search_impl` del loader externo en visitas CLAIM al perfil público; no demuestra un defecto del selector privado. Sin sesión Safari privada disponible ni configuración efectiva acreditada, su fallo normal-local queda no reproducido; no se cambia proveedor/configuración.
 - **Documentos históricos:** HTML congelado puede compartir CSS actual; cualquier cambio futuro debe evaluar compatibilidad de presentación/paginación y firma.
 - **Finanzas:** [mapa Stripe/PAC](contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md) recupera confirmación de pago y activación explícita separadas; writes Identity/retorno/renovación conservan brechas. PAC seleccionado: SW primario, Finkok secundario; adapter/operación pendientes, no selección nueva.
 - **Clínica:** issuer/binding C4 implementado; consumidor profesional todavía deniega incondicionalmente. Alta paciente tiene disparidad de autorización fuente `unresolved`; no se hizo probe ni se cambió autoridad. [Mapa clínico](contexto/FUNCIONES_CLINICAS_MXMED.md).
 - **Infra:** IaC y cierres físicos históricos C3/SES recuperados; packaging actual omite shell/workflows y hay divergencia DB env. AWS/Stripe remotos no verificados. [Mapa AWS](contexto/AWS_Y_ENTORNOS_MXMED.md).
+- **Casos Agenda:** [CTX-MAP03](contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md) traza CTA integrado público y matriz por acción; waitlist/no-show no están en los cinco grants de operador. Call Center conserva contrato futuro y consumidor no acreditado; política por rol, scope waitlist y atribución ordinaria tienen brechas fuente explícitas, sin probes ni permisos nuevos.
+- **Comercial/asesores:** [CTX-MAP03](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) separa enrollment, captación, venta, soporte, revisor y aceptante. Cupón UI no acredita validación/snapshot/descuento canónico. Workspace staff y gobierno se reutilizan; no hay panel comercial completo acreditado.
 
 ## Evidencia reciente y reconciliación de tests
 
@@ -72,10 +74,11 @@
 ## Cobertura, autorizaciones y continuidad
 
 - CTX-MAP02: censo de 2.967 paths/19 raíces/doce módulos, 183 entradas candidatas y 49 declaraciones literales (no universo dinámico); [cobertura y doce retrieval checks](contexto/COBERTURA_Y_PENDIENTES_MXMED.md).
-- Metadata local READ ONLY: 128 tablas, cero vistas, 1.734 columnas, 138 FK, 35 triggers/once rutinas. Unión fuente/física de 204 nombres; todos con dominio; nueve sin CREATE quedan explícitos y 36 gaps léxicos de writer se reconciliaron por revisión dirigida. [Datos](contexto/DATOS_Y_MIGRACIONES_MXMED.md).
-- Sólo documentación/inventarios; sin filas reales, tests de producto, SQL aplicado, AWS/Stripe, envíos ni reinicios. Se conservan mapas antiguos con avisos de sucesor y ACT04 como tests corregidos.
+- CTX-MAP03: 35 casos (diez Agenda, quince Billing, diez comerciales), matriz de cinco canales y nueve ejemplos documentales; [respuestas y validación](contexto/COBERTURA_Y_PENDIENTES_MXMED.md#ctx-map03). No son nuevas funciones ni tests de producto.
+- Metadata heredada de CTX-MAP02, no consultada de nuevo en SQL: 128 tablas, cero vistas, 1.734 columnas, 138 FK, 35 triggers/once rutinas. Unión fuente/física de 204 nombres; todos con dominio; nueve sin CREATE quedan explícitos y 36 gaps léxicos de writer se reconciliaron por revisión dirigida. [Datos](contexto/DATOS_Y_MIGRACIONES_MXMED.md).
+- CTX-MAP03 sólo documentación y lectura dirigida de fuente/metadata ya publicada; sin filas reales, conexión SQL nueva, tests de producto, AWS/Stripe, envíos ni reinicios. Se conservan mapas antiguos con avisos de sucesor y ACT04 como tests corregidos.
 - Siguiente acción de producto/piloto: **NONE_PENDING_DIRECTOR_REVIEW**. Director prioriza una brecha; mapas no autorizan despliegue, DDL, SMS/custodias, staff/MFA, C4, owner, firma ni operadores.
-- Incertidumbres: remoto/proveedores/runtime físico; variantes SQL/rutas dinámicas; UI parciales y lineage físico. Decisiones comerciales/seguridad aprobadas no se reabren por README históricos.
+- Incertidumbres: remoto/proveedores/runtime físico; variantes SQL/rutas dinámicas; UI parciales, atribución comercial y lineage físico. Decisiones comerciales/seguridad aprobadas no se reabren por README históricos.
 - Inicio de nueva tarea: verificar Git/instrucciones, leer este estado, seguir un dominio del router y contrastar decisión/UI/writer antes de proponer cambios.
 - Cierre: baseline/post HEAD, alcance, comportamiento, pruebas y entorno, límites, referencias y autorizaciones pendientes; usar la [plantilla existente](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md).
 - Mantenimiento **manual y sólo autorizado**: actualizar IDs/journeys/objetos afectados y reemplazar este resumen después de un cambio material; anclar fecha/baseline verificados y preservar la historia en Git/contratos.
