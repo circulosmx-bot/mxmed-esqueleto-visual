@@ -1,5 +1,7 @@
 # PUB-ENR02 — origen público e información inicial pendiente
 
+**Continuación PUB-ENR03:** [resolución revisada y handoff explícito a C4](PUB-ENR03-reviewed-resolution-handoff.md) añade el escritor humano sobre el intake enviado, su migración 06 y el caso general resuelto a un perfil existente. Las secciones siguientes que describen ese handoff como pendiente documentan el alcance histórico de PUB-ENR02. Origen, registro/email, asociación e intake se conservan; normal-local sigue sin DDL ni activación.
+
 2026-10-16. Worktree `mxmed-step2-vitals-r1`, rama `ux/consultation-step2-vitals-r1`, inicio local/upstream/remoto `0df3fd018e7b3464dc09e082cac1c041a36e29b8`, limpio. Alcance: fuente funcional y ensayo nuevo sintético, sin despliegue ni envíos reales. Continúa [UX-ALIGN01](UX-ALIGN01-product-experience.md), no rehace su UI ni los escritores C4, membership, ownership o clínicos.
 
 ## Estado y composición

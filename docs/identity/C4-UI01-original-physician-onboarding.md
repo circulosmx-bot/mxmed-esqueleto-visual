@@ -1,5 +1,7 @@
 # C4-UI01 — acreditación profesional en la UI original
 
+**Continuación PUB-ENR03:** la [resolución gobernada](PUB-ENR03-reviewed-resolution-handoff.md) incorpora solicitudes pendientes a esta misma sección staff y su continuación exacta al expediente C4. Se ocultan IDs técnicos del texto visible; el test verifica el mismo scope en el DTO autenticado. La presentación general resuelta ya es un caso explícito, sin selección manual de perfil ni CLAIM ficticio. Normal-local mantiene el estado deshabilitado y las autorizaciones separadas de titularidad/firma.
+
 **Seguimiento C4-ACT01:** el [paquete de preparación operativa](C4-ACT01-operational-activation-package.md) concreta SMS, custodia/retención, esquema, staff y composición pendiente, sin activación. Distingue navegación de estado disponible de prueba funcional real aún bloqueada.
 
 2026-10-16. Worktree `mxmed-step2-vitals-r1`, rama `ux/consultation-step2-vitals-r1`, inicio local/upstream/remoto `391bcaa7aeb65f147ba3bc00bf34c5af76175019`, limpio. Implementación de fuente y QA desechable; sin activación, DDL, SMS, documentos, decisiones ni nuevas autoridades reales.

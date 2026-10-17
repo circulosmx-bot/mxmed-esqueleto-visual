@@ -1,5 +1,7 @@
 # C4-ADM02-IMP02 — emisor de admisión y vinculación profesional
 
+**Continuación PUB-ENR03:** este mismo emisor reconoce el [caso explícito de resolución revisada](PUB-ENR03-reviewed-resolution-handoff.md), incluido REQUEST_NEW_PROFILE asociado a un perfil existente sin cambiar el origen. Revalida la relación dentro del mismo PDO/transacción, además de la evidencia C4 confirmada. El hash incorpora esa relación sólo para expedientes enlazados; se conserva la compatibilidad anterior. No se escribe ownership ni se activa firma/DDL normal-local.
+
 **Seguimiento C4-UI01:** la [UI original de acreditación](C4-UI01-original-physician-onboarding.md) conecta este emisor mediante la misma evidencia y confirmación independiente. Se verifica en QA desechable; no selecciona la composición operativa ni activa DDL, SMS, owner o firma normal-local.
 
 2026-10-16. Worktree `mxmed-step2-vitals-r1`, rama `ux/consultation-step2-vitals-r1`, inicio local/upstream/remoto `ab14912456c257c7612335f5b3ea2dcfb224568f`, limpio. Implementación de fuente y ensayo sintético desechable autorizados; ninguna activación, DDL o mutación normal-local.

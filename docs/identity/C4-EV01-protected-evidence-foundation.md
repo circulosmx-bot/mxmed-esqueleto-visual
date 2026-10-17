@@ -1,5 +1,7 @@
 # C4-EV01 — expediente protegido y confirmación del médico
 
+**Continuación PUB-ENR03:** el [handoff de resolución revisada](PUB-ENR03-reviewed-resolution-handoff.md) añade `createFromEnrollment` al mismo servicio y referencias minimizadas al mismo puerto protegido. REQUEST_NEW_PROFILE resuelto conserva su origen; sólo la relación revisada vigente habilita ese caso explícito. Todos los controles de contacto, documentos, revisión/MFA y confirmación siguientes se conservan. Las limitaciones sobre ausencia de resolución descritas abajo son históricas; perfil nuevo y transferencia siguen cerrados. Sin activación real.
+
 **Seguimiento C4-UI01:** la [integración en la UI original](C4-UI01-original-physician-onboarding.md) añade el recorrido de cuenta/claim, revisión staff y confirmación/emisión, probado en Chromium/WebKit con servicios nativos desechables. Normal-local conserva el estado pendiente, sin intake, SMS, DDL ni autoridades reales. La ausencia de UI descrita abajo corresponde a esta entrega histórica.
 
 **Seguimiento C4-ADM02-IMP02:** el [emisor de admisión/binding](C4-ADM02-IMP02-physician-authority-issuer.md) reutiliza esta fundación, añade un handoff opcional desde la confirmación y completa emisión/lifecycle/elegibilidad con QA desechable. Las limitaciones de emisor descritas abajo son históricas; operación real, onboarding completo y firma siguen sin activar.
