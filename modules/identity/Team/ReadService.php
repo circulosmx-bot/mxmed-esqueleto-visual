@@ -41,7 +41,7 @@ final class ReadService
         $target=$input['target']??null;
         if($target!==null&&!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$target))throw new ReadFailure(400,'invalid_target');
         // Lists default to current membership; exact target reads retain historical access.
-        $status=$input['status']??($category==='ADVISOR'&&$target===null?'ACTIVE':'ALL');
+        $status=$input['status']??($target===null?'ACTIVE':'ALL');
         if(!in_array($status,['ACTIVE','SUSPENDED','REMOVED','ALL'],true))throw new ReadFailure(400,'invalid_status');
         $where='s.governance_class=?';$params=[$category];
         if($target!==null){$where.=' AND s.account_id=?';$params[]=$target;}
@@ -63,7 +63,7 @@ final class ReadService
                 'lifecycle_operations'=>$authority['mutations_enabled']&&$row['account_id']!==$viewer&&$row['governance_class']==='ADVISOR'&&$row['account_status']==='active'&&in_array($row['status'],['ACTIVE','SUSPENDED'],true)?[$row['status']==='ACTIVE'?'suspend':'reactivate']:[],
                 'removal_allowed'=>$authority['mutations_enabled']&&$authority['class']==='DIRECTOR'&&$row['account_id']!==$viewer&&$row['governance_class']==='ADVISOR'&&in_array($row['status'],['ACTIVE','SUSPENDED'],true),
                 'master_actions'=>$this->masterActions($row,$authority,$viewer,$grants),
-                'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>null];
+                'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>$target!==null?ActivityProjection::read($this->pdo,$row['account_id'],$authority):null];
         }
         return ['authority'=>$authority,'catalog'=>InternalCapabilityCatalog::all(),'items'=>$items,'page'=>$page,'page_size'=>$size,'has_more'=>$hasMore,'category'=>$category,'status'=>$status,'grant_semantics'=>'stored_active; use_requires_current_consumer_authority','personal_profile_source'=>'NOT_CONNECTED','identity_review_source'=>'NOT_CONNECTED','commercial_source'=>'NOT_CONNECTED'];
     }

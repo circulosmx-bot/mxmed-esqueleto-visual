@@ -180,3 +180,7 @@ Directorio Activos por defecto, estados históricos separados y solicitudes pend
 ## ASE-ADM02-UXFLOW03
 
 Preparación en asistente aprobado de cuatro pasos, revisión contextual separada y edición personal del integrante existente. Actor de reauth derivado de sesión en servidor. 39 checks funcionales y 11 de presentación PASS; producción inactiva. Véase [UXFLOW03](identity/ASE-ADM02-UXFLOW03.md).
+
+## ASE-ADM02-PANEL04
+
+[Panel contextual](identity/ASE-ADM02-PANEL04.md), base UXFLOW03 f9fe6950: encabezado/rol/logout canónicos, alta debajo de lista, secciones solicitadas y lectura mínima de historial existente. Permisos/admisión/MFA/baja preservados. No se encontró asignación vendedor ni relación asesor–cliente: no conexión financiera ni comisiones inventadas. Sólo ensayo sintético; aceptación visual del Director pendiente.

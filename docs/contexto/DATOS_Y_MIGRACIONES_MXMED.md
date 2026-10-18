@@ -169,3 +169,7 @@ No añade migraciones: filtra internal_staff.status antes de paginar y distingue
 ## UXFLOW03 — sin migración
 
 Sin objetos nuevos. Reutiliza versiones/procedencia personal, invitaciones y casos; proyección de acciones elegibles y caso vinculado. Challenge deriva email de auth_accounts por actor autenticado; no acepta email como campo del navegador. Véase [UXFLOW03](../identity/ASE-ADM02-UXFLOW03.md).
+
+## PANEL04 — proyección sin migración
+
+[Contrato](../identity/ASE-ADM02-PANEL04.md): manifest documental y audit existente minimizados, sin tabla/ledger/versionado paralelo. History máximo100 con orden UTC+event_id, sólo target/caso exacto y ámbito delegado; sin metadata privada. No nuevas atribuciones, porcentajes, pagos o comisiones.

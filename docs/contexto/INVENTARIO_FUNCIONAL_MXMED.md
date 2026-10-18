@@ -344,3 +344,7 @@ P=corrección solicitada; S=filtro SQL de estado y navegación de solicitudes; C
 ## ID-07 / COM-10 — UXFLOW03
 
 P=separación explícita aprobada; S=asistente y lectores/writers existentes; C=caso/invitación, revisión contextual con step-up, edición personal versionada; V=39 checks funcionales y 11 de presentación PASS; O=aislado sintético. Véase [UXFLOW03](../identity/ASE-ADM02-UXFLOW03.md).
+
+## ID-07 / COM-10 — PANEL04
+
+P=reorganización explícita del Director; S=componentes/writers existentes y proyección audit minimizada; C=logout, documento por manifest, historial según target/delegación; V=ver [PANEL04](../identity/ASE-ADM02-PANEL04.md); O=ensayo aislado, sin activación. COM financiero no integrado: falta atribución canónica y clasificación vendedor, no se infiere de la categoría ADVISOR.

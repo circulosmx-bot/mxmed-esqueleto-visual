@@ -1,0 +1,50 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Previous logout error reproduced exactly after canonical session closure",
+      "pass": true
+    },
+    {
+      "name": "Recovered synthetic active and removed records preserved",
+      "pass": true
+    },
+    {
+      "name": "Historical state filters survive navigation",
+      "pass": true
+    },
+    {
+      "name": "Final responsive panel and wizard 1440",
+      "pass": true
+    },
+    {
+      "name": "Final responsive panel and wizard 1366",
+      "pass": true
+    },
+    {
+      "name": "Final responsive panel and wizard 390",
+      "pass": true
+    },
+    {
+      "name": "Logout teardown has no JavaScript errors",
+      "pass": true
+    },
+    {
+      "name": "Session cookie removed by canonical endpoint",
+      "pass": true
+    },
+    {
+      "name": "Master role boundary and canonical logout preserved",
+      "pass": true
+    }
+  ],
+  "check_count": 9,
+  "previous_error": [
+    "Cannot set properties of null (setting 'value')"
+  ],
+  "errors_after_fix": [],
+  "source_sha256": "63db614093496fe9215b7cb45be685e9aa38e34b0b12599f4d167de523a57077",
+  "canonical_records_preserved": true,
+  "real_personal_data_used": false,
+  "production_activation": false
+}

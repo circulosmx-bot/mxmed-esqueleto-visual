@@ -18,7 +18,7 @@ def setup(r,check):
     (owned/'applicant-password').write_text(secrets.token_urlsafe(32)+'Aa1!')
     (owned/'staff-private').mkdir(mode=0o700)
     # Private config bound to source, exact checkout, own datadir and expiry. Never a production composition.
-    files=[*root.glob('modules/identity/StaffWorkflow/*.php'),*root.glob('modules/identity/StaffMedia/*.php'),*root.glob('modules/identity/StaffAdmission/*.php'),root/'modules/identity/services/InternalGovernanceService.php',root/'modules/identity/services/StaffMfaService.php',root/'scripts/ase-adm02-workflow-runtime.php',root/'scripts/ase-adm02-workflow-router.php']
+    files=[*root.glob('modules/identity/Team/*.php'),*root.glob('modules/identity/StaffWorkflow/*.php'),*root.glob('modules/identity/StaffMedia/*.php'),*root.glob('modules/identity/StaffAdmission/*.php'),root/'modules/identity/services/InternalGovernanceService.php',root/'modules/identity/services/StaffMfaService.php',root/'scripts/ase-adm02-workflow-runtime.php',root/'scripts/ase-adm02-workflow-router.php']
     (owned/'workflow-approval.json').write_text(json.dumps({'root':str(root),'database':db,'expires':int(time.time())+7200,'source_hashes':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}))
     check('Fresh schema installed; historical governance operations preserved plus staff review', 'STAFF_ADMISSION_REVIEW' in sql("SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=%s AND CONSTRAINT_NAME='ck_auth_governance_case_operation'",(db,))[0][0])
 

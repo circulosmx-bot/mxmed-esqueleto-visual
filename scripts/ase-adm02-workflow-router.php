@@ -6,6 +6,7 @@ try{
  require_once __DIR__.'/ase-adm02-workflow-runtime.php';
  $services=staffWorkflowOwnedServices();
  if($path==='/api/internal/staff-admission/workflow.php'){\Identity\StaffWorkflow\Http::handle($services);return true;}
+ if($path==='/api/identity/index.php/logout'){require __DIR__.'/../api/identity/index.php';return true;}
  if(preg_match('~^/assets/(css|js)/[a-z0-9-]+\.(css|js)$~D',$path))return false;
  if($path==='/api/internal/team/read.php'){
   \Identity\Team\Http::headers(true);if(!\Identity\Team\Http::method())return true;
@@ -13,7 +14,7 @@ try{
  }
  if(preg_match('~^/api/internal/team/(read|csrf|capability|lifecycle)\.php$~D',$path))return false;
  if($path==='/internal/media-review/index.php'){
-  \Identity\Team\Http::service()->authority($_COOKIE);\Identity\Team\Http::headers();header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'");$teamAuthorized=true;$staffWorkflowReady=true;
+  $teamAuthority=\Identity\Team\Http::service()->authority($_COOKIE);\Identity\Team\Http::headers();header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'");$teamAuthorized=true;$staffWorkflowReady=true;
   require __DIR__.'/../partials/identity/internal-team.php';return true;
  }
  if($path==='/staff-admission.php'){

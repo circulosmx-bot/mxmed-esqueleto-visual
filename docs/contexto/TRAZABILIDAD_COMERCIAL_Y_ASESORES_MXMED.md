@@ -231,3 +231,7 @@ Sucede frases previas «checklist/gestión sin adapter gráfico» sólo para lec
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta gobierno Master individual sin autoridad comercial implícita. Comisión recurrente de COM aprobada preservada, D01–D08 y siete políticas ADM sin decisiones nuevas. Retirar Master no determina derechos económicos futuros ni borra atribución.
+
+## PANEL04 — inspección de la conexión comercial
+
+[PANEL04](../identity/ASE-ADM02-PANEL04.md) confirma en f9fe6950 ausencia de clasificación comercial vendedor y vínculo canónico asesor–cliente. Readers financieros existen, pero falta ese vínculo autorizado; no se conectan por creator/reviewer/aceptante/email. No writer huérfano de porcentaje ni fixtures de cartera inventada. Se preservan D01–D08 y la distinción descuento/comisión/devengado/liquidado. La administración staff restante sí se integra con fuentes existentes.

@@ -58,3 +58,7 @@ Cerrar: `python3 /tmp/mxmed-uxflow03-review-w3i0n75b/control.py stop`. El runner
 | CONTEXT_SYNC_STATUS | PASS_UPDATED. |
 | DOCUMENTATION_COMMIT | Commit mixto de corrección, informado al entregar. |
 | REMAINING_CONTEXT_GAPS | Operación real, Safari físico, aceptación visual final y actualización documental postadmisión fuera del flujo existente. |
+
+## Sucesor de presentación
+
+[ASE-ADM02-PANEL04](ASE-ADM02-PANEL04.md) sucede jerarquía, ubicación de Agregar y disposición del detalle. Conserva este asistente y los writers/confirmaciones; la evidencia histórica de UXFLOW03 no se reinterpreta como cobertura comercial.

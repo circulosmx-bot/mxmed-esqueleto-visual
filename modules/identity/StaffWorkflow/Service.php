@@ -78,13 +78,16 @@ final class Service
     {
         $data=(new \Identity\Team\ReadService($this->p,$this->sessions))->read($cookies,$input);
         if(!$data['authority']['can_read_masters'])return $data;
-        return $this->unit->run($cookies,function($a)use($data){
+        return $this->unit->run($cookies,function($a)use($data,$input){
             foreach($data['items'] as &$item){
                 $id=$this->query('SELECT case_id FROM auth_staff_admission_completions WHERE account_id=?',[$item['account_reference']])->fetchColumn();if(!$id)continue;
                 $c=$this->case($id);$this->director($a,$c);
                 $p=$this->row('SELECT given_names,first_surname,second_surname,operation_state,operation_city FROM auth_staff_admission_versions WHERE case_id=? AND version=?',[$id,$c['version']]);
+                $manifest=$this->query('SELECT manifest FROM auth_staff_document_sets WHERE case_id=? ORDER BY sequence_number DESC LIMIT 1',[$id])->fetchColumn();
+                $item['documents']=$manifest?array_map(static fn($d)=>['kind'=>$d['kind'],'version'=>$d['document_version'],'pages'=>count($d['pages'])],json_decode($manifest,true,16,JSON_THROW_ON_ERROR)):[];
                 $item['admission_case_id']=$id;$item['personal_editable']=$item['staff_status']!=='REMOVED';$item['personal_profile']=$p;$item['identity_review']=['current'=>false];
                 try{$review=$this->approved($c);$item['identity_review']=['current'=>true,'review_version'=>$review['review_id']];}catch(\RuntimeException){}
+                if(isset($input['target']))$item['history']=\Identity\Team\ActivityProjection::read($this->p,$item['account_reference'],$data['authority'],$id);
                 $this->audit($a,$c,'read',$this->uuid());
             }unset($item);
             $data['personal_profile_source']='STAFF_ADMISSION';$data['identity_review_source']='VERSIONED_REVIEW';return $data;

@@ -211,3 +211,7 @@ Listado activo → detalle ACTIVE → borrador de permisos → confirmación →
 ## J09 — UXFLOW03
 
 Agregar → Persona/Categoría/Permisos/Revisión → prepare/issue sin activación. Pendientes → caso → acción concreta → contraseña/MFA → resultado; aceptación y admisión siguen separadas. Integrante → sección personal → update versionado, permisos y baja independientes. Véase [UXFLOW03](../identity/ASE-ADM02-UXFLOW03.md).
+
+## J09 — PANEL04
+
+Staff → categoría/estado → integrante → datos/documentación/funciones/restricciones/clientes/historial. Alta bajo listado → asistente UXFLOW03; acciones sensibles contextuales intactas. Cerrar sesión → POST Identity/CSRF → revocación canónica → retiro del panel. Historial distingue BY_MEMBER/ON_MEMBER y scope Master delegado. J08 no cambia: sin atribución comercial no se conectan finanzas. [PANEL04](../identity/ASE-ADM02-PANEL04.md).

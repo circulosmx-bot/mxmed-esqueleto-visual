@@ -180,3 +180,5 @@ Los enlaces son candidatos de selección, no una lista obligatoria de ejecución
 - **Preparación y revisión staff separadas:** [ASE-ADM02-UXFLOW03](identity/ASE-ADM02-UXFLOW03.md), asistente aprobado, revisión contextual y edición personal.
 - **Listado por estado y revisión de permisos ACTIVE:** [ASE-ADM02-UXFUNC02](identity/ASE-ADM02-UXFUNC02.md), sucesor acotado de UXFUNC01.
 - **Corrección funcional de administración staff:** [ASE-ADM02-UXFUNC01](identity/ASE-ADM02-UXFUNC01.md), alta visible, permisos interactivos y baja definitiva de Advisor; autoridad Master independiente preservada.
+
+- **Administración contextual del equipo:** [ASE-ADM02-PANEL04](identity/ASE-ADM02-PANEL04.md), sucesor de presentación UXFLOW03; logout, documentación e historial canónicos, con límites comerciales explícitos.

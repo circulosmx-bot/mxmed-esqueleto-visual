@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "at_utc": "2026-10-18T23:46:13.152594+00:00",
+  "source_baseline": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+  "branch": "feature/ase-adm02-panel04-team-administration",
+  "source_hashes_match": true,
+  "pinned_sources": 33,
+  "syntax": "PASS_PHP_JS_PYTHON",
+  "protected_worktrees_listeners_pointer_unchanged": true,
+  "chromium": {
+    "opened_at_unix": 1792367152.0803971,
+    "chromium_opened": true,
+    "director_session_ready": true,
+    "applicant_session_ready": true,
+    "guide_local_only": true,
+    "expiry_unix": 1792453026
+  },
+  "canonical_datadir_preserved": true,
+  "commercial_positive_path": "UNVERIFIED_MISSING_CANONICAL_SOURCE",
+  "visual_acceptance": "PENDING",
+  "prod_activation": false,
+  "local_link_paths_checked": 861
+}

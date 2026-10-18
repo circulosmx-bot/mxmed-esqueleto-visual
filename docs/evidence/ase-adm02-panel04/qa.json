@@ -1,0 +1,38 @@
+{
+  "result": "PASS_WITH_DOCUMENTED_CORRECTION",
+  "source_baseline": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+  "functional_checks_passed": 45,
+  "focused_regression_checks_passed": 9,
+  "initial_run": "failed-20261018T234337Z.json",
+  "regression": "smoke.json",
+  "resolved_failure": "Navigation attempted to set staff-status.value after canonical logout had removed the DOM; reproduced with previous client, guarded after fix.",
+  "only_product_change_after_initial_run": "Null guard after navigate action; previous source digest reconstructed and matched.",
+  "commercial_positive_fixture": "NOT_RUN_NO_CANONICAL_SELLER_ASSIGNMENT_OR_ADVISOR_CLIENT_RELATION",
+  "financial_values": "NOT_PROJECTED_NO_AUTHORIZED_RELATION",
+  "protected_unchanged": true,
+  "preview": {
+    "url": "https://127.0.0.1:63259/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792453026,
+    "owner_pid": 74277,
+    "recovered_existing_synthetic_datadir": true
+  },
+  "source_sha256": {
+    "assets/css/internal-team-admission.css": "f6c8442e4e22c587cdf53762e78470f6cf50c1554b24a9571b23d9a64d8cb16a",
+    "assets/js/internal-team-master.js": "05cdbf6b972b131c72d9e42cd0bb135e2b86a3920b4abf7a65c892fa64a526e0",
+    "assets/js/internal-team.js": "63db614093496fe9215b7cb45be685e9aa38e34b0b12599f4d167de523a57077",
+    "modules/identity/StaffWorkflow/Service.php": "c385461fbbbdcccf2a725e4ba8c2bc36891614e0793bf8b49e2e78171c19dbfe",
+    "modules/identity/Team/Page.php": "e773ed2e7c065c5abe3c821c0d813dc993835bfe22cf64aaab2d79314ad0d386",
+    "modules/identity/Team/ReadService.php": "c8aa865baab7f1437af5925997869d64e5033a1d57018a36530d4424d62d6303",
+    "modules/identity/tests/StaffWorkflowFixture.php": "c1887e74cb2725e893262306cb4eee014822c0cf227b17ea299da77c2b155385",
+    "partials/identity/internal-team.php": "de90499755ac9421c0a448d7db7fb26fc597504c285a6901390a19a8412e2dde",
+    "scripts/ase-adm02-workflow-checks.py": "1febad2c4e7cf92dd8783fbf165429ae73a46b74b6653bbb1ed288dc85087d8a",
+    "scripts/ase-adm02-workflow-router.php": "019c4e81b3af8ba645b0b480a1b0554ac5401f26582888b655b4b75f0a0083c4",
+    "modules/identity/Team/ActivityProjection.php": "f4206081a1aa4fa3a119547dc1698f4d00de335b722e5bfcbfe1d232cdb10df6",
+    "scripts/ase-adm02-panel04-checks.py": "5c0c778c1b27a08962db744fca73acbfd5839cf8bbe1da10c0a1eca4df1f8703",
+    "scripts/ase-adm02-panel04-qa.py": "8f3555883501b430b6fe4f45504d20884f45a2e6ad524406ee1a8610b4284610",
+    "scripts/ase-adm02-panel04-smoke.py": "b2beefdf4de57e9d7c0c192c5b6f14d7e152af37159605947ffadc17093f7127"
+  },
+  "real_personal_data_used": false,
+  "production_activation": false,
+  "director_visual_acceptance": "PENDING"
+}

@@ -35,6 +35,11 @@ try{
   $ceremony=new \Identity\Services\GovernanceStaffMfaCeremony($p,$mfa,$security,new \Identity\Adapters\CanonicalGovernanceAuditAdapter($p),$clock,['qa_master']);
   $r=$ceremony->begin($actor,$registrar,'qa_director@example.test',$password,'qa_master@example.test',$password);
   $ceremony->activate($actor,$r['factor_id'],\Identity\Services\StaffMfaService::totp($secret,intdiv(time(),30)));$result=['enrolled'=>true];
+ }elseif($action==='panel_limited_master'){
+  // Fixed synthetic fixture; canonical Director writer, never a product endpoint.
+  $governance=new InternalGovernanceService($fixture,$resolver);
+  $governance->execute(['__Host-mxmed_session'=>$tokens['director']],'delegate','qa_master','media_review_read');
+  $result=['delegated'=>true];
  }elseif($action==='consumer'){
   require_once dirname(__DIR__,2).'/media/services/MediaReviewAuthority.php';
   $authority=new \Identity\Services\InternalOperatorAuthority($resolver,new \Identity\Repositories\InternalOperatorGrantRepository($p));
