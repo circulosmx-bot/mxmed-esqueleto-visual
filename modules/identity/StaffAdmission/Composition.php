@@ -22,6 +22,7 @@ final class Composition
         $root=dirname(__DIR__,3);$files=glob(__DIR__.'/*.php');
         foreach(glob($root.'/api/internal/staff-admission/*.php') as $f)$files[]=$f;
         $files[]=$root.'/modules/identity/db/migrations/2026_10_18_04_staff_admission_foundation.sql';
+        $files[]=$root.'/modules/identity/db/migrations/2026_10_18_05_staff_admission_invitations.sql';
         sort($files);$hash=[];foreach($files as $f)$hash[substr($f,strlen($root)+1)]=hash_file('sha256',$f);
         return hash('sha256',json_encode($hash,JSON_THROW_ON_ERROR));
     }

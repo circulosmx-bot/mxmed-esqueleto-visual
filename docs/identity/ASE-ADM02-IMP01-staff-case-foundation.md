@@ -110,3 +110,7 @@ Limitaciones: sin UI/browser nueva ni Safari físico (UI-0), entrega/handshake d
 | REMAINING_CONTEXT_GAPS | ADM-IMP02 binding/invitación; políticas legales/retención/custodia/delegación; IMP03 evidencia, IMP04 revisión/port, IMP05 grants/MFA/handoff, D01–D08. |
 
 Siguiente autorización: ADM-IMP02 acotado para invitación preautorizada y handoff Identity, con autoridad/expiración/entrega/privacidad definidas. UI, documentos, revisión, admisión aprobada y operación real requieren fases independientes. Esta entrega no modifica register histórico ni habilita appointment Master.
+
+## Sucesor aislado ADM-IMP02
+
+[Invitación y binding](ASE-ADM02-IMP02-staff-invitation-binding.md) implementa intención Director/email protegido, tokens propios, aceptación con Identity real y vínculo atómico al mismo caso. La ausencia anterior de binding producto queda sucedida sólo en fuente/QA aislada. Composición HTTP de invitaciones sigue cerrada por TTL/canal/legal pendientes; positivo canónico CLI y confirmación propia HTTP IMP01. No staff/review/grants/activación ni UI.

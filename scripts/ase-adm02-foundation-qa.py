@@ -173,6 +173,7 @@ def main():
         from importlib.util import spec_from_file_location, module_from_spec
         spec=spec_from_file_location('admission_checks',ROOT/'scripts/ase-adm02-foundation-checks.py')
         tests=module_from_spec(spec);spec.loader.exec_module(tests);tests.run({**locals(),'ROOT':ROOT,'BASE':BASE},check,concurrency)
+        if HOOK is not None:HOOK({**locals(),'ROOT':ROOT,'BASE':BASE},check,concurrency)
     except Exception as exc:
         error=type(exc).__name__+': '+str(exc)
         # Errors here contain no cookies or credentials; private subprocess logs stay outside Git.

@@ -1,0 +1,204 @@
+{
+  "result": "PASS",
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "branch": "feature/act03-governance-check-compat01",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "branch": "feature/ase-adm02-staff-admission-policy",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "branch": "feature/ase-adm02-staff-case-foundation",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "branch": "feature/act03-governance-check-compat01",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "branch": "feature/ase-adm02-staff-admission-policy",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "branch": "feature/ase-adm02-staff-case-foundation",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_unchanged": true,
+  "qa_checks": 201,
+  "sql_concurrency_scenarios": 7,
+  "qa_source_hashes_match": true,
+  "php_lint_files": 28,
+  "python_syntax": "PASS",
+  "audit_policy_regressions": 2,
+  "real_database_changed": false,
+  "ui_changed": false,
+  "operational_activation": false,
+  "production_invitation_http": "BLOCKED_PENDING_POLICY",
+  "local_markdown_links": 823,
+  "protected_canonical_sources": {
+    "modules/identity/services/RegistrationService.php": "636685f8368a0f9c8189902f010392d977c4bbf5c73f3c883a524dda42b0cf88",
+    "modules/identity/services/EmailVerificationService.php": "0ced7223c9cb59d90830b3107a3731eea63927a24b2c42bc7e62b4aa229b4f93",
+    "modules/identity/repositories/OneTimeTokenRepository.php": "31adba3fbf4f8618761afb0ceff44aba8c796b430f51412aa5a4b8bbcfedeaab",
+    "modules/identity/contracts/OneTimeTokenPurpose.php": "1b4eeba54a5b5d7fb2cde2360c5236f4fe535f4b0fa97075fb3861cc3e39f20f",
+    "modules/identity/contracts/NotificationMessage.php": "d134fe05441a48d58603049c8e4f1d4b174e45e9ec0d0a59cdf6c49cd8ca915a",
+    "modules/identity/contracts/IdentityNotificationPort.php": "e077bd2decb69e637e6878709afe379d5fa43e67007d48819cb8e71803a58bb1",
+    "modules/identity/repositories/IdentityAccountRepository.php": "c7735ea07f1715ec743500c66258ba89f536309a085130f60c309c6a8d4ccd64",
+    "modules/identity/http/CanonicalHttpSessionResolver.php": "633051263883e5be65253a514669c41cc8e4da03457284b302c6d62ffe63b0c6",
+    "modules/identity/services/SessionService.php": "774bbf46676012a8f07f737977d2619595c5ab5370849a9eae132318177ccb8b",
+    "modules/identity/http/IdentityHttpComposition.php": "f89f04948b37963dd2ca4d5beb166e44ca6a526e3afa01ae5499c12478e0c2ec",
+    "modules/identity/services/InternalGovernanceService.php": "ed3469b891ccfb84421a218d0394d34d30a0bf701adaaf2c79c7ebf77a4f1957",
+    "modules/identity/Operational/DeploymentPackage.php": "c661fe2b0f730ee5b28c54f11f1c7655075f781d06ad2c88c7f55121594832dc",
+    "modules/identity/MasterGovernance/Composition.php": "df4e7a784777fc4dfce0530c10bcce6787d1c821f3772a8813e146c9f9d05fe7",
+    "modules/identity/adapters/UnavailableStaffIdentityReview.php": "f73c64f9bcb59b4869b2ab67688e8cd027f81281f9f4ff0e9874ec9b66dcdb3a",
+    "modules/identity/db/migrations/2026_10_18_04_staff_admission_foundation.sql": "440908fe4dd6a39f30770d3f3f12b16031fdd4b180c5a328ff435416dd16f352",
+    "modules/platform/services/CanonicalAuditPolicyRegistry.php": "5dcf32bd304eee7048340e9afc70947e7e5beb6728ce6f8a8c5117b224804ffe",
+    "modules/platform/contracts/CanonicalAuditEventType.php": "10e787c894a816bb1be16d80318e7e6e52db77f4fc34e36e7d3c253a7d87db02",
+    "modules/platform/services/SourceModuleCatalog.php": "f65f7b9f431b76d3d680b455b0f28853c4f35154c617de27b94036def28a76e6",
+    "modules/platform/services/CorrelatableOperationCatalog.php": "fecd88964fb2f94fa15dbeff7e98a90603bffc4e702e08282c1795ebfb7f61ac"
+  },
+  "diff_review": "PASS",
+  "context_sync_status": "PASS_UPDATED"
+}

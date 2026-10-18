@@ -252,3 +252,7 @@ Ninguna fase implementada aquí. Primero aprobar el alcance técnico sintético 
 ## Sucesor aislado ADM-IMP01
 
 [Fundación caso/perfil](ASE-ADM02-IMP01-staff-case-foundation.md) implementa únicamente preparación Director, snapshots/procedencia, confirmación exacta de cuenta vinculada y recibos idempotentes con auditoría canónica. Binding positivo sólo fixture CLI; producto no vincula cuentas y permanece default off. Principios y detalles pendientes de este contrato preservados; no review/approval/grants/MFA/activación ni UI.
+
+## Sucesor aislado ADM-IMP02
+
+[Invitación y binding](ASE-ADM02-IMP02-staff-invitation-binding.md) implementa intención Director/email protegido, tokens propios, aceptación con Identity real y vínculo atómico al mismo caso. La ausencia anterior de binding producto queda sucedida sólo en fuente/QA aislada. Composición HTTP de invitaciones sigue cerrada por TTL/canal/legal pendientes; positivo canónico CLI y confirmación propia HTTP IMP01. No staff/review/grants/activación ni UI.

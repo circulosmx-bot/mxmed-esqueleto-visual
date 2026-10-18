@@ -320,3 +320,7 @@ ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-chec
 ## ID-07 / COM-10 — ADM-IMP01 aislado
 
 [Fundación](../identity/ASE-ADM02-IMP01-staff-case-foundation.md): P=alcance Director/preparación/confirmación exacta autorizado; S=caso/versiones/recibos y dos eventos audit; C=API acotada default off, binding producto pendiente; V=101 checks sintéticos y tres escenarios concurrentes; O=inactivo. Reutiliza ID-01/02/03, sin nuevo motor de permisos, perfiles médicos o catálogo ejecutable.
+
+## ID-07 / COM-10 — ADM-IMP02 aislado
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): P=Director autoriza destinatario y aceptación personal; S=invitación/recibo/binding al caso existente; C=servicios canónicos y endpoints preparados, composición HTTP indisponible por políticas productivas pendientes; V=QA sintética con Identity real y confirmación propia HTTP IMP01; O=inactivo. Reuso ID-01/02/03, sin catálogo/grants nuevos.

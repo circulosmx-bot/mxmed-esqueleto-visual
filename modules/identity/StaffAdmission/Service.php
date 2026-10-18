@@ -23,24 +23,15 @@ final class Service
         return false;
     }
     private function transaction(array $cookies,callable $fn):array
+    {return (new UnitOfWork($this->pdo,$this->sessions))->run($cookies,$fn);}
+    /** Internal domain writer; caller must hold UnitOfWork actor locks and exact case lock. */
+    public function bindInvitationWithinTransaction(AuthenticatedAccessContext $actor,string $caseId,int $version,string $invitationId):void
     {
-        $actor=$this->sessions->resolve($cookies,true);
-        if(!$actor)throw new \RuntimeException('admission_authentication_required');
-        if($this->pdo->inTransaction())throw new \RuntimeException('admission_transaction_required');
-        try{
-            $this->pdo->beginTransaction();
-            // Same account -> staff -> credential order as canonical governance. Actor lock also serializes operation IDs.
-            $a=$this->row('SELECT status,email_verified_at FROM auth_accounts WHERE account_id=? FOR UPDATE',[$actor->accountId()]);
-            $this->query('SELECT account_id FROM internal_staff WHERE account_id=? FOR UPDATE',[$actor->accountId()])->fetchAll();
-            $c=$this->row('SELECT credential_version FROM auth_account_credentials WHERE account_id=? FOR UPDATE',[$actor->accountId()]);
-            if($a['status']!=='active'||$a['email_verified_at']===null||(int)$c['credential_version']!==$actor->principal()->credentialVersion())throw new \RuntimeException('admission_denied');
-            $result=$fn($actor);
-            $live=$this->sessions->resolve($cookies,true);
-            if(!$live||$live->accountId()!==$actor->accountId()||(string)$live->session()->sessionId()!==(string)$actor->session()->sessionId())throw new \RuntimeException('admission_denied');
-            if(!$this->pdo->commit())throw new \RuntimeException('admission_commit_uncertain');
-            return $result;
-        }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();
-            if($e instanceof \PDOException&&in_array((int)($e->errorInfo[1]??0),[1062,1213,1205],true))throw new \RuntimeException('admission_conflict');throw $e;}
+        if(!$this->pdo->inTransaction())throw new \RuntimeException('admission_transaction_required');
+        $case=$this->case($caseId);
+        if($case['state']!=='PREPARING'||(int)$case['version']!==$version||$case['bound_account_id']!==null
+            ||$this->query('SELECT account_id FROM internal_staff WHERE account_id=? FOR UPDATE',[$actor->accountId()])->fetchColumn())throw new \RuntimeException('admission_denied');
+        $this->query('UPDATE auth_staff_admission_cases SET bound_account_id=?,binding_credential_version=?,binding_reference=?,updated_at=UTC_TIMESTAMP(6) WHERE case_id=?',[$actor->accountId(),$actor->principal()->credentialVersion(),$invitationId,$caseId]);
     }
     private function case(string $id):array
     {return $this->row('SELECT * FROM auth_staff_admission_cases WHERE case_id=? FOR UPDATE',[$id]);}

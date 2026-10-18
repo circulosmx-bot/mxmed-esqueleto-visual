@@ -145,3 +145,7 @@ El snapshot Master real sólo contiene account_id, credential_version, review_ve
 ## ASE-ADM02-IMP01 — tres objetos staff aislados
 
 [Contrato/schema](../identity/ASE-ADM02-IMP01-staff-case-foundation.md) añade auth_staff_admission_cases, auth_staff_admission_versions y auth_staff_admission_operations: FK/CHECK/UNIQUE, puntero/versión anterior del mismo caso, snapshots/recibos inmutables con cuatro triggers. Migración18_04 sólo ensayada en MySQL nuevo; sin aplicación real ni cambio COMPAT01/DeploymentPackage. Dos eventos audit canónicos nuevos, sin datos personales en metadata; tablas Identity/staff/grants existentes intactas. Retención y eliminación gobernada pendientes antes de live.
+
+## ASE-ADM02-IMP02 — invitación y recibo
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Migración18_05 posterior a18_04 añade auth_staff_admission_invitations y auth_staff_admission_invitation_operations, tres triggers, FKs y una intención ACTIVE por caso. HMAC de destinatario por caso, digest de token aleatorio, expiración/estados terminales y recibos inmutables; binding en el mismo caso IMP01. Audit59 intacto. Sin email/token raw en SQL, cambios históricos/COMPAT01, backfill, staff ni DDL real.

@@ -65,6 +65,12 @@
 - Confirmación sólo cuenta legítimamente vinculada; producto no implementa binding y casos preparados no se pueden confirmar hasta ADM-IMP02. Master sin nueva autoridad; cero review/aprobación/grants/activación. Gate default off y autorización de despliegue/custodia/retención requeridos; principios aprobados no resuelven detalles legales.
 - 101 checks HTTP/SQL sintéticos PASS, tres escenarios concurrentes, dos regresiones audit. MySQL/Valkey/TLS nuevos retirados; once worktrees/listeners/pointer preservados. UI original y composición Master/port indisponible intactos. Sin DB/datos reales, merge o deploy.
 
+## Sucesor aislado ASE-ADM02-IMP02 — UI-0
+
+- Padre2330be886bc984d8ce89c5952113d540bdf1f3cb; feature `feature/ase-adm02-staff-invitation-binding`. [Invitación y binding](identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Director autoriza destinatario mediante HMAC por caso; token con expiración/revocación/reemisión, aceptación autenticada/verificada y consumo/vínculo/audit/recibo atómicos. Reutiliza caso/versionado IMP01, sin registro staff.
+- Registro/verificación/login canónicos probados con cuenta nueva sintética; cuenta existente conservada. Perfil propio confirmado/corregido por HTTP IMP01. La composición HTTP de invitaciones permanece indisponible por políticas productivas no ratificadas; ninguna excepción positiva por env/fixture.
+- 201 checks PASS, siete escenarios concurrentes y dos regresiones audit; límites en contrato/evidencia. Recursos propios dispuestos y doce worktrees/listeners/pointer protegidos. UI R2/COM/ADM, Master fail-closed y COMPAT01 preservados. Sin cuentas/envíos/DB/staff/grants reales, merge, deploy o activación.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

@@ -187,3 +187,7 @@ A–H definen cuenta existente/nueva/pendiente, duplicados, revocación/expiraci
 ## J09 — fundación parcial ADM-IMP01
 
 [Conexión aislada](../identity/ASE-ADM02-IMP01-staff-case-foundation.md): Director → preparar/actualizar caso → versiones/procedencia/audit → lectura de recibo por actor tras ACK perdido. Confirm/correct sólo persona vinculada; binding producto aún ausente, positivo CLI sintético. Casos ASSISTED/REMOTE_PREAUTHORIZED comparten estructura; no envío, review, aprobación ni register. Tres carreras SQL verifican versión y autoridad actuales; J08/D01–D08 sin cambios.
+
+## J09 — aceptación de invitación ADM-IMP02
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Director prepara → autoriza email exacto → intención/token propios → entrega inerte → registro/verificación/login canónicos o cuenta existente → aceptación exacta → consumo/vínculo/audit en SQL → lectura/corrección/confirmación propias IMP01. Fallo entrega conserva pending; ACK se reconcilia por operación sin replay ciego. HTTP invitación no disponible por política productiva pendiente; positivo CLI sintético. J08/D01–D08 y Master indisponible preservados.

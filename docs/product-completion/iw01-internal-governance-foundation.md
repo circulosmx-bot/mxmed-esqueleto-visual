@@ -104,3 +104,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## ADM-IMP01 — caso separado del registro staff
 
 [Fundación de admisión](../identity/ASE-ADM02-IMP01-staff-case-foundation.md) no invoca ni modifica execute/register. Preparar, corregir y confirmar datos nunca crean relación ACTIVE ni grants. Director prepara; management Master no concede autoridad de admisión. Snapshot/review Master indisponibles conservados; handoff operativo pertenece a IMP05.
+
+## ADM-IMP02 — vínculo sin autoridad staff
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Director vigente emite/reemite/revoca; Master con management no recibe autoridad nueva. Cuenta legítima acepta su caso sin register/grants/MFA/review. Relación staff preexistente se deniega para revisión separada, sin reactivación/democión/promoción. Perfil confirmado no satisface StaffIdentityReviewPort. HTTP invitación sigue cerrado por políticas pendientes.
