@@ -1,0 +1,69 @@
+{
+  "checkpoint": "6e7def31cf16f9e782ea9489e40f8d68ebf0b5b6",
+  "viewports": [
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "height": 900,
+      "page_height": 2563,
+      "matrix_height": 1681.84375,
+      "detail_height": 2175.40625
+    },
+    {
+      "engine": "chromium",
+      "width": 1366,
+      "height": 768,
+      "page_height": 2563,
+      "matrix_height": 1681.84375,
+      "detail_height": 2175.40625
+    },
+    {
+      "engine": "chromium",
+      "width": 820,
+      "height": 1180,
+      "page_height": 2754,
+      "matrix_height": 1756.828125,
+      "detail_height": 2344.96875
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 844,
+      "page_height": 3974,
+      "matrix_height": 2057.859375,
+      "detail_height": 2700.765625
+    },
+    {
+      "engine": "webkit",
+      "width": 1440,
+      "height": 900,
+      "page_height": 2562,
+      "matrix_height": 1681.515625,
+      "detail_height": 2175.03125
+    },
+    {
+      "engine": "webkit",
+      "width": 1366,
+      "height": 768,
+      "page_height": 2562,
+      "matrix_height": 1681.515625,
+      "detail_height": 2175.03125
+    },
+    {
+      "engine": "webkit",
+      "width": 820,
+      "height": 1180,
+      "page_height": 2754,
+      "matrix_height": 1756.453125,
+      "detail_height": 2344.515625
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "height": 844,
+      "page_height": 3974,
+      "matrix_height": 2057.453125,
+      "detail_height": 2700.25
+    }
+  ]
+}

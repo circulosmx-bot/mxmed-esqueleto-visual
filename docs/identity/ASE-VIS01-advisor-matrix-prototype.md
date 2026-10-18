@@ -1,4 +1,89 @@
-# ASE-VIS01 — prototipo reversible de asesores y permisos
+# ASE-VIS01 R2 — prototipo reversible del equipo interno
+
+## ASE-VIS01 R2 — revisión vigente, sin integración
+
+**Inicio:** prototipo `6e7def31cf16f9e782ea9489e40f8d68ebf0b5b6`; fuente oficial `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`. Misma rama/worktree/preview de R1. R1 permanece como checkpoint en Git y sus capturas/resultados anteriores son históricos de esa versión, no QA de R2.
+
+| Eje | R2 |
+|---|---|
+| `PRODUCT_POLICY` / `APPROVED FUNCTIONAL DESIGN` | Tres decisiones del Director: interfaz común para asesores/Masters; una incorporación guiada; familias contraíbles con selección múltiple visual e individualización. Sólo Director nombra/retira Masters; Master sólo gestiona asesores con gestión y delegación exactas. |
+| `SOURCE_IMPLEMENTATION` / `SIMULATED PROTOTYPE` | Extiende el mismo mock en memoria; directorio por categoría, gestión Master, incorporación de cuatro pasos y familias triestado. Ningún cambio productivo. |
+| `PROPOSED VISUAL APPEARANCE` | Conserva directorio izquierdo/detalle derecho, tipografía/colores y superficie. «EQUIPO INTERNO Y PERMISOS»; apariencia y responsive finales pendientes de aprobación. |
+| `EXISTING BACKEND` | Catálogo, Identity, gobierno, auditoría y ceremonia MFA existentes, leídos en fuente. No ejecutados por el mock. |
+| `CONNECTIVITY` / `MISSING BACKEND CONNECTION` | Sin sesión/API/DB/transporte. Faltan reader/adapter staff, incorporación orquestada, invitación/admisión staff, versionado y contrato específico de step-up Master. |
+| `VERIFICATION` | QA R2 y reducción de altura documentadas abajo. No prueba de autorización backend ni Safari físico. |
+| `OPERATIONAL_STATUS` | `PROTOTYPE_ONLY_NOT_OPERATIONAL`; no cuenta, grant, delegación, MFA o invitación real. 8091/8092/8443/6385 preservados. |
+
+### Directorio, permisos y gobierno
+
+- Asesores y Administradores maestros son filtros del mismo directorio. El Director raíz no es una tarjeta editable. Ocho personas ficticias iniciales; no constituyen cuota de staff. Las dos plazas de operadores por médico permanecen independientes.
+- Lucía Castaño ilustra dos grants operativos, gestión de asesores y tres delegaciones distintas (`media_review_read`, `media_review_approve`, `physician_accreditation_review`). Tomás Niebla ilustra un Master suspendido. Ninguno representa una persona real.
+- Director puede proponer/retirar designación Master con confirmación explícita separada y acknowledgement obligatorio. Proponer deja `PENDING_AUTHORIZATION` **sólo como estado UX**, conserva grants operativos y no añade gestión/delegaciones. Retirar conserva grants/historia, retira gestión y delegaciones y vuelve a la categoría Asesor, como el contrato de `remove_master`; conservar un grant no elimina gates de consumidor.
+- Master no accede a controles para nombrar Masters ni a targets propios/Masters; sólo asesores y su subconjunto exacto. Sin `internal_advisors_manage` no hay gestión. Tener grant de uso no equivale a poder concederlo; una delegación sin gestión tampoco autoriza administración.
+- En detalle Master, «Permisos para usar funciones» está separado de «Gestión y delegación para asesores». `internal_advisors_manage` se representa sólo allí como autoridad reservada otorgable por Director, nunca como familia operativa ADVISOR. `profile_initial_ownership_approve` sigue fuera del editor.
+
+### Familias y triestado
+
+Mismo catálogo de **18** entradas: **16** operativas delegables y **2** de gobierno. La tabla exacta de dominios/IDs de R1 siguiente continúa vigente. Cinco familias de presentación: Acreditación profesional (dos claves), Revisión de medios (seis), Correcciones de perfiles (dos), Administración de perfiles (cuatro), Organizaciones y proveedores (dos). No se crea capability genérica, bundle ni writer de grupo.
+
+Cada fila tiene **selección** y **expandir/contraer** como controles nativos distintos, con nombre accesible y `aria-expanded/controls`. Expandir no cambia grants. Checkbox padre usa `indeterminate` y `aria-checked=mixed` cuando hay selección parcial del total; conteos separan total seleccionado y subconjunto editable. Seleccionar/deseleccionar opera sólo sobre claves editables; conserva sin alteración las bloqueadas o fuera de delegación. Si sólo dos de seis son elegibles y quedan seleccionadas, el indicador global continúa mixto, con «2 de 2 editables» explícito. Si las otras cuatro ya estaban asignadas, se conservan y el total refleja ese hecho, sin atribuir su concesión al actor actual.
+
+Los cuatro `profile_*` siguen sólo lectura. Correcciones permanece bloqueada para targets ADVISOR; en Master se representa su consumidor de clase existente, sin nueva habilitación para asesores. Delegaciones de correcciones/futuro se conservan pero no se ofrecen como funciones utilizables por asesores. Las dos proveedoras mantienen el aviso de pantalla pendiente. **Asignación, autoridad efectiva y disponibilidad del consumidor son tres hechos distintos.**
+
+No autosave: **GUARDAR PERMISOS** confirma cada concesión/retiro y delegación por su etiqueta española, más cambios de gestión. Descarga privada/aprobación pública permanecen explícitas. Borrador, revertir, suspensión sin borrado, historial ficticio, conflicto/refresh y foco modal conservan la base R1. La simulación que rechaza el conjunto ante conflicto no promete atomicidad del backend futuro.
+
+### Incorporación unificada: una experiencia, varios pasos canónicos futuros
+
+«+ AGREGAR INTEGRANTE» abre Persona → Categoría → Permisos → Revisión. Sólo admite nombres ficticios y correos `@example.test`, sin consulta real de existencia. Director puede proponer Asesor/Master; Master autorizado sólo Asesor con su delegación. Configuración de gestión/delegaciones y confirmación privilegiada Master son exclusivas de Director. No se pide contraseña de otra persona.
+
+| Estado UX propuesto, nunca enum nuevo | Presentación del caso ficticio |
+|---|---|
+| `PENDING_INVITATION` | Solicitud de invitación o invitación vencida; nunca «enviada» ni cuenta activa. |
+| `PENDING_IDENTITY_VERIFICATION` | Falta verificación; sin autorización operativa. |
+| `PENDING_AUTHORIZATION` | Cuenta activa existente a reutilizar, propuesta Master o fallo parcial; falta autorización confirmada. |
+| `PENDING_MFA_SETUP` | Falta ceremonia MFA aplicable, con registrador independiente. |
+| `ACTIVE` / `SUSPENDED` | Fixtures previos para revisar uso/gestión y conservación de grants; no resultado automático de solicitar incorporación. |
+
+Confirmar sólo añade una **propuesta ficticia** al directorio con cero nuevos grants/gestión/delegaciones efectivos; guarda la intención por separado. El caso duplicado no crea otra entrada. Vencimiento y fallo parcial requieren revisión, refresh/reconciliación y confirmación legítima; no reenvío ni retry ciego. Cerrar/recargar descarta memoria. No se infiere identidad o relación staff por nombre/email coincidente.
+
+### Contrato futuro contrastado con registro y notificaciones
+
+| Fuente existente inspeccionada, sin instanciar | Reuso y límite |
+|---|---|
+| [RegistrationService](../../modules/identity/services/RegistrationService.php) | La persona aporta contraseña y aceptaciones/versiones legales. Crea cuenta pendiente, credencial/consents y token en transacción propia; **luego** notifica. Duplicado puede devolver decisión aceptada con razón específica: no acredita alta ni activación. Si falla notificar, conserva cuenta pendiente y trata de invalidar el token; no repetir alta a ciegas. |
+| [EmailVerificationService](../../modules/identity/services/EmailVerificationService.php) | Verifica propósito/expiración/consumo/invalidación, cuenta pendiente y consents; activa/consume canónicamente. `resend` reemplaza token en transacción y notifica después. No es invitación de staff ni autoriza gobierno. |
+| [IdentityNotificationPort](../../modules/identity/contracts/IdentityNotificationPort.php), [NotificationMessage](../../modules/identity/contracts/NotificationMessage.php), [OneTimeTokenPurpose](../../modules/identity/contracts/OneTimeTokenPurpose.php) | Transporte/proósitos existentes. No se localizó propósito ni handoff de invitación/admisión de staff interno. `OPERATOR_INVITATION` pertenece a operadores por médico; no se reutiliza como staff. |
+| [PreviewIdentityNotificationAdapter](../../modules/identity/adapters/PreviewIdentityNotificationAdapter.php), [composición normal-local](../../modules/identity/http/IdentityHttpComposition.php), [SesIdentityNotificationAdapter](../../modules/identity/adapters/SesIdentityNotificationAdapter.php) | Sink privado local y transporte productivo existentes, con sus límites de propósito/configuración; sólo lectura de fuente. Ninguna notificación, archivo de tokens ni proveedor ejecutado en R2. |
+| [InternalGovernanceService](../../modules/identity/services/InternalGovernanceService.php) | Cuenta activa existente para `register`; `appoint_master` crea relación Master o promueve Asesor activo bajo Director. `remove_master` conserva grants operativos y revoca gestión/delegaciones. `grant/revoke` y `delegate/revoke_delegation` son comandos exactos separados. No hay adapter staff conectado. |
+| [GovernanceStaffMfaCeremony](../../modules/identity/services/GovernanceStaffMfaCeremony.php), [GovernanceSecurityContext](../../modules/identity/services/GovernanceSecurityContext.php), [StaffMfaService](../../modules/identity/services/StaffMfaService.php) | Existen reauth/sesión viva, enrolamiento con registrador independiente aprobado y proofs ligados a operación. `InternalGovernanceService::execute` no los compone para nombramiento Master; la allowlist actual de desafíos no define `appoint_master`. No presentar una ceremonia visual completa ya implementada ni sustituirla por otra operación MFA. |
+
+Antes de integrar: aprobar adapter/reader paginado y minimizado con sesión canónica, métodos/CSRF, no-store/same-origin, autoridad/targets/allowlists y grants/delegaciones actuales; matching de cuenta autorizado sin enumeración ni filtración entre cuentas; admisión/invitación y aceptación por la persona, expiración/reemisión y duplicados; contrato específico de acción privilegiada con step-up ligado a actor/target/intención/versiones, auditoría y revalidación; definición de activación final y MFA aplicable. Reusar los servicios existentes, no un segundo login, password delegado, writer de grants o motor de roles.
+
+**Una incorporación guiada no es una transacción única.** El gobierno abre una transacción por comando y rechaza una exterior; no hay batch/CAS/idempotencia existentes. Hace falta snapshot/versionado real y orquestación aprobada con resultado autoritativo por capability/paso, éxito parcial visible, estado de commit/entrega desconocido, refresh, reconciliación de respuesta perdida y nueva confirmación. No declarar éxito global, retries ciegos ni rollback global silencioso. No activar una cuenta pendiente por el mero retorno `accepted` ni conceder gobierno desde una invitación.
+
+### QA R2 y gate
+
+**PASS del prototipo R2: 1.112 checks, ocho recorridos de 139, Chromium y WebKit en 1440×900, 1366×768, 820×1180 y 390×844.** [Resumen y hashes del candidato](../../prototypes/ase-vis01/evidence/r2/browser/summary.json). Se cubren escenarios 1–20, grupo completo/individual/mixto, permisos bloqueados conservados, gestión/delegación separadas, nombramiento/retiro, onboarding existente/nuevo/duplicado/vencido/parcial/verificación/MFA, conflicto/reconciliación y reapertura rápida de diálogo. Sin errores de aplicación, solicitudes fuera del allowlist, storage/cookies, llamadas Identity/DB o entrega real.
+
+La [comparación medida](../../prototypes/ase-vis01/evidence/r2/height-comparison.json) contra el [baseline R1](../../prototypes/ase-vis01/evidence/r2/baseline.json) muestra **61,48–67,14% menos altura de matriz**, según viewport/motor. Desktop 1440: ~1.682 →553px; tablet: ~1.757 →676px; móvil: ~2.058 →731px. La página inicial medida también se reduce; móvil usa directorio/detalle alternables. Sin overflow horizontal ni recortes observados en capturas. Targets >=44px, labels/descripciones asociados, triestado anunciado, expandir separado, foco visible, Tab/Shift+Tab modal, Escape/cancelar y retorno de foco verificados. Alcance de accesibilidad: DOM/teclado, sin lector de pantalla físico. Móvil `INTERIM_MOBILE_SMOKE_ONLY`; Safari físico `NOT_RUN` y aprobación visual final pendiente.
+
+**28 capturas R2:** [desktop](../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-collapsed.png), [tablet](../../prototypes/ase-vis01/evidence/r2/browser/webkit-820x1180-collapsed.png), [móvil](../../prototypes/ase-vis01/evidence/r2/browser/webkit-390x844-collapsed.png), [Master](../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-master-administration.png), [incorporación](../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-unified-onboarding.png), [expandido/mixto](../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-expanded-partial.png), [confirmación individual múltiple](../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-multi-confirmation.png). Las 40 capturas y el resultado R1 más abajo permanecen históricos, sin modificación.
+
+[Preservación y rollback R2](../../prototypes/ase-vis01/evidence/r2/isolation.json): 2.992 archivos fuente idénticos, HEAD/worktree oficiales preservados y mismos procesos 8443/8091/8092/6385. Servidor estático rechaza rutas productivas/repositorio (404) y POST (405). Se reabrió/detuvo sólo el preview de prueba8141, liberando ese puerto y conservando8140; recargar descarta simulaciones. Cero conexiones SQL o peticiones HTTP a la aplicación original. No se reejecutaron suites backend que muten datos; sus contratos/evidencias históricas no se sustituyen por esta QA de mocks.
+
+WebKit conserva 6/1/1/6 diagnósticos de captura por viewport (14 total): inserción exacta `body {}` del driver Playwright rechazada por CSP, correlacionada con mutación/timing/hash de herramienta como en R1. Otros errores de consola/CSP son fatales. No se cambió driver ni CSP. El candidato se probó antes de commit; el reporte identifica el HEAD inicial y SHA-256 de los nueve archivos pertinentes, que se cotejan con el árbol final antes del push. Un HEAD previo no se presenta como commit nuevo ya probado.
+
+Preview mismo loopback8140, expiración `2026-10-25T00:00:00Z`; servidor static allowlisted existente, ninguna exposición del repositorio/PHP. Reapertura y descarte seguro conservan las instrucciones R1. Fuentes/listeners originales deben permanecer idénticos; sin integración a la rama oficial. El commit exacto se informa al cerrar y sus bytes deben coincidir con los digests del candidato probado.
+
+CTX-SYNC01 R2: `CONTEXT_BASELINE=6e7def31` prototipo / `f92f37f1` fuente; mapas CTX-MAP02 `1b8dfccb` y CTX-MAP03 `0bea8195` como anclas históricas. IDs **ID-07/COM-10**, 18 claves sólo representadas; journeys **NONE** modificados; objetos **NONE** leídos/escritos (tablas Identity/staff/grants/delegaciones/auditoría sólo contrato futuro). Afecta este contrato, registro visual, estado, mapa asesores e IW01; no cambia censos ni router. `CONTEXT_VERIFICATION=PASS`: catálogo/fuente contrastados, 1.112 checks, capturas, reducción medida, aislamiento/rollback, diff y enlaces/anchors verificados. `CONTEXT_SYNC_STATUS=PASS_UPDATED` para los cinco documentos afectados; el cotejo de digests ata el candidato al commit final. `DOCUMENTATION_COMMIT` en entrega final; gaps: aprobación visual, reader/API/orquestación/invitación/versionado y step-up Master autorizados, operación real separada.
+
+**FINAL_VISUAL_APPROVAL=false**. Integración sólo tras **“Apruebo visualmente esta versión.”** y alcance posterior autorizado. Las tres decisiones funcionales no aprueban todavía la apariencia final.
+
+---
+
+## Contrato R1 preservado — checkpoint histórico
+
+Lo siguiente documenta el alcance, capturas y QA de R1 (`6e7def31`). R2 sucede su exclusión visual de gestión Master y su placeholder de alta; sus límites canónicos, fuente y seguridad continúan salvo los refinamientos explícitos anteriores. No interpretar el resultado R1 como QA de la revisión actual.
 
 ## Alcance y aprobación
 

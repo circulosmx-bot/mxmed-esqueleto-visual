@@ -1,0 +1,74 @@
+[
+  {
+    "engine": "chromium",
+    "viewport": "1440x900",
+    "r1_matrix_height": 1681.84375,
+    "r2_matrix_height": 552.8125,
+    "matrix_reduction_percent": 67.13,
+    "r1_page_height": 2563,
+    "r2_page_height": 1434
+  },
+  {
+    "engine": "chromium",
+    "viewport": "1366x768",
+    "r1_matrix_height": 1681.84375,
+    "r2_matrix_height": 552.8125,
+    "matrix_reduction_percent": 67.13,
+    "r1_page_height": 2563,
+    "r2_page_height": 1434
+  },
+  {
+    "engine": "chromium",
+    "viewport": "820x1180",
+    "r1_matrix_height": 1756.828125,
+    "r2_matrix_height": 676.71875,
+    "matrix_reduction_percent": 61.48,
+    "r1_page_height": 2754,
+    "r2_page_height": 1728
+  },
+  {
+    "engine": "chromium",
+    "viewport": "390x844",
+    "r1_matrix_height": 2057.859375,
+    "r2_matrix_height": 730.9375,
+    "matrix_reduction_percent": 64.48,
+    "r1_page_height": 3974,
+    "r2_page_height": 1914
+  },
+  {
+    "engine": "webkit",
+    "viewport": "1440x900",
+    "r1_matrix_height": 1681.515625,
+    "r2_matrix_height": 552.5,
+    "matrix_reduction_percent": 67.14,
+    "r1_page_height": 2562,
+    "r2_page_height": 1433
+  },
+  {
+    "engine": "webkit",
+    "viewport": "1366x768",
+    "r1_matrix_height": 1681.515625,
+    "r2_matrix_height": 552.5,
+    "matrix_reduction_percent": 67.14,
+    "r1_page_height": 2562,
+    "r2_page_height": 1433
+  },
+  {
+    "engine": "webkit",
+    "viewport": "820x1180",
+    "r1_matrix_height": 1756.453125,
+    "r2_matrix_height": 676.203125,
+    "matrix_reduction_percent": 61.5,
+    "r1_page_height": 2754,
+    "r2_page_height": 1727
+  },
+  {
+    "engine": "webkit",
+    "viewport": "390x844",
+    "r1_matrix_height": 2057.453125,
+    "r2_matrix_height": 730.453125,
+    "matrix_reduction_percent": 64.5,
+    "r1_page_height": 3974,
+    "r2_page_height": 1914
+  }
+]

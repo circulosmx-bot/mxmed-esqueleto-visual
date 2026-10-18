@@ -1,0 +1,17 @@
+{
+  "source_head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "prototype_start_head": "6e7def31cf16f9e782ea9489e40f8d68ebf0b5b6",
+  "source_tracked_files_compared": 2992,
+  "source_worktree_clean": true,
+  "source_files_changed": 0,
+  "normal_listeners_identical": true,
+  "catalog_export_exact": true,
+  "original_product_http_requests": 0,
+  "database_connections": 0,
+  "database_writes": false,
+  "real_notifications": false,
+  "static_product_routes": 404,
+  "static_post": 405,
+  "rollback_own_8141_reopen_stop": "PASS",
+  "preview_8140_preserved": true
+}

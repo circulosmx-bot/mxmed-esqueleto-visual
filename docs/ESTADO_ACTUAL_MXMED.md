@@ -3,7 +3,7 @@
 ## Ancla y alcance
 
 - Fecha de verificación documental: **2026-10-17**.
-- Baseline fuente verificado: `f92f37f1958af5140a96c04cb52c5c1ce7af8e01` (CTX-SYNC01 publicado; inicio del prototipo ASE-VIS01).
+- Baseline fuente verificado: `f92f37f1958af5140a96c04cb52c5c1ce7af8e01` (fuente oficial preservada; ASE-VIS01 R2 parte del checkpoint aislado `6e7def31cf16f9e782ea9489e40f8d68ebf0b5b6`).
 - Rama fuente: `ux/consultation-step2-vitals-r1`; al iniciar ASE-VIS01, HEAD/upstream coinciden y worktree limpio. El prototipo vive sólo en `prototype/ase-vis01-advisor-capability-matrix`, worktree separado `mxmed-ase-vis01-prototype`; no se integra a la fuente.
 - Worktree: `/Users/circulodigital/Documents/GitHub/mxmed-step2-vitals-r1`; no confundir con el checkout hermano `mxmed-esqueleto-visual`.
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
@@ -36,7 +36,7 @@
 | ACT03 | **Source provisioning implementado y verificado en QA aislada**; [cierre](identity/ACT03-governed-professional-sources.md#cierre-verificado). Resultado histórico **PARTIAL_MXMED_ACT03** preservado. |
 | ASE-ALIGN01 V2 | Política individual aprobada en [IW01](product-completion/iw01-internal-governance-foundation.md); MFA/consumidores/guard y workspace originales alineados; QA aislada completa. Sin activación real. |
 | CTX-SYNC01 | [Regla permanente](../AGENTS.md#sincronización-obligatoria-de-contexto--ctx-sync01) y [campos/gate de entrega](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md#context-sync) obligatorios en cada cambio autorizado; revisión documental manual, sin nueva QA de producto ni activación. |
-| ASE-VIS01 | [Prototipo UI-3 aislado](identity/ASE-VIS01-advisor-matrix-prototype.md): directorio izquierdo/matriz derecha aprobados como concepto, datos ficticios y cambios en memoria. QA documentada en su contrato; apariencia final pendiente del Director, sin adapter ni administración real integrada. |
+| ASE-VIS01 R1/R2 | [Prototipo UI-3 aislado](identity/ASE-VIS01-advisor-matrix-prototype.md): R2 añade Asesores/Masters, incorporación guiada y familias contraíbles/selección visual. Decisiones funcionales aprobadas; datos ficticios, sin adapter ni administración real. QA R2: 1.112 checks Chromium/WebKit, 28 capturas, matriz 61–67% más baja y fuente/listeners preservados; R1 histórico en contrato. Apariencia final pendiente del Director. |
 
 ## Estado operacional y migraciones
 
@@ -61,7 +61,7 @@
 - **Clínica:** issuer/binding C4 implementado; consumidor profesional todavía deniega incondicionalmente. Alta paciente tiene disparidad de autorización fuente `unresolved`; no se hizo probe ni se cambió autoridad. [Mapa clínico](contexto/FUNCIONES_CLINICAS_MXMED.md).
 - **Infra:** IaC y cierres físicos históricos C3/SES recuperados; packaging actual omite shell/workflows y hay divergencia DB env. AWS/Stripe remotos no verificados. [Mapa AWS](contexto/AWS_Y_ENTORNOS_MXMED.md).
 - **Casos Agenda:** [CTX-MAP03](contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md) traza CTA integrado público y matriz por acción; waitlist/no-show no están en los cinco grants de operador. Call Center conserva contrato futuro y consumidor no acreditado; política por rol, scope waitlist y atribución ordinaria tienen brechas fuente explícitas, sin probes ni permisos nuevos.
-- **Comercial/asesores:** [trazabilidad](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) preserva ventas, captación, Call Center, cupones y Billing separados. ASE-ALIGN01 aprueba combinaciones individuales sin subtipos ni cupo arbitrario de asesores/capacidades; no heredan las dos plazas del operador médico. Director/MASTER delegado conservan gobierno, ADVISOR no recibe autoridad por clase ni autogrants. La matriz conceptual tiene ahora un [prototipo UI-3 aislado ASE-VIS01](identity/ASE-VIS01-advisor-matrix-prototype.md); la pantalla/adapter reales siguen sin implementar y la aprobación visual final permanece pendiente. Grants de revisión/fuentes y revocación son independientes; MFA sujeto/uso se separan del registrador independiente y operaciones sensibles. Runtime real sigue inactivo.
+- **Comercial/asesores:** [trazabilidad](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) preserva ventas, captación, Call Center, cupones y Billing separados. ASE-ALIGN01 aprueba combinaciones individuales sin subtipos ni cupo arbitrario de asesores/capacidades; no heredan las dos plazas del operador médico. Director/MASTER delegado conservan gobierno, ADVISOR no recibe autoridad por clase ni autogrants. La matriz conceptual tiene ahora un [prototipo UI-3 aislado ASE-VIS01](identity/ASE-VIS01-advisor-matrix-prototype.md); R2 amplía sólo su simulación a Masters/incorporación/familias, la pantalla/adapter reales siguen sin implementar y la aprobación visual final permanece pendiente. Grants de revisión/fuentes y revocación son independientes; MFA sujeto/uso se separan del registrador independiente y operaciones sensibles. Runtime real sigue inactivo.
 
 ## Evidencia reciente y reconciliación de tests
 

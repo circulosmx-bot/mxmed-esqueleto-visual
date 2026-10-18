@@ -1,19 +1,17 @@
-/* UI-3, fictional state in memory only. No fetch/XHR, persistence, account lookup or backend calls. */
+/* ASE-VIS01 R2: synthetic page-memory presentation only. No Identity, API or storage calls. */
 (() => {
   'use strict';
   const catalog = Object.values(window.ASE_VIS01_CATALOG);
   const operational = catalog.filter(c => c.kind === 'operational' && c.delegable);
-  const reserved = catalog.filter(c => c.kind !== 'operational' || !c.delegable);
   const future = new Set(['profile_create','profile_curate','profile_publication_manage','profile_support_assist']);
   const restricted = new Set(['public_profile_correction_review','public_profile_correction_apply']);
   const groups = [
-    {title:'Acreditación profesional', domains:['physician_accreditation','professional_sources'], note:'Flujo existente. Su habilitación requiere verificación y autorización específicas.'},
-    {title:'Revisión de medios', domains:['media_review'], note:'Cada función se concede por separado; consultar no concede aprobar ni descargar.'},
-    {title:'Correcciones de perfiles', domains:['public_profile_corrections','public_profile_correction_application'], note:'Flujo existente para Dirección y Master. Su uso por asesores aún no está habilitado.'},
-    {title:'Administración de perfiles', domains:['profile_administration'], note:'Permisos definidos, con funciones pendientes de conectar. Vista de sólo lectura.'},
-    {title:'Organizaciones y proveedores', domains:['provider_claim','provider_commercial'], note:'Funciones para organizaciones. La pantalla de trabajo aún está pendiente.'}
+    {id:'accreditation', title:'Acreditación profesional', domains:['physician_accreditation','professional_sources'], note:'Revisión y fuentes son permisos independientes. Su uso requiere los controles de cada flujo.'},
+    {id:'media', title:'Revisión de medios', domains:['media_review'], note:'Incluye acciones sensibles: descargar originales privados y aprobar imágenes públicas. Revisa cada cambio antes de guardar.'},
+    {id:'corrections', title:'Correcciones de perfiles', domains:['public_profile_corrections','public_profile_correction_application'], note:'Flujo existente para Dirección y Master. Su uso por asesores aún no está habilitado.'},
+    {id:'profiles', title:'Administración de perfiles', domains:['profile_administration'], note:'Cuatro permisos definidos, con flujo genérico pendiente de conectar. Sólo lectura.'},
+    {id:'providers', title:'Organizaciones y proveedores', domains:['provider_claim','provider_commercial'], note:'Servicios existentes para organizaciones. La pantalla interna aún está pendiente.'}
   ];
-  // Presentation copy only; keys, labels, domains and delegability remain the exported catalog's.
   const descriptions = {
     media_review_read:'Consultar las imágenes recibidas para revisión.',
     media_review_approve:'Aprobar explícitamente una imagen para su publicación.',
@@ -32,168 +30,252 @@
     provider_claim_review:'Revisar la solicitud de vinculación de una organización proveedora.',
     provider_subscription_activate:'Gestionar una suscripción organizacional. Esta acción no acredita un pago.'
   };
-  const fixture = (id,name,status,grants) => ({id,name,status,grants:new Set(grants),version:1,events:[]});
-  const advisors = [
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const labelFor = key => window.ASE_VIS01_CATALOG[key].label;
+  const keysFor = group => operational.filter(c=>group.domains.includes(c.domain)).map(c=>c.key);
+  const fixture = (id,name,status,grants,category='ADVISOR',manage=false,delegations=[]) => ({id,name,status,stage:status,category,manage,grants:new Set(grants),delegations:new Set(delegations),version:1,events:[]});
+  const members = [
     fixture('aurora','Aurora Naranjo','ACTIVE',['media_review_read']),
     fixture('bruno','Bruno Lago','ACTIVE',['media_review_read','physician_accreditation_review','professional_source_provision']),
-    fixture('cora','Cora Vela','ACTIVE',operational.map(c => c.key)),
+    fixture('cora','Cora Vela','ACTIVE',operational.map(c=>c.key)),
     fixture('diego','Diego Roble','ACTIVE',[]),
     fixture('elisa','Elisa Monte','SUSPENDED',['media_review_read','media_review_approve']),
-    fixture('mar','Mar Solano','ACTIVE',['media_review_read','media_review_source_download'])
+    fixture('mar','Mar Solano','ACTIVE',['media_review_read','media_review_source_download']),
+    fixture('lucia','Lucía Castaño','ACTIVE',['media_review_read','media_review_source_download'],'MASTER_ADMIN',true,['media_review_read','media_review_approve','physician_accreditation_review']),
+    fixture('tomas','Tomás Niebla','SUSPENDED',['professional_source_provision'],'MASTER_ADMIN',false,['media_review_read'])
   ];
-  const delegated = new Set(['media_review_read','media_review_approve','physician_accreditation_review']);
-  const $ = id => document.getElementById(id);
-  let selected = advisors[0];
-  let draft = new Set(selected.grants);
-  let mode = 'director';
-  let directoryState = 'ready';
-  let query = '';
-  let stale = false;
-  let pendingAction = null;
-  let dialogReturnFocus = null;
-  const dialog = $('confirmation');
-  const escape = value => String(value).replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const labelFor = key => window.ASE_VIS01_CATALOG[key].label;
-  const changes = () => ({grants:[...draft].filter(k => !selected.grants.has(k)),revokes:[...selected.grants].filter(k => !draft.has(k))});
-  const dirty = () => selected && (changes().grants.length + changes().revokes.length > 0);
-  const self = () => mode === 'self' && selected?.id === 'mar';
-  const canManage = () => mode !== 'missing' && !self();
-  const editable = key => canManage() && selected?.status === 'ACTIVE' && !stale && !future.has(key) && !restricted.has(key) && (mode === 'director' || delegated.has(key));
-  const status = advisor => `<span class="status ${advisor.status === 'SUSPENDED' ? 'suspended' : ''}">${advisor.status === 'ACTIVE' ? 'Activo' : 'Suspendido'}</span>`;
-  const say = message => { $('feedback').textContent = message; };
-  function openDialog(title, description, body, acceptLabel, action) {
-    dialogReturnFocus = document.activeElement;
-    $('confirmation-title').textContent = title;
-    $('confirmation-description').textContent = description;
-    $('confirmation-body').innerHTML = body;
-    $('accept-confirmation').textContent = acceptLabel;
-    $('accept-confirmation').hidden = !action;
-    $('cancel-confirmation').textContent = action ? 'Cancelar' : 'Entendido';
-    pendingAction = action;
-    dialog.showModal();
+  const stages = {ACTIVE:'Activo',SUSPENDED:'Suspendido',PENDING_INVITATION:'Invitación pendiente',PENDING_IDENTITY_VERIFICATION:'Verificación de identidad pendiente',PENDING_AUTHORIZATION:'Autorización pendiente',PENDING_MFA_SETUP:'Configuración MFA pendiente'};
+  let selected=members[0], mode='director', category='ADVISOR', directoryState='ready', query='', stale=false;
+  let draft, wizard=null, wizardStep=0, sequence=0;
+  const copy = member => ({grants:new Set(member.grants),delegations:new Set(member.delegations),manage:member.manage});
+  const resetDraft = () => { draft=copy(selected); stale=false; };
+  resetDraft();
+  const deltaSet = (next,previous) => ({add:[...next].filter(k=>!previous.has(k)),remove:[...previous].filter(k=>!next.has(k))});
+  const changes = () => ({use:deltaSet(draft.grants,selected.grants),delegate:deltaSet(draft.delegations,selected.delegations),management:draft.manage!==selected.manage});
+  const dirty = () => {const d=changes();return d.use.add.length+d.use.remove.length+d.delegate.add.length+d.delegate.remove.length+Number(d.management)>0;};
+  const active = member => member.status==='ACTIVE' && member.stage==='ACTIVE';
+  const actor = () => members.find(m=>m.id==='lucia');
+  const canManage = () => mode==='director' || (mode==='master' && active(actor()) && actor().manage && selected.category==='ADVISOR' && selected.id!==actor().id);
+  function available(key,targetCategory) {return !future.has(key) && !(targetCategory==='ADVISOR' && restricted.has(key));}
+  function editable(key,kind='use') {
+    return active(selected) && !stale && canManage() && available(key,kind==='delegate'?'ADVISOR':selected.category) && (kind==='delegate'?mode==='director':mode==='director'||actor().delegations.has(key));
+  }
+  const say = message => { $('feedback').textContent=message; };
+  const stateLabel = member => stages[member.stage] || 'En revisión';
+  const status = member => `<span class="status ${active(member)?'': 'suspended'}">${stateLabel(member)}</span>`;
+  const categoryLabel = value => value==='MASTER_ADMIN'?'Administrador maestro':'Asesor';
+  function focusDetail() { $('detail-title')?.focus(); }
+  function mobileView(view) {
+    $('workspace-columns').dataset.mobileView=view;
+    $('show-directory').setAttribute('aria-pressed',String(view==='directory'));
+    $('show-detail').setAttribute('aria-pressed',String(view==='detail'));
+  }
+  function setupDialog(dialog) {
+    let previousFocus=null;
+    dialog.addEventListener('keydown',event=>{
+      if(event.key!=='Tab')return;
+      const controls=[...dialog.querySelectorAll('button,input,select,[tabindex="0"]')].filter(e=>!e.disabled && !e.hidden && e.getClientRects().length);
+      if(!controls.length)return;
+      event.preventDefault();const index=controls.indexOf(document.activeElement);
+      controls[(index<0?(event.shiftKey?controls.length-1:0):(index+(event.shiftKey?-1:1)+controls.length)%controls.length)].focus();
+    });
+    dialog.addEventListener('close',()=>{
+      if(dialog.open)return;
+      if(previousFocus?.isConnected && previousFocus.getClientRects().length)previousFocus.focus();
+      else if(stale && $('conflict-banner'))$('conflict-banner').focus();
+      else focusDetail();
+    });
+    return ()=>{previousFocus=document.activeElement;dialog.showModal();};
+  }
+  const confirmation=$('confirmation'), showConfirmation=setupDialog(confirmation), onboarding=$('onboarding'), showOnboarding=setupDialog(onboarding);
+  let pendingAction=null;
+  function confirm(title,description,body,accept,action,privileged=false) {
+    $('confirmation-title').textContent=title; $('confirmation-description').textContent=description;
+    $('confirmation-body').innerHTML=body+(privileged?'<label class="ack-row" for="privileged-ack"><input id="privileged-ack" type="checkbox"> Confirmo expresamente esta propuesta privilegiada. La operación real requiere un contrato de seguridad y verificación reforzada aún pendiente.</label>':'');
+    $('accept-confirmation').textContent=accept; $('accept-confirmation').disabled=privileged;
+    pendingAction=action; showConfirmation();
+    if(privileged)$('privileged-ack').onchange=e=>{$('accept-confirmation').disabled=!e.target.checked;};
   }
   function transition(action) {
-    if (!dirty()) { action(); return; }
-    openDialog('¿Descartar los cambios pendientes?', 'Aún no has guardado esta propuesta de permisos. Puedes seguir editando o descartarla para continuar.', '', 'Descartar y continuar', action);
+    if(!dirty()){action();return;}
+    confirm('¿Descartar los cambios pendientes?','Puedes seguir editando o descartar la propuesta para continuar. No se ha guardado ningún cambio.','','Descartar y continuar',action);
   }
-  function choose(advisor) {
-    transition(() => { selected = advisor; draft = new Set(advisor.grants); stale = false; say(''); render(); $('detail-title').focus({preventScroll:innerWidth > 640}); });
+  function choose(member) {transition(()=>{selected=member;resetDraft();say('');render();mobileView('detail');focusDetail();});}
+  function filter(next) {
+    if(next==='MASTER_ADMIN' && mode!=='director')return;
+    transition(()=>{category=next;query='';$('advisor-search').value='';selected=members.find(m=>m.category===category)||selected;resetDraft();render();mobileView('directory');});
   }
   function renderDirectory() {
-    $('directory-count').textContent = directoryState === 'ready' ? `${advisors.length} ficticios` : '';
-    const content = $('directory-content');
-    content.setAttribute('aria-busy', String(directoryState === 'loading'));
-    if (directoryState === 'loading') { content.innerHTML = '<div class="empty-state" role="status"><strong>Cargando asesores…</strong>Ejemplo visual de consulta en curso.</div>'; return; }
-    if (directoryState === 'error') { content.innerHTML = '<div class="empty-state" role="alert"><strong>No pudimos consultar el directorio.</strong>Intenta de nuevo para recuperar los registros ficticios.<br><button type="button" id="retry-directory">Reintentar</button></div>'; $('retry-directory').onclick = () => { directoryState='ready'; $('directory-state').value='ready'; selected=advisors[0]; draft=new Set(selected.grants); render(); }; return; }
-    if (directoryState === 'empty') { content.innerHTML = '<div class="empty-state"><strong>Aún no hay asesores.</strong>La incorporación vinculará una cuenta existente con el equipo interno.</div>'; return; }
-    const normalized = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    const list = advisors.filter(a => normalized(a.name).includes(normalized(query)));
-    if (!list.length) { content.innerHTML = '<div class="empty-state"><strong>Sin resultados.</strong>Prueba con otro nombre.</div>'; return; }
-    content.innerHTML = `<ul class="advisor-list">${list.map(a => `<li><button type="button" class="advisor-card" data-advisor="${a.id}" aria-pressed="${selected?.id === a.id}"><span class="avatar" aria-hidden="true">${a.name.split(' ').map(n=>n[0]).join('')}</span><span class="advisor-card-copy"><span class="advisor-name">${a.name}</span><span class="advisor-meta">${status(a)}<span>${a.grants.size} ${a.grants.size === 1 ? 'permiso' : 'permisos'}</span></span></span>${selected?.id === a.id ? '<span class="selection-mark" aria-hidden="true">✓</span>' : ''}</button></li>`).join('')}</ul>`;
-    content.querySelectorAll('[data-advisor]').forEach(button => button.onclick = () => choose(advisors.find(a=>a.id === button.dataset.advisor)));
+    const list=members.filter(m=>m.category===category);
+    $('directory-count').textContent=directoryState==='ready'?`${list.length} ficticios`:'';
+    $('filter-advisors').setAttribute('aria-pressed',String(category==='ADVISOR'));
+    $('filter-masters').setAttribute('aria-pressed',String(category==='MASTER_ADMIN'));
+    $('filter-masters').disabled=mode!=='director';
+    $('category-hint').textContent=mode==='director'?'El Director conserva la raíz y no aparece como integrante editable.':'Sólo puedes administrar asesores dentro de tu autorización y delegación. No puedes nombrar Masters ni administrarte a ti mismo.';
+    $('add-member').disabled=mode==='missing' || (mode==='master' && (!actor().manage || !active(actor())));
+    const content=$('directory-content');content.setAttribute('aria-busy',String(directoryState==='loading'));
+    if(directoryState!=='ready') {
+      content.innerHTML=directoryState==='loading'?'<div class="empty-state" role="status"><strong>Cargando equipo…</strong>Ejemplo de consulta en curso.</div>':directoryState==='error'?'<div class="empty-state" role="alert"><strong>No pudimos consultar el directorio.</strong><button id="retry-directory" type="button">Reintentar</button></div>':'<div class="empty-state"><strong>Aún no hay integrantes.</strong>La incorporación reúne los pasos de identidad y autorización.</div>';
+      if($('retry-directory'))$('retry-directory').onclick=()=>{directoryState='ready';$('directory-state').value='ready';render();};return;
+    }
+    const normal=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const visible=list.filter(m=>normal(m.name).includes(normal(query)));
+    content.innerHTML=visible.length?`<ul class="advisor-list">${visible.map(m=>`<li><button type="button" class="advisor-card" data-member="${m.id}" aria-pressed="${selected.id===m.id}"><span class="avatar" aria-hidden="true">${m.name.split(' ').map(n=>n[0]).join('')}</span><span class="advisor-card-copy"><span class="advisor-name">${esc(m.name)}</span><span class="advisor-meta">${status(m)}<span>${m.grants.size} ${m.grants.size===1?'permiso asignado':'permisos asignados'}${m.requested?` · ${m.requested.size} propuestos`:''}</span></span></span>${selected.id===m.id?'<span class="selection-mark" aria-hidden="true">✓</span>':''}</button></li>`).join('')}</ul>`:list.length?'<div class="empty-state"><strong>Sin resultados.</strong>Prueba con otro nombre.</div>':'<div class="empty-state"><strong>Aún no hay integrantes de esta categoría.</strong></div>';
+    content.querySelectorAll('[data-member]').forEach(button=>button.onclick=()=>choose(members.find(m=>m.id===button.dataset.member)));
   }
-  function authorityCopy() {
-    if (self()) return 'No puedes administrar tus propios permisos ni tu estado. Selecciona a otra persona para revisar el alcance delegado.';
-    if (mode === 'missing') return 'Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta.';
-    if (mode !== 'director') return 'Vista Master: puede gestionar a otros asesores y sólo los permisos con delegación exacta. El resto permanece en consulta.';
-    return 'Vista Director: administra permisos operativos individuales. Las autoridades de gobierno permanecen separadas.';
+  function reason(key,kind,targetCategory=selected.category) {
+    if(future.has(key))return 'Sin flujo conectado · sólo lectura';
+    if(restricted.has(key) && (kind==='delegate'||targetCategory==='ADVISOR'))return 'Uso por asesores no habilitado';
+    if(!active(selected))return 'Sin autorización operativa activa · estado conservado';
+    if(mode==='missing')return 'Sin autorización de gestión';
+    if(mode!=='director' && !actor().delegations.has(key))return 'Fuera de tu delegación · se conserva';
+    return key.startsWith('provider_')?'Servicio existente · pantalla pendiente':'';
   }
-  function reasonFor(key) {
-    if (future.has(key)) return 'Sin flujo conectado · sólo lectura';
-    if (restricted.has(key)) return 'Uso restringido a Dirección / Master';
-    if (!canManage()) return self() ? 'Autoadministración no permitida' : 'Sin autorización de gestión';
-    if (selected.status === 'SUSPENDED') return 'Asesor suspendido · permisos conservados';
-    if (mode !== 'director' && !delegated.has(key)) return 'Sin delegación para administrar este permiso';
-    if (key.startsWith('provider_')) return 'Servicio existente · pantalla pendiente';
-    return '';
+  function familyHTML(prefix,kind,chosen,isEditable,reasonFor) {
+    return groups.map(group=>{
+      const id=`${prefix}-${group.id}`,keys=keysFor(group);
+      return `<section class="family" data-family="${group.id}" data-kind="${kind}"><div class="family-heading"><label class="family-select" for="${id}-select"><input type="checkbox" id="${id}-select" data-family-select="${group.id}" data-kind="${kind}"><span><span class="family-title">${group.title}</span><span class="family-count" id="${id}-count"></span><span class="family-limit" id="${id}-limit"></span></span></label><button class="family-toggle" type="button" aria-expanded="false" aria-controls="${id}-body" data-expand="${id}-body" aria-label="Expandir ${group.title}">Expandir</button></div><div id="${id}-body" class="family-body" hidden><p class="group-note">${group.note}</p>${keys.map(key=>`<label class="capability-row" for="${id}-${key}"><input type="checkbox" id="${id}-${key}" data-capability="${key}" data-kind="${kind}" ${chosen.has(key)?'checked':''} ${isEditable(key)?'':'disabled'} aria-describedby="${id}-${key}-description"><span class="capability-text"><span class="capability-label">${esc(labelFor(key))}</span><span class="capability-description" id="${id}-${key}-description">${esc(descriptions[key])}</span>${reasonFor(key)?`<span class="availability">${esc(reasonFor(key))}</span>`:''}</span></label>`).join('')}</div></section>`;
+    }).join('');
+  }
+  function bindFamilies(container,chosenFor,isEditable,onChange) {
+    container.querySelectorAll('[data-expand]').forEach(button=>button.onclick=()=>{
+      const body=$(button.dataset.expand);body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));button.textContent=body.hidden?'Expandir':'Contraer';button.setAttribute('aria-label',`${body.hidden?'Expandir':'Contraer'} ${groups.find(g=>g.id===button.closest('[data-family]').dataset.family).title}`);
+    });
+    container.querySelectorAll('[data-capability]').forEach(input=>input.onchange=()=>{
+      const key=input.dataset.capability,kind=input.dataset.kind,chosen=chosenFor(kind);
+      if(isEditable(key,kind)){if(input.checked)chosen.add(key);else chosen.delete(key);}else input.checked=chosen.has(key);
+      refreshFamilies(container,chosenFor,isEditable);onChange();
+    });
+    container.querySelectorAll('[data-family-select]').forEach(input=>input.onchange=()=>{
+      const kind=input.dataset.kind,chosen=chosenFor(kind),keys=keysFor(groups.find(g=>g.id===input.dataset.familySelect)).filter(k=>isEditable(k,kind));
+      const remove=keys.length>0 && keys.every(key=>chosen.has(key));
+      keys.forEach(key=>remove?chosen.delete(key):chosen.add(key));
+      container.querySelectorAll(`[data-capability][data-kind="${kind}"]`).forEach(control=>{control.checked=chosen.has(control.dataset.capability);});
+      refreshFamilies(container,chosenFor,isEditable);onChange();
+    });
+    refreshFamilies(container,chosenFor,isEditable);
+  }
+  function refreshFamilies(container,chosenFor,isEditable) {
+    container.querySelectorAll('[data-family-select]').forEach(input=>{
+      const group=groups.find(g=>g.id===input.dataset.familySelect),kind=input.dataset.kind,chosen=chosenFor(kind),keys=keysFor(group),eligible=keys.filter(k=>isEditable(k,kind));
+      const count=keys.filter(k=>chosen.has(k)).length,eligibleSelected=eligible.filter(k=>chosen.has(k)).length;
+      input.checked=count===keys.length;input.indeterminate=count>0 && count<keys.length;input.disabled=!eligible.length;
+      input.setAttribute('aria-checked',input.indeterminate?'mixed':String(input.checked));
+      const row=input.closest('.family'),label=row.querySelector('.family-count'),limit=row.querySelector('.family-limit');
+      label.textContent=`${count} de ${keys.length} ${kind==='delegate'?'ámbitos seleccionados':'permisos seleccionados'} · ${eligibleSelected} de ${eligible.length} editables seleccionados`;
+      const reasons=[...new Set([...row.querySelectorAll('[data-capability]:disabled')].map(control=>control.closest('label').querySelector('.availability')?.textContent||'Fuera del alcance editable'))];
+      limit.textContent=keys.length-eligible.length?`${keys.length-eligible.length} excluidos; se conservan. ${reasons.join('; ')}.`:'';
+      input.setAttribute('aria-label',`${eligible.length && eligibleSelected===eligible.length?'Deseleccionar':'Seleccionar'} sólo permisos elegibles de ${group.title}. ${label.textContent}. ${limit.textContent}`);
+    });
   }
   function renderDetail() {
-    const detail = $('advisor-detail');
-    if (directoryState !== 'ready' || !selected) { detail.innerHTML = '<div class="empty-state detail-empty"><h2 id="detail-title">Selecciona un asesor</h2><p>Sus permisos y su historial aparecerán aquí cuando el directorio esté disponible.</p></div>'; return; }
-    detail.innerHTML = `<header class="detail-header"><div class="detail-heading-row"><div><p class="eyebrow">Asesor seleccionado · persona ficticia</p><h2 id="detail-title" tabindex="-1">${selected.name}</h2>${status(selected)}<p class="detail-subtitle"><span id="selected-count">${draft.size}</span> <span id="count-label">${draft.size === 1 ? 'permiso asignado' : 'permisos asignados'}</span> · simulación</p></div><button id="lifecycle" class="lifecycle" type="button" ${!canManage() || dirty() || stale ? 'disabled' : ''}>${selected.status === 'ACTIVE' ? 'SUSPENDER ASESOR' : 'REACTIVAR ASESOR'}</button></div><p class="authority-note">${authorityCopy()}${selected.status === 'SUSPENDED' ? ' La suspensión conserva los permisos y el historial; las acciones operativas quedan bloqueadas.' : ''}</p></header>
-    <div id="conflict-banner" class="conflict-banner" role="alert" tabindex="-1" ${stale ? '' : 'hidden'}><p><strong>La información cambió durante la edición.</strong> Tu propuesta no se aplicó. Actualiza los datos antes de preparar otra propuesta.</p><button id="refresh-conflict" type="button">Actualizar y descartar cambios</button></div>
-    <form id="capabilities-form"><div class="matrix">${groups.map(group => `<fieldset class="capability-group"><legend>${group.title}</legend><p class="group-note">${group.note}</p>${operational.filter(c=>group.domains.includes(c.domain)).map(c => `<label class="capability-row" for="cap-${c.key}"><input id="cap-${c.key}" type="checkbox" data-capability="${c.key}" ${draft.has(c.key) ? 'checked' : ''} ${editable(c.key) ? '' : 'disabled'} aria-describedby="desc-${c.key}"><span class="capability-text"><span class="capability-label">${escape(c.label)}</span><span class="capability-description" id="desc-${c.key}">${escape(descriptions[c.key] || c.description)}</span>${reasonFor(c.key) ? `<span class="availability">${reasonFor(c.key)}</span>` : ''}</span></label>`).join('')}</fieldset>`).join('')}</div>
-    <div class="save-area"><div class="save-row"><p id="unsaved" class="unsaved" role="status" aria-live="polite"></p><div class="save-buttons"><button id="revert" type="button" class="secondary">Revertir</button><button id="save-permissions" class="primary" type="submit">GUARDAR PERMISOS</button></div></div><p class="save-explanation">Guardado explícito y simulado. Un permiso asignado no activa un flujo pendiente o restringido.</p></div></form>
-    <details class="reserved"><summary>Autoridades de gobierno · fuera de esta matriz</summary><p>No son permisos operativos delegables a un asesor.</p><ul>${reserved.map(c=>`<li>${escape(c.label)}</li>`).join('')}</ul></details>
-    <details class="history"><summary>Historial del asesor · ejemplo ficticio</summary><p class="history-note">Ejemplos para revisar la presentación. La integración futura consultará auditoría canónica; aquí no se consulta ningún registro real.</p><ol id="history-list"></ol></details>`;
-    detail.querySelectorAll('[data-capability]').forEach(input => input.onchange = () => {
-      if (!editable(input.dataset.capability)) { input.checked=draft.has(input.dataset.capability); return; }
-      if (input.checked) draft.add(input.dataset.capability); else draft.delete(input.dataset.capability);
-      say(''); updatePending();
-    });
-    $('capabilities-form').onsubmit = event => { event.preventDefault(); savePreview(); };
-    $('revert').onclick = () => { draft = new Set(selected.grants); say('Propuesta revertida. Los permisos simulados guardados se conservan.'); renderDetail(); $('detail-title').focus(); };
-    $('lifecycle').onclick = lifecyclePreview;
-    $('refresh-conflict').onclick = () => { draft=new Set(selected.grants); stale=false; say('Datos ficticios actualizados. Puedes preparar una nueva propuesta.'); render(); $('detail-title').focus(); };
-    renderHistory(); updatePending();
+    const detail=$('advisor-detail');
+    if(directoryState!=='ready' || selected.category!==category){detail.innerHTML='<div class="empty-state detail-empty"><h2 id="detail-title" tabindex="-1">Selecciona un integrante</h2><p>Su información aparecerá cuando el directorio esté disponible.</p></div>';return;}
+    const master=selected.category==='MASTER_ADMIN',pending=!['ACTIVE','SUSPENDED'].includes(selected.stage);
+    detail.innerHTML=`<header class="detail-header"><div class="detail-heading-row"><div><p class="eyebrow">${categoryLabel(selected.category)} · persona ficticia</p><h2 id="detail-title" tabindex="-1">${esc(selected.name)}</h2>${status(selected)}<p class="detail-subtitle"><span id="selected-count">${draft.grants.size}</span> <span id="count-noun">${draft.grants.size===1?'permiso operativo':'permisos operativos'}</span> <span id="count-label">${draft.grants.size===1?'asignado':'asignados'}</span> · simulación</p></div><div class="member-actions"><button id="lifecycle" class="lifecycle" type="button" ${pending?'disabled':''}>${selected.status==='SUSPENDED'?'REACTIVAR':'SUSPENDER'} ${master?'MASTER':'ASESOR'}</button>${mode==='director'?`<button id="designation" class="lifecycle" type="button">${master?'RETIRAR DESIGNACIÓN MASTER':'PROPONER COMO MASTER'}</button>`:''}</div></div><p class="authority-note">${mode==='director'?'Vista Director: permisos de uso, gestión y delegación son decisiones separadas.':mode==='missing'?'Este Master no tiene autorización de gestión. Todos los permisos permanecen en consulta.':'Vista Master: sólo puedes administrar asesores y las capacidades expresamente delegadas. No puedes autoadministrarte ni nombrar Masters.'}${selected.status==='SUSPENDED'?' La suspensión bloquea uso y conserva permisos e historial.':''}</p>${pending?`<div class="pending-notice"><strong>${stateLabel(selected)} · simulación</strong><p>${esc(selected.pendingMessage||'La propuesta no es una autorización operativa activa.')}</p>${selected.requested?`<p>${selected.requested.size} permisos solicitados; cero nuevos permisos efectivos. Falta validar identidad, autoridad y los pasos de seguridad aplicables.</p>`:''}</div>`:''}</header>
+    <div id="conflict-banner" class="conflict-banner" role="alert" tabindex="-1" ${stale?'':'hidden'}><p><strong>La información cambió durante la edición.</strong> La propuesta no se aplicó. Actualiza antes de continuar.</p><button id="refresh-conflict" type="button">Actualizar y descartar cambios</button></div>
+    <form id="capabilities-form"><div class="matrix" id="operational-matrix"><h3 class="matrix-title">Permisos para usar funciones</h3><p class="group-note">Asignación, uso efectivo y disponibilidad del flujo son distintos. Seleccionar una familia sólo modifica sus permisos editables.</p>${familyHTML('use','use',draft.grants,key=>editable(key),key=>reason(key,'use'))}</div>
+    ${master?`<details class="master-governance"><summary>Gestión y delegación para asesores</summary><p>Usar una función no autoriza concederla. Sólo el Director configura esta autoridad.</p><label class="ack-row" for="manage-advisors"><input id="manage-advisors" type="checkbox" ${draft.manage?'checked':''} ${mode==='director'&&active(selected)&&!stale?'':'disabled'}> Autorizar administración de asesores</label><p class="group-note">Sin esta autorización, los ámbitos delegados no permiten gestionar asesores.</p><div id="delegation-matrix">${familyHTML('delegate','delegate',draft.delegations,key=>editable(key,'delegate'),key=>reason(key,'delegate'))}</div></details>`:''}
+    <div class="save-area"><div class="save-row"><p id="unsaved" class="unsaved" role="status" aria-live="polite"></p><div class="save-buttons"><button id="revert" type="button" class="secondary">Revertir</button><button id="save-permissions" class="primary" type="submit">GUARDAR PERMISOS</button></div></div><p class="save-explanation">Guardado explícito y simulado. La aplicación real deberá confirmar cada cambio individual.</p></div></form>
+    <details class="reserved"><summary>Gobierno reservado y límites</summary><p>Nombrar o retirar Masters corresponde sólo al Director. La aprobación de titularidad inicial y recuperación extraordinaria quedan fuera de esta pantalla. Ninguna familia crea un permiso genérico.</p></details><details class="history"><summary>Historial · ejemplo ficticio</summary><p class="history-note">La integración futura consultará auditoría canónica; aquí no se lee ningún registro real.</p><ol id="history-list"></ol></details>`;
+    bindFamilies($('capabilities-form'),kind=>kind==='delegate'?draft.delegations:draft.grants,editable,()=>{say('');updatePending();});
+    if($('manage-advisors'))$('manage-advisors').onchange=e=>{draft.manage=e.target.checked;updatePending();};
+    $('capabilities-form').onsubmit=e=>{e.preventDefault();savePreview();};
+    $('revert').onclick=()=>{resetDraft();say('Propuesta revertida; estado simulado guardado conservado.');renderDetail();focusDetail();};
+    $('lifecycle').onclick=lifecyclePreview;
+    if($('designation'))$('designation').onclick=designationPreview;
+    $('refresh-conflict').onclick=()=>{resetDraft();say('Estado ficticio actualizado. Puedes revisar una nueva propuesta.');render();focusDetail();};
+    $('history-list').innerHTML=[...selected.events,'Integrante registrado.','Permiso concedido: Consultar revisión de medios.','Permiso revocado: Aprobar medios.','Integrante suspendido; permisos conservados.','Integrante reactivado.'].map((text,i)=>`<li><time>Ejemplo ${i+1} · Dirección ficticia</time>${esc(text)}</li>`).join('');
+    updatePending();
   }
   function updatePending() {
-    if (!$('unsaved')) return;
-    const count = changes().grants.length + changes().revokes.length;
-    $('unsaved').textContent = count ? `${count} ${count === 1 ? 'cambio sin guardar' : 'cambios sin guardar'}` : 'Sin cambios pendientes';
-    $('unsaved').classList.toggle('dirty', count > 0);
-    $('selected-count').textContent = draft.size;
-    $('count-label').textContent = count ? (draft.size === 1 ? 'permiso propuesto' : 'permisos propuestos') : (draft.size === 1 ? 'permiso asignado' : 'permisos asignados');
-    $('save-permissions').disabled = !count || !canManage() || stale || selected.status !== 'ACTIVE';
-    $('revert').disabled = !count || stale;
-    $('lifecycle').disabled = !canManage() || count > 0 || stale;
+    if(!$('unsaved'))return;
+    const d=changes(),count=d.use.add.length+d.use.remove.length+d.delegate.add.length+d.delegate.remove.length+Number(d.management);
+    $('unsaved').textContent=count?`${count} cambios sin guardar`:'Sin cambios pendientes';$('unsaved').classList.toggle('dirty',count>0);
+    $('selected-count').textContent=draft.grants.size;$('count-noun').textContent=draft.grants.size===1?'permiso operativo':'permisos operativos';$('count-label').textContent=count?(draft.grants.size===1?'propuesto':'propuestos'):(draft.grants.size===1?'asignado':'asignados');
+    $('save-permissions').disabled=!count || !canManage() || !active(selected) || stale;
+    $('revert').disabled=!count || stale;
+    $('lifecycle').disabled=!canManage() || dirty() || stale || !['ACTIVE','SUSPENDED'].includes(selected.stage);
+    if($('designation'))$('designation').disabled=dirty() || stale || (selected.category==='ADVISOR' && !active(selected));
   }
+  const listChanges=(title,keys)=>`<section class="change-list"><h3>${title} (${keys.length})</h3>${keys.length?`<ul>${keys.map(k=>`<li>${esc(labelFor(k))}</li>`).join('')}</ul>`:'<p>Ninguno.</p>'}</section>`;
   function savePreview() {
-    if (!dirty() || !canManage() || stale || selected.status !== 'ACTIVE') return;
-    const delta = changes();
-    const version = selected.version;
-    const section = (title, keys) => `<section class="change-list"><h3>${title} (${keys.length})</h3>${keys.length ? `<ul>${keys.map(key=>`<li>${escape(labelFor(key))}</li>`).join('')}</ul>` : '<p>Ninguno.</p>'}</section>`;
-    openDialog('Confirmar propuesta de permisos', `Revisa los cambios para ${selected.name}. Esta confirmación sólo actualiza la simulación en memoria.`, section('Conceder',delta.grants)+section('Revocar',delta.revokes), 'Confirmar simulación', () => {
-      if ($('simulate-conflict').checked) { selected.version++; $('simulate-conflict').checked=false; }
-      if (selected.version !== version) { stale=true; say('Conflicto simulado: no se aplicó ningún cambio de tu propuesta.'); renderDetail(); return; }
-      delta.grants.forEach(key=>selected.events.unshift(`Permiso concedido: ${labelFor(key)}.`));
-      delta.revokes.forEach(key=>selected.events.unshift(`Permiso revocado: ${labelFor(key)}.`));
-      selected.grants = new Set(draft); selected.version++;
-      say(`Simulación guardada. Concedidos: ${delta.grants.length}. Revocados: ${delta.revokes.length}. No hubo cambios reales.`); render();
+    if(!dirty() || !canManage() || !active(selected) || stale)return;
+    const d=changes(),version=selected.version;
+    confirm('Confirmar propuesta de permisos',`Cambios individuales para ${selected.name}. Sólo se simulan en memoria. Descargar originales privados y aprobar medios son acciones sensibles.`,listChanges('Conceder uso',d.use.add)+listChanges('Revocar uso',d.use.remove)+(selected.category==='MASTER_ADMIN'?listChanges('Delegar administración',d.delegate.add)+listChanges('Retirar delegación',d.delegate.remove)+(d.management?`<p>${draft.manage?'Autorizar':'Retirar'} administración de asesores.</p>`:''):''),'Confirmar simulación',()=>{
+      if($('simulate-conflict').checked){selected.version++;$('simulate-conflict').checked=false;}
+      if(selected.version!==version){stale=true;say('Conflicto simulado: no se aplicó tu propuesta.');renderDetail();return;}
+      [['Permiso concedido',d.use.add],['Permiso revocado',d.use.remove],['Delegación concedida',d.delegate.add],['Delegación retirada',d.delegate.remove]].forEach(([verb,keys])=>keys.forEach(k=>selected.events.unshift(`${verb}: ${labelFor(k)}.`)));
+      if(d.management)selected.events.unshift(`${draft.manage?'Autorizada':'Retirada'} administración de asesores.`);
+      selected.grants=new Set(draft.grants);selected.delegations=new Set(draft.delegations);selected.manage=draft.manage;selected.version++;
+      say(`Simulación guardada. Concedidos: ${d.use.add.length}. Revocados: ${d.use.remove.length}. Delegaciones añadidas: ${d.delegate.add.length}; retiradas: ${d.delegate.remove.length}. No hubo cambios reales.`);render();
     });
   }
   function lifecyclePreview() {
-    if (!canManage() || dirty() || stale) return;
-    const suspend = selected.status === 'ACTIVE';
-    openDialog(suspend ? '¿Suspender al asesor?' : '¿Reactivar al asesor?', `${selected.name}: ${suspend ? 'la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta.' : 'la reactivación conserva sus permisos. Cada operación sigue requiriendo los controles de su servicio.'} Sólo es una simulación.`, '', suspend ? 'Simular suspensión' : 'Simular reactivación', () => {
-      selected.status = suspend ? 'SUSPENDED' : 'ACTIVE'; selected.version++; selected.events.unshift(suspend ? 'Asesor suspendido. Permisos e historial conservados.' : 'Asesor reactivado.');
-      say(suspend ? 'Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real.' : 'Reactivación simulada. No se modificó ninguna cuenta real.'); render();
-    });
+    if(!canManage() || dirty() || stale || !['ACTIVE','SUSPENDED'].includes(selected.stage))return;
+    const suspend=selected.status==='ACTIVE';
+    confirm(suspend?'¿Suspender al integrante?':'¿Reactivar al integrante?',`${selected.name}. ${suspend?'La suspensión bloquea futuras acciones y conserva todos sus permisos, delegaciones e historial. No elimina la cuenta.':'La reactivación conserva los permisos y delegaciones guardados. Cada uso requiere sus controles propios.'} Sólo es una simulación.`,'',suspend?'Simular suspensión':'Simular reactivación',()=>{selected.status=suspend?'SUSPENDED':'ACTIVE';selected.stage=selected.status;selected.version++;selected.events.unshift(suspend?'Integrante suspendido.':'Integrante reactivado.');say(suspend?'Suspensión simulada; permisos e historial conservados.':'Reactivación simulada; no se modificó una cuenta real.');render();});
   }
-  function renderHistory() {
-    const examples = ['Asesor registrado en el equipo interno.','Permiso concedido: Consultar revisión de medios.','Permiso revocado: Aprobar medios.','Asesor suspendido. Permisos e historial conservados.','Asesor reactivado.'];
-    $('history-list').innerHTML = [...selected.events, ...examples].map((text,index)=>`<li><time>Ejemplo ${index+1} · Dirección ficticia</time>${escape(text)}</li>`).join('');
+  function designationPreview() {
+    if(mode!=='director' || dirty() || stale)return;
+    const remove=selected.category==='MASTER_ADMIN';
+    confirm(remove?'Retirar designación de Master':'Proponer designación de Master',remove?'La simulación conserva los permisos operativos y el historial. Retira la autoridad de gestión y todas las delegaciones; la persona pasa a Asesor.':'Sólo el Director puede proponer esta designación. No concede permisos operativos, gestión ni delegaciones automáticamente. Antes de activarla se requiere un contrato aprobado de verificación reforzada.', '',remove?'Simular retiro de designación':'Confirmar propuesta privilegiada',()=>{
+      selected.category=remove?'ADVISOR':'MASTER_ADMIN';selected.manage=false;selected.delegations.clear();selected.stage=remove?(selected.status||selected.stage):'PENDING_AUTHORIZATION';selected.version++;
+      selected.events.unshift(remove?'Retirada designación Master; gestión y delegaciones revocadas.':'Designación Master propuesta; autorización reforzada pendiente.');category=selected.category;resetDraft();render();say(remove?'Retiro de designación simulado. Permisos operativos conservados; gestión y delegaciones retiradas.':'Propuesta Master simulada, pendiente de autorización reforzada. No es una activación operativa.');focusDetail();
+    },true);
   }
-  function render() { renderDirectory(); renderDetail(); }
-  $('advisor-search').oninput = event => { query=event.target.value; renderDirectory(); };
-  $('authority-view').onchange = event => {
-    const next=event.target.value; $('authority-view').value=mode;
-    transition(() => { mode=next; $('authority-view').value=mode; if (mode==='self') selected=advisors.find(a=>a.id==='mar'); draft=new Set(selected?.grants || []); stale=false; say(''); render(); });
-  };
-  $('directory-state').onchange = event => {
-    const next=event.target.value; $('directory-state').value=directoryState;
-    transition(() => { directoryState=next; $('directory-state').value=next; selected=advisors[0]; draft=new Set(selected.grants); stale=false; say(''); render(); });
-  };
-  $('add-advisor').onclick = () => openDialog('Agregar asesor · vista previa', 'La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva.', '<p>La búsqueda autorizada de cuentas, su validación y el registro canónico se conectarán en otra fase. Aquí no se consulta ni registra a ninguna persona.</p>', '', null);
-  $('cancel-confirmation').onclick = () => { pendingAction=null; dialog.close(); };
-  $('accept-confirmation').onclick = () => { const action=pendingAction; pendingAction=null; dialog.close(); action?.(); };
-  dialog.addEventListener('keydown', event => {
-    if (event.key !== 'Tab') return;
-    const controls = [...dialog.querySelectorAll('button')].filter(button => !button.hidden && !button.disabled && button.getClientRects().length);
-    if (!controls.length) return;
-    event.preventDefault();
-    const current = controls.indexOf(document.activeElement);
-    const next = current < 0 ? (event.shiftKey ? controls.length - 1 : 0) : (current + (event.shiftKey ? -1 : 1) + controls.length) % controls.length;
-    controls[next].focus();
-  });
-  dialog.addEventListener('close', () => {
-    // A queued close from the previous dialog must not cancel a newly opened confirmation.
-    if (dialog.open) return;
-    pendingAction=null;
-    if (dialogReturnFocus?.isConnected) { dialogReturnFocus.focus(); return; }
-    const target = stale && !$('conflict-banner')?.hidden ? $('conflict-banner') : $('detail-title');
-    target?.focus();
-  });
-  window.addEventListener('beforeunload', event => { if (dirty()) { event.preventDefault(); event.returnValue=''; } });
+  // This is one administrative journey, not a registration/invitation writer or transaction.
+  const cases={existing:['Cuenta activa existente','PENDING_AUTHORIZATION','La cuenta ficticia existente se reutilizaría tras una coincidencia autorizada. Falta autorizar la relación y los permisos.'],new:['Requiere invitación nueva','PENDING_INVITATION','Invitación pendiente. No se envió ningún mensaje. La persona deberá crear su contraseña, aceptar documentos legales y verificar su correo.'],verification:['Verificación pendiente','PENDING_IDENTITY_VERIFICATION','La verificación de identidad/correo sigue pendiente. No hay autorización operativa.'],mfa:['Configuración MFA pendiente','PENDING_MFA_SETUP','MFA pendiente mediante ceremonia canónica con registrador independiente; aquí no se configura ningún factor.'],duplicate:['Posible duplicado','PENDING_AUTHORIZATION','Posible duplicado ficticio. No se crea otra entrada; requiere conciliación autorizada.'],expired:['Invitación vencida','PENDING_INVITATION','La invitación ficticia ha vencido. No se envió otra. Requiere revisión y reemisión autorizada.'],partial:['Fallo parcial de incorporación','PENDING_AUTHORIZATION','Resultado parcial simulado: autorización no confirmada. Actualizar y reconciliar cada paso antes de reintentar; sin repetición automática.']};
+  function wizardEligible(key,kind='use') {return available(key,kind==='delegate'?'ADVISOR':wizard.category) && (mode==='director' || (kind==='use' && mode==='master' && active(actor()) && actor().manage && actor().delegations.has(key)));}
+  function openWizard() {
+    if($('add-member').disabled)return;
+    transition(()=>{wizard={name:'Nora Cedro',email:'nora.cedro@example.test',category:'ADVISOR',scenario:'new',grants:new Set(),delegations:new Set(),manage:false,ack:false};wizardStep=0;renderWizard();showOnboarding();});
+  }
+  function renderWizard() {
+    const content=$('onboarding-content');$('onboarding-feedback').textContent='';
+    [...document.querySelectorAll('.wizard-steps li')].forEach((li,i)=>{if(i===wizardStep)li.setAttribute('aria-current','step');else li.removeAttribute('aria-current');});
+    $('previous-onboarding').hidden=wizardStep===0;
+    $('next-onboarding').textContent=wizardStep===3?'Confirmar solicitud simulada':'Continuar';
+    $('next-onboarding').disabled=false;
+    if(wizardStep===0){
+      content.innerHTML=`<label class="wizard-field" for="member-name">Nombre completo ficticio<input id="member-name" autocomplete="off" maxlength="80" value="${esc(wizard.name)}"></label><label class="wizard-field" for="member-email">Correo ficticio<input id="member-email" type="email" autocomplete="off" maxlength="120" value="${esc(wizard.email)}" aria-describedby="fictional-email-hint"></label><p id="fictional-email-hint" class="group-note">Usa exclusivamente el dominio example.test. Nunca se consulta si una cuenta real existe.</p><label class="wizard-field" for="identity-case">Situación ficticia para revisar<select id="identity-case">${Object.entries(cases).map(([key,value])=>`<option value="${key}" ${wizard.scenario===key?'selected':''}>${value[0]}</option>`).join('')}</select></label>`;
+      $('member-name').oninput=e=>{wizard.name=e.target.value;};$('member-email').oninput=e=>{wizard.email=e.target.value;};$('identity-case').onchange=e=>{wizard.scenario=e.target.value;};
+    }else if(wizardStep===1){
+      content.innerHTML=`<label class="wizard-field" for="member-category">Categoría interna<select id="member-category"><option value="ADVISOR">Asesor</option><option value="MASTER_ADMIN" ${mode==='director'?'':'disabled'}>Administrador maestro · sólo Director</option></select></label><p>Una sola incorporación guía identidad, categoría y permisos; la persona define su propia contraseña y aceptación legal. El administrador no las sustituye.</p><p class="pending-notice">Designar un Master requiere confirmación explícita del Director y un futuro contrato de seguridad reforzada. Esta pantalla no lo implementa.</p>`;
+      $('member-category').value=wizard.category;$('member-category').onchange=e=>{wizard.category=mode==='director'?e.target.value:'ADVISOR';wizard.ack=false;wizard.grants.forEach(key=>{if(!wizardEligible(key))wizard.grants.delete(key);});if(wizard.category!=='MASTER_ADMIN'){wizard.manage=false;wizard.delegations.clear();}};
+    }else if(wizardStep===2){
+      content.innerHTML=`<h3>Permisos iniciales propuestos</h3><p class="group-note">Todos son solicitudes pendientes, sin autorización activa. Cada cambio será individual.</p><div id="onboarding-use">${familyHTML('onboard-use','use',wizard.grants,k=>wizardEligible(k),k=>future.has(k)?'Sin flujo conectado':restricted.has(k)&&wizard.category==='ADVISOR'?'Uso por asesores no habilitado':!wizardEligible(k)?'Fuera de tu delegación':'')}</div>${wizard.category==='MASTER_ADMIN'?`<details class="wizard-delegation"><summary>Administración de asesores y ámbitos delegados</summary><label class="ack-row" for="onboard-manage"><input id="onboard-manage" type="checkbox" ${wizard.manage?'checked':''}> Proponer autorización para administrar asesores</label><p class="group-note">Separada de sus permisos de uso. Sólo el Director puede configurarla.</p><div id="onboarding-delegate">${familyHTML('onboard-delegate','delegate',wizard.delegations,k=>wizardEligible(k,'delegate'),k=>wizardEligible(k,'delegate')?'':'Uso por asesores no habilitado o flujo pendiente')}</div></details>`:''}`;
+      bindFamilies(content,kind=>kind==='delegate'?wizard.delegations:wizard.grants,wizardEligible,()=>{});
+      if($('onboard-manage'))$('onboard-manage').onchange=e=>{wizard.manage=e.target.checked;};
+    }else{
+      const stage=cases[wizard.scenario];
+      content.innerHTML=`<dl class="onboarding-summary"><dt>Persona ficticia</dt><dd>${esc(wizard.name)} · ${esc(wizard.email)}</dd><dt>Categoría propuesta</dt><dd>${categoryLabel(wizard.category)}</dd><dt>Estado pendiente propuesto</dt><dd>${stages[stage[1]]}</dd></dl>${listChanges('Permisos de uso solicitados',[...wizard.grants])}${wizard.category==='MASTER_ADMIN'?listChanges('Ámbitos delegados solicitados',[...wizard.delegations])+`<p>Gestión de asesores: ${wizard.manage?'solicitada':'no solicitada'}.</p>`:''}<p class="pending-notice">${stage[2]} Los pasos son independientes; una solicitud no activa a la persona ni confirma todos los permisos.</p>${wizard.category==='MASTER_ADMIN'?'<label class="ack-row" for="master-confirm"><input id="master-confirm" type="checkbox"> Como Director, confirmo expresamente la propuesta Master. Su autorización reforzada y ceremonia de seguridad siguen pendientes.</label>':''}`;
+      if($('master-confirm')){$('master-confirm').checked=wizard.ack;$('next-onboarding').disabled=!wizard.ack;$('master-confirm').onchange=e=>{wizard.ack=e.target.checked;$('next-onboarding').disabled=!wizard.ack;};}
+    }
+    $('onboarding-title').textContent=`Agregar integrante · paso ${wizardStep+1} de 4`;
+  }
+  function nextWizard() {
+    if(wizardStep===0 && (!wizard.name.trim() || !/^[^\s@]+@example\.test$/i.test(wizard.email))){$('onboarding-feedback').textContent='Escribe un nombre ficticio y un correo del dominio example.test.';return;}
+    if(wizardStep<3){wizardStep++;renderWizard();$('onboarding-title').focus();return;}
+    if(wizard.category==='MASTER_ADMIN' && (mode!=='director' || !wizard.ack))return;
+    if(wizard.scenario==='duplicate'){$('onboarding-feedback').textContent=cases.duplicate[2];return;}
+    const entry=fixture(`proposed-${++sequence}`,wizard.name.trim(),null,[],wizard.category);
+    entry.stage=cases[wizard.scenario][1];entry.pendingMessage=cases[wizard.scenario][2];entry.requested=new Set(wizard.grants);entry.proposedDelegations=new Set(wizard.delegations);entry.proposedManagement=wizard.manage;entry.events=['Incorporación propuesta; sin activación ni entrega de mensajes.'];
+    members.push(entry);selected=entry;category=entry.category;query='';$('advisor-search').value='';resetDraft();render();mobileView('detail');onboarding.close();say(`Solicitud simulada: ${stateLabel(entry)}. No se creó una cuenta, no se envió una invitación y no se concedieron permisos reales.`);wizard=null;focusDetail();
+  }
+  function render(){renderDirectory();renderDetail();}
+  $('filter-advisors').onclick=()=>filter('ADVISOR');$('filter-masters').onclick=()=>filter('MASTER_ADMIN');
+  $('advisor-search').oninput=e=>{query=e.target.value;renderDirectory();};
+  $('show-directory').onclick=()=>{mobileView('directory');$('advisor-search').focus();};$('show-detail').onclick=()=>{mobileView('detail');focusDetail();};
+  $('skip-detail').onclick=()=>mobileView('detail');
+  $('authority-view').onchange=e=>{const next=e.target.value;$('authority-view').value=mode;transition(()=>{mode=next;$('authority-view').value=mode;category='ADVISOR';selected=members.find(m=>m.category==='ADVISOR');resetDraft();query='';$('advisor-search').value='';render();mobileView('directory');});};
+  $('directory-state').onchange=e=>{const next=e.target.value;$('directory-state').value=directoryState;transition(()=>{directoryState=next;$('directory-state').value=next;resetDraft();render();});};
+  $('add-member').onclick=openWizard;$('next-onboarding').onclick=nextWizard;$('previous-onboarding').onclick=()=>{wizardStep--;renderWizard();$('onboarding-title').focus();};$('cancel-onboarding').onclick=()=>{wizard=null;onboarding.close();};
+  $('cancel-confirmation').onclick=()=>{pendingAction=null;confirmation.close();};
+  $('accept-confirmation').onclick=()=>{if($('accept-confirmation').disabled)return;const action=pendingAction;pendingAction=null;confirmation.close();action?.();};
+  onboarding.addEventListener('close',()=>{if(!onboarding.open)wizard=null;});
+  confirmation.addEventListener('close',()=>{if(!confirmation.open)pendingAction=null;});
+  window.addEventListener('beforeunload',e=>{if(dirty() || wizard){e.preventDefault();e.returnValue='';}});
   render();
 })();

@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic UI-3 browser checks. Never connects to Identity, SQL or the original app.
-
-Requires the already installed Python Playwright browsers. Evidence is synthetic.
-WebKit is engine QA, not physical Safari acceptance. Mobile is interim smoke only.
-"""
+"""ASE-VIS01 R2: synthetic static UI checks; no original app, Identity, SQL or delivery."""
 import argparse
 import datetime as dt
 import hashlib
@@ -12,385 +8,257 @@ from pathlib import Path
 import subprocess
 import sys
 from urllib.parse import urlsplit
-
 from playwright.sync_api import sync_playwright
 
-
 ROOT = Path(__file__).resolve().parents[2]
-VIEWPORTS = [(1440, 900), (1366, 768), (820, 1180), (390, 844)]
-ROUTES = {'/', '/style.css', '/catalog.js', '/app.js', '/assets/css/media-review-inbox.css'}
-FUTURE = {'profile_create', 'profile_curate', 'profile_publication_manage', 'profile_support_assist'}
-RESTRICTED = {'public_profile_correction_review', 'public_profile_correction_apply'}
-DELEGATED = {'media_review_read', 'media_review_approve', 'physician_accreditation_review'}
-
-
+VIEWPORTS = [(1440,900),(1366,768),(820,1180),(390,844)]
+ROUTES = {'/','/style.css','/catalog.js','/app.js','/assets/css/media-review-inbox.css'}
+FUTURE = {'profile_create','profile_curate','profile_publication_manage','profile_support_assist'}
+RESTRICTED = {'public_profile_correction_review','public_profile_correction_apply'}
+DELEGATED = {'media_review_read','media_review_approve','physician_accreditation_review'}
+WARNING = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
 def git(*args):
-    return subprocess.check_output(['git', *args], cwd=ROOT, text=True).strip()
+    return subprocess.check_output(['git',*args],cwd=ROOT,text=True).strip()
 
-
-def run_case(browser, engine, viewport, base, evidence):
-    width, height = viewport
-    context = browser.new_context(viewport={'width': width, 'height': height}, locale='es-MX', reduced_motion='reduce')
-    page = context.new_page()
-    checks, screenshots, requests, errors, forbidden = [], [], [], [], []
-    capture_diagnostics, capture_messages = [], []
-    capture_active = False
-    webkit_capture_warning = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
-    origin = urlsplit(base)
-
-    def route(request_route):
-        request = request_route.request
-        parsed = urlsplit(request.url)
-        entry = {'method': request.method, 'path': parsed.path, 'origin': f'{parsed.scheme}://{parsed.netloc}'}
-        requests.append(entry)
-        if (parsed.scheme, parsed.netloc) != (origin.scheme, origin.netloc) or parsed.path not in ROUTES or request.method != 'GET':
-            forbidden.append(entry)
-            request_route.abort()
-        else:
-            request_route.continue_()
-
-    context.route('**/*', route)
-    page.on('pageerror', lambda error: errors.append(str(error)))
-    def console(message):
-        if message.type != 'error':
-            return
-        if capture_active and engine == 'webkit' and message.text == webkit_capture_warning:
-            capture_messages.append(message.text)
-        else:
-            errors.append(message.text)
-
-    page.on('console', console)
+def run_case(browser,engine,viewport,base,evidence,baseline):
+    width,height=viewport
+    context=browser.new_context(viewport={'width':width,'height':height},locale='es-MX',reduced_motion='reduce')
+    page=context.new_page()
+    checks=[];errors=[];requests=[];forbidden=[];screenshots=[];diagnostics=[];capture_messages=[];capturing=False
+    origin=urlsplit(base)
+    def route(r):
+        q=r.request;p=urlsplit(q.url);item={'method':q.method,'path':p.path,'origin':f'{p.scheme}://{p.netloc}'};requests.append(item)
+        if (p.scheme,p.netloc)!=(origin.scheme,origin.netloc) or p.path not in ROUTES or q.method!='GET':forbidden.append(item);r.abort()
+        else:r.continue_()
+    context.route('**/*',route)
+    page.on('pageerror',lambda e:errors.append(str(e)))
+    def console(m):
+        if m.type!='error':return
+        if capturing and engine=='webkit' and m.text==WARNING:capture_messages.append(m.text)
+        else:errors.append(m.text)
+    page.on('console',console)
     context.add_init_script("""(() => {
-      window.__storageAttempts = [];
-      window.__injectedStyles = [];
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (node.nodeName === 'STYLE') window.__injectedStyles.push(node.textContent);
-      }))).observe(document, {childList:true,subtree:true});
-      window.__dialogCloses = 0;
-      window.addEventListener('DOMContentLoaded', () => document.querySelector('#confirmation').addEventListener('close', () => window.__dialogCloses++));
-      for (const method of ['setItem','removeItem','clear']) {
-        const original = Storage.prototype[method];
-        Storage.prototype[method] = function(...args) { window.__storageAttempts.push('Storage.'+method); return original.apply(this,args); };
-      }
-      if (window.indexedDB) { const original = indexedDB.open.bind(indexedDB); indexedDB.open = (...args) => { window.__storageAttempts.push('indexedDB.open'); return original(...args); }; }
-      if (navigator.serviceWorker) { const original = navigator.serviceWorker.register.bind(navigator.serviceWorker); navigator.serviceWorker.register = (...args) => { window.__storageAttempts.push('serviceWorker.register'); return original(...args); }; }
+      window.__storageAttempts=[];window.__styles=[];window.__closes={confirmation:0,onboarding:0};
+      new MutationObserver(records=>records.forEach(r=>r.addedNodes.forEach(n=>{if(n.nodeName==='STYLE')window.__styles.push(n.textContent);}))).observe(document,{childList:true,subtree:true});
+      addEventListener('DOMContentLoaded',()=>['confirmation','onboarding'].forEach(id=>document.getElementById(id).addEventListener('close',()=>window.__closes[id]++)));
+      for(const method of ['setItem','removeItem','clear']){const original=Storage.prototype[method];Storage.prototype[method]=function(...args){window.__storageAttempts.push(method);return original.apply(this,args);};}
+      if(window.indexedDB){const original=indexedDB.open.bind(indexedDB);indexedDB.open=(...args)=>{window.__storageAttempts.push('indexedDB');return original(...args);};}
+      if(navigator.serviceWorker){const original=navigator.serviceWorker.register.bind(navigator.serviceWorker);navigator.serviceWorker.register=(...args)=>{window.__storageAttempts.push('serviceWorker');return original(...args);};}
     })();""")
-
-    def check(name, condition, detail=None):
-        checks.append({'name': name, 'pass': bool(condition), **({'detail': detail} if detail is not None else {})})
-        if not condition:
-            raise AssertionError(f'{engine} {width}x{height}: {name}; {detail}')
-
-    def expect_text(selector, fragment, name):
-        text = page.locator(selector).inner_text()
-        check(name, fragment in text, text)
-
-    def shot(name):
-        nonlocal capture_active
-        path = evidence / f'{engine}-{width}x{height}-{name}.png'
-        before_styles = page.evaluate('window.__injectedStyles.length')
-        before_messages = len(capture_messages)
-        capture_active = True
+    def check(name,ok,detail=None):
+        checks.append({'name':name,'pass':bool(ok),**({'detail':detail} if detail is not None else {})})
+        if not ok:raise AssertionError(f'{engine} {width}x{height}: {name}; {detail}')
+    def text(selector,fragment,name):check(name,fragment in page.locator(selector).inner_text())
+    def shot(name,modal=False):
+        nonlocal capturing
+        if name!='collapsed' and width not in [1440,390]:return
+        path=evidence/f'{engine}-{width}x{height}-{name}.png';before=page.evaluate('window.__styles.length');messages=len(capture_messages);capturing=True
         try:
-            page.screenshot(path=str(path), full_page=True)
-            new_styles = page.evaluate('(start) => window.__injectedStyles.slice(start)', before_styles)
-            new_messages = capture_messages[before_messages:]
-            # Playwright's WebKit screenshot synchronization injects and removes
-            # exactly `body {}` (driver/lib/server/screenshotter.js). The strict
-            # CSP correctly refuses it. Preserve that tool diagnostic separately;
-            # never ignore arbitrary inline-style violations or runtime errors.
-            if engine == 'webkit' and new_styles == ['body {}'] and new_messages == [webkit_capture_warning]:
-                capture_diagnostics.append({'screenshot': name, 'source': 'Playwright WebKit screenshot syncAnimations', 'timing': 'Only during page.screenshot; observed DOM mutation and matching console event.', 'injected_style': 'body {}', 'csp_rejected': True, 'message': webkit_capture_warning})
-            elif new_messages:
-                errors.extend(new_messages)
-        finally:
-            capture_active = False
-        screenshots.append(str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path))
-
-    def select(advisor):
-        card = page.locator(f'[data-advisor="{advisor}"]')
-        card.focus()
-        page.keyboard.press('Enter')
-
-    def save_with_keyboard():
-        page.locator('#save-permissions').focus()
-        page.keyboard.press('Enter')
-
-    def lifecycle_with_keyboard():
-        page.locator('#lifecycle').focus()
-        page.keyboard.press('Enter')
-
-    def focus_check(selector, name):
-        try:
-            page.wait_for_function('(selector) => document.querySelector(selector) === document.activeElement', arg=selector, timeout=2000)
-            focused = True
-        except Exception:
-            focused = False
-        check(name, focused, page.evaluate('({tag:document.activeElement.tagName,id:document.activeElement.id})'))
-
-    def close_dialog(action):
-        # Native dialog close is dispatched asynchronously after focus restoration.
-        # Await its real event; do not race another user action into that interval.
-        previous = page.evaluate('window.__dialogCloses')
-        action()
-        page.wait_for_function('(previous) => window.__dialogCloses > previous', arg=previous, timeout=2000)
-
-    def reveal_review():
-        page.locator('.review-controls').evaluate('(element) => element.open = true')
-
-    def choose_mode(value):
-        reveal_review()
-        page.locator('#authority-view').select_option(value)
-
-    def choose_state(value):
-        reveal_review()
-        page.locator('#directory-state').select_option(value)
-
-    def cap(key):
-        return page.locator(f'[data-capability="{key}"]')
-
-    def checked_keys():
-        return set(page.locator('[data-capability]:checked').evaluate_all('(nodes) => nodes.map(n => n.dataset.capability)'))
-
+            page.screenshot(path=str(path),full_page=not modal)
+            styles=page.evaluate('(n)=>window.__styles.slice(n)',before);found=capture_messages[messages:]
+            if engine=='webkit' and styles==['body {}'] and found==[WARNING]:diagnostics.append({'screenshot':name,'style':'body {}','csp_rejected':True,'message':WARNING,'scope':'Exact DOM mutation during screenshot only'})
+            elif found:errors.extend(found)
+        finally:capturing=False
+        screenshots.append(str(path.relative_to(ROOT)))
+    def layout(name):
+        metrics=page.evaluate("""()=>({overflow:Math.max(document.body.scrollWidth,document.documentElement.scrollWidth)>innerWidth,small:[...document.querySelectorAll('button,select,input:not([type=checkbox]),summary,.family-select,.capability-row,.ack-row')].filter(e=>e.getClientRects().length && !e.closest('dialog:not([open])') && e.getBoundingClientRect().height<43.9).map(e=>({id:e.id,height:e.getBoundingClientRect().height}))})""")
+        check(name+' no horizontal overflow',not metrics['overflow'],metrics)
+        check(name+' controls/labels >=44px',not metrics['small'],metrics['small'])
+    def close_dialog(id,action):
+        old=page.evaluate('(id)=>window.__closes[id]',id);action();page.wait_for_function('([id,n])=>window.__closes[id]>n',arg=[id,old])
+    def enter(selector):page.locator(selector).focus();page.keyboard.press('Enter')
+    def member(id):
+        if width<=640:page.locator('#show-directory').click()
+        enter(f'[data-member="{id}"]')
+    def mode(value):
+        page.locator('.review-controls').evaluate('e=>e.open=true');page.locator('#authority-view').select_option(value)
+    def root(kind='use'):return page.locator('#operational-matrix' if kind=='use' else '#delegation-matrix')
+    def group(id,kind='use'):return root(kind).locator(f'[data-family-select="{id}"]')
+    def expand(id,kind='use'):
+        button=root(kind).locator(f'[data-family="{id}"] .family-toggle')
+        if button.get_attribute('aria-expanded')=='false':button.click()
+    def cap(key,kind='use'):return root(kind).locator(f'[data-capability="{key}"]')
+    def selected_keys(kind='use'):return set(root(kind).locator('[data-capability]:checked').evaluate_all('nodes=>nodes.map(n=>n.dataset.capability)'))
+    def save():enter('#save-permissions')
+    def accept():close_dialog('confirmation',lambda:page.locator('#accept-confirmation').click())
+    def focus(selector,name):
+        page.wait_for_function('(s)=>document.querySelector(s)===document.activeElement',arg=selector);check(name,True)
+    def fresh():page.reload(wait_until='networkidle')
+    def wizard_step():page.locator('#next-onboarding').click()
+    def wizard_start(scenario,category='ADVISOR'):
+        if width<=640:page.locator('#show-directory').click()
+        page.locator('#add-member').click();page.locator('#identity-case').select_option(scenario)
+        wizard_step();page.locator('#member-category').select_option(category);wizard_step()
+    result={}
     try:
-        response = page.goto(base, wait_until='networkidle')
-        check('Static prototype loads with HTTP 200', response.status == 200)
-        check('CSP prohibits backend connections and form submission', "connect-src 'none'" in response.headers.get('content-security-policy', '') and "form-action 'none'" in response.headers.get('content-security-policy', ''))
-        check('UI is explicitly non-operational', 'PROTOTIPO — NO OPERATIVO' in page.locator('body').inner_text())
-        check('Spanish page and exact heading', page.locator('html').get_attribute('lang') == 'es' and page.locator('h1').inner_text() == 'ASESORES Y PERMISOS')
-        check('Page source anchor identifies isolated branch', 'prototype/ase-vis01-advisor-capability-matrix' in page.locator('.preview-footer').text_content())
-        catalog = page.evaluate('window.ASE_VIS01_CATALOG')
-        operational = {key for key, value in catalog.items() if value['kind'] == 'operational' and value['delegable']}
-        reserved = set(catalog) - operational
-        present = set(page.locator('[data-capability]').evaluate_all('(nodes) => nodes.map(n => n.dataset.capability)'))
-        check('Catalog exactly represented: 18 definitions, 16 independent operational checkboxes', len(catalog) == 18 and len(operational) == 16 and present == operational)
-        check('Two governance authorities have no operational checkboxes', len(reserved) == 2 and not (present & reserved))
-        check('Operational groups cover all rendered capabilities exactly once', page.locator('[data-capability]').count() == len(present))
-        check('A: one-capability fictional advisor', page.locator('#detail-title').inner_text() == 'Aurora Naranjo' and checked_keys() == {'media_review_read'})
-        check('Selected advisor remains visibly and semantically selected', page.locator('[data-advisor="aurora"]').get_attribute('aria-pressed') == 'true')
-        check('Four future functions remain read-only', all(cap(key).is_disabled() for key in FUTURE))
-        check('N: Future workflow gap explained', page.locator('.availability').filter(has_text='Sin flujo conectado').count() == 4)
-        check('Two class-restricted consumers remain read-only', all(cap(key).is_disabled() for key in RESTRICTED))
-        check('Director can edit only ten currently represented eligible functions', page.locator('[data-capability]:enabled').count() == 10)
-        check('Native labels and descriptions are associated with all checkboxes', page.locator('[data-capability]').evaluate_all("""nodes => nodes.every(n => n.labels.length === 1 && n.labels[0].textContent.trim() && n.getAttribute('aria-describedby') && document.getElementById(n.getAttribute('aria-describedby')))"""))
-        check('Individual capability label click targets are at least 44px high', page.locator('.capability-row').evaluate_all('nodes => nodes.every(n => n.getBoundingClientRect().height >= 44)'))
-        check('Checkbox technical identifiers are absent from visible product text', all(key not in page.locator('body').inner_text() for key in catalog))
-        overflow = page.evaluate('({width:innerWidth, document:document.documentElement.scrollWidth, body:document.body.scrollWidth})')
-        check('Viewport has no horizontal document overflow', max(overflow['document'], overflow['body']) <= width, overflow)
-        positions = page.locator('.workspace-columns').evaluate("e => ({columns:getComputedStyle(e).gridTemplateColumns,children:Array.from(e.children).map(c=>({x:c.getBoundingClientRect().x,y:c.getBoundingClientRect().y,width:c.getBoundingClientRect().width}))})")
-        check('Responsive composition retains desktop/tablet columns or mobile stack', positions['children'][1]['x'] > positions['children'][0]['x'] if width > 640 else positions['children'][1]['y'] > positions['children'][0]['y'], positions)
-        shot('directory-matrix')
-
-        page.keyboard.press('Tab')
-        if engine == 'webkit':
-            # WebKit on macOS inherits the platform option to skip links with Tab.
-            # Test its real focus/activation; do not equate headless engine policy
-            # with the Director's Safari Full Keyboard Access preference.
-            page.locator('.skip-link').focus()
-            check('Skip link accepts focus (WebKit platform Tab policy documented)', page.locator('.skip-link').evaluate('(e) => e === document.activeElement'))
-        else:
-            check('Keyboard reaches the skip link first', page.locator('.skip-link').evaluate('(e) => e === document.activeElement'))
-        outline = page.locator('.skip-link').evaluate('e => ({style:getComputedStyle(e).outlineStyle,width:getComputedStyle(e).outlineWidth})')
-        check('Keyboard focus has a visible outline', outline['style'] != 'none' and float(outline['width'].replace('px', '')) >= 2, outline)
-        page.keyboard.press('Enter')
-        check('Skip link focuses advisor detail', page.locator('#advisor-detail').evaluate('(e) => e === document.activeElement'))
-        check('Status regions are announced politely', page.locator('#feedback').get_attribute('aria-live') == 'polite' and page.locator('#unsaved').get_attribute('role') == 'status')
-
-        initial_url = page.url
-        select('bruno')
-        check('B: three independent permissions and same-page selection', len(checked_keys()) == 3 and page.url == initial_url and page.locator('#detail-title').inner_text() == 'Bruno Lago')
-        check('G: selection moves focus to the new advisor heading', page.locator('#detail-title').evaluate('(e) => e === document.activeElement'))
-        select('cora')
-        check('C: all sixteen operational permissions can be represented without arbitrary maximum', checked_keys() == operational)
-        select('diego')
-        check('D: active advisor with zero grants', not checked_keys() and 'Activo' in page.locator('.detail-header').inner_text())
-        select('elisa')
-        check('E: suspended advisor preserves two grants and blocks editing', len(checked_keys()) == 2 and page.locator('[data-capability]:enabled').count() == 0 and page.locator('#lifecycle').inner_text() == 'REACTIVAR ASESOR')
-        choose_mode('master')
-        select('aurora')
-        enabled = set(page.locator('[data-capability]:enabled').evaluate_all('(nodes) => nodes.map(n => n.dataset.capability)'))
-        check('Master administration is limited to three exact delegated capabilities', enabled == DELEGATED, sorted(enabled))
-        choose_mode('missing')
-        check('F: Master lacking management authority cannot modify any grant or lifecycle', page.locator('[data-capability]:enabled').count() == 0 and page.locator('#lifecycle').is_disabled())
-        expect_text('.authority-note', 'no tiene autorización', 'Missing management authority explained')
-        choose_mode('self')
-        check('Master cannot administer self or change own lifecycle', page.locator('#detail-title').inner_text() == 'Mar Solano' and page.locator('[data-capability]:enabled').count() == 0 and page.locator('#lifecycle').is_disabled())
-        choose_mode('director')
-        select('aurora')
-
-        cap('media_review_read').uncheck()
-        cap('media_review_approve').check()
-        expect_text('#unsaved', '2 cambios sin guardar', 'H: grant and revocation remain explicitly unsaved')
-        check('Dirty proposal blocks lifecycle until resolved', page.locator('#lifecycle').is_disabled())
-        check('Unsaved grant does not change directory saved count', '1 permiso' in page.locator('[data-advisor="aurora"]').inner_text())
-        save_with_keyboard()
-        check('I: explicit save opens labelled native confirmation dialog', page.locator('#confirmation').evaluate('e => e.open') and page.locator('#confirmation').get_attribute('aria-labelledby') == 'confirmation-title' and page.locator('#confirmation').get_attribute('aria-describedby') == 'confirmation-description')
-        expect_text('#confirmation-body', 'Conceder (1)', 'Confirmation separates exact grants')
-        expect_text('#confirmation-body', 'Revocar (1)', 'Confirmation separates exact revocations')
-        expect_text('#confirmation-description', 'sólo actualiza la simulación', 'Confirmation describes mock scope')
-        check('Dialog focuses non-destructive cancel first', page.locator('#cancel-confirmation').evaluate('e => e === document.activeElement'))
-        for key in ['Tab', 'Tab', 'Shift+Tab', 'Shift+Tab']:
-            page.keyboard.press(key)
-            check(f'Modal focus remains trapped after {key}', page.locator('#confirmation').evaluate('e => e.contains(document.activeElement)'))
-        shot('save-confirmation')
-        close_dialog(lambda: page.keyboard.press('Escape'))
-        check('Native Escape cancels dialog', not page.locator('#confirmation').evaluate('e => e.open'))
-        focus_check('#save-permissions', 'Escape restores keyboard-triggering save focus')
-        expect_text('#unsaved', '2 cambios sin guardar', 'Escape preserves draft')
-        select('bruno')
-        expect_text('#confirmation-title', 'Descartar', 'Changing selection protects unsaved proposal')
-        close_dialog(lambda: page.locator('#cancel-confirmation').click())
-        check('Cancelling selection change preserves selected advisor and draft', page.locator('#detail-title').inner_text() == 'Aurora Naranjo' and checked_keys() == {'media_review_approve'})
-        focus_check('[data-advisor="bruno"]', 'Cancel restores keyboard-triggering directory focus')
+        response=page.goto(base,wait_until='networkidle')
+        check('Static preview HTTP 200 and no backend connections by CSP',response.status==200 and "connect-src 'none'" in response.headers['content-security-policy'] and "form-action 'none'" in response.headers['content-security-policy'])
+        text('h1','EQUIPO INTERNO Y PERMISOS','R2 heading')
+        text('body','PROTOTIPO — NO OPERATIVO','Explicit mock scope')
+        catalog=page.evaluate('window.ASE_VIS01_CATALOG');op={k for k,v in catalog.items() if v['kind']=='operational' and v['delegable']}
+        check('18 definitions and exact16 operational checkboxes',len(catalog)==18 and set(root().locator('[data-capability]').evaluate_all('ns=>ns.map(n=>n.dataset.capability)'))==op)
+        check('Director sees six advisors, no editable Director root',page.locator('[data-member]').count()==6 and page.locator('[data-member="director"]').count()==0)
+        check('Five families collapsed initially',root().locator('.family').count()==5 and root().locator('[data-capability]:visible').count()==0)
+        check('Expand and select are separate native controls',root().locator('[data-expand]').count()==5 and root().locator('[data-family-select]').count()==5)
+        if width<=640:page.locator('#show-detail').click()
+        dimensions=page.evaluate('({page_height:document.documentElement.scrollHeight,matrix_height:document.querySelector("#operational-matrix").getBoundingClientRect().height,detail_height:document.querySelector("#advisor-detail").getBoundingClientRect().height})')
+        old=next(v for v in baseline['viewports'] if v['engine']==engine and v['width']==width)
+        check('Collapsed matrix height reduced at least40% from R1',dimensions['matrix_height']<old['matrix_height']*.6,{'r1':old,'r2':dimensions})
+        layout('Collapsed matrix');shot('collapsed')
+        if width<=640:check('Mobile selection-first hides directory in detail view',not page.locator('#team-directory').is_visible() and page.locator('#advisor-detail').is_visible())
+        else:check('Desktop/tablet retains both columns',page.locator('#team-directory').is_visible() and page.locator('#advisor-detail').is_visible())
+        check('One selected media capability has mixed semantics',group('media').evaluate('e=>e.indeterminate') and group('media').get_attribute('aria-checked')=='mixed')
+        before=selected_keys();expand('media');check('Expand does not modify any grant',selected_keys()==before)
+        group('media').click();check('Entire Media family selects six exact capabilities',len(selected_keys() & set(k for k in op if k.startswith('media_')))==6)
+        check('All eligible selected indicator',group('media').is_checked() and not group('media').evaluate('e=>e.indeterminate'))
+        cap('media_review_approve').uncheck();check('Individual override produces mixed5of6',len(selected_keys())==5 and group('media').evaluate('e=>e.indeterminate'))
+        shot('expanded-partial');layout('Expanded partial')
+        check('No autosave; directory still one saved permission','1 permiso asignado' in page.locator('[data-member="aurora"]').inner_text())
+        cap('media_review_read').uncheck();save()
+        text('#confirmation-body','Conceder uso (4)','Grouped confirmation lists individual grants')
+        text('#confirmation-body','Revocar uso (1)','Grouped confirmation lists individual revocation')
+        text('#confirmation-body','Descargar originales','Private source consequence remains visible')
+        check('No capability IDs shown in UI',all(k not in page.locator('body').inner_text() for k in catalog))
+        focus('#cancel-confirmation','Confirmation focuses Cancel first')
+        for key in ['Tab','Tab','Shift+Tab']:
+            page.keyboard.press(key);check('Confirmation focus remains inside '+key,page.locator('#confirmation').evaluate('e=>e.contains(document.activeElement)'))
+        layout('Multigrant dialog');shot('multi-confirmation',True)
+        close_dialog('confirmation',lambda:page.keyboard.press('Escape'));focus('#save-permissions','Escape returns keyboard focus')
+        check('Escape preserves unsaved proposal',not page.locator('#save-permissions').is_disabled())
+        page.locator('#revert').click();focus('#detail-title','Revert restores focus');check('Revert restores original one grant',selected_keys()=={'media_review_read'})
+        expand('media');cap('media_review_approve').check();member('bruno')
+        text('#confirmation-title','Descartar','Selection change protects unsaved draft')
+        close_dialog('confirmation',lambda:page.locator('#cancel-confirmation').click())
+        check('Cancel selection preserves advisor and independent draft',page.locator('#detail-title').inner_text()=='Aurora Naranjo' and selected_keys()=={'media_review_read','media_review_approve'})
+        if width<=640:page.locator('#show-detail').click()
+        save();accept()
+        text('#feedback','Simulación guardada','Explicit simulated success');check('Save updates only page memory',selected_keys()=={'media_review_read','media_review_approve'})
+        focus('#detail-title','Confirmed save focus restored')
+        expand('media');cap('media_review_read').uncheck();page.locator('.review-controls').evaluate('e=>e.open=true');page.locator('#simulate-conflict').check();save();accept()
+        check('Stale conflict blocks saving and preserves draft',page.locator('#conflict-banner').is_visible() and page.locator('#save-permissions').is_disabled())
+        focus('#conflict-banner','Conflict focuses recovery notice');page.locator('#refresh-conflict').click();check('Explicit refresh restores saved grants',len(selected_keys())==2)
+        enter('#lifecycle');text('#confirmation-description','conserva todos sus permisos','Suspension preserves history and grants');accept()
+        check('Suspended advisor retains grants and blocks edits',len(selected_keys())==2 and root().locator('[data-capability]:enabled').count()==0)
+        enter('#lifecycle');accept();check('Reactivated advisor retains grants',len(selected_keys())==2 and root().locator('[data-capability]:enabled').count()==10)
+        member('bruno');check('Three-grant fixture',len(selected_keys())==3);member('cora');check('All16assigned fixture retained including locked grants',len(selected_keys())==16);member('diego');check('Zero-grant fixture',len(selected_keys())==0)
+        # Master authority is independent from operational use and delegation.
+        fresh();page.locator('#filter-masters').click()
+        if width<=640:page.locator('#show-detail').click()
+        check('Director Master directory has two fictional Masters',page.locator('[data-member]').count()==2 and 'Lucía' in page.locator('#detail-title').inner_text())
+        check('Master operational use has exactly two grants',len(selected_keys())==2)
+        page.locator('.master-governance').evaluate('e=>e.open=true')
+        check('Management authority and three exact delegations separate from use',page.locator('#manage-advisors').is_checked() and selected_keys('delegate')==DELEGATED)
+        check('Corrections consumer allowed only for Master targets; profiles still locked',all(cap(k).is_enabled() for k in RESTRICTED) and all(cap(k).is_disabled() for k in FUTURE))
+        shot('master-administration');layout('Master administration')
+        expand('media');cap('media_review_improve').check()
+        check('Operational use edit does not grant delegation','media_review_improve' not in selected_keys('delegate'))
+        page.locator('#revert').click();page.locator('.master-governance').evaluate('e=>e.open=true')
+        expand('media','delegate');cap('media_review_source_download','delegate').check()
+        check('Delegation edit does not add operational use',len(selected_keys())==2)
         page.locator('#revert').click()
-        check('Revert restores saved grant without backend activity', checked_keys() == {'media_review_read'} and page.locator('#save-permissions').is_disabled())
-        focus_check('#detail-title', 'Revert retains useful focus after replacing detail controls')
-        cap('media_review_read').uncheck()
-        cap('media_review_approve').check()
-        save_with_keyboard()
-        close_dialog(lambda: page.locator('#accept-confirmation').click())
-        expect_text('#feedback', 'Simulación guardada. Concedidos: 1. Revocados: 1.', 'J: grant and revoke feedback is explicit simulation')
-        expect_text('#feedback', 'No hubo cambios reales', 'No canonical server success is claimed')
-        check('In-memory save updates saved state and clears dirty flag', checked_keys() == {'media_review_approve'} and page.locator('#save-permissions').is_disabled())
-        focus_check('#detail-title', 'Confirmed save moves focus to the replaced detail heading')
-        page.locator('.history').evaluate('(e) => e.open = true')
-        history = page.locator('#history-list').inner_text()
-        check('O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable', page.locator('#history-list li').count() == 7 and all(fragment in history for fragment in ['registrado', 'concedido', 'revocado', 'suspendido', 'reactivado']))
-        shot('simulation-history')
+        enter('#designation');check('Removing Master requires distinct acknowledgement',page.locator('#accept-confirmation').is_disabled());page.locator('#privileged-ack').check();accept()
+        check('Removing designation preserves operational grants',len(selected_keys())==2 and page.locator('.master-governance').count()==0)
+        text('#feedback','gestión y delegaciones retiradas','Removal reports management and delegation revocation')
+        enter('#designation');check('Director designation is separately confirmed',page.locator('#accept-confirmation').is_disabled());page.locator('#privileged-ack').check();accept()
+        text('.detail-header','Autorización pendiente','Master proposal is not fully activated')
+        check('Appointment adds no use grants, management or delegation',len(selected_keys())==2 and not page.locator('#manage-advisors').is_checked() and not selected_keys('delegate'))
+        # Delegated family selection must preserve existing grants outside scope.
+        fresh();mode('master');member('aurora');group('media').click()
+        check('All eligible subset selected still has truthful mixed2of6 indicator',selected_keys()=={'media_review_read','media_review_approve'} and group('media').get_attribute('aria-checked')=='mixed')
+        text('#operational-matrix [data-family="media"] .family-count','2 de 2 editables','Delegated subset count is explicit')
+        page.locator('#revert').click();member('cora')
+        check('Master cannot select Masters, appoint or self-manage',page.locator('#filter-masters').is_disabled() and page.locator('#designation').count()==0 and page.locator('[data-member="lucia"]').count()==0)
+        check('Only exact3delegated controls enabled',set(root().locator('[data-capability]:enabled').evaluate_all('ns=>ns.map(n=>n.dataset.capability)'))==DELEGATED)
+        expand('media');group('media').click()
+        check('Partial Master bulk revokes only2delegated Media, preserves4others',len(selected_keys() & set(k for k in op if k.startswith('media_')))==4 and 'media_review_source_download' in selected_keys())
+        check('Partial group truthfully mixed, not all granted',group('media').get_attribute('aria-checked')=='mixed')
+        save();text('#confirmation-body','Revocar uso (2)','Only exact delegated revocations confirmed');accept();check('Saved subset retains all14othergrants',len(selected_keys())==14)
+        expand('media');group('media').click();check('Selecting eligible subset restores2without changing locked4',len(selected_keys())==16 and group('media').get_attribute('aria-checked')=='true')
+        page.locator('#revert').click();mode('missing')
+        if width<=640:page.locator('#show-detail').click()
+        check('Master missing management cannot mutate groups or lifecycle',root().locator('[data-capability]:enabled').count()==0 and root().locator('[data-family-select]:enabled').count()==0 and page.locator('#lifecycle').is_disabled() and page.locator('#add-member').is_disabled())
+        fresh();mode('master');wizard_start('existing')
+        page.locator('#previous-onboarding').click()
+        check('Master onboarding category excludes Master appointment',page.locator('#member-category option[value="MASTER_ADMIN"]').evaluate('e=>e.disabled'))
+        close_dialog('onboarding',lambda:page.keyboard.press('Escape'))
+        fresh();page.locator('#add-member').click();page.locator('#member-email').fill('not-a-fictional-domain@example.com');wizard_step()
+        text('#onboarding-feedback','example.test','Prototype accepts synthetic email only')
+        check('Guided dialog keeps keyboard focus inside',page.locator('#onboarding').evaluate('e=>e.contains(document.activeElement)'))
+        for key in ['Tab','Shift+Tab']:
+            page.keyboard.press(key);check('Guided modal focus trap '+key,page.locator('#onboarding').evaluate('e=>e.contains(document.activeElement)'))
+        close_dialog('onboarding',lambda:page.keyboard.press('Escape'))
+        # Unified journey scenarios. No account existence lookup, password, or delivery.
+        for scenario,expected in [('existing','Autorización pendiente'),('new','Invitación pendiente'),('verification','Verificación de identidad pendiente'),('mfa','Configuración MFA pendiente'),('expired','Invitación pendiente'),('partial','Autorización pendiente')]:
+            fresh();wizard_start(scenario)
+            check(scenario+' collapsed initial permissions',page.locator('#onboarding [data-capability]:visible').count()==0)
+            page.locator('#onboarding [data-family-select="media"][data-kind="use"]').click();wizard_step()
+            text('#onboarding-content',expected,scenario+' safe pending review')
+            check(scenario+' never asks admin for another person password',page.locator('#onboarding input[type=password]').count()==0)
+            if scenario=='new':shot('unified-onboarding',True);layout('Onboarding review')
+            close_dialog('onboarding',wizard_step)
+            text('.detail-header',expected,scenario+' pending lifecycle recorded as UX only')
+            check(scenario+' proposal has zero assigned operational grants',not selected_keys() and root().locator('[data-capability]:enabled').count()==0)
+            text('#feedback','no se envió una invitación',scenario+' no false delivery success')
+            if scenario=='partial':text('.detail-header .pending-notice','Actualizar y reconciliar', 'Partial failure requires reconciliation, no blind retry')
+            if scenario=='expired':text('.detail-header .pending-notice','ha vencido','Expired invitation is not sent or activated')
+        fresh();wizard_start('duplicate');wizard_step();wizard_step()
+        check('Duplicate keeps workflow open without creating member',page.locator('#onboarding').evaluate('e=>e.open') and page.locator('[data-member]').count()==6)
+        text('#onboarding-feedback','No se crea otra entrada','Duplicate requires safe reconciliation');close_dialog('onboarding',lambda:page.locator('#cancel-onboarding').click())
+        fresh();wizard_start('existing','MASTER_ADMIN')
+        page.locator('#onboarding [data-family-select="media"][data-kind="use"]').click();page.locator('.wizard-delegation').evaluate('e=>e.open=true');page.locator('#onboard-manage').check();page.locator('#onboarding [data-family-select="media"][data-kind="delegate"]').click();wizard_step()
+        check('Unified Master proposal requires explicit Director confirmation',page.locator('#next-onboarding').is_disabled())
+        text('#onboarding-content','seguridad siguen pendientes','Master security ceremony is explicitly future');shot('master-onboarding',True)
+        page.locator('#master-confirm').check();close_dialog('onboarding',wizard_step)
+        check('Master onboarding proposal creates no effective grants/delegation/manage',not selected_keys() and not selected_keys('delegate') and not page.locator('#manage-advisors').is_checked())
+        text('.detail-header','Autorización pendiente','Master onboarding is not an activation')
+        # Directory states, labels, focus, privacy and page memory foundations.
+        fresh();page.locator('#advisor-search').fill('nobody-fictional');text('#directory-content','Sin resultados','Search no-results');page.locator('#advisor-search').fill('')
+        page.locator('.review-controls').evaluate('e=>e.open=true')
+        for state,word in [('empty','Aún no hay integrantes'),('loading','Cargando equipo'),('error','No pudimos consultar')]:
+            page.locator('#directory-state').select_option(state);text('#directory-content',word,'Directory '+state)
+        page.locator('#retry-directory').click();check('Retry restores historical fictional fixtures',page.locator('[data-member]').count()==6)
+        if width<=640:page.locator('#show-detail').click()
+        check('Labels/descriptions associated with individual checkboxes',root().locator('[data-capability]').evaluate_all('ns=>ns.every(n=>n.labels.length===1 && document.getElementById(n.getAttribute("aria-describedby")))'))
+        check('Status feedback is live',page.locator('#feedback').get_attribute('aria-live')=='polite' and page.locator('#unsaved').get_attribute('role')=='status')
+        page.locator('.skip-link').focus();page.keyboard.press('Enter');focus('#advisor-detail','Skip link supports focus and mobile detail access')
+        layout('Final layout')
+        storage=page.evaluate('({attempts:window.__storageAttempts,local:localStorage.length,session:sessionStorage.length,cookies:document.cookie})')
+        check('No persistence attempts or cookies',not storage['attempts'] and not storage['local'] and not storage['session'] and not storage['cookies'] and context.storage_state()=={'cookies':[],'origins':[]},storage)
+        check('Only allowlisted local GETs; no Identity/governance/delivery calls',not forbidden and bool(requests),requests)
+        check('No application errors; exact screenshot diagnostic separated',not errors,errors)
+        fresh();check('Reload discards all simulated staff/governance changes',page.locator('[data-member]').count()==6 and selected_keys()=={'media_review_read'})
+        if width<=640:page.locator('#show-detail').click()
+        expand('media');before_close=page.evaluate('window.__closes.confirmation')
+        page.evaluate('''()=>{document.querySelector('#use-media-media_review_approve').click();document.querySelector('#save-permissions').click();document.querySelector('#cancel-confirmation').click();document.querySelector('#save-permissions').click();}''')
+        page.wait_for_function('(n)=>window.__closes.confirmation>n',arg=before_close)
+        check('Rapid reopen ignores old queued close event',page.locator('#confirmation').evaluate('e=>e.open'))
+        accept();check('Rapidly reopened action still executes',selected_keys()=={'media_review_read','media_review_approve'})
+        check('No late application error or prohibited request',not errors and not forbidden)
 
-        cap('media_review_read').check()
-        reveal_review()
-        page.locator('#simulate-conflict').check()
-        save_with_keyboard()
-        close_dialog(lambda: page.locator('#accept-confirmation').click())
-        check('K: stale version rejects save, preserves pending proposal and disables save', page.locator('#conflict-banner').is_visible() and len(checked_keys()) == 2 and page.locator('#save-permissions').is_disabled() and page.locator('#revert').is_disabled())
-        expect_text('#feedback', 'no se aplicó ningún cambio', 'Conflict does not claim a successful update')
-        focus_check('#conflict-banner', 'Conflict focuses its recovery alert after replacing the form')
-        check('Conflict leaves saved directory count unchanged', '1 permiso' in page.locator('[data-advisor="aurora"]').inner_text())
-        shot('conflict')
-        page.locator('#refresh-conflict').click()
-        check('Explicit conflict refresh discards proposal and restores current saved state', not page.locator('#conflict-banner').is_visible() and checked_keys() == {'media_review_approve'} and not page.locator('#lifecycle').is_disabled())
-
-        lifecycle_with_keyboard()
-        expect_text('#confirmation-description', 'conserva todos sus permisos e historial', 'Suspension confirmation explains preservation')
-        close_dialog(lambda: page.locator('#cancel-confirmation').click())
-        check('Cancelling suspension retains active status', page.locator('#lifecycle').inner_text() == 'SUSPENDER ASESOR')
-        focus_check('#lifecycle', 'Cancelling lifecycle confirmation restores its keyboard trigger')
-        lifecycle_with_keyboard()
-        close_dialog(lambda: page.locator('#accept-confirmation').click())
-        check('Suspension changes only fictional status and preserves grants/history', checked_keys() == {'media_review_approve'} and page.locator('#lifecycle').inner_text() == 'REACTIVAR ASESOR' and page.locator('[data-capability]:enabled').count() == 0 and page.locator('#history-list li').count() == 8)
-        focus_check('#detail-title', 'Confirmed suspension restores useful focus in replaced detail')
-        expect_text('#feedback', 'Suspensión simulada', 'Suspension is explicitly simulated')
-        lifecycle_with_keyboard()
-        close_dialog(lambda: page.locator('#accept-confirmation').click())
-        check('Reactivation preserves saved grants/history and enables eligible editing', checked_keys() == {'media_review_approve'} and page.locator('#lifecycle').inner_text() == 'SUSPENDER ASESOR' and page.locator('[data-capability]:enabled').count() == 10 and page.locator('#history-list li').count() == 9)
-        focus_check('#detail-title', 'Confirmed reactivation restores useful focus in replaced detail')
-
-        cap('media_review_read').check()
-        select('bruno')
-        close_dialog(lambda: page.locator('#accept-confirmation').click())
-        check('Explicit discard switches selected advisor without applying draft', page.locator('#detail-title').inner_text() == 'Bruno Lago' and len(checked_keys()) == 3 and '1 permiso' in page.locator('[data-advisor="aurora"]').inner_text())
-        page.locator('#advisor-search').fill('AURORA')
-        check('Name search is case-insensitive', page.locator('[data-advisor]').count() == 1 and page.locator('[data-advisor="aurora"]').count() == 1)
-        page.locator('#advisor-search').fill('Ninguna persona ficticia')
-        expect_text('#directory-content', 'Sin resultados', 'M: no-results state is explicit')
-        page.locator('#advisor-search').fill('')
-        choose_state('empty')
-        expect_text('#directory-content', 'Aún no hay asesores', 'L: empty directory state')
-        expect_text('#advisor-detail', 'Selecciona un asesor', 'Empty directory has coherent empty detail')
-        choose_state('loading')
-        check('Loading state is busy and announced', page.locator('#directory-content').get_attribute('aria-busy') == 'true' and page.locator('#directory-content [role="status"]').count() == 1)
-        choose_state('error')
-        check('Directory error is announced and retry is available', page.locator('#directory-content [role="alert"]').count() == 1 and page.locator('#retry-directory').is_enabled())
-        shot('directory-error')
-        page.locator('#retry-directory').click()
-        check('Retry restores fictional directory without re-registration', page.locator('[data-advisor]').count() == 6 and page.locator('#directory-state').input_value() == 'ready')
-        page.locator('#add-advisor').click()
-        expect_text('#confirmation-description', 'Identity ya existente', 'Add advisor describes existing-account association')
-        check('Add advisor has no account-creation or real submit control', page.locator('#accept-confirmation').is_hidden() and page.locator('#confirmation input').count() == 0)
-        close_dialog(lambda: page.keyboard.press('Escape'))
-        check('Placeholder closes without creating fictional extra advisor', page.locator('[data-advisor]').count() == 6)
-        metrics = page.evaluate("""() => ({
-          overflow:document.documentElement.scrollWidth > innerWidth,
-          undersized:Array.from(document.querySelectorAll('button,select,input[type=search],summary')).filter(e=>e.getClientRects().length && !e.closest('dialog:not([open])') && e.getBoundingClientRect().height < 43.9).map(e=>({id:e.id,text:e.textContent.trim(),height:e.getBoundingClientRect().height})),
-          storageAttempts:window.__storageAttempts,
-          local:localStorage.length, session:sessionStorage.length, cookies:document.cookie,
-          forms:Array.from(document.forms).map(f=>({action:f.getAttribute('action'),method:f.getAttribute('method')}))
-        })""")
-        check('All displayed controls meet 44px minimum height', not metrics['undersized'], metrics['undersized'])
-        check('All states preserve viewport width', not metrics['overflow'])
-        check('No browser persistence attempted; storage and cookies stay empty', not metrics['storageAttempts'] and metrics['local'] == 0 and metrics['session'] == 0 and not metrics['cookies'], metrics)
-        check('No session cookies or origins persisted in context', context.storage_state() == {'cookies': [], 'origins': []})
-        check('Only allowlisted local GET resources were requested', not forbidden and requests and all(request['method'] == 'GET' for request in requests), requests)
-        check('No application script/console errors; exact verified capture-tool diagnostic separated', not errors, errors)
-        # Reload must discard all previously simulated changes, demonstrating page memory scope.
-        page.reload(wait_until='networkidle')
-        check('Reload discards all mock administration changes', checked_keys() == {'media_review_read'} and page.locator('#history-list li').count() == 5 and page.locator('#lifecycle').inner_text() == 'SUSPENDER ASESOR')
-        # Regression for a close event queued by a previous confirmation: a rapid
-        # reopen must retain its new action, not let the old close handler clear it.
-        before_rapid_close = page.evaluate('window.__dialogCloses')
-        page.evaluate("""() => {
-          document.querySelector('[data-capability="media_review_approve"]').click();
-          document.querySelector('#save-permissions').click();
-          document.querySelector('#cancel-confirmation').click();
-          document.querySelector('#save-permissions').click();
-        }""")
-        page.wait_for_function('(previous) => window.__dialogCloses > previous', arg=before_rapid_close, timeout=2000)
-        check('Rapid reopening survives the previous queued dialog close event', page.locator('#confirmation').evaluate('e => e.open') and 'Confirmar propuesta' in page.locator('#confirmation-title').inner_text())
-        close_dialog(lambda: page.locator('#accept-confirmation').click())
-        check('Rapidly reopened confirmation retains and executes its own mock action', checked_keys() == {'media_review_read', 'media_review_approve'} and page.locator('#save-permissions').is_disabled() and 'Concedidos: 1.' in page.locator('#feedback').inner_text())
-        check('Rapid-reopen regression causes no application script errors or forbidden requests', not errors and not forbidden, errors)
-        return {'engine': engine, 'viewport': f'{width}x{height}', 'result': 'PASS', 'checks': checks, 'screenshots': screenshots, 'requests': requests, 'page_errors': errors, 'capture_tool_diagnostics': capture_diagnostics, 'mobile_classification': 'INTERIM_SMOKE_ONLY' if width == 390 else None}
+        result={'result':'PASS','dimensions':dimensions}
     except Exception as error:
-        try:
-            shot('failure')
-        except Exception:
-            pass
-        return {'engine': engine, 'viewport': f'{width}x{height}', 'result': 'FAIL', 'error': str(error), 'checks': checks, 'screenshots': screenshots, 'requests': requests, 'page_errors': errors, 'capture_tool_diagnostics': capture_diagnostics, 'forbidden_requests': forbidden}
-    finally:
-        context.close()
-
+        try:shot('failure')
+        except Exception:pass
+        result={'result':'FAIL','error':str(error)}
+    finally:context.close()
+    return {'engine':engine,'viewport':f'{width}x{height}',**result,'checks':checks,'requests':requests,'forbidden_requests':forbidden,'application_errors':errors,'capture_tool_diagnostics':diagnostics,'screenshots':screenshots}
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--url', default='http://127.0.0.1:8140/')
-    parser.add_argument('--evidence', type=Path, required=True)
-    args = parser.parse_args()
-    parsed = urlsplit(args.url)
-    if parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or not parsed.port or parsed.port < 8140 or parsed.path not in {'', '/'} or parsed.query or parsed.fragment or parsed.username or parsed.password:
-        parser.error('Only a loopback HTTP prototype root at port >= 8140 is permitted.')
-    if git('branch', '--show-current') != 'prototype/ase-vis01-advisor-capability-matrix':
-        parser.error('Run only inside the isolated ASE-VIS01 prototype worktree.')
-    evidence = args.evidence.resolve()
-    evidence.mkdir(parents=True, exist_ok=True)
-    source_paths = ['prototypes/ase-vis01/' + name for name in ['index.html', 'style.css', 'app.js', 'catalog.js', 'serve.py', 'qa.py', 'export-catalog.php']]
-    source_paths += ['assets/css/media-review-inbox.css', 'modules/identity/services/InternalCapabilityCatalog.php']
-    hashes = {path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest() for path in source_paths}
-    driver_path = Path(__import__('playwright').__file__).resolve().parent / 'driver/package/lib/server/screenshotter.js'
-    driver_source = driver_path.read_bytes()
-    driver_lines = driver_source.decode().splitlines()
-    capture_tool = {'driver_path': str(driver_path), 'sha256': hashlib.sha256(driver_source).hexdigest(), 'function': 'inPagePrepareForScreenshots', 'body_style_line': next(i for i, line in enumerate(driver_lines, 1) if 'style.textContent = "body {}"' in line), 'qualification': 'WebKit-only screenshot synchronization attempts an inline body {} style. Strict CSP rejects it. A capture diagnostic is accepted only when exact text, DOM style mutation and screenshot timing match; all other errors remain fatal. No CSP bypass or driver modification.'}
-    report = {'task': 'ASE-VIS01', 'started_utc': dt.datetime.now(dt.timezone.utc).isoformat(), 'branch': git('branch', '--show-current'), 'commit_at_test': git('rev-parse', 'HEAD'), 'commit_binding': 'Candidate tested before commit; verify these file digests against the final commit tree.', 'source_sha256': hashes, 'url': args.url, 'scope': 'Synthetic static UI only; no original runtime, API or database access.', 'physical_safari': 'NOT_RUN', 'final_visual_approval': False, 'mobile': 'INTERIM_SMOKE_ONLY', 'accessibility_limits': 'DOM/keyboard/focus/label/status smoke only, not a screen-reader or full accessibility audit. macOS WebKit may skip links on Tab according to platform keyboard preferences; skip link focus and activation are tested explicitly.', 'cases': []}
-    report['capture_tool_qualification'] = capture_tool
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--url',default='http://127.0.0.1:8140/');parser.add_argument('--evidence',type=Path,default=ROOT/'prototypes/ase-vis01/evidence/r2/browser');args=parser.parse_args();p=urlsplit(args.url)
+    if p.scheme!='http' or p.hostname!='127.0.0.1' or not p.port or p.port<8140 or p.path not in ['','/'] or p.query or p.fragment or p.username or p.password:parser.error('Only loopback static preview root at port>=8140')
+    if git('branch','--show-current')!='prototype/ase-vis01-advisor-capability-matrix':parser.error('Isolated prototype branch required')
+    evidence=args.evidence.resolve();evidence.mkdir(parents=True,exist_ok=True)
+    paths=['prototypes/ase-vis01/'+n for n in ['index.html','app.js','style.css','catalog.js','qa.py','serve.py','export-catalog.php']]+['assets/css/media-review-inbox.css','modules/identity/services/InternalCapabilityCatalog.php']
+    driver=Path(__import__('playwright').__file__).resolve().parent/'driver/package/lib/server/screenshotter.js';data=driver.read_bytes()
+    report={'task':'ASE-VIS01 R2','started_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'branch':git('branch','--show-current'),'commit_at_test':git('rev-parse','HEAD'),'commit_binding':'Precommit candidate SHA256 must match final commit tree','source_sha256':{f:hashlib.sha256((ROOT/f).read_bytes()).hexdigest() for f in paths},'physical_safari':'NOT_RUN','mobile':'INTERIM_MOBILE_SMOKE_ONLY','final_visual_approval':False,'capture_tool_qualification':{'driver_path':str(driver),'sha256':hashlib.sha256(data).hexdigest(),'body_style_line':next(i for i,line in enumerate(data.decode().splitlines(),1) if 'style.textContent = "body {}"' in line),'rule':'Only exact WebKit body {} injection plus matching CSP denial during screenshot is qualified; other errors fatal, no driver/CSP bypass.'},'accessibility_limits':'DOM, keyboard, labels, focus, modal and target smoke; no physical screen-reader or Safari acceptance. macOS WebKit Tab-to-link preference is not changed.','cases':[]}
+    baseline=json.loads((ROOT/'prototypes/ase-vis01/evidence/r2/baseline.json').read_text())
     with sync_playwright() as playwright:
-        for engine in ['chromium', 'webkit']:
-            browser = getattr(playwright, engine).launch(headless=True)
+        for engine in ['chromium','webkit']:
+            browser=getattr(playwright,engine).launch()
             try:
-                for viewport in VIEWPORTS:
-                    case = run_case(browser, engine, viewport, args.url, evidence)
-                    report['cases'].append(case)
-                    print(f"{engine} {case['viewport']}: {case['result']} ({len(case['checks'])} checks)", flush=True)
-                    if case['result'] == 'FAIL':
-                        print(case['error'], flush=True)
-            finally:
-                browser.close()
-    report['finished_utc'] = dt.datetime.now(dt.timezone.utc).isoformat()
-    report['result'] = 'PASS' if all(case['result'] == 'PASS' for case in report['cases']) and len(report['cases']) == 8 else 'FAIL'
-    report['check_count'] = sum(len(case['checks']) for case in report['cases'])
-    (evidence / 'summary.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
-    print(json.dumps({'result': report['result'], 'cases': len(report['cases']), 'checks': report['check_count'], 'summary': str(evidence / 'summary.json')}), flush=True)
-    return 0 if report['result'] == 'PASS' else 1
-
-
-if __name__ == '__main__':
-    sys.exit(main())
+                for size in VIEWPORTS:
+                    case=run_case(browser,engine,size,args.url,evidence,baseline);report['cases'].append(case);print(f"{engine} {case['viewport']}: {case['result']} ({len(case['checks'])} checks) {case.get('error','')}",flush=True)
+            finally:browser.close()
+    report['result']='PASS' if len(report['cases'])==8 and all(c['result']=='PASS' for c in report['cases']) else 'FAIL';report['check_count']=sum(len(c['checks']) for c in report['cases']);report['finished_utc']=dt.datetime.now(dt.timezone.utc).isoformat();(evidence/'summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps({'result':report['result'],'checks':report['check_count'],'summary':str(evidence/'summary.json')}),flush=True)
+    return 0 if report['result']=='PASS' else 1
+if __name__=='__main__':sys.exit(main())
