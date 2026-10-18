@@ -92,6 +92,8 @@ Cada familia conserva writer, autoridad y estrategia de snapshot; un PNG de firm
 
 ## J08 — Plan, Stripe y activación
 
+**Sucesor ASE-COM01:** [contrato comercial](../identity/ASE-COM01-commercial-attribution-recurring-commission.md) requiere código autorizado→oferta/originador validados→snapshot aceptado→pago/periodo elegible→un resultado de comisión→liquidación separada. Un asesor originador por cliente, renovaciones pagadas incluidas sin reingresar código; descuento histórico del cliente 15% y comisión pendiente son reglas distintas. No se implementa esta cadena: faltan atribución/handoffs, reglas/cálculo, lector propio y liquidación. FREE activo no genera pago. Soporte/revisor/aceptante no determinan vendedor; origen técnico J01/J02 inmutable. Ver primeros enlaces pendientes en COM. Fuente/flujo financiero existente y gates siguientes intactos; sólo prototipo aislado, sin SQL/proveedor/activación.
+
 CTX-MAP03 amplía [descuento y contrato COM-09](TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#descuentos-com-09): el control de cupón no prueba validación ni persistencia. [COM-01..08](TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#casos-com-01-a-com-08) separa procedencia comercial, asesor de venta/soporte, revisor, aceptante y actor técnico; aceptación contractual no atribuye automáticamente una venta.
 
 Traza detallada [J08 financiero](STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#j08--plan--pago--evento--activación--entitlements): catálogo/precio/aceptación → ruta/checkout snapshot servidor → PaymentIntent → montaje browser (confirmación/retorno incompletos) → webhook firmado/deduplicado → pago confirmado → activación explícita en otra transacción → `profile_subscriptions` → capacidades/DTO público.

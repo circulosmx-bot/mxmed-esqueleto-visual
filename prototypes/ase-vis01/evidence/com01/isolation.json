@@ -1,0 +1,88 @@
+{
+  "result": "PASS",
+  "official": {
+    "branch": "ux/consultation-step2-vitals-r1",
+    "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+    "upstream": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+    "worktree_clean": true,
+    "tracked_files_compared": 2992,
+    "changed_files": [],
+    "baseline_manifest_sha256": "612a4dfc63337ff3c0149f91ff32c7de91bf49bd54a98d4f7fb0fc642f52a97e"
+  },
+  "original_listeners_before": {
+    "8091": [
+      "90106"
+    ],
+    "8092": [
+      "1727"
+    ],
+    "8443": [
+      "93582"
+    ],
+    "6385": [
+      "1590"
+    ]
+  },
+  "original_listeners_after": {
+    "8091": [
+      "90106"
+    ],
+    "8092": [
+      "1727"
+    ],
+    "8443": [
+      "93582"
+    ],
+    "6385": [
+      "1590"
+    ]
+  },
+  "original_listeners_unchanged": true,
+  "product_code_changed": false,
+  "sql_reads": 0,
+  "sql_writes": 0,
+  "provider_calls": 0,
+  "real_financial_actions": false,
+  "real_data_changed": false,
+  "no_product_QA_or_financial_services_executed": true,
+  "preview_http_checks": [
+    {
+      "method": "HEAD",
+      "path": "/",
+      "status": 200,
+      "target": "own static prototype only"
+    },
+    {
+      "method": "GET",
+      "path": "/commercial.js",
+      "status": 200,
+      "target": "own static prototype only"
+    },
+    {
+      "method": "GET",
+      "path": "/commercial.css",
+      "status": 200,
+      "target": "own static prototype only"
+    },
+    {
+      "method": "GET",
+      "path": "/api/identity/session",
+      "status": 404,
+      "target": "own static prototype only"
+    },
+    {
+      "method": "GET",
+      "path": "/docs/README.md",
+      "status": 404,
+      "target": "own static prototype only"
+    },
+    {
+      "method": "POST",
+      "path": "/",
+      "status": 405,
+      "target": "own static prototype only"
+    }
+  ],
+  "prototype_expiry": "2026-10-25T00:00:00Z",
+  "prototype_cleanup": "Close/reload discards mock memory; stop only verified own PID, retain published branch. Original listeners untouched."
+}

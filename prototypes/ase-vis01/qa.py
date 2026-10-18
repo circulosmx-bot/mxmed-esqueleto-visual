@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 VIEWPORTS = [(1440,900),(1366,768),(820,1180),(390,844)]
-ROUTES = {'/','/style.css','/catalog.js','/app.js','/assets/css/media-review-inbox.css'}
+ROUTES = {'/commercial.js','/commercial.css','/','/style.css','/catalog.js','/app.js','/assets/css/media-review-inbox.css'}
 FUTURE = {'profile_create','profile_curate','profile_publication_manage','profile_support_assist'}
 RESTRICTED = {'public_profile_correction_review','public_profile_correction_apply'}
 DELEGATED = {'media_review_read','media_review_approve','physician_accreditation_review'}
@@ -248,9 +248,9 @@ def main():
     if p.scheme!='http' or p.hostname!='127.0.0.1' or not p.port or p.port<8140 or p.path not in ['','/'] or p.query or p.fragment or p.username or p.password:parser.error('Only loopback static preview root at port>=8140')
     if git('branch','--show-current')!='prototype/ase-vis01-advisor-capability-matrix':parser.error('Isolated prototype branch required')
     evidence=args.evidence.resolve();evidence.mkdir(parents=True,exist_ok=True)
-    paths=['prototypes/ase-vis01/'+n for n in ['index.html','app.js','style.css','catalog.js','qa.py','serve.py','export-catalog.php']]+['assets/css/media-review-inbox.css','modules/identity/services/InternalCapabilityCatalog.php']
+    paths=['prototypes/ase-vis01/'+n for n in ['index.html','app.js','style.css','catalog.js','commercial.js','commercial.css','commercial-qa.py','qa.py','serve.py','export-catalog.php']]+['assets/css/media-review-inbox.css','modules/identity/services/InternalCapabilityCatalog.php']
     driver=Path(__import__('playwright').__file__).resolve().parent/'driver/package/lib/server/screenshotter.js';data=driver.read_bytes()
-    report={'task':'ASE-VIS01 R2','started_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'branch':git('branch','--show-current'),'commit_at_test':git('rev-parse','HEAD'),'commit_binding':'Precommit candidate SHA256 must match final commit tree','source_sha256':{f:hashlib.sha256((ROOT/f).read_bytes()).hexdigest() for f in paths},'physical_safari':'NOT_RUN','mobile':'INTERIM_MOBILE_SMOKE_ONLY','final_visual_approval':False,'capture_tool_qualification':{'driver_path':str(driver),'sha256':hashlib.sha256(data).hexdigest(),'body_style_line':next(i for i,line in enumerate(data.decode().splitlines(),1) if 'style.textContent = "body {}"' in line),'rule':'Only exact WebKit body {} injection plus matching CSP denial during screenshot is qualified; other errors fatal, no driver/CSP bypass.'},'accessibility_limits':'DOM, keyboard, labels, focus, modal and target smoke; no physical screen-reader or Safari acceptance. macOS WebKit Tab-to-link preference is not changed.','cases':[]}
+    report={'task':'ASE-COM01 R2 regression','r2_visual_approval':'APPROVED_BY_DIRECTOR_IN_ASE_COM01','final_visual_approval_scope':'ASE-COM01 extension only','started_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'branch':git('branch','--show-current'),'commit_at_test':git('rev-parse','HEAD'),'commit_binding':'Precommit candidate SHA256 must match final commit tree','source_sha256':{f:hashlib.sha256((ROOT/f).read_bytes()).hexdigest() for f in paths},'physical_safari':'NOT_RUN','mobile':'INTERIM_MOBILE_SMOKE_ONLY','final_visual_approval':False,'capture_tool_qualification':{'driver_path':str(driver),'sha256':hashlib.sha256(data).hexdigest(),'body_style_line':next(i for i,line in enumerate(data.decode().splitlines(),1) if 'style.textContent = "body {}"' in line),'rule':'Only exact WebKit body {} injection plus matching CSP denial during screenshot is qualified; other errors fatal, no driver/CSP bypass.'},'accessibility_limits':'DOM, keyboard, labels, focus, modal and target smoke; no physical screen-reader or Safari acceptance. macOS WebKit Tab-to-link preference is not changed.','cases':[]}
     baseline=json.loads((ROOT/'prototypes/ase-vis01/evidence/r2/baseline.json').read_text())
     with sync_playwright() as playwright:
         for engine in ['chromium','webkit']:

@@ -1,0 +1,25 @@
+/* ASE-COM01: bounded additions to the approved R2 layout. */
+.commercial-group{border:1px solid var(--line);border-radius:7px;margin:12px 0;background:#fff;min-width:0}
+.commercial-heading{flex:1;min-width:0;padding:4px 0}
+.commercial-group .family-heading{min-height:74px}
+.commercial-note{font-size:.78rem;line-height:1.65;color:var(--muted);overflow-wrap:anywhere}
+.commercial-conditions{margin:0 24px 20px;border:1px solid var(--line);border-radius:7px;padding:0 14px 14px}
+.commercial-conditions>summary{min-height:44px;align-content:center;cursor:pointer;font-size:.86rem;font-weight:650}
+.commercial-terms{margin:12px 0;font-size:.82rem;line-height:1.65}
+.commercial-terms>div{padding:10px 0;border-bottom:1px solid #edf1f4}
+.commercial-terms dt{font-weight:650}
+.commercial-terms dd{margin:4px 0 0;color:var(--muted);overflow-wrap:anywhere}
+#preview-own-activity{font-size:.8rem;max-width:100%;white-space:normal}
+#commercial-activity{width:min(760px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;color:var(--ink)}
+#commercial-activity h2{margin:0 0 10px;font-size:1.2rem}
+#commercial-activity h3{font-size:.92rem;margin:18px 0 8px}
+#commercial-activity>section{border-top:1px solid var(--line);padding:4px 0 10px}
+#commercial-activity .commercial-note{font-size:.78rem}
+.symbolic-code{padding:12px;border:1px solid var(--line);background:var(--soft);border-radius:6px;font-size:.85rem;overflow-wrap:anywhere}
+.commercial-customers,.commercial-periods{padding:0;margin:0;list-style:none}
+.commercial-customers li,.commercial-periods li{border:1px solid var(--line);border-radius:6px;margin:10px 0;padding:12px;font-size:.82rem;line-height:1.6;overflow-wrap:anywhere}
+.commercial-customers span,.commercial-periods span{display:block;color:var(--muted);margin-top:5px}
+.commercial-replay{background:#f4f7f9;padding:12px!important;border-radius:6px}
+#commercial-activity .dialog-actions{position:sticky;bottom:-16px;background:white;padding:12px 0}
+@media(max-width:1000px){.commercial-conditions{margin-left:18px;margin-right:18px}}
+@media(max-width:640px){.commercial-conditions{padding-left:10px;padding-right:10px}#commercial-activity{padding:18px}#commercial-activity .dialog-actions{bottom:-18px}#commercial-replay{width:100%;white-space:normal}.commercial-group .family-heading{align-items:flex-start}}

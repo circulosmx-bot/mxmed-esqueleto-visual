@@ -88,6 +88,8 @@
     });
     return ()=>{previousFocus=document.activeElement;dialog.showModal();};
   }
+  // Presentation-only hook for bounded static extensions; no authority or grant writer exposed.
+  window.ASE_VIS01_UI=Object.freeze({setupDialog});
   const confirmation=$('confirmation'), showConfirmation=setupDialog(confirmation), onboarding=$('onboarding'), showOnboarding=setupDialog(onboarding);
   let pendingAction=null;
   function confirm(title,description,body,accept,action,privileged=false) {
@@ -171,6 +173,7 @@
   }
   function renderDetail() {
     const detail=$('advisor-detail');
+    detail.dataset.memberId=selected.id;detail.dataset.memberName=selected.name;detail.dataset.category=selected.category;detail.dataset.stage=selected.stage;detail.dataset.authorityView=mode;
     if(directoryState!=='ready' || selected.category!==category){detail.innerHTML='<div class="empty-state detail-empty"><h2 id="detail-title" tabindex="-1">Selecciona un integrante</h2><p>Su información aparecerá cuando el directorio esté disponible.</p></div>';return;}
     const master=selected.category==='MASTER_ADMIN',pending=!['ACTIVE','SUSPENDED'].includes(selected.stage);
     detail.innerHTML=`<header class="detail-header"><div class="detail-heading-row"><div><p class="eyebrow">${categoryLabel(selected.category)} · persona ficticia</p><h2 id="detail-title" tabindex="-1">${esc(selected.name)}</h2>${status(selected)}<p class="detail-subtitle"><span id="selected-count">${draft.grants.size}</span> <span id="count-noun">${draft.grants.size===1?'permiso operativo':'permisos operativos'}</span> <span id="count-label">${draft.grants.size===1?'asignado':'asignados'}</span> · simulación</p></div><div class="member-actions"><button id="lifecycle" class="lifecycle" type="button" ${pending?'disabled':''}>${selected.status==='SUSPENDED'?'REACTIVAR':'SUSPENDER'} ${master?'MASTER':'ASESOR'}</button>${mode==='director'?`<button id="designation" class="lifecycle" type="button">${master?'RETIRAR DESIGNACIÓN MASTER':'PROPONER COMO MASTER'}</button>`:''}</div></div><p class="authority-note">${mode==='director'?'Vista Director: permisos de uso, gestión y delegación son decisiones separadas.':mode==='missing'?'Este Master no tiene autorización de gestión. Todos los permisos permanecen en consulta.':'Vista Master: sólo puedes administrar asesores y las capacidades expresamente delegadas. No puedes autoadministrarte ni nombrar Masters.'}${selected.status==='SUSPENDED'?' La suspensión bloquea uso y conserva permisos e historial.':''}</p>${pending?`<div class="pending-notice"><strong>${stateLabel(selected)} · simulación</strong><p>${esc(selected.pendingMessage||'La propuesta no es una autorización operativa activa.')}</p>${selected.requested?`<p>${selected.requested.size} permisos solicitados; cero nuevos permisos efectivos. Falta validar identidad, autoridad y los pasos de seguridad aplicables.</p>`:''}</div>`:''}</header>
@@ -188,6 +191,7 @@
     $('refresh-conflict').onclick=()=>{resetDraft();say('Estado ficticio actualizado. Puedes revisar una nueva propuesta.');render();focusDetail();};
     $('history-list').innerHTML=[...selected.events,'Integrante registrado.','Permiso concedido: Consultar revisión de medios.','Permiso revocado: Aprobar medios.','Integrante suspendido; permisos conservados.','Integrante reactivado.'].map((text,i)=>`<li><time>Ejemplo ${i+1} · Dirección ficticia</time>${esc(text)}</li>`).join('');
     updatePending();
+    document.dispatchEvent(new Event('ase-vis01-detail-rendered'));
   }
   function updatePending() {
     if(!$('unsaved'))return;

@@ -1,6 +1,17 @@
 # ASE-VIS01 R2 — prototipo reversible del equipo interno
 
-## ASE-VIS01 R2 — revisión vigente, sin integración
+## ASE-COM01 — aprobación R2 conservada y extensión comercial aislada
+
+**Sucesor vigente, 2026-10-17:** el Director denomina expresamente R2 `d87174774de6526d54082c1b7a770b228c472746` **visualmente aprobado** en ASE-COM01. Se conserva esa aprobación; las menciones anteriores de aprobación R2 pendiente más abajo son historia de su entrega. No se infiere Safari físico ni autorización de integración. Sólo las adiciones comerciales esperan nueva revisión visual.
+
+[Contrato comercial único](ASE-COM01-commercial-attribution-recurring-commission.md) registra requerimiento recurrente, decisiones recuperadas/pendientes y productor→consumidor→primer enlace ausente. La misma UI añade familia **CAPTACIÓN Y VENTAS** con cuatro actividades propuestas sólo lectura, **CONDICIONES COMERCIALES** en detalle y modal **MI ACTIVIDAD COMERCIAL** con médicos ficticios del asesor seleccionado. Sin catálogo/grants ejecutables nuevos, tasa/base/saldos, API/SQL, códigos/acciones financieras reales o integración ASE-INT01. Master no hereda atribución, código ni poder financiero.
+
+R2 conserva DOM/geometría de encabezado, directorio, detalle y cinco familias previas; nuevas zonas debajo y con CSS acotado. Catálogo inalterado (18/16). Un hook de render/presentación y helper modal reutilizan la UI existente; expansión comercial no entra en el editor de grants. La QA R2 vigente se ejecuta con las dos nuevas rutas estáticas permitidas y evidencia propia, sin sobrescribir R1/R2 históricos. [Suite comercial](../../prototypes/ase-vis01/evidence/com01/browser/summary.json), [regresión R2](../../prototypes/ase-vis01/evidence/com01/r2-regression/summary.json), [capturas](../../prototypes/ase-vis01/evidence/com01/browser/), [aislamiento](../../prototypes/ase-vis01/evidence/com01/isolation.json). Los diez campos CTX-SYNC vigentes constan en el contrato comercial y reporte final.
+
+Misma URL `http://127.0.0.1:8140/`, expiración `2026-10-25T00:00:00Z`. Retiro seguro al final de este contrato; nuevo commit/QA/digests en entrega. `NEW_VISUAL_APPROVAL_PENDING=true` sólo para ASE-COM01. `OPERATIONAL_STATUS=PROTOTYPE_ONLY_NOT_OPERATIONAL`.
+
+<a id="ase-vis01-r2--revisión-vigente-sin-integración"></a>
+## ASE-VIS01 R2 — revisión entregada, sin integración
 
 **Inicio:** prototipo `6e7def31cf16f9e782ea9489e40f8d68ebf0b5b6`; fuente oficial `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`. Misma rama/worktree/preview de R1. R1 permanece como checkpoint en Git y sus capturas/resultados anteriores son históricos de esa versión, no QA de R2.
 

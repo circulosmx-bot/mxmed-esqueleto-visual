@@ -731,6 +731,8 @@ es requisito previo a una delegación futura, no instrucción para migrar o modi
 
 ### J08 — plan → pago → evento → activación → entitlements
 
+**ASE-COM01, sucesor de política comercial:** [contrato y traza acotada](../identity/ASE-COM01-commercial-attribution-recurring-commission.md) exige conservar un originador por cliente y comisiones por pagos elegibles, incluidas renovaciones mensuales/anuales. El 15% recuperado es descuento del cliente, no comisión; tasa/base/duración del descuento/liquidación pendientes D01–D08. Este requerimiento no elimina las brechas SUBS-09 ni demuestra Stripe Billing, cargos recurrentes, Connect o payouts. Se reutilizan SUBS-02..08 como evidencia de precio/contrato/pago/activación, pero faltan código/atribución/reglas/consumer comisionable/resultado único y liquidación. Confirmación, activación, devengado y liquidación son cuatro hechos separados; no una transacción común. Nada de esto modifica Patient Billing/PAC ni comisiones de Agenda/Call Center. Sin llamadas Stripe, SQL ni aceptación financiera nueva.
+
 `#p-suscripcion / seleccionar plan` → handlers de ruta [SUBS-02](#subs-02--seleccionar-catálogo-y-preparar-ruta-de-pago)
 → API y contexto servidor → preview/precio catálogo → writer ruta/idempotencia
 → [SUBS-03](#subs-03--aceptación-contractual-y-checkout-interno) aceptación/checkout transaccional

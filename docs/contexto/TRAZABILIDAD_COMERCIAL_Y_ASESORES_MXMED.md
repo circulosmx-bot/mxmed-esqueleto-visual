@@ -37,6 +37,22 @@ Sobre `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`, el Director aprobó sólo la c
 
 Sucesor visual aislado sobre `6e7def31`, fuente oficial `f92f37f1` intacta. Director aprobó interfaz común Asesores/Masters, incorporación guiada y familias contraíbles con selección visual de capabilities individuales. Sólo Director propone/retira Masters y configura gestión/delegaciones; Master gestiona asesores dentro de autoridad y scopes exactos. [Contrato R2](../identity/ASE-VIS01-advisor-matrix-prototype.md#ase-vis01-r2--revisión-vigente-sin-integración). **P:** decisiones funcionales aprobadas, apariencia final pendiente. **S:** mock en memoria extendido. **C:** sin reader/API, invitación/admisión ni step-up Master conectados. **V:** QA R2 separada de R1 en contrato. **O:** no operativo, sin cuentas/grants/MFA/datos o listeners reales modificados. Grupos no son grants genéricos; onboarding no es transacción global ni autorización activa. COM-10/ID-07 conservan fuentes/owners y counts.
 
+<a id="ase-com01"></a>
+## ASE-COM01 — sucesor comercial de la política y del prototipo R2
+
+**APPROVED_USER_REQUIREMENT, 2026-10-17:** R2 `d8717477` está visualmente aprobado por el Director en ASE-COM01. Se conserva; sólo la nueva extensión comercial está pendiente. [Política reconciliada, traza exacta y D01–D08](../identity/ASE-COM01-commercial-attribution-recurring-commission.md) sucede las antiguas ausencias de **política**, sin convertirlas en implementación. Un ADVISOR con grants individuales puede dedicarse a captar médicos mediante código autorizado, sin clase/bundle/cupo nuevo. Un originador por cliente; comisión porcentual sobre pagos elegibles **incluidas renovaciones mensuales/anuales**, con relación pagada/perfil elegible activo. El médico es el pagador recurrente. FREE activo no genera pago. No caduca a doce meses ni requiere reingresar código.
+
+| Caso afectado | Sucesor contractual ASE-COM01; fuente anterior intacta |
+|---|---|
+| COM-02 | Captación comercial y originador requeridos; código temprano es decisión histórica recuperada. Validación/relación/handoff no encontrados en el ámbito inspeccionado. Origen técnico CLAIM/JOIN inmutable, sin backfill. |
+| COM-03 | Origen económico conservado en venta y renovaciones elegibles. Pago/periodo/reglas versionados necesarios; no derivar vendedor de actor/aceptante/revisor. No motor de comisión encontrado. |
+| COM-04 | Soporte actual es distinto de originador económico; cambios no transfieren derechos automáticamente. Relación operativa de cartera sigue pendiente. |
+| COM-06/07 | Reutilizar snapshots, aceptante/actor exactos y auditoría con su semántica; falta atribución/reglas económicas y lector comercial. No una transacción global ni auditoría financiera ya conectada. |
+| COM-08/09 | Histórico recuperado **15% de descuento al cliente**, no tasa de comisión ni duración perpetua. Aplicabilidad D03 pendiente, sin descuento real. Cupón original sigue oculto/inactivo; primera frontera UI→validación de código/oferta. |
+| COM-10 | Misma UI aprobada R2 con familia propuesta Captación y ventas, condiciones y vista propia ficticia. No claves ejecutables, scopes/consumers/gestión financiera operativos, otra app ni integración ASE-INT01. |
+
+`SOURCE_IMPLEMENTATION`: archivos de Identity/subscriptions originales preservados. `CONNECTIVITY`: faltan código autorizado→atribución validada→snapshots comerciales→resultado de comisión→liquidación separada. `VERIFICATION`: sólo fuente y [QA estática comercial/R2](../identity/ASE-COM01-commercial-attribution-recurring-commission.md#extensión-de-la-ui-aprobada-y-verificación). `OPERATIONAL_STATUS=PROTOTYPE_ONLY_NOT_OPERATIONAL`. Los casos y readiness históricos siguientes se leen con este sucesor: política base ahora definida, D01–D08 y producers/consumers pendientes; no se borra evidencia CTX-MAP03.
+
 <a id="separacion-de-identidades-y-procedencias"></a>
 ## Ocho significados distintos
 

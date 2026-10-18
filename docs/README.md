@@ -79,6 +79,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 - Escritura: [CreateSubscriptionWithAcceptanceService](../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php), [ProfileSubscriptionRepository](../modules/subscriptions/repositories/ProfileSubscriptionRepository.php).
 - Lectura: [CurrentSubscriptionReadModelService](../modules/subscriptions/services/CurrentSubscriptionReadModelService.php), [PublicCommercialPlanSource](../modules/subscriptions/services/PublicCommercialPlanSource.php).
 - Contratos: [decisiones comerciales](MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md), [registro visual](MXMED_REGISTRO_CONTRATOS_VISUALES.md), [ACT02 comercial](identity/ACT02-integrated-public-workflows.md). QA: [capabilities](../modules/subscriptions/tests/ExistingCapabilityAuthorityServiceTest.php).
+- Contrato comercial dirigido: [ASE-COM01 — captación, atribución y comisión recurrente](identity/ASE-COM01-commercial-attribution-recurring-commission.md), con procedencia, D01–D08 y extensión del prototipo R2 aprobado; sin implementación financiera ni ASE-INT01.
 - Límite: override local de revisión no es suscripción real; preservar opt-in, entitlements y gates de cobro/mapping.
 
 ### Agenda y Consultorio / Google Maps — CURRENT

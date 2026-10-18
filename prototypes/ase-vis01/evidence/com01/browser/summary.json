@@ -1,0 +1,3092 @@
+{
+  "task": "ASE-COM01",
+  "scope": "Static presentation/contract only; no financial acceptance",
+  "result": "PASS",
+  "commit_at_test": "d87174774de6526d54082c1b7a770b228c472746",
+  "source_sha256": {
+    "prototypes/ase-vis01/index.html": "1625d43507be0d64dd1286c0455c8b37e0858f5bd754d9bebc1c41c1b1b4b417",
+    "prototypes/ase-vis01/app.js": "f557424e64d8e9220a9a3e2c9bc7982a0f8f5a82d3396b697d8c944b735f7ba8",
+    "prototypes/ase-vis01/style.css": "5fa20409b805b4373714025c7377ffd3ab86b5db3b2be7c4a1bcce7453ead7e0",
+    "prototypes/ase-vis01/catalog.js": "deb3a1741e555afd38806ed5ceb6148851b131935553b4b054aa3d1546be8533",
+    "prototypes/ase-vis01/commercial.js": "1b957c12ca40e2f6e294c7e3819156e37226099091ecc9ca61341da4cf073c39",
+    "prototypes/ase-vis01/commercial.css": "ccf65cb86791d2350f597c10b543512378c7fb4861e00bb7d60a44e0ce72ca93",
+    "prototypes/ase-vis01/commercial-qa.py": "1c38a31a609058eb845725a87c394e5d22e66a0797e8e624fcf3268b4f2c69cc",
+    "prototypes/ase-vis01/qa.py": "79b850857eec23c5f98aaa11683760e7d6dc2ce69e4e0fbae5995ee57a54c8dd",
+    "prototypes/ase-vis01/serve.py": "08200d3c205a646d7961c70d548fde52fefd82eaabf5731ff18aafdaa9613387",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71"
+  },
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_MOBILE_SMOKE_ONLY",
+  "new_visual_approval_pending": true,
+  "check_count": 380,
+  "cases": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 108,
+              "y": 32,
+              "width": 1224,
+              "height": 117.71875
+            },
+            "after": {
+              "x": 108,
+              "y": 32,
+              "width": 1224,
+              "height": 117.71875
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 108,
+              "y": 265.46875,
+              "width": 400,
+              "height": 964.75
+            },
+            "after": {
+              "x": 108,
+              "y": 265.46875,
+              "width": 400,
+              "height": 964.75
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 533,
+              "y": 266.46875,
+              "width": 798,
+              "height": 224.5625
+            },
+            "after": {
+              "x": 533,
+              "y": 266.46875,
+              "width": 798,
+              "height": 224.5625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 567.75,
+              "width": 750,
+              "height": 71.40625
+            },
+            "after": {
+              "x": 557,
+              "y": 567.75,
+              "width": 750,
+              "height": 71.40625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 651.15625,
+              "width": 750,
+              "height": 71.40625
+            },
+            "after": {
+              "x": 557,
+              "y": 651.15625,
+              "width": 750,
+              "height": 71.40625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 734.5625,
+              "width": 750,
+              "height": 91.9375
+            },
+            "after": {
+              "x": 557,
+              "y": 734.5625,
+              "width": 750,
+              "height": 91.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 838.5,
+              "width": 750,
+              "height": 91.9375
+            },
+            "after": {
+              "x": 557,
+              "y": 838.5,
+              "width": 750,
+              "height": 91.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 942.4375,
+              "width": 750,
+              "height": 71.40625
+            },
+            "after": {
+              "x": 557,
+              "y": 942.4375,
+              "width": 750,
+              "height": 71.40625
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-1440x900-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-1440x900-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-1440x900-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 71,
+              "y": 32,
+              "width": 1224,
+              "height": 117.71875
+            },
+            "after": {
+              "x": 71,
+              "y": 32,
+              "width": 1224,
+              "height": 117.71875
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 71,
+              "y": 265.46875,
+              "width": 400,
+              "height": 964.75
+            },
+            "after": {
+              "x": 71,
+              "y": 265.46875,
+              "width": 400,
+              "height": 964.75
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 496,
+              "y": 266.46875,
+              "width": 798,
+              "height": 224.5625
+            },
+            "after": {
+              "x": 496,
+              "y": 266.46875,
+              "width": 798,
+              "height": 224.5625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 567.75,
+              "width": 750,
+              "height": 71.40625
+            },
+            "after": {
+              "x": 520,
+              "y": 567.75,
+              "width": 750,
+              "height": 71.40625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 651.15625,
+              "width": 750,
+              "height": 71.40625
+            },
+            "after": {
+              "x": 520,
+              "y": 651.15625,
+              "width": 750,
+              "height": 71.40625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 734.5625,
+              "width": 750,
+              "height": 91.9375
+            },
+            "after": {
+              "x": 520,
+              "y": 734.5625,
+              "width": 750,
+              "height": 91.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 838.5,
+              "width": 750,
+              "height": 91.9375
+            },
+            "after": {
+              "x": 520,
+              "y": 838.5,
+              "width": 750,
+              "height": 91.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 942.4375,
+              "width": 750,
+              "height": 71.40625
+            },
+            "after": {
+              "x": 520,
+              "y": 942.4375,
+              "width": 750,
+              "height": 71.40625
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-1366x768-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-1366x768-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-1366x768-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 22,
+              "y": 28,
+              "width": 776,
+              "height": 117.71875
+            },
+            "after": {
+              "x": 22,
+              "y": 28,
+              "width": 776,
+              "height": 117.71875
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 22,
+              "y": 283.21875,
+              "width": 263.0625,
+              "height": 987.3125
+            },
+            "after": {
+              "x": 22,
+              "y": 283.21875,
+              "width": 263.0625,
+              "height": 987.3125
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 302.0625,
+              "y": 284.21875,
+              "width": 494.9375,
+              "height": 355.140625
+            },
+            "after": {
+              "x": 302.0625,
+              "y": 284.21875,
+              "width": 494.9375,
+              "height": 355.140625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 734.796875,
+              "width": 458.9375,
+              "height": 88.9375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 734.796875,
+              "width": 458.9375,
+              "height": 88.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 835.734375,
+              "width": 458.9375,
+              "height": 88.9375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 835.734375,
+              "width": 458.9375,
+              "height": 88.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 936.671875,
+              "width": 458.9375,
+              "height": 109.46875
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 936.671875,
+              "width": 458.9375,
+              "height": 109.46875
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 1058.140625,
+              "width": 458.9375,
+              "height": 127
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 1058.140625,
+              "width": 458.9375,
+              "height": 127
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 1197.140625,
+              "width": 458.9375,
+              "height": 88.9375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 1197.140625,
+              "width": 458.9375,
+              "height": 88.9375
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-820x1180-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-820x1180-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-820x1180-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 16,
+              "y": 24,
+              "width": 358,
+              "height": 178.9375
+            },
+            "after": {
+              "x": 16,
+              "y": 24,
+              "width": 358,
+              "height": 178.9375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "after": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 17,
+              "y": 419.34375,
+              "width": 356,
+              "height": 296.140625
+            },
+            "after": {
+              "x": 17,
+              "y": 419.34375,
+              "width": 356,
+              "height": 296.140625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 829.640625,
+              "width": 320,
+              "height": 88.453125
+            },
+            "after": {
+              "x": 35,
+              "y": 829.640625,
+              "width": 320,
+              "height": 88.453125
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 930.09375,
+              "width": 320,
+              "height": 88.453125
+            },
+            "after": {
+              "x": 35,
+              "y": 930.09375,
+              "width": 320,
+              "height": 88.453125
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 1030.546875,
+              "width": 320,
+              "height": 126.515625
+            },
+            "after": {
+              "x": 35,
+              "y": 1030.546875,
+              "width": 320,
+              "height": 126.515625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 1169.0625,
+              "width": 320,
+              "height": 126.515625
+            },
+            "after": {
+              "x": 35,
+              "y": 1169.0625,
+              "width": 320,
+              "height": 126.515625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 1307.578125,
+              "width": 320,
+              "height": 108.84375
+            },
+            "after": {
+              "x": 35,
+              "y": 1307.578125,
+              "width": 320,
+              "height": 108.84375
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-390x844-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-390x844-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/chromium-390x844-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 108,
+              "y": 32,
+              "width": 1224,
+              "height": 117.703125
+            },
+            "after": {
+              "x": 108,
+              "y": 32,
+              "width": 1224,
+              "height": 117.703125
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 108,
+              "y": 265.453125,
+              "width": 400,
+              "height": 964.734375
+            },
+            "after": {
+              "x": 108,
+              "y": 265.453125,
+              "width": 400,
+              "height": 964.734375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 533,
+              "y": 266.453125,
+              "width": 798,
+              "height": 224.515625
+            },
+            "after": {
+              "x": 533,
+              "y": 266.453125,
+              "width": 798,
+              "height": 224.515625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 567.671875,
+              "width": 750,
+              "height": 71.359375
+            },
+            "after": {
+              "x": 557,
+              "y": 567.671875,
+              "width": 750,
+              "height": 71.359375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 651.03125,
+              "width": 750,
+              "height": 71.359375
+            },
+            "after": {
+              "x": 557,
+              "y": 651.03125,
+              "width": 750,
+              "height": 71.359375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 734.390625,
+              "width": 750,
+              "height": 91.859375
+            },
+            "after": {
+              "x": 557,
+              "y": 734.390625,
+              "width": 750,
+              "height": 91.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 838.25,
+              "width": 750,
+              "height": 91.859375
+            },
+            "after": {
+              "x": 557,
+              "y": 838.25,
+              "width": 750,
+              "height": 91.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 557,
+              "y": 942.109375,
+              "width": 750,
+              "height": 71.359375
+            },
+            "after": {
+              "x": 557,
+              "y": 942.109375,
+              "width": 750,
+              "height": 71.359375
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "commercial-detail",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "own-activity",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conceptual-replay",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-1440x900-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-1440x900-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-1440x900-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 71,
+              "y": 32,
+              "width": 1224,
+              "height": 117.703125
+            },
+            "after": {
+              "x": 71,
+              "y": 32,
+              "width": 1224,
+              "height": 117.703125
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 71,
+              "y": 265.453125,
+              "width": 400,
+              "height": 964.734375
+            },
+            "after": {
+              "x": 71,
+              "y": 265.453125,
+              "width": 400,
+              "height": 964.734375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 496,
+              "y": 266.453125,
+              "width": 798,
+              "height": 224.515625
+            },
+            "after": {
+              "x": 496,
+              "y": 266.453125,
+              "width": 798,
+              "height": 224.515625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 567.671875,
+              "width": 750,
+              "height": 71.359375
+            },
+            "after": {
+              "x": 520,
+              "y": 567.671875,
+              "width": 750,
+              "height": 71.359375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 651.03125,
+              "width": 750,
+              "height": 71.359375
+            },
+            "after": {
+              "x": 520,
+              "y": 651.03125,
+              "width": 750,
+              "height": 71.359375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 734.390625,
+              "width": 750,
+              "height": 91.859375
+            },
+            "after": {
+              "x": 520,
+              "y": 734.390625,
+              "width": 750,
+              "height": 91.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 838.25,
+              "width": 750,
+              "height": 91.859375
+            },
+            "after": {
+              "x": 520,
+              "y": 838.25,
+              "width": 750,
+              "height": 91.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 520,
+              "y": 942.109375,
+              "width": 750,
+              "height": 71.359375
+            },
+            "after": {
+              "x": 520,
+              "y": 942.109375,
+              "width": 750,
+              "height": 71.359375
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "commercial-detail",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "own-activity",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conceptual-replay",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-1366x768-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-1366x768-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-1366x768-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 22,
+              "y": 28,
+              "width": 776,
+              "height": 117.703125
+            },
+            "after": {
+              "x": 22,
+              "y": 28,
+              "width": 776,
+              "height": 117.703125
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 22,
+              "y": 283.203125,
+              "width": 263.0625,
+              "height": 987.234375
+            },
+            "after": {
+              "x": 22,
+              "y": 283.203125,
+              "width": 263.0625,
+              "height": 987.234375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 302.0625,
+              "y": 284.203125,
+              "width": 494.9375,
+              "height": 355.0625
+            },
+            "after": {
+              "x": 302.0625,
+              "y": 284.203125,
+              "width": 494.9375,
+              "height": 355.0625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 734.671875,
+              "width": 458.9375,
+              "height": 88.859375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 734.671875,
+              "width": 458.9375,
+              "height": 88.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 835.53125,
+              "width": 458.9375,
+              "height": 88.859375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 835.53125,
+              "width": 458.9375,
+              "height": 88.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 936.390625,
+              "width": 458.9375,
+              "height": 109.359375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 936.390625,
+              "width": 458.9375,
+              "height": 109.359375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 1057.75,
+              "width": 458.9375,
+              "height": 126.859375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 1057.75,
+              "width": 458.9375,
+              "height": 126.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 320.0625,
+              "y": 1196.609375,
+              "width": 458.9375,
+              "height": 88.859375
+            },
+            "after": {
+              "x": 320.0625,
+              "y": 1196.609375,
+              "width": 458.9375,
+              "height": 88.859375
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "commercial-detail",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "own-activity",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conceptual-replay",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-820x1180-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-820x1180-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-820x1180-conceptual-replay.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Static CSP prevents financial/API connections",
+          "pass": true
+        },
+        {
+          "name": "R2 catalog unchanged, no commercial executable key",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 DOM preserved .workspace-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .workspace-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 16,
+              "y": 24,
+              "width": 358,
+              "height": 178.859375
+            },
+            "after": {
+              "x": 16,
+              "y": 24,
+              "width": 358,
+              "height": 178.859375
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #team-directory",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #team-directory",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "after": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved .detail-header",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved .detail-header",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 17,
+              "y": 419.265625,
+              "width": 356,
+              "height": 296.0625
+            },
+            "after": {
+              "x": 17,
+              "y": 419.265625,
+              "width": 356,
+              "height": 296.0625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(1)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 829.4375,
+              "width": 320,
+              "height": 88.390625
+            },
+            "after": {
+              "x": 35,
+              "y": 829.4375,
+              "width": 320,
+              "height": 88.390625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(2)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 929.828125,
+              "width": 320,
+              "height": 88.390625
+            },
+            "after": {
+              "x": 35,
+              "y": 929.828125,
+              "width": 320,
+              "height": 88.390625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(3)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 1030.21875,
+              "width": 320,
+              "height": 126.390625
+            },
+            "after": {
+              "x": 35,
+              "y": 1030.21875,
+              "width": 320,
+              "height": 126.390625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(4)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 1168.609375,
+              "width": 320,
+              "height": 126.390625
+            },
+            "after": {
+              "x": 35,
+              "y": 1168.609375,
+              "width": 320,
+              "height": 126.390625
+            }
+          }
+        },
+        {
+          "name": "Approved R2 DOM preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true
+        },
+        {
+          "name": "Approved R2 geometry preserved #operational-matrix [data-family]:nth-of-type(5)",
+          "pass": true,
+          "detail": {
+            "before": {
+              "x": 35,
+              "y": 1307,
+              "width": 320,
+              "height": 108.78125
+            },
+            "after": {
+              "x": 35,
+              "y": 1307,
+              "width": 320,
+              "height": 108.78125
+            }
+          }
+        },
+        {
+          "name": "Five operational families preserved plus separate proposed family",
+          "pass": true
+        },
+        {
+          "name": "Commercial family initially collapsed",
+          "pass": true
+        },
+        {
+          "name": "Keyboard expands proposed activities, separate from grant selector",
+          "pass": true
+        },
+        {
+          "name": "Proposals cannot change canonical draft",
+          "pass": true
+        },
+        {
+          "name": "No broad financial power or inherited Master authority",
+          "pass": true
+        },
+        {
+          "name": "Rate/basis pending; historical15 is customer discount",
+          "pass": true
+        },
+        {
+          "name": "Paid monthly/annual renewals retained without code reentry",
+          "pass": true
+        },
+        {
+          "name": "Commercial detail fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Own seller view clearly fictional/proposed",
+          "pass": true
+        },
+        {
+          "name": "Only own fictional customers, no other advisor selector",
+          "pass": true
+        },
+        {
+          "name": "Monthly renewals and annual second year included",
+          "pass": true
+        },
+        {
+          "name": "FREE alone excluded; paid versus activation unresolved",
+          "pass": true
+        },
+        {
+          "name": "No fake balances or commission defaults",
+          "pass": true
+        },
+        {
+          "name": "Modal opens at heading and foreground only",
+          "pass": true
+        },
+        {
+          "name": "Own activity fits viewport/44px targets",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "small": [],
+            "modalOverflow": false
+          }
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Same notice and different notice same payment stay five conceptual results",
+          "pass": true
+        },
+        {
+          "name": "Repeated presentation replay adds no result/balance",
+          "pass": true
+        },
+        {
+          "name": "Visual dedupe never claims financial idempotency",
+          "pass": true
+        },
+        {
+          "name": "Modal focus stays within view",
+          "pass": true
+        },
+        {
+          "name": "Modal focus wraps",
+          "pass": true
+        },
+        {
+          "name": "Modal reverse wrap",
+          "pass": true
+        },
+        {
+          "name": "Exact known WebKit screenshot injection only",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "warnings": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape returns focus to entry",
+          "pass": true
+        },
+        {
+          "name": "Next own view contains only next advisor customers",
+          "pass": true
+        },
+        {
+          "name": "Suspension preserves history, no economic-rights invention",
+          "pass": true
+        },
+        {
+          "name": "Master has no automatic code/customers/earnings",
+          "pass": true
+        },
+        {
+          "name": "Operationally delegated Master cannot grant commercial proposal",
+          "pass": true
+        },
+        {
+          "name": "No storage/cookies/service worker",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "url": "http://127.0.0.1:8140/",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/assets/css/media-review-inbox.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/style.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/catalog.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/app.js",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.css",
+          "method": "GET"
+        },
+        {
+          "url": "http://127.0.0.1:8140/commercial.js",
+          "method": "GET"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "commercial-detail",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "own-activity",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conceptual-replay",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-390x844-commercial-detail.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-390x844-own-activity.png",
+        "prototypes/ase-vis01/evidence/com01/browser/webkit-390x844-conceptual-replay.png"
+      ]
+    }
+  ]
+}
