@@ -93,6 +93,29 @@ Stop verifica PIDs/comandos propios, espera terminación y elimina datadir, secr
 
 [QA HTTP/SQL](../evidence/ase-int01/qa.json) y [navegadores/capturas](../evidence/ase-int01/browser/summary.json) prueban sesión/rol/scope/revocaciones, paginación/búsqueda, mismo origen, métodos, privacidad, loading/error503/empty, navegación, teclado/collapse, límites responsive y controles deshabilitados. Digests de cinco tablas iguales durante reads/denials HTTP; experimentos de revocación sólo sobre fixture propia y restaurados aparte (sus updated_at cambian). 403/503 deliberados se registran, no se ocultan como éxito. Diagnóstico WebKit exacto del screenshotter `body {}` rechazado por CSP se distingue de errores de aplicación; no se relaja CSP. Sin pruebas físicas Safari ni activación normal-local. La comparación compartida no es aprobación de las diferencias necesarias.
 
+## Recuperación dirigida de evidencia
+
+La auditoría posterior a la interrupción clasificó la entrega como `CODE_COMPLETE_QA_PENDING`: el commit `230dc03610bd0c235e2c35d8d9d19bfe5b14d9d6` estaba publicado y limpio, pero no se localizó una salida independiente de `TeamReadDestinationTest.mjs`. La afirmación histórica de ocho PASS se conserva como tal; el cierre siguiente no reconstruye ni acredita retroactivamente aquella ejecución.
+
+Con autorización específica del Director se inspeccionaron el test y las funciones extraídas de `public/identity/identity-access.js`, y se ejecutó únicamente `node modules/identity/tests/TeamReadDestinationTest.mjs` sobre ese commit. La nueva ejecución posterior a la recuperación produjo **PASS, ocho checks, exit code 0 y stderr vacío**. El [registro independiente](../evidence/ase-int01/login-return-recovery.json) conserva timestamps UTC reales, stdout/stderr exactos, versión Node y SHA-256 de ambos archivos antes/después. Sólo lectura local de fuente y VM con dobles en memoria de fetch, navegación y almacenamiento; sin red, SQL, staff, sesiones reales ni servicios operacionales. No prueba autenticación de servidor.
+
+`RESULT=READY_MXMED_ASE_INT01_R2_QA_GAP_CLOSED` cierra exclusivamente la falta de evidencia independiente del retorno-login. Los 76 checks HTTP/SQL, 176 navegador y ocho comparaciones visuales originales permanecen como evidencia histórica PASS, sin reejecución ni sobrescritura; los 53 archivos previos de evidencia quedan vinculados por un manifiesto SHA-256. No hay cambios de producto ni promoción. La revisión de diferencias visuales por el Director sigue PENDING, Safari físico NOT_RUN, finalización móvil PENDING y activación operacional FALSE.
+
+### CTX-SYNC01 del cierre dirigido
+
+| Campo | Registro del cierre de evidencia |
+|---|---|
+| CONTEXT_BASELINE | Integración `230dc03610bd0c235e2c35d8d9d19bfe5b14d9d6`; fuente oficial `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`; visual `312ee388f93c892e6caf7e845b11e2b42f9c3565`. |
+| AFFECTED_CAPABILITY_IDS | ID-02/ID-03, retorno de login; ID-07 como destino staff. Sólo evidencia, sin nuevas capacidades. |
+| AFFECTED_JOURNEY_IDS | J09, retorno al workspace; comportamiento intacto. |
+| AFFECTED_DATA_OBJECTS | Ninguno leído o escrito en bases; sólo archivos locales de fuente y evidencia. |
+| AFFECTED_CONTEXT_FILES | Este contrato, `docs/ESTADO_ACTUAL_MXMED.md` y `docs/evidence/ase-int01/login-return-recovery.json`. Router/mapas conservados: no cambia ubicación ni contrato funcional. |
+| CONTEXT_CHANGES_IMPLEMENTED | Se sucede el estado de evidencia no localizada por un resultado independiente posterior a la recuperación, preservando el histórico y sus límites. |
+| CONTEXT_VERIFICATION | Salida/exit reales, dos hashes de fuente sin cambios y coincidentes con QA histórica; preservación de evidencia previa, revisión de diff y enlaces locales del cierre. |
+| CONTEXT_SYNC_STATUS | PASS_UPDATED |
+| DOCUMENTATION_COMMIT | Commit documental posterior a `230dc036`; resolver con `git log -- docs/evidence/ase-int01/login-return-recovery.json`. La tabla siguiente conserva el registro de la implementación original. |
+| REMAINING_CONTEXT_GAPS | Revisión visual del Director, Safari físico, móvil final; siete políticas ADM, D01–D08, readers pendientes, writers y autorización operacional sin cambios. |
+
 ## CTX-SYNC01
 
 | Campo | Registro de esta entrega |

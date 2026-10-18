@@ -1,0 +1,42 @@
+{
+  "record_type": "ASE-INT01-R2-targeted-qa-recovery",
+  "execution_phase": "POST_RECOVERY_NEW_EXECUTION_NOT_ORIGINAL_RUN",
+  "started_at_utc": "2026-10-18T05:08:07.431690+00:00",
+  "finished_at_utc": "2026-10-18T05:08:07.548795+00:00",
+  "implementation_commit": "230dc03610bd0c235e2c35d8d9d19bfe5b14d9d6",
+  "branch": "feature/ase-int01-internal-team-readonly",
+  "working_directory": "/Users/circulodigital/Documents/GitHub/mxmed-ase-int01-readonly",
+  "command": [
+    "node",
+    "modules/identity/tests/TeamReadDestinationTest.mjs"
+  ],
+  "node_version": "v22.22.0",
+  "node_executable": "/Users/circulodigital/.nvm/versions/node/v22.22.0/bin/node",
+  "node_options_removed_for_execution": true,
+  "exit_code": 0,
+  "stdout": "{\"result\":\"PASS\",\"checks\":8,\"scope\":\"Existing canonical login return navigation only; team server independently revalidates session/staff/grants\"}\n",
+  "stderr": "",
+  "checks": 8,
+  "result": "PASS",
+  "source_sha256": {
+    "modules/identity/tests/TeamReadDestinationTest.mjs": "b1227406774c196f8d7962d47c403a9c760e4deb2ee667bfae1b0f994dbb6846",
+    "public/identity/identity-access.js": "117b0855e02582fdee314ec24703e725579a965c928cd9572df9851036adf23e"
+  },
+  "source_unchanged_after_execution": true,
+  "prior_evidence_sha256": {
+    "docs/evidence/ase-int01/browser/summary.json": "6062b68a1d4a79eb04354b167d4db0ed305b4eb95a256777a19b271184501584",
+    "docs/evidence/ase-int01/context-links.json": "e74df83cacabd7d9215746e63e18f1e30ce6226bdbe69530e62b9badd99d88b7",
+    "docs/evidence/ase-int01/isolation.json": "cc870b76f0c1603a8eeaebdd87839f69cddda650409cae363242678a94f760ce",
+    "docs/evidence/ase-int01/qa.json": "052352eb64fd548b27900c5b7d36ecf746d19a8aed60362b081e54f82a644497",
+    "docs/evidence/ase-int01/visual-comparison.json": "659744af8d7f38039af0ab361777b1048764ca5a046dbd01c63a8cfd312cbbb6"
+  },
+  "prior_evidence_unchanged": true,
+  "scope": "Local source read and Node VM with in-memory fetch/location/storage doubles; no real database, network, staff, sessions or operational services. Does not verify server authentication.",
+  "director_visual_difference_review": "PENDING",
+  "physical_safari": "NOT_RUN",
+  "final_mobile": "PENDING",
+  "operational_activation": false,
+  "prior_evidence_file_count": 53,
+  "prior_evidence_manifest_sha256": "8f1549d54c17ac5e67d9cbacc5f905c91a17a1a5e6cdd9858ceb525094abe05e",
+  "prior_evidence_manifest_format": "SHA256 of UTF-8 JSON {repository_relative_path: sha256}, sorted keys, compact separators; all 53 pre-existing evidence files, excluding this recovery record"
+}
