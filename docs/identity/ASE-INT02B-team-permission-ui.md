@@ -79,3 +79,7 @@ Los intentos fallidos se conservan con su resultado: dos errores de preparación
 | REMAINING_CONTEXT_GAPS | Admisión, documentos, perfiles personales, nombramiento/delegaciones Master, MFA, readers comerciales, D01–D08, siete políticas ADM, Safari físico/móvil final y cualquier activación/merge/despliegue. |
 
 NEXT_AUTHORIZATION_REQUIRED: revisión/promoción y cualquier activación real requieren autorización separada; Master/admisión/comercial y consumidores pendientes mantienen sus gates propios.
+
+## Sucesor acotado ASE-INT03A
+
+[ASE-INT03A](ASE-INT03A-advisor-lifecycle.md) sucede sólo la desconexión de suspensión/reactivación Advisor. Reutiliza botones/modal/coordinador, impide lifecycle con borrador pendiente y conserva readonly de permisos en suspendidos. Writer canónico bajo locks, ACK/refresh y resultados inciertos sin retry. Este contrato y sus 303 checks permanecen como evidencia histórica del padre; no se repite la suite completa ni se activa operación real.

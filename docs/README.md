@@ -124,6 +124,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 
 - Sucesor backend aislado: [ASE-INT02A — grants individuales Advisor](identity/ASE-INT02A-governed-advisor-grants.md), POST + CSRF canónico, target bajo locks y auditoría existente. En ese hito, UI sólo consulta; sin activación.
 - Sucesor UI aislado: [ASE-INT02B — matriz y comandos individuales](identity/ASE-INT02B-team-permission-ui.md), disponibilidad canónica, borrador/confirmación, secuencia y reconciliación parcial; QA sintética Chromium/WebKit, gate apagado por defecto y sin activación.
+- Sucesor lifecycle aislado: [ASE-INT03A — suspender/reactivar Advisor](identity/ASE-INT03A-advisor-lifecycle.md), writer/HTTP canónicos, estado bajo locks, confirmación y grants preservados; gate apagado por defecto.
 
 - Integración aislada vigente: [ASE-INT01 R2 — Equipo y permisos, sólo consulta](identity/ASE-INT01-R2-internal-team-readonly.md), sección `equipo`, reader GET/HEAD, autoridad independiente de Media; sin admisión/mutaciones ni activación.
 

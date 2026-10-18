@@ -5,10 +5,10 @@ namespace Identity\Team;
 use Identity\Http\{CanonicalHttpSessionResolver,GovernanceTransport,IdentityHttpComposition};
 use Identity\Services\{InternalCapabilityCatalog,InternalGovernanceService};
 
-/** Backend-only individual commands. The existing team UI stays read-only. */
+/** Shared canonical boundary for individually scoped team commands. */
 final class MutationHttp
 {
-    public static function handle(bool $bootstrap): void
+    public static function handle(bool $bootstrap,bool $lifecycle=false): void
     {
         Http::headers(true);
         try {
@@ -39,7 +39,11 @@ final class MutationHttp
             if(!preg_match('~^application/json(?:\s*;\s*charset=utf-8)?$~i',trim($_SERVER['CONTENT_TYPE']??'')))throw new ReadFailure(415,'json_required');
             $csrf=$_SERVER['HTTP_X_CSRF_TOKEN']??'';
             if(!is_string($csrf)||strlen($csrf)>256||!$identity->csrf()->validAuthenticated($csrf,$session->session()->tokenDigest()))throw new ReadFailure(403,'access_denied');
-            $body=self::body($raw);
+            $body=self::body($raw,$lifecycle);
+            if($lifecycle){
+                $result=(new InternalGovernanceService($pdo,$resolver))->execute($_COOKIE,$body['operation'],$body['target'],null,InternalGovernanceService::ADVISOR_LIFECYCLE);
+                self::respond(['result'=>'changed','operation'=>$body['operation'],'target'=>$body['target'],'staff_status'=>$result['status'],'refresh_required'=>true,'consumer_authority'=>'independently_required']);return;
+            }
             (new InternalGovernanceService($pdo,$resolver))->execute($_COOKIE,$body['operation'],$body['target'],$body['capability'],InternalGovernanceService::ACTIVE_ADVISOR_OPERATIONAL);
             self::respond(['result'=>'changed','operation'=>$body['operation'],'target'=>$body['target'],'capability'=>$body['capability'],'stored_grant'=>$body['operation']==='grant'?'ACTIVE':'REVOKED','refresh_required'=>true,'consumer_authority'=>'independently_required']);
         } catch(\Throwable $e) {
@@ -55,17 +59,18 @@ final class MutationHttp
         }
     }
 
-    private static function body(string $raw): array
+    private static function body(string $raw,bool $lifecycle): array
     {
         try{$object=json_decode($raw,false,4,JSON_THROW_ON_ERROR);}catch(\JsonException){throw new ReadFailure(400,'invalid_request');}
         if(!$object instanceof \stdClass)throw new ReadFailure(400,'invalid_request');
         $body=(array)$object;$keys=array_keys($body);sort($keys);
-        if($keys!==['capability','operation','target'])throw new ReadFailure(400,'invalid_request');
+        if($keys!==($lifecycle?['operation','target']:['capability','operation','target']))throw new ReadFailure(400,'invalid_request');
         foreach($body as $value)if(!is_string($value))throw new ReadFailure(400,'invalid_request');
         // Flat JSON object: count key tokens including duplicates before PHP collapses them.
         preg_match_all('/"(?:[^"\\\\]|\\\\.)*"\s*:/s',$raw,$matches);
-        if(count($matches[0])!==3)throw new ReadFailure(400,'invalid_request');
-        if(!in_array($body['operation'],['grant','revoke'],true)||!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$body['target']))throw new ReadFailure(400,'invalid_request');
+        if(count($matches[0])!==($lifecycle?2:3))throw new ReadFailure(400,'invalid_request');
+        if(!in_array($body['operation'],$lifecycle?['suspend','reactivate']:['grant','revoke'],true)||!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$body['target']))throw new ReadFailure(400,'invalid_request');
+        if($lifecycle)return $body;
         $definition=InternalCapabilityCatalog::all()[$body['capability']]??null;
         if(!$definition||$definition['kind']!=='operational'||$definition['delegable']!==true)throw new ReadFailure(400,'invalid_request');
         return $body;

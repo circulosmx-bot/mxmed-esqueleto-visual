@@ -56,6 +56,7 @@ final class ReadService
                 'management_granted'=>$authority['can_read_masters']&&in_array(InternalCapabilityCatalog::MANAGE_ADVISORS,$grants,true),
                 'master_delegations'=>$authority['can_read_masters']&&$row['governance_class']==='MASTER_ADMIN'?$this->delegations($row['account_id']):null,
                 'editable_capabilities'=>$this->editable($row,$authority,$viewer),
+                'lifecycle_operations'=>$authority['mutations_enabled']&&$row['account_id']!==$viewer&&$row['governance_class']==='ADVISOR'&&$row['account_status']==='active'&&in_array($row['status'],['ACTIVE','SUSPENDED'],true)?[$row['status']==='ACTIVE'?'suspend':'reactivate']:[],
                 'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>null];
         }
         return ['authority'=>$authority,'catalog'=>InternalCapabilityCatalog::all(),'items'=>$items,'page'=>$page,'page_size'=>$size,'has_more'=>$hasMore,'category'=>$category,'grant_semantics'=>'stored_active; use_requires_current_consumer_authority','personal_profile_source'=>'NOT_CONNECTED','identity_review_source'=>'NOT_CONNECTED','commercial_source'=>'NOT_CONNECTED'];

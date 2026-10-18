@@ -292,3 +292,7 @@ Actualizar sólo IDs afectados por una operación posterior autorizada, con ruta
 ## ID-07 — conexión UI ASE-INT02B
 
 [Matriz individual](../identity/ASE-INT02B-team-permission-ui.md): P=grant/revoke acotado; S=proyección editable y coordinador UI; C=read/CSRF/POST canónicos reutilizados; V=QA real sintética con Chromium/WebKit, audit y concurrencia; O=gate default off, sin activación. Sucede GUI sin handler del hito ASE-INT02A; no modifica censo ni IDs.
+
+## ID-07 — lifecycle conectado ASE-INT03A
+
+[Contrato](../identity/ASE-INT03A-advisor-lifecycle.md): P=suspend/reactivate Advisor existente; S=mismo writer con scope estricto y HTTP compartido; C=botones aprobados/CSRF/POST/refresh; V=223 checks, seis carreras y ocho combinaciones de navegador; O=gate default off, sin activación. Censo/IDs preservados; Master/admisión fuera.

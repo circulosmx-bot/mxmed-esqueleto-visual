@@ -120,3 +120,7 @@ permanece pendiente.
 ## ASE-INT02B — conexión de interacciones aprobadas
 
 [Contrato/evidencia](identity/ASE-INT02B-team-permission-ui.md), superficie Equipo interno en `/internal/media-review/index.php?section=equipo`, baseline aprobado `312ee388`. UI-2 expresamente autorizada en solicitud ASE-INT02B: checkboxes/grupos, revertir, confirmación, secuencia, guardas y resultados honestos. Tres CSS aprobados idénticos; conserva composición R2/COM/ADM y modal. Diferencias de copy/estados explican disponibilidad, parcialidad e incertidumbre solicitadas; no rediseño ni pixel0. Comparación de geometría/tokens y capturas Chromium/WebKit en 1440×900, 1366×768, 820×1180 y 390×844; Safari físico NOT_RUN, móvil interino. No se inventa aprobación de aceptación final ni autorización operacional.
+
+## ASE-INT03A — botones lifecycle aprobados
+
+[Ficha UI-2 y evidencia](identity/ASE-INT03A-advisor-lifecycle.md): solicitud ASE-INT03A autoriza conectar SUSPENDER ASESOR/REACTIVAR ASESOR del header y modal existentes en baseline `312ee388`. Sin cambios CSS/template/header/directorio/matriz. Copy autorizado de consecuencias, conservación, conflicto e incertidumbre; guardia de borrador. Ocho combinaciones Chromium/WebKit y 36 capturas; comparación de geometría/tokens, sin claim pixel0 ni Safari físico. Aprobaciones históricas R2/COM/ADM preservadas; no activación.

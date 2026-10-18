@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "scope": "Only failed directories created by ASE-INT03A",
+  "records": [
+    {
+      "evidence": "failed-20261018T061229Z.json",
+      "sha256": "eb241147940c1b620fb6990844ad6eafb4016156954e08bbffb373210bdba8bd",
+      "owned_directory": "/tmp/mxmed-ase-int03a-ruf3ca3o",
+      "ownership_processes_and_open_files": "PASS",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T061245Z.json",
+      "sha256": "b2e0cbb416726c77e2e47cf9e04a67e39440799bcac527a22ff3888c27d6a68a",
+      "owned_directory": "/tmp/mxmed-ase-int03a-b3b54odq",
+      "ownership_processes_and_open_files": "PASS",
+      "deleted": true
+    }
+  ]
+}

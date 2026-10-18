@@ -15,12 +15,19 @@
 - UI original del equipo sigue **sólo consulta**, sin guardado grupal ni cambio visual; la ausencia histórica de adapter de commands queda sucedida únicamente para esta API aislada. 122 checks sintéticos PASS, siete carreras reales, evidencia/descarte propios; no prueba ni activa datos/runtimes reales.
 - Siguiente fase: autorización de conexión UI con confirmación y reconciliación de resultados parciales. ADM/D01–D08, readers pendientes, Master, finanzas y activación mantienen gates separados.
 
-## Sucesor aislado ASE-INT02B
+## Hito previo aislado ASE-INT02B
 
-- Entrega actual: `feature/ase-int02b-team-permission-ui`, worktree `mxmed-ase-int02b-team-permission-ui`, padre `05e428cf4354b1f722090c7532ced3784e0d4985`. Los anchors anteriores describen sus hitos históricos; no son la rama actual de esta entrega.
+- Hito ASE-INT02B: `feature/ase-int02b-team-permission-ui`, worktree `mxmed-ase-int02b-team-permission-ui`, padre `05e428cf4354b1f722090c7532ced3784e0d4985`. Los anchors anteriores describen sus hitos históricos; no son la rama actual de esta entrega.
 - [ASE-INT02B](identity/ASE-INT02B-team-permission-ui.md) conecta la matriz aprobada a GET read/CSRF y POST individuales canónicos. Borrador por target, descarte explícito, confirmación, secuencia, éxito parcial e incertidumbre con lectura autoritativa; sin retries ni compensaciones.
 - Disponibilidad servidor y bootstrap; Master sólo delegación exacta, ocultos UNKNOWN. Gate deshabilitado por defecto; sólo QA sintética nueva lo habilita. Gobierno, admisión, documentos, delegaciones Master, finanzas y consumidores incompletos siguen sin conexión en esta UI.
 - QA real con MySQL/Valkey nuevos, audit y carreras de dos conexiones; Chromium/WebKit en cuatro tamaños. CSS aprobados preservados; UI-2 de comportamiento/copy autorizado. Safari físico NOT_RUN y móvil interino. Sin merge, despliegue o operación real. La deuda UI de ASE-INT02A queda sucedida sólo dentro de esta feature.
+
+## Sucesor aislado ASE-INT03A
+
+- Entrega actual: `feature/ase-int03a-advisor-lifecycle`, worktree `mxmed-ase-int03a-advisor-lifecycle`, padre `36eeb51655a1c24248405feae579cefc06ff3b44`.
+- [ASE-INT03A](identity/ASE-INT03A-advisor-lifecycle.md) conecta sólo suspender/reactivar Advisors mediante el mismo writer y boundary HTTP, con scope de categoría/estado/cuenta/autoridad revalidado bajo locks. Grants e historia conservados; no habilita cuentas desactivadas ni restaura grants revocados.
+- Botones/modal aprobados, borrador de permisos protegido, refresh y ACK incierto sin retry. 223 checks dirigidos, seis carreras SQL y ocho combinaciones Chromium/WebKit; CSS aprobado preservado. Safari físico NOT_RUN y móvil interino.
+- Gate default off; recursos sintéticos propios dispuestos, cinco worktrees/listeners/pointer protegidos sin cambios. Sin merge, promoción, operación real, Master/admisión o decisiones comerciales D06.
 
 ## Producto existente
 

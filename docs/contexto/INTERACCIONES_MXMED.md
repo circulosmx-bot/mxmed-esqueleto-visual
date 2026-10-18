@@ -157,3 +157,7 @@ Registrar cambios de conexión en el journey afectado y en su capability, sin du
 ## J09 — matriz conectada ASE-INT02B
 
 [Flujo verificado](../identity/ASE-INT02B-team-permission-ui.md): snapshot autorizado → borrador del target → refresh/confirmación/refresh → comandos individuales secuenciales → lectura canónica por intento. Conflicto, autoridad perdida o ACK incierto detienen restantes; éxitos previos conservados, sin replay ni compensación. Grupos sólo claves elegibles, ocultos UNKNOWN; descarte al cambiar contexto. Sucede la deuda UI del hito anterior, exclusivamente en feature/QA aislada. J08 y activación sin cambios.
+
+## J09 — suspensión/reactivación ASE-INT03A
+
+[Flujo](../identity/ASE-INT03A-advisor-lifecycle.md): resolver borrador → snapshot → confirmación española → snapshot vigente → comando lifecycle único bajo locks → audit/commit → refresh. Conflicto o ACK incierto no produce éxito inventado/retry. Suspensión bloquea siguiente autoridad operativa; reactivación conserva gates independientes. J08/D06 no cambia.

@@ -115,3 +115,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT02B — proyección y transporte, sin migración
 
 [Contrato](../identity/ASE-INT02B-team-permission-ui.md): read añade disponibilidad y claves editables por target; writer, grants y audit existentes sin cambios. Borrador/token sólo memoria del navegador. No store persistente, schema ni writer alternativo. QA crea exclusivamente datadir/schema y Valkey propios, con SQL/audit reales de fixture; no consulta instancias reales ni acredita DDL operacional.
+
+## ASE-INT03A — UPDATE staff existente
+
+[Contrato](../identity/ASE-INT03A-advisor-lifecycle.md): estado de `internal_staff` y append audit en transacción canónica única; cuenta/credencial/grants sólo consultados por lifecycle. No DDL de producto, borrado de historia, recreación de grants ni habilitación de cuenta. MySQL/Valkey nuevos exclusivos de QA; permisos del principal sintético no son migración operacional.

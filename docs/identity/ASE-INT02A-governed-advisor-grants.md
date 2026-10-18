@@ -100,3 +100,7 @@ NEXT_AUTHORIZATION_REQUIRED: fase explícita para conectar UI con confirmación 
 ## Sucesor UI aislado ASE-INT02B
 
 [ASE-INT02B](ASE-INT02B-team-permission-ui.md) sucede la deuda `ASE-INT02A-UI-CONNECTION` mediante autorización expresa del Director. Conecta la matriz a estos endpoints sin cambiar writer, locks, catálogo, schema individual o auditoría. Borrador, confirmación, secuencia, ACK incierto y refresh verificados en QA sintética nueva. Las afirmaciones UI readonly anteriores describen este hito padre; evidencia 122/siete carreras preservada. Gate sigue apagado por defecto; ninguna activación operacional.
+
+## Extensión aislada ASE-INT03A
+
+[ASE-INT03A](ASE-INT03A-advisor-lifecycle.md) reutiliza esta frontera `MutationHttp` con endpoint separado y allowlist exacta suspend/reactivate, scope servidor en el mismo writer y dos campos de payload. El contrato de capability de tres campos y su scope no cambian. No amplía callers históricos ni expone otros comandos; QA dirigida y gate default off.

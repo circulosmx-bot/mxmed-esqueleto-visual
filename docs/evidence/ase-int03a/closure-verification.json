@@ -1,0 +1,147 @@
+{
+  "result": "PASS",
+  "source_hashes_match": 22,
+  "protected_states_unchanged": true,
+  "unchanged_parent_sources": [
+    "assets/css/internal-team.css",
+    "assets/css/internal-team-commercial.css",
+    "assets/css/internal-team-admission.css",
+    "partials/identity/internal-team.php",
+    "assets/js/internal-team.js",
+    "modules/identity/services/InternalCapabilityCatalog.php",
+    "modules/identity/services/StaffMfaService.php",
+    "modules/identity/repositories/InternalOperatorGrantRepository.php",
+    "modules/identity/http/CanonicalHttpSessionResolver.php",
+    "modules/identity/http/CsrfTokenService.php",
+    "modules/platform/repositories/JoinedPdoCanonicalAuditTransactionAdapter.php"
+  ],
+  "links_checked": 21,
+  "links": [
+    {
+      "source": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/README.md",
+      "target": "identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/identity/ASE-INT02A-governed-advisor-grants.md",
+      "target": "ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../identity/ASE-INT03A-advisor-lifecycle.md"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "ASE-INT02B-team-permission-ui.md"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../../api/internal/team/lifecycle.php"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../../modules/identity/Team/MutationHttp.php"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../../modules/identity/services/InternalGovernanceService.php"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../../modules/identity/repositories/InternalOperatorGrantRepository.php"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../../assets/js/internal-team-editor.js"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../../scripts/ase-int03a-qa.py"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../evidence/ase-int03a/qa.json"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../evidence/ase-int03a/browser.json"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../evidence/ase-int03a/screenshots/"
+    },
+    {
+      "source": "docs/identity/ASE-INT03A-advisor-lifecycle.md",
+      "target": "../evidence/ase-int03a/disposal.json"
+    }
+  ],
+  "screenshots_sha256": {
+    "screenshots/chromium-1366x768-confirmation.png": "dad90da120646a0cafee8de69400e59ba0245d24b1bfa544e6bd4a7dca0bf552",
+    "screenshots/chromium-1366x768-reactivated.png": "96bbd1619ea43f6e2a488edd4c116be863be91715850c504b2e70758f1434a3d",
+    "screenshots/chromium-1366x768-suspended.png": "ebe63ed8ea1524a6a223bb14bfa026800195f2b3191874b87a07b54e0915d0df",
+    "screenshots/chromium-1440x900-confirmation.png": "4c3f4d7a3a358bc745e647c4a0d57187813df880570f154084bba7ebf1778c60",
+    "screenshots/chromium-1440x900-reactivated.png": "a73767ec268178e06aee5ff50f5dfc724de852b68943c757b3d2e804d5eccd4f",
+    "screenshots/chromium-1440x900-suspended.png": "7f85c791d978cbef917cb6176206d8d8060447e0d84a374660bb7f4fdf9dbd1d",
+    "screenshots/chromium-390x844-confirmation.png": "6476e67c34e9295bae58cf795f62a1106307eaa224e2543a132a3b758834f414",
+    "screenshots/chromium-390x844-reactivated.png": "6b639b90d3c2b81d70eadb587235759344787348073276fdfd981a12d25e0253",
+    "screenshots/chromium-390x844-suspended.png": "ffbe0416fdf9b7149243fcb7569bc9410b5bd750ebd275569be760466357f5e0",
+    "screenshots/chromium-409.png": "39af65bd5adeec87f1a0eb6da37545ac23a302be39ed63b0e1f28b2765539fd1",
+    "screenshots/chromium-820x1180-confirmation.png": "87ff3acc4820ec2551ec2b7dd6557b71e75fe129973ee98460c813ff2dec9b61",
+    "screenshots/chromium-820x1180-reactivated.png": "a2cda91df53359b317f849491ef1c167c2a053b306fc43b229169d1d47b01e92",
+    "screenshots/chromium-820x1180-suspended.png": "f5a3dd056f523fef193d7d08adac18c4b75df12e8e92826197e8adf2237712e4",
+    "screenshots/chromium-failed_refresh.png": "c0524b42897e8645adb8231c45d4b76b927cfd203b6e163f28e91a827932e85a",
+    "screenshots/chromium-lost_ack.png": "6e828a94de68bddc409eaf6c0f9a69c2a7a02423e17be370d06ff497b48f9f2e",
+    "screenshots/chromium-management_during_confirmation.png": "dadad36517c396766967511209884b6aa55dd04b1da138783575b413221fb94f",
+    "screenshots/chromium-session_expired.png": "2c0418ff87e19c3d35effa8fd0f63e4f5d822668732aefe29c24330df34a75fd",
+    "screenshots/chromium-target_during_confirmation.png": "587c26472b060971b90b78c1694d814e6af60184b1079ad8749cf5ad3abf8f9d",
+    "screenshots/webkit-1366x768-confirmation.png": "fdb3c5740ac79c26a71a09a108726c56b91744389141dc12ada695df33bfa7b5",
+    "screenshots/webkit-1366x768-reactivated.png": "f1e880fc76879d245388ce265f1a59f2d74b7ce77b7928a04a60fbaa68eace8c",
+    "screenshots/webkit-1366x768-suspended.png": "9137965623048c4de9267d23105fe83cdedbb1d78fafade63afe32c48703f81f",
+    "screenshots/webkit-1440x900-confirmation.png": "ddb318a162e0d36fb6a7811a8f3b70ff2bfb89038dfd1198520131fc8afe8026",
+    "screenshots/webkit-1440x900-reactivated.png": "8f03d6b1f2037745fb80c134c5d5001469931db01f7d37b59bb35e9008c6849d",
+    "screenshots/webkit-1440x900-suspended.png": "9e3bf784169d09588a1316fee8a58cb6f7d70905fa1144bab9feaa3c36e458a9",
+    "screenshots/webkit-390x844-confirmation.png": "47d960e61573b6db539e9a5ce1c9ff25f64499b7dfdcfd79859fdc7b95218092",
+    "screenshots/webkit-390x844-reactivated.png": "2864ee82b5d123a71f0c7f37fb4885c9db49d4d9c204db208dd9b9f0e474f84f",
+    "screenshots/webkit-390x844-suspended.png": "21f5f2a694788c3ccc6eaf7b50408fcef4ee286d5b156e2ac9a4779fbd0fd3d5",
+    "screenshots/webkit-409.png": "ff6a0250962f4f9ed1134a7dc3eadf9772b3295c51487fe4e80565750e8e6fe4",
+    "screenshots/webkit-820x1180-confirmation.png": "2174023f014713f77e25208acf28a2da0591164fd9f0de52aed30e589f7eea7a",
+    "screenshots/webkit-820x1180-reactivated.png": "88a281525a0da87b4872304b9933ba3709c73ca5ec237ebbd4fe954a6293754d",
+    "screenshots/webkit-820x1180-suspended.png": "65e8d49dd018157230ba43cebac663708e595cf41d498dc9c362558b0c2a7f7d",
+    "screenshots/webkit-failed_refresh.png": "bdb2dad73bf161fbd8031925743538b7ce01857ff40efc19dba55283858c0182",
+    "screenshots/webkit-lost_ack.png": "c2ed9a664c8938881e107c957fa91ad488226c61997c0ecbb7d46655964c9d30",
+    "screenshots/webkit-management_during_confirmation.png": "1a87c8f6165be14a4f73b95cbde9ce6184e36093a015b1712eeae255297f4f3f",
+    "screenshots/webkit-session_expired.png": "f32a033107aa7beb0f800e5e17ebfcc92473c9851f3147bd7375417410f98508",
+    "screenshots/webkit-target_during_confirmation.png": "ffe39d18289bad4488831929bd0f3a20d7760c8760e79bcbb6b180b3a4c57625"
+  },
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_SMOKE_ONLY",
+  "final_qa_checks": 223,
+  "visual_inspection": "Chromium desktop suspended state and WebKit mobile confirmation inspected; preserved composition and honest states."
+}

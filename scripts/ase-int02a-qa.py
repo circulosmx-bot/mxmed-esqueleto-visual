@@ -12,6 +12,7 @@ ROUTER='scripts/ase-int02a-router.php'
 HOOK=None
 EXTRA_PROTECTED=[]
 EXTRA_SOURCES=[]
+EXTRA_WRITABLE_TABLES=[]
 checks=[]; concurrency=[]; processes=[]
 BASE='09d3aefcf20266641d81aa128cec05f4a9e4ca03'
 
@@ -93,6 +94,9 @@ def main():
         sql("CREATE USER 'ase_writer'@'127.0.0.1' IDENTIFIED BY %s",(password,))
         for table in ['auth_accounts','auth_account_credentials','internal_staff','internal_capability_delegations']:
             sql(f"GRANT SELECT ON `{database}`.`{table}` TO 'ase_writer'@'127.0.0.1'")
+        for table in EXTRA_WRITABLE_TABLES:
+            assert table=='internal_staff'
+            sql(f"GRANT UPDATE ON `{database}`.`{table}` TO 'ase_writer'@'127.0.0.1'")
         sql(f"GRANT SELECT,INSERT,UPDATE ON `{database}`.internal_operator_grants TO 'ase_writer'@'127.0.0.1'")
         for table in ['platform_audit_events','platform_audit_stream_heads']:
             sql(f"GRANT SELECT,INSERT ON `{database}`.`{table}` TO 'ase_writer'@'127.0.0.1'")

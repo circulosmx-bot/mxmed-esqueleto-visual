@@ -1,0 +1,1464 @@
+{
+  "result": "PASS",
+  "cases": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "263.062px 496.938px",
+          "gap": "16px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 263.0625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 496.9375,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "263.062px 496.938px",
+          "gap": "16px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 263.0625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 496.9375,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "358px",
+          "gap": "20px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "358px",
+          "gap": "20px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "size": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "400px 800px",
+          "gap": "24px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "263.0625px 496.9375px",
+          "gap": "16px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 263.0625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 496.9375,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "263.0625px 496.9375px",
+          "gap": "16px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 263.0625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 496.9375,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 505.515625,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "result": "PASS",
+      "approved": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "358px",
+          "gap": "20px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "358px",
+          "gap": "20px",
+          "radius": "0px"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "16px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "10px"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "size": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "columns": "none",
+          "gap": "normal",
+          "radius": "0px"
+        }
+      }
+    }
+  ],
+  "receipts": [
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 409,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "reactivate",
+      "target": "qa_target"
+    },
+    {
+      "status": 200,
+      "operation": "suspend",
+      "target": "qa_target"
+    },
+    {
+      "status": 409,
+      "operation": "suspend",
+      "target": "qa_target"
+    }
+  ],
+  "lifecycle_audit": [
+    {
+      "actor": "account:qa_master",
+      "target": "qa_legacy",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_legacy"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_legacy",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_legacy"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "after": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "reactivate",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "after": {
+        "status": "SUSPENDED",
+        "governance_class": "ADVISOR"
+      },
+      "before": {
+        "status": "ACTIVE",
+        "governance_class": "ADVISOR"
+      },
+      "operation": "suspend",
+      "capability": null,
+      "target_account_id": "qa_target"
+    }
+  ],
+  "javascript_errors": [],
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_SMOKE_ONLY"
+}

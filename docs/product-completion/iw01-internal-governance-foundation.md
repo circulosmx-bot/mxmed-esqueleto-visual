@@ -80,3 +80,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## Conexión acotada ASE-INT02B
 
 [ASE-INT02B](../identity/ASE-INT02B-team-permission-ui.md) conecta las selecciones aprobadas al adapter individual ASE-INT02A. No modifica `execute`, catálogo, locks ni auditoría. Grupos son selección local; cada comando mantiene transacción propia, autoridad vigente y target ADVISOR activo. UI-2 autorizada, QA sintética nueva, gate default off. Nombramientos, delegación administrativa, admisión y operación real permanecen fuera.
+
+## Lifecycle estricto ASE-INT03A
+
+[ASE-INT03A](../identity/ASE-INT03A-advisor-lifecycle.md) agrega scope servidor opcional `ADVISOR_LIFECYCLE` a `execute`: sólo suspend/reactivate, target Advisor no-self, cuenta activa y estado inicial exacto bajo locks; sesión/credencial y management vigentes revalidados. Reutiliza UPDATE y auditoría; callers sin scope conservan semántica previa. No elimina grants, restaura revocados ni habilita cuentas; no conecta Master/admisión ni decide D06.

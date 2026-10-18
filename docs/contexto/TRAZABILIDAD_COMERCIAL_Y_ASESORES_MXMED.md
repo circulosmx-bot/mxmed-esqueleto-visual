@@ -215,3 +215,7 @@ Sucede frases previas «checklist/gestión sin adapter gráfico» sólo para lec
 ## COM-10 — conexión individual ASE-INT02B
 
 [Matriz conectada](../identity/ASE-INT02B-team-permission-ui.md) sucede GUI sin guardado del hito ASE-INT02A sólo en feature aislada. Director/Master exacto, confirmación y ACK por capability, reconciliación y parcialidad explícitas. Sin grant de familia, balances, pagos, código comercial ni decisiones D01–D08/ADM. Servicios originales sin cambios y gate apagado por defecto; censo COM-01..09 preservado.
+
+## COM-10 — acceso staff y D06 separados
+
+[ASE-INT03A](../identity/ASE-INT03A-advisor-lifecycle.md) conecta únicamente suspensión/reactivación Advisor mediante gobierno canónico y confirmación. Conserva grants, atribución e historia; no cambia comisiones, cartera, descuentos, código ni ownership. D06 sobre efecto comercial futuro de suspensión/salida sigue pendiente, al igual que restantes D01–D08 y ADM. Sólo feature y QA aisladas.
