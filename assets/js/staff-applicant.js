@@ -1,0 +1,25 @@
+(() => {
+'use strict';
+const $=id=>document.getElementById('wf-'+id),uid=()=>crypto.randomUUID();
+let csrf='',director=false,cid='',version=1,view=null,documents=[],busy=false;
+const say=m=>{$('status').textContent=m;};
+async function api(action,input={}) {const r=await fetch('/api/internal/staff-admission/workflow.php',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({action,input})});const b=await r.json();if(!r.ok)throw new Error(b.error==='conflict_refresh_required'?'La solicitud cambió. Actualiza antes de continuar.':'Acción no confirmada. Consulta el estado antes de repetirla.');return b;}
+function on(id,fn){$(id).onclick=async()=>{if(busy)return;busy=true;$(id).disabled=true;try{await fn();}catch(e){say(e.message);}finally{busy=false;$(id).disabled=false;}};}
+const fields=['given_names','first_surname','second_surname','operation_state','operation_city'];
+const profile=()=>Object.fromEntries(fields.map(k=>[k,$(k).value.trim()]));
+async function refresh(){const list=await api('cases');$('cases').replaceChildren(new Option('Seleccionar',''),...list.items.map(c=>new Option(`${c.case_id} · ${c.state}`,c.case_id)));$('cases').value=cid;if(cid)await load();else say(director?'Selecciona una solicitud o prepara una nueva.':'Acepta tu invitación para continuar.');}
+async function load(){const c=await api('case',{case_id:cid});version=c.version||c.case?.version||1;const values=c.profile||c.current_profile||c;fields.forEach(k=>$(k).value=values[k]||'');view=await api('view',{case_id:cid});$('review-state').textContent=view.admitted?'Admisión confirmada. Permisos individuales pendientes.':view.review?`${view.review.decision}: ${view.review.reason}${view.review_current?'':' · Requiere revisión de las versiones actuales'}`:'Pendiente de revisión';documents=[];$('documents').replaceChildren();$('pages').replaceChildren();say('Solicitud consultada.');}
+async function upload(file,purpose){if(!file)throw new Error('Selecciona la imagen requerida.');if(file.size>65536)throw new Error('La imagen debe tener un tamaño máximo de 64 KiB.');const array=new Uint8Array(await file.arrayBuffer());let raw='';array.forEach(x=>raw+=String.fromCharCode(x));
+// Resolve current version from case media metadata supplied by the server.
+const c=await api('case',{case_id:cid});version=c.version;
+const meta=await api('media_status',{case_id:cid,purpose});
+return api('upload',{metadata:{operation_id:uid(),case_id:cid,expected_case_version:version,expected_asset_version:meta.version,purpose,declared_mime:file.type},base64:btoa(raw)});}
+on('refresh',refresh);$('cases').onchange=async()=>{cid=$('cases').value;if(cid)try{await load();}catch(e){say(e.message);}};
+on('accept-invite',async()=>{const target=$('inv-case').value;await api('accept',{operation_id:uid(),case_id:target,expected_version:1,invitation_id:$('inv-id').value,token:$('token').value});$('token').value='';cid=target;await refresh();});
+on('save',async()=>{await api('correct',{operation_id:uid(),case_id:cid,expected_version:version,...profile()});await load();});
+on('confirm',async()=>{await api('confirm',{operation_id:uid(),case_id:cid,expected_version:version});await load();});
+on('add-document',async()=>{const pages=[],kind=$('kind').value;const front=await upload($('front').files[0],'STAFF_IDENTITY_EVIDENCE');pages.push({side:kind==='INE'?'FRONT':'BIOGRAPHIC',asset_id:front.asset_id});if(kind==='INE'){const back=await upload($('back').files[0],'STAFF_IDENTITY_EVIDENCE');pages.push({side:'BACK',asset_id:back.asset_id});}const previous=view?.sets?.[0]?JSON.parse(view.sets[0].manifest):[];const prior=previous.find(d=>d.kind===kind&&!documents.some(x=>x.document_id===d.document_id));documents.push({document_id:prior?.document_id||uid(),kind,justification:$('justification').value,pages});const li=document.createElement('li');li.textContent=`${kind}: ${pages.length} cara(s) añadidas`;$('documents').append(li);say('Documento agrupado. Envía el conjunto cuando esté completo.');});
+on('upload-portrait',async()=>{await upload($('portrait').files[0],'INTERNAL_PRESENTATION_PORTRAIT');say('Retrato privado guardado.');});
+on('submit',async()=>{if(!$('consent').checked)throw new Error('Confirma personalmente la versión presentada.');await api('submit',{operation_id:uid(),case_id:cid,expected_version:version,documents,legal_reference:'synthetic-staff-acceptance-v1',accepted:true});await load();});
+api('bootstrap').then(async b=>{csrf=b.csrf_token;director=b.director;if(director){say('Consulta las solicitudes desde Equipo y permisos.');return;}$('applicant').hidden=false;$('upload').hidden=false;await refresh();}).catch(e=>say(e.message));
+})();

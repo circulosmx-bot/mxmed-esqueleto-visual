@@ -207,3 +207,7 @@ J09: preparación → invitación/Identity → confirmación → documentos agru
 ## J09 — UXFUNC02
 
 Listado activo → detalle ACTIVE → borrador de permisos → confirmación → writer → lectura canónica. Baja → REMOVED → salida del listado activo → histórico. Solicitud pendiente → formulario existente, nunca relación staff implícita. Véase [UXFUNC02](../identity/ASE-ADM02-UXFUNC02.md).
+
+## J09 — UXFLOW03
+
+Agregar → Persona/Categoría/Permisos/Revisión → prepare/issue sin activación. Pendientes → caso → acción concreta → contraseña/MFA → resultado; aceptación y admisión siguen separadas. Integrante → sección personal → update versionado, permisos y baja independientes. Véase [UXFLOW03](../identity/ASE-ADM02-UXFLOW03.md).

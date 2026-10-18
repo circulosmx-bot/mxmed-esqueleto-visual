@@ -39,3 +39,6 @@
 #applicant-submit,#applicant-material-change{font-size:.8rem;max-width:100%;white-space:normal}
 @media(max-width:1000px){.admission-section{margin-left:18px;margin-right:18px}.admission-access>summary{margin-left:18px;margin-right:18px}}
 @media(max-width:640px){.admission-fields,.admission-status-grid{grid-template-columns:1fr}.admission-request-actions{flex-direction:column}.admission-request-actions button{width:100%}#admission-review,#applicant-preview,#admission-document{padding:18px}.admission-heading-person{gap:10px}.admission-portrait{width:56px;height:56px}.admission-requests{padding-left:12px;padding-right:12px}.admission-actions{flex-direction:column}.admission-actions button{width:100%}.admission-photo-example{flex-wrap:wrap}#admission-review .dialog-actions,#applicant-preview .dialog-actions{bottom:-18px}}
+
+/* Contextual dialogs reuse the approved onboarding geometry and field tokens. */
+#staff-case,#staff-profile,#staff-stepup{width:min(720px,calc(100% - 32px))}.wizard-field textarea{width:100%;font:inherit;color:var(--ink);border:1px solid #9bb0bd;border-radius:6px;padding:10px 12px;max-width:100%;box-sizing:border-box}#staff-case-content .member-actions{flex-direction:row;flex-wrap:wrap}#staff-case-content .member-actions button{max-width:100%}

@@ -83,7 +83,7 @@ final class Service
                 $id=$this->query('SELECT case_id FROM auth_staff_admission_completions WHERE account_id=?',[$item['account_reference']])->fetchColumn();if(!$id)continue;
                 $c=$this->case($id);$this->director($a,$c);
                 $p=$this->row('SELECT given_names,first_surname,second_surname,operation_state,operation_city FROM auth_staff_admission_versions WHERE case_id=? AND version=?',[$id,$c['version']]);
-                $item['personal_profile']=$p;$item['identity_review']=['current'=>false];
+                $item['admission_case_id']=$id;$item['personal_editable']=$item['staff_status']!=='REMOVED';$item['personal_profile']=$p;$item['identity_review']=['current'=>false];
                 try{$review=$this->approved($c);$item['identity_review']=['current'=>true,'review_version'=>$review['review_id']];}catch(\RuntimeException){}
                 $this->audit($a,$c,'read',$this->uuid());
             }unset($item);
@@ -117,15 +117,25 @@ final class Service
             $sets=$this->query('SELECT set_id,case_version,sequence_number,manifest,created_at FROM auth_staff_document_sets WHERE case_id=? ORDER BY sequence_number DESC LIMIT 20',[$id])->fetchAll(PDO::FETCH_ASSOC);
             $review=$this->query('SELECT review_id,set_id,decision,reason,created_at FROM auth_staff_identity_reviews WHERE case_id=? ORDER BY created_at DESC,review_id DESC LIMIT 1',[$id])->fetch(PDO::FETCH_ASSOC)?:null;
             $current=false;try{$s=$this->currentSet($c);$current=$review&&$review['set_id']===$s['set_id'];}catch(\RuntimeException){}
-            $this->audit($a,$c,'read',$this->uuid());return ['case_id'=>$id,'sets'=>$sets,'review'=>$review,'review_current'=>$current,'legal_reference'=>$this->legalReference,'admitted'=>(bool)$this->query('SELECT 1 FROM auth_staff_admission_completions WHERE case_id=?',[$id])->fetchColumn()];});
+            $admitted=(bool)$this->query('SELECT 1 FROM auth_staff_admission_completions WHERE case_id=?',[$id])->fetchColumn();$actions=[];
+            // Eligibility projection only: each operation revalidates all authority and versions.
+            if($c['bound_account_id']!==$a->accountId()){
+                try{$s=$this->currentSet($c);$actions[]='READ';
+                    if(!$admitted){$actions[]='CORRECTIONS';$actions[]='REJECT';
+                        if($this->query("SELECT 1 FROM auth_staff_review_intents WHERE case_id=? AND set_id=? AND actor_account_id=? AND session_id=? AND action='READ' AND consumed_at IS NOT NULL AND expires_at>UTC_TIMESTAMP(6)",[$id,$s['set_id'],$a->accountId(),(string)$a->session()->sessionId()])->fetchColumn())$actions[]='ACCEPT';
+                        try{$this->approved($c);if($c['proposed_category']==='ADVISOR'&&!$this->query('SELECT 1 FROM internal_staff WHERE account_id=?',[$c['bound_account_id']])->fetchColumn())$actions[]='ADMIT';}catch(\RuntimeException){}
+                    }
+                }catch(\RuntimeException){}
+            }
+            $this->audit($a,$c,'read',$this->uuid());return ['case_id'=>$id,'sets'=>$sets,'review'=>$review,'review_current'=>$current,'legal_reference'=>$this->legalReference,'admitted'=>$admitted,'available_actions'=>$actions];});
     }
     public function challenge(array $cookies,array $b):array
     {
-        self::keys($b,['case_id','set_id','action','reason','email','password']);
+        self::keys($b,['case_id','set_id','action','reason','password']);
         if(!in_array($b['action'],['READ','CORRECTIONS','ACCEPT','REJECT','ADMIT'],true)||!is_string($b['reason'])||strlen(trim($b['reason']))<8||strlen($b['reason'])>500)throw new \RuntimeException('workflow_invalid');
         $a=$this->sessions->resolve($cookies,true);if(!$a)throw new \RuntimeException('workflow_denied');
         // Password authentication and rate limits use their own canonical transaction before domain locks.
-        $reauth=$this->security->reauthenticate($a,$b['email'],$b['password'],['ip'=>$_SERVER['REMOTE_ADDR']??'127.0.0.1']);
+        $reauth=$this->security->reauthenticate($a,$this->row('SELECT email_address FROM auth_accounts WHERE account_id=?',[$a->accountId()])['email_address'],$b['password'],['ip'=>$_SERVER['REMOTE_ADDR']??'127.0.0.1']);
         return $this->unit->run($cookies,function($actor)use($b,$reauth){
             $c=$this->case($b['case_id']);$this->director($actor,$c);$s=$this->currentSet($c);
             if($s['set_id']!==$b['set_id'])throw new \RuntimeException('workflow_stale');

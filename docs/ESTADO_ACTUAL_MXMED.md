@@ -176,3 +176,7 @@ Cierre ASE-ADM02-FUNCTIONAL-CONSOLIDATION: 41 checks integrados PASS, revisión 
 ## ASE-ADM02-UXFUNC02
 
 Directorio Activos por defecto, estados históricos separados y solicitudes pendientes mediante flujo existente; writer y autoridad sin cambios. 27 checks integrados y 11 smoke checks PASS, sin activación. Véase [UXFUNC02](identity/ASE-ADM02-UXFUNC02.md).
+
+## ASE-ADM02-UXFLOW03
+
+Preparación en asistente aprobado de cuatro pasos, revisión contextual separada y edición personal del integrante existente. Actor de reauth derivado de sesión en servidor. 39 checks funcionales y 11 de presentación PASS; producción inactiva. Véase [UXFLOW03](identity/ASE-ADM02-UXFLOW03.md).

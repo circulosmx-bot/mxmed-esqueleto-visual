@@ -165,3 +165,7 @@ Migración18_07: conjuntos documentales, intenciones, revisiones y recibos del m
 ## Proyección UXFUNC02
 
 No añade migraciones: filtra internal_staff.status antes de paginar y distingue solicitudes admitidas mediante auth_staff_admission_completions. No DELETE ni reactivación REMOVED. Esquema UXFUNC01 intacto. Véase [UXFUNC02](../identity/ASE-ADM02-UXFUNC02.md).
+
+## UXFLOW03 — sin migración
+
+Sin objetos nuevos. Reutiliza versiones/procedencia personal, invitaciones y casos; proyección de acciones elegibles y caso vinculado. Challenge deriva email de auth_accounts por actor autenticado; no acepta email como campo del navegador. Véase [UXFLOW03](../identity/ASE-ADM02-UXFLOW03.md).

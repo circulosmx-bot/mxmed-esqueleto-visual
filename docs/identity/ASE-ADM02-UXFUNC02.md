@@ -50,3 +50,5 @@ El primer smoke esperaba el código HTTP original de ReadFailure; el router prop
 Preview sintético: `https://127.0.0.1:56213/internal/media-review/index.php?section=equipo`; vence el 19 de octubre de 2026 a las 16:05:13, America/Mexico_City (UTC−06:00). Sólo loopback. Chromium abre Director autenticado, vista Activos y Alma seleccionada; guía privada local con MFA canónico. La duración del entorno no extiende la sesión: puede abrirse de nuevo con `python3 /tmp/mxmed-uxfunc02-review-tnb6yo0l/control.py open`.
 
 Cerrar: `python3 /tmp/mxmed-uxfunc02-review-tnb6yo0l/control.py stop`. El runner termina sólo sus procesos propietarios; cerrar la ventana no detiene el entorno. Sin datos personales reales, correo externo, merge ni despliegue.
+
+Sucesor acotado: [UXFLOW03](ASE-ADM02-UXFLOW03.md) separa preparación, revisión e integrante existente; preserva el listado y los permisos verificados aquí.

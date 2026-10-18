@@ -20,7 +20,7 @@ try{
   $a=(new \Identity\Http\CanonicalHttpSessionResolver($services[0]->sessions()))->resolve($_COOKIE,true);if(!$a)throw new RuntimeException('authentication_required');
   \Identity\Team\Http::headers();header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'");
   $staffWorkflowReady=true;$staffWorkflowApplicant=true;
-  echo '<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi incorporación · México Médico</title><link rel="stylesheet" href="/assets/css/internal-team.css"><link rel="stylesheet" href="/assets/css/internal-team-admission.css"><script src="/assets/js/staff-workflow.js" defer></script></head><body><main class="advisor-workspace"><h1>Mi incorporación</h1>';
+  echo '<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi incorporación · México Médico</title><link rel="stylesheet" href="/assets/css/internal-team.css"><link rel="stylesheet" href="/assets/css/internal-team-admission.css"><script src="/assets/js/staff-applicant.js" defer></script></head><body><main class="advisor-workspace"><h1>Mi incorporación</h1>';
   require __DIR__.'/../partials/identity/staff-workflow.php';echo '</main></body></html>';return true;
  }
 }catch(Throwable $e){http_response_code(503);header('Cache-Control: no-store');echo '{"error":"isolated_service_unavailable"}';return true;}

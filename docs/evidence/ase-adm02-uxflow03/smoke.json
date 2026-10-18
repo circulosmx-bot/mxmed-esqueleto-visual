@@ -1,0 +1,51 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Persona fields/navigation reachable at 1440",
+      "pass": true
+    },
+    {
+      "name": "Contextual case fits 1440",
+      "pass": true
+    },
+    {
+      "name": "Contextual credentials fit 1440",
+      "pass": true
+    },
+    {
+      "name": "Persona fields/navigation reachable at 1366",
+      "pass": true
+    },
+    {
+      "name": "Contextual case fits 1366",
+      "pass": true
+    },
+    {
+      "name": "Contextual credentials fit 1366",
+      "pass": true
+    },
+    {
+      "name": "Persona fields/navigation reachable at 390",
+      "pass": true
+    },
+    {
+      "name": "Contextual case fits 390",
+      "pass": true
+    },
+    {
+      "name": "Contextual credentials fit 390",
+      "pass": true
+    },
+    {
+      "name": "Applicant self-service remains connected without Director review controls",
+      "pass": true
+    },
+    {
+      "name": "No exceptions in separated Director/applicant controllers",
+      "pass": true
+    }
+  ],
+  "count": 11,
+  "production_activation": false
+}

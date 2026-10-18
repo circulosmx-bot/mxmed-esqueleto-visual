@@ -1,28 +1,16 @@
-<?php declare(strict_types=1);if(empty($staffWorkflowReady)){http_response_code(503);exit;} ?>
-<?php if(!empty($staffWorkflowApplicant)): ?><link rel="stylesheet" href="/assets/css/media-review-inbox.css"><?php endif; ?>
-<details class="admission-requests panel" id="admission-requests" <?php if(!empty($staffWorkflowApplicant))echo 'open'; ?>>
-<summary>Solicitudes de incorporación</summary>
-<p class="admission-note">Ensayo aislado con personas y archivos ficticios. No introduzcas datos personales reales.</p>
-<ol class="wizard-steps"><li>Persona</li><li>Documentos</li><li>Revisión</li><li>Admisión</li></ol>
-<p id="wf-status" role="status" aria-live="polite">Validando sesión…</p>
-<label class="wizard-field">Solicitud <select id="wf-cases"><option value="">Seleccionar</option></select></label><button id="wf-refresh" type="button">Actualizar</button>
-<div id="wf-director" hidden><button id="wf-new" type="button">Preparar solicitud</button><label class="wizard-field">Correo del destinatario <input id="wf-email" type="email" autocomplete="off"></label><button id="wf-invite" type="button">Preparar invitación</button><p>La invitación de ensayo se entrega únicamente al buzón local privado.</p></div>
-<details class="admission-section" open><summary>DATOS PERSONALES</summary>
-<div class="admission-fields"><label class="wizard-field">Nombre(s) <input id="wf-given_names" maxlength="120"></label><label class="wizard-field">Primer apellido <input id="wf-first_surname" maxlength="120"></label><label class="wizard-field">Segundo apellido <input id="wf-second_surname" maxlength="120"></label>
-<label class="wizard-field">Estado <input id="wf-operation_state" maxlength="120"></label><label class="wizard-field">Ciudad <input id="wf-operation_city" maxlength="120"></label>
-</div><div id="wf-applicant" hidden><button id="wf-save" type="button">Guardar correcciones</button><button id="wf-confirm" type="button">Confirmar mis datos</button>
-<details><summary>Aceptar invitación</summary><label class="wizard-field">Solicitud <input id="wf-inv-case"></label><label class="wizard-field">Invitación <input id="wf-inv-id"></label><label class="wizard-field">Código privado <input id="wf-token" type="password" autocomplete="off"></label><button id="wf-accept-invite" type="button">Vincular mi cuenta</button></details></div>
-</details>
-<details class="admission-section" open><summary>IDENTIDAD Y DOCUMENTACIÓN</summary>
-<div id="wf-upload" hidden><label class="wizard-field">Documento <select id="wf-kind"><option value="INE">INE: anverso y reverso</option><option value="PASSPORT">Pasaporte mexicano: página biográfica</option></select></label>
-<label class="wizard-field">Justificación <input id="wf-justification" maxlength="300" value="Verificación inicial de identidad"></label>
-<label class="wizard-field">Primera cara <input id="wf-front" type="file" accept="image/jpeg,image/png"></label><label class="wizard-field">Reverso INE <input id="wf-back" type="file" accept="image/jpeg,image/png"></label>
-<button id="wf-add-document" type="button">Añadir documento al envío</button><ul id="wf-documents"></ul>
-<label class="wizard-field">Retrato opcional <input id="wf-portrait" type="file" accept="image/jpeg,image/png"></label><button id="wf-upload-portrait" type="button">Guardar retrato privado</button>
-<p id="wf-legal">Aceptación sintética de ensayo, versión synthetic-staff-acceptance-v1. No es un aviso legal aprobado.</p><label class="ack-row"><input id="wf-consent" type="checkbox">Confirmo personalmente esta versión de datos y documentos para el ensayo.</label><button id="wf-submit" type="button">Enviar a revisión</button></div>
-<p id="wf-review-state"></p><div id="wf-pages"></div>
-<div id="wf-review" hidden><label class="wizard-field">Acción <select id="wf-action"><option value="READ">Consultar evidencia</option><option value="CORRECTIONS">Solicitar correcciones</option><option value="ACCEPT">Aceptar evidencia y concluir revisión</option><option value="REJECT">Rechazar evidencia y concluir revisión</option><option value="ADMIT">Aprobar admisión Advisor</option></select></label>
-<label class="wizard-field">Motivo o corrección solicitada <input id="wf-reason" maxlength="500"></label><label class="wizard-field">Correo del Director <input id="wf-reauth-email" type="email"></label><label class="wizard-field">Contraseña actual <input id="wf-password" type="password" autocomplete="current-password"></label><button id="wf-challenge" type="button">Confirmar acción y solicitar MFA</button>
-<label class="wizard-field">Código del autenticador <input id="wf-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label><button id="wf-execute" type="button" disabled>Verificar MFA y ejecutar</button></div>
-</details><p>La admisión crea sólo la relación Advisor. Los permisos se conceden individualmente en Acceso y funciones; nombrar Master requiere su flujo independiente.</p>
-</details>
+<?php declare(strict_types=1);if(empty($staffWorkflowReady)){http_response_code(503);exit;}
+if(!empty($staffWorkflowApplicant)){require __DIR__.'/staff-applicant.php';return;} ?>
+<p id="wf-status" role="status" aria-live="polite"></p>
+<dialog id="onboarding" aria-labelledby="onboarding-title" aria-describedby="onboarding-description">
+<h2 id="onboarding-title" tabindex="-1">Agregar integrante</h2><p id="onboarding-description">Prepara la incorporación. La persona confirmará sus datos y presentará sus documentos desde su propia cuenta.</p>
+<ol class="wizard-steps" aria-label="Pasos de incorporación"><li>Persona</li><li>Categoría</li><li>Permisos</li><li>Revisión</li></ol>
+<div id="onboarding-content"></div><p id="onboarding-feedback" role="status" aria-live="polite"></p>
+<div class="dialog-actions"><button id="cancel-onboarding" type="button">Cerrar</button><button id="save-onboarding" type="button">Guardar borrador</button><button id="previous-onboarding" type="button">Anterior</button><button id="next-onboarding" type="button" class="primary">Continuar</button></div>
+</dialog>
+<dialog id="staff-case" aria-labelledby="staff-case-title"><h2 id="staff-case-title" tabindex="-1">Solicitud de incorporación</h2><div id="staff-case-content"></div><p id="staff-case-status" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="close-staff-case" type="button">Cerrar</button></div></dialog>
+<dialog id="staff-profile" aria-labelledby="staff-profile-title"><h2 id="staff-profile-title">Editar datos personales</h2><p>Se conservará una nueva versión preparada por Dirección. La persona deberá confirmar los cambios; la revisión de identidad anterior puede requerir actualización. Esto no cambia la cuenta, las credenciales ni los permisos.</p><div id="staff-profile-content"></div><p id="staff-profile-status" role="status"></p><div class="dialog-actions"><button id="cancel-staff-profile" type="button">Cancelar</button><button id="save-staff-profile" type="button" class="primary">Guardar nueva versión</button></div></dialog>
+<dialog id="staff-stepup" aria-labelledby="staff-stepup-title"><h2 id="staff-stepup-title"></h2><p id="staff-stepup-target"></p>
+<label class="wizard-field" id="staff-reason-label" hidden>Motivo o corrección solicitada<textarea id="staff-reason" maxlength="500" rows="3"></textarea></label>
+<div id="staff-password-stage"><label class="wizard-field">Contraseña actual<input id="staff-password" type="password" autocomplete="current-password"></label><button id="staff-challenge" type="button" class="primary">Confirmar acción y continuar</button></div>
+<div id="staff-code-stage" hidden><label class="wizard-field">Código del autenticador<input id="staff-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label><button id="staff-execute" type="button" class="primary">Verificar y ejecutar</button></div>
+<p id="staff-stepup-status" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="cancel-staff-stepup" type="button">Cancelar</button></div></dialog>

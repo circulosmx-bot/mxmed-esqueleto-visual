@@ -340,3 +340,7 @@ ID-07 / COM-10: flujo sintético integrado de admisión, revisión y alta Adviso
 ## ID-07 / COM-10 — UXFUNC02
 
 P=corrección solicitada; S=filtro SQL de estado y navegación de solicitudes; C=UI existente con escritor canónico intacto; V=27 checks integrados y 11 smoke checks PASS; O=sintético aislado. Véase [UXFUNC02](../identity/ASE-ADM02-UXFUNC02.md).
+
+## ID-07 / COM-10 — UXFLOW03
+
+P=separación explícita aprobada; S=asistente y lectores/writers existentes; C=caso/invitación, revisión contextual con step-up, edición personal versionada; V=39 checks funcionales y 11 de presentación PASS; O=aislado sintético. Véase [UXFLOW03](../identity/ASE-ADM02-UXFLOW03.md).

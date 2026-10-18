@@ -1,0 +1,65 @@
+{
+  "result": "PASS",
+  "start_head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+  "functional_checks": 39,
+  "presentation_checks": 11,
+  "source_sha256": {
+    "assets/css/internal-team-admission.css": "a025df8b19a9cc0c0fe4d357b5300978df05c58cfee8bf4b6aa3585b798d8618",
+    "assets/js/internal-team.js": "e2a3b1f38c21bbd0af5f60772691c86b0bf5f2d92bdea320baa3e66cfb971e4e",
+    "assets/js/staff-applicant.js": "3e35e9dfe970644a033aad0d161c5378a04c0bb46c2b947efb65d985b1e0c6ac",
+    "assets/js/staff-workflow.js": "43a4fc3729bd3e8991fd0dcd82c1520cc03fb761daa9c8104279ec8f8487744d",
+    "modules/identity/StaffWorkflow/Service.php": "ad65b2768a964497b0c052047724b04e91b1a22f47a26275bf51661822ea127f",
+    "partials/identity/internal-team.php": "d2398f3413a9f1208cb142975bca7c19fd5ab80286ce108ff67cb8d51690ed65",
+    "partials/identity/staff-applicant.php": "d2918133e24a291c5abebd2ab21f79ce389899d675438e543c0de20fb79d2959",
+    "partials/identity/staff-workflow.php": "ecb6d961c90ed7fa99e563632daa70cd79eac905250c029b18185b7cc91ef008",
+    "scripts/ase-adm02-uxflow03-checks.py": "13e035057d8155a91fc20b6855a813bab860284e422f8c0788067f22d71fb205",
+    "scripts/ase-adm02-uxflow03-qa.py": "1cda0e942f858bd5d57a7ccbde62a484aa28fb562e9f29a9478b591c6ff4a47c",
+    "scripts/ase-adm02-uxflow03-smoke.py": "af27a39ebbcef43607a1ea51750b8ea1d7b0dd547439b8db3be26025f4682ed3",
+    "scripts/ase-adm02-workflow-router.php": "6793afd49b2f406e07a3cde78d06489f6995a743ea87cf86147420b0dd92ee0c"
+  },
+  "screens_sha256": {
+    "docs/evidence/ase-adm02-uxflow03/screens/case-1366.png": "ce345aa876fab7a9ae18df967e7e40c25490373302c5d5164ec062f3f43745ff",
+    "docs/evidence/ase-adm02-uxflow03/screens/persona-390.png": "5d61ae803d5d92f9e1a23c19ffafc45d9ea3654f3d0c1eed0175079a71763520",
+    "docs/evidence/ase-adm02-uxflow03/screens/team-390.png": "0c7e96d2b7b640f7776b2314c32ade0ca4bc4470a7af799c23c878394093e503",
+    "docs/evidence/ase-adm02-uxflow03/screens/persona-1440.png": "5a39a409d363ecf5f57f640180ace93acd24887be33e0f5540e31630f85dfb8b",
+    "docs/evidence/ase-adm02-uxflow03/screens/wizard-1366.png": "ac97334f026cde5a027d3f8e43012725a77d1a43176b802c2ec01e6b23dc11d1",
+    "docs/evidence/ase-adm02-uxflow03/screens/stepup-1440.png": "a405aa2124afe3fe8b1103e25dab37580f79d2d12546b744e707023b0cff31e2",
+    "docs/evidence/ase-adm02-uxflow03/screens/case-390.png": "840d45fdf557f1a08f3bc718f3a7c8aa68f27c2635e50886ff386f48e81f9cc7",
+    "docs/evidence/ase-adm02-uxflow03/screens/team-1440.png": "ffeb3b9dd06ae35e4a97e706accbea95fc4cc95d62c326f5fa0dd6a0ef683616",
+    "docs/evidence/ase-adm02-uxflow03/screens/case-1440.png": "9e72682a363361d8a5e9cdd0d8937872bebbb68397dc29c7d149506b2c62057e",
+    "docs/evidence/ase-adm02-uxflow03/screens/wizard-1440.png": "ec0a29c1b651384a9686c1f0b662db45c2a2779584babe0233a4a858f8874f9d",
+    "docs/evidence/ase-adm02-uxflow03/screens/wizard-390.png": "4f11438946290964222bb71c4a6a1ecaf2fb4b875f9417ef2642139516b3a247",
+    "docs/evidence/ase-adm02-uxflow03/screens/persona-1366.png": "ea21a5516c9c421b34ef21ae05a010b638afd0d60b27e6f39f577967b3e6b3b1",
+    "docs/evidence/ase-adm02-uxflow03/screens/stepup-1366.png": "a8e182fd9e333fcb6857cea84022ba0a7472f2dc8e9d3dd0fae8f1ddea7fda64",
+    "docs/evidence/ase-adm02-uxflow03/screens/team-1366.png": "0174fab352023068a59c472082b3e2e8d24678505e6d73562ea1955f46b051e6",
+    "docs/evidence/ase-adm02-uxflow03/screens/stepup-390.png": "c779a7fc27f177310aeac0453119367236e956f02864813167c9debd57a4fd05"
+  },
+  "tested_runtime_hashes_match": true,
+  "protected_worktrees_and_listeners_unchanged": true,
+  "syntax": "PASS",
+  "context_sync_status": "PASS_UPDATED",
+  "preview": {
+    "url": "https://127.0.0.1:59235/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792449160.371259,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-zdcs8vi9",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "browser": {
+    "opened_at_unix": 1792363236.7809322,
+    "chromium_opened": true,
+    "director_session_ready": true,
+    "applicant_session_ready": true,
+    "guide_local_only": true,
+    "expiry_unix": 1792449160.371259
+  },
+  "production_activation": false,
+  "real_personal_data_used": false,
+  "limits": [
+    "Synthetic isolated integration only",
+    "No physical Safari or final Director visual approval",
+    "Admission bundle remains synthetic; no production policy activation",
+    "Post-admission documentary renewal remains bounded by existing service",
+    "Permission enforcement verified at real MediaReviewAuthority boundary, not entire media workflow"
+  ],
+  "local_links_checked": 767
+}
