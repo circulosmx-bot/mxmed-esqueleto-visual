@@ -161,3 +161,7 @@ Registrar cambios de conexión en el journey afectado y en su capability, sin du
 ## J09 — suspensión/reactivación ASE-INT03A
 
 [Flujo](../identity/ASE-INT03A-advisor-lifecycle.md): resolver borrador → snapshot → confirmación española → snapshot vigente → comando lifecycle único bajo locks → audit/commit → refresh. Conflicto o ACK incierto no produce éxito inventado/retry. Suspensión bloquea siguiente autoridad operativa; reactivación conserva gates independientes. J08/D06 no cambia.
+
+## J09 — flujo Master propuesto ASE-INT03B-PREP01
+
+[Contrato y secuencia](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md): selección/snapshot → confirmación → reauth canónica → MFA exacto → locks/consumo/mutación/audit → refresh/reconciliación. Es propuesta, no journey conectado ni probado; casos actuales son específicos de otros dominios. Preserva J09 existente y frontera J08; no nuevas asignaciones comerciales.

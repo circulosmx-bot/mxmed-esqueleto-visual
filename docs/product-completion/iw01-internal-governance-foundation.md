@@ -84,3 +84,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## Lifecycle estricto ASE-INT03A
 
 [ASE-INT03A](../identity/ASE-INT03A-advisor-lifecycle.md) agrega scope servidor opcional `ADVISOR_LIFECYCLE` a `execute`: sólo suspend/reactivate, target Advisor no-self, cuenta activa y estado inicial exacto bajo locks; sesión/credencial y management vigentes revalidados. Reutiliza UPDATE y auditoría; callers sin scope conservan semántica previa. No elimina grants, restaura revocados ni habilita cuentas; no conecta Master/admisión ni decide D06.
+
+## Preparación Master ASE-INT03B-PREP01
+
+[Contrato de seguridad propuesto](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md): distingue comandos directos existentes de HTTP privilegiado aún ausente. Preserva clase/management/delegación/uso y democión canónica; documenta allowlist MFA, CHECK de casos, Director-only y consumo/audit atómicos pendientes. Sólo documentación; no altera writer, esquema, grants ni gates.

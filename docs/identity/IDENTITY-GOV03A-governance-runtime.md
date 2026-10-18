@@ -130,3 +130,7 @@ Con conexión administrativa privada que permite leer sólo el esquema fuente de
 Los clones importan **cero filas normales**, reasignan definers a su principal restringido y ejecutan únicamente sus dos rutinas audit R2. Se prueba denegación de lectura/escritura/CALL hacia mxmed, rollback físico de auditoría, dos procesos finalizando y consumo único. Se destruyen base, principal SQL y Valkey propios. Los checksums normales, sesiones/configuración y QA05/OP02/UI03 se verifican aparte, sin logins sobre cuentas reales. La QA positiva de ownership prueba el contrato con evidencia sintética, no disponibilidad de acreditación productiva ni aceptación humana.
 
 La contención clínica y la política de contactos profesionales ordinarios no se modifican: GOV03B no convierte ownership o staff en autoridad médica ni redefine el alcance de `profile/contact-points`.
+
+## Extensión propuesta Master — ASE-INT03B-PREP01
+
+[Contrato dirigido](ASE-INT03B-PREP01-master-privileged-authorization.md): MFA y casos actuales no autorizan nombramientos Master. Propone seis operaciones exactas y contexto staff tipado en casos existentes, conservando intactos ownership/recovery, enrollment y evidencia externa. Registra composición transaccional pendiente, límite SQL/Valkey y CHECKs no acumulativos de paquetes posteriores. No ejecuta migraciones ni amplía autoridad o ceremonias reales; no sucede las autorizaciones operacionales pendientes de este documento.

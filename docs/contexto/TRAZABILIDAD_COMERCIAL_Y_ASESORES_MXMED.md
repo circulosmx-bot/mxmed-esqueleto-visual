@@ -219,3 +219,7 @@ Sucede frases previas «checklist/gestión sin adapter gráfico» sólo para lec
 ## COM-10 — acceso staff y D06 separados
 
 [ASE-INT03A](../identity/ASE-INT03A-advisor-lifecycle.md) conecta únicamente suspensión/reactivación Advisor mediante gobierno canónico y confirmación. Conserva grants, atribución e historia; no cambia comisiones, cartera, descuentos, código ni ownership. D06 sobre efecto comercial futuro de suspensión/salida sigue pendiente, al igual que restantes D01–D08 y ADM. Sólo feature y QA aisladas.
+
+## COM-10 — preparación de gobierno Master
+
+[ASE-INT03B-PREP01](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md) define seguridad propuesta para designación, management y delegación exacta; conserva uso independiente. Democión existente revoca gestión/delegaciones, preserva grants operativos, estado staff e historia. No implementa HTTP/UI Master ni atribución, comisiones, cartera o decisiones D01–D08; siete políticas ADM pendientes. Contexto documental, no activación.

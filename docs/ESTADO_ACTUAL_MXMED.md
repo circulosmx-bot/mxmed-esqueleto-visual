@@ -24,10 +24,16 @@
 
 ## Sucesor aislado ASE-INT03A
 
-- Entrega actual: `feature/ase-int03a-advisor-lifecycle`, worktree `mxmed-ase-int03a-advisor-lifecycle`, padre `36eeb51655a1c24248405feae579cefc06ff3b44`.
+- Entrega ASE-INT03A: `feature/ase-int03a-advisor-lifecycle`, worktree `mxmed-ase-int03a-advisor-lifecycle`, padre `36eeb51655a1c24248405feae579cefc06ff3b44`.
 - [ASE-INT03A](identity/ASE-INT03A-advisor-lifecycle.md) conecta sólo suspender/reactivar Advisors mediante el mismo writer y boundary HTTP, con scope de categoría/estado/cuenta/autoridad revalidado bajo locks. Grants e historia conservados; no habilita cuentas desactivadas ni restaura grants revocados.
 - Botones/modal aprobados, borrador de permisos protegido, refresh y ACK incierto sin retry. 223 checks dirigidos, seis carreras SQL y ocho combinaciones Chromium/WebKit; CSS aprobado preservado. Safari físico NOT_RUN y móvil interino.
 - Gate default off; recursos sintéticos propios dispuestos, cinco worktrees/listeners/pointer protegidos sin cambios. Sin merge, promoción, operación real, Master/admisión o decisiones comerciales D06.
+
+## Preparación vigente ASE-INT03B-PREP01
+
+- Entrega documental en `feature/ase-int03b-master-governance-prep`, worktree `mxmed-ase-int03b-master-governance-prep`, padre exacto `b23d4b924d1170fc250afe3ed01555838ee684c8`. [Contrato privilegiado Master](identity/ASE-INT03B-PREP01-master-privileged-authorization.md): autoridad aprobada, operaciones directas existentes y flujo HTTP/MFA específico aún no implementado.
+- Allowlist MFA y CHECK de casos no admiten Master; ampliar sólo nombres no basta: falta Director-only, contexto exacto y consumo proof/mutación/audit en una transacción. Inspección detecta reemplazo no acumulativo del CHECK en ACT03; requiere rehearsal posterior, sin afirmar schema instalado.
+- UI-2 propuesta pendiente, controles Master deshabilitados; admisión/identidad y D01–D08 siguen separados. Sólo fuente/documentación inspeccionadas, sin QA de producto nueva, DDL/DML, MFA real, merge, despliegue o activación.
 
 ## Producto existente
 

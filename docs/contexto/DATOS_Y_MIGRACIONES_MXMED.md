@@ -119,3 +119,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT03A — UPDATE staff existente
 
 [Contrato](../identity/ASE-INT03A-advisor-lifecycle.md): estado de `internal_staff` y append audit en transacción canónica única; cuenta/credencial/grants sólo consultados por lifecycle. No DDL de producto, borrado de historia, recreación de grants ni habilitación de cuenta. MySQL/Valkey nuevos exclusivos de QA; permisos del principal sintético no son migración operacional.
+
+## ASE-INT03B-PREP01 — inspección de esquema, sin ejecución
+
+[Contrato](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md) documenta tablas staff/grants/delegaciones y casos/challenges/proofs existentes; propone ampliar sólo CHECK de operaciones y contexto tipado, sin archivo SQL nuevo. El paquete ACT03 reemplaza el CHECK y omite dos operaciones de correcciones antes admitidas: hallazgo de fuente que exige preflight/rehearsal posterior, no constatación de DB real. Sin consultas SQL/DDL/DML, nuevos objetos físicos ni regeneración del censo; auditoría y sesión conservan sus dueños.

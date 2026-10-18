@@ -296,3 +296,7 @@ Actualizar sólo IDs afectados por una operación posterior autorizada, con ruta
 ## ID-07 — lifecycle conectado ASE-INT03A
 
 [Contrato](../identity/ASE-INT03A-advisor-lifecycle.md): P=suspend/reactivate Advisor existente; S=mismo writer con scope estricto y HTTP compartido; C=botones aprobados/CSRF/POST/refresh; V=223 checks, seis carreras y ocho combinaciones de navegador; O=gate default off, sin activación. Censo/IDs preservados; Master/admisión fuera.
+
+## ID-07 — preparación privilegiada ASE-INT03B-PREP01
+
+[Contrato](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md): P=autoridad exclusiva Director y separación de poderes aprobadas; S=comandos Master directos existentes, seguridad específica propuesta; C=HTTP/UI Master desconectados; V=inspección documental, sin QA nueva; O=inactivo. ID-02/03 se reutilizarían para reauth/sesión, sin otro motor. No modifica el censo ni concede capabilities.

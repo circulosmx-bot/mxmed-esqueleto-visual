@@ -124,3 +124,7 @@ permanece pendiente.
 ## ASE-INT03A — botones lifecycle aprobados
 
 [Ficha UI-2 y evidencia](identity/ASE-INT03A-advisor-lifecycle.md): solicitud ASE-INT03A autoriza conectar SUSPENDER ASESOR/REACTIVAR ASESOR del header y modal existentes en baseline `312ee388`. Sin cambios CSS/template/header/directorio/matriz. Copy autorizado de consecuencias, conservación, conflicto e incertidumbre; guardia de borrador. Ocho combinaciones Chromium/WebKit y 36 capturas; comparación de geometría/tokens, sin claim pixel0 ni Safari físico. Aprobaciones históricas R2/COM/ADM preservadas; no activación.
+
+## ASE-INT03B-PREP01 — ficha de seguridad pendiente
+
+[Ficha UI-2](identity/ASE-INT03B-PREP01-master-privileged-authorization.md#ficha-ui-2-y-decisiones-del-director) propone confirmación/reauth/TOTP y estados de fallo/expiración/incertidumbre en Equipo. Entrega actual UI-0 documental; no implementación ni aprobación nueva. Preserva baseline visual `312ee388`, botones de designación y separación uso/gestión/delegación; controles Master siguen deshabilitados. Deuda `ASE-INT03B-PRIVILEGED-UI`, decisión del Director antes de implementar conducta nueva según protocolo.

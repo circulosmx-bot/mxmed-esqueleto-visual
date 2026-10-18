@@ -122,6 +122,8 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
 
+- Preparación documental vigente: [ASE-INT03B-PREP01 — autorización privilegiada Master](identity/ASE-INT03B-PREP01-master-privileged-authorization.md), gaps MFA/casos, transacción, elegibilidad y ficha UI-2 pendiente. No implementa ni habilita comandos Master.
+
 - Sucesor backend aislado: [ASE-INT02A — grants individuales Advisor](identity/ASE-INT02A-governed-advisor-grants.md), POST + CSRF canónico, target bajo locks y auditoría existente. En ese hito, UI sólo consulta; sin activación.
 - Sucesor UI aislado: [ASE-INT02B — matriz y comandos individuales](identity/ASE-INT02B-team-permission-ui.md), disponibilidad canónica, borrador/confirmación, secuencia y reconciliación parcial; QA sintética Chromium/WebKit, gate apagado por defecto y sin activación.
 - Sucesor lifecycle aislado: [ASE-INT03A — suspender/reactivar Advisor](identity/ASE-INT03A-advisor-lifecycle.md), writer/HTTP canónicos, estado bajo locks, confirmación y grants preservados; gate apagado por defecto.
