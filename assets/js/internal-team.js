@@ -1,4 +1,4 @@
-/* Canonical GET-only team projection. No fixture identities, commands or persistence. */
+/* Canonical team projection; draft and individual transport use the permission editor. */
 (() => {
   'use strict';
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -7,18 +7,26 @@
   let category='ADVISOR',page=1,q='',authority=null,catalog={},selected=null,listEpoch=0,detailEpoch=0,searchTimer;
   const say=message=>{$('feedback').textContent=message;};
   const mobile=view=>{$('workspace-columns').dataset.mobileView=view;$('show-directory').setAttribute('aria-pressed',String(view==='directory'));$('show-detail').setAttribute('aria-pressed',String(view==='detail'));};
-  function empty(message){$('advisor-detail').innerHTML=`<div class="empty-state detail-empty"><h2 id="detail-title" tabindex="-1">${esc(message)}</h2><p>Los datos personales, documentos y funciones de escritura no están conectados.</p></div>`;}
+  function empty(message){$('advisor-detail').innerHTML=`<div class="empty-state detail-empty"><h2 id="detail-title" tabindex="-1">${esc(message)}</h2><p>Los datos personales y documentos no están conectados.</p></div>`;}
   async function read(params){
-    const response=await fetch('/api/internal/team/read.php?'+new URLSearchParams(params),{method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
-    if(!response.ok){const e=new Error('read_failed');e.status=response.status;throw e;}return response.json();
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+    try{const response=await fetch('/api/internal/team/read.php?'+new URLSearchParams(params),{signal:controller.signal,method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+    if(!response.ok){const e=new Error('read_failed');e.status=response.status;throw e;}return await response.json();}finally{clearTimeout(timer);}
   }
+  const editor=window.createTeamPermissionEditor({read,onData:data=>{
+    authority=data.authority;catalog=data.catalog;selected=data.items[0];renderDetail();
+    const card=[...document.querySelectorAll('[data-member]')].find(b=>b.dataset.member===selected.account_reference);
+    if(card){const status=card.querySelector('.status');status.textContent=selected.staff_status==='ACTIVE'?'Activo':'Suspendido';status.classList.toggle('suspended',selected.staff_status!=='ACTIVE');card.querySelector('.advisor-meta span:last-child').textContent=`Asesor · ${selected.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}`;}
+  }});
+  async function navigate(action){clearTimeout(searchTimer);if(await editor.canLeave())await action();else $('advisor-search').value=q;}
   function failure(error){
+    editor.reset();
     authority=null;selected=null;detailEpoch++;$('directory-content').innerHTML='';empty('Consulta no disponible');$('filter-masters').disabled=true;$('filter-advisors').disabled=true;$('previous-team').disabled=true;$('next-team').disabled=true;
     say(error.status===401?'Tu sesión no está disponible. Inicia sesión mediante Identity.':error.status===403?'La consulta del equipo requiere autorización vigente.':'No pudimos consultar el equipo. Puedes intentar de nuevo.');
     const button=document.createElement('button');button.type='button';button.id='retry-team';button.textContent='Reintentar consulta';button.onclick=load;$('directory-content').append(button);
   }
   async function load(){
-    const epoch=++listEpoch;detailEpoch++;selected=null;empty('Selecciona un integrante');$('directory-content').innerHTML='';$('directory-content').setAttribute('aria-busy','true');say('Cargando equipo…');
+    editor.reset();const epoch=++listEpoch;detailEpoch++;selected=null;empty('Selecciona un integrante');$('directory-content').innerHTML='';$('directory-content').setAttribute('aria-busy','true');say('Cargando equipo…');
     $('previous-team').disabled=true;$('next-team').disabled=true;
     try{
       const data=await read({category,page:String(page),page_size:'20',q});if(epoch!==listEpoch)return;
@@ -26,15 +34,15 @@
       $('filter-advisors').setAttribute('aria-pressed',String(category==='ADVISOR'));$('filter-masters').setAttribute('aria-pressed',String(category==='MASTER_ADMIN'));
       $('authority-note').textContent=authority.class==='DIRECTOR'?'Vista de consulta de Dirección. Gobierno, uso y delegación son hechos separados.':'Vista Master: sólo asesores. Los permisos y conteos se limitan a tus capacidades delegadas vigentes; no revelan otras asignaciones.';
       $('directory-content').innerHTML=data.items.length?`<ul class="advisor-list">${data.items.map(m=>`<li><button type="button" class="advisor-card" data-member="${esc(m.account_reference)}" aria-pressed="false"><span class="avatar team-neutral" aria-hidden="true">○</span><span class="advisor-card-copy"><span class="advisor-name">Nombre no disponible</span><span class="team-reference">Cuenta: ${esc(m.account_reference)}</span><span class="advisor-meta"><span class="status ${m.staff_status==='ACTIVE'?'':'suspended'}">${m.staff_status==='ACTIVE'?'Activo':'Suspendido'}</span><span>${m.governance_class==='MASTER_ADMIN'?'Master':'Asesor'} · ${m.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}</span></span></span></button></li>`).join('')}</ul>`:'<div class="empty-state"><strong>No hay relaciones staff en esta consulta.</strong>No se consultan otras cuentas.</div>';
-      $('directory-content').querySelectorAll('[data-member]').forEach(button=>button.onclick=()=>select(button.dataset.member,true));
-      $('team-page').textContent=`Página ${data.page}`;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;say(data.items.length?'Consulta de relaciones staff. Los cambios permanecen deshabilitados.':'Sin resultados en el ámbito autorizado.');
+      $('directory-content').querySelectorAll('[data-member]').forEach(button=>button.onclick=()=>navigate(()=>select(button.dataset.member,true)));
+      $('team-page').textContent=`Página ${data.page}`;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;say(data.items.length?'Consulta de relaciones staff. Revisa el alcance disponible para cada integrante.':'Sin resultados en el ámbito autorizado.');
       if(data.items.length)await select(data.items[0].account_reference,false);
     }catch(error){if(epoch===listEpoch)failure(error);}finally{if(epoch===listEpoch)$('directory-content').setAttribute('aria-busy','false');}
   }
   async function select(reference,focus){
-    const epoch=++detailEpoch,listing=listEpoch;
+    editor.reset();empty('Cargando integrante…');const epoch=++detailEpoch,listing=listEpoch;
     try{const data=await read({category,target:reference});if(epoch!==detailEpoch||listing!==listEpoch)return;
-      authority=data.authority;catalog=data.catalog;selected=data.items[0];renderDetail();document.querySelectorAll('[data-member]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.member===reference)));
+      authority=data.authority;catalog=data.catalog;selected=data.items[0];renderDetail();editor.adopt(data);document.querySelectorAll('[data-member]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.member===reference)));
       if(focus){mobile('detail');$('detail-title').focus();}
     }catch(error){if(epoch===detailEpoch)failure(error);}
   }
@@ -45,7 +53,7 @@
       return `<section class="family" data-family="${id}"><div class="family-heading"><label class="family-select"><input type="checkbox" disabled data-group-count="${count}" data-group-total="${definitions.length}" ${count===definitions.length?'checked':''}><span><span class="family-title">${title}</span><span class="family-count">${count} de ${visible.length} ${delegation?'ámbitos delegados':'permisos vigentes'} visibles</span><span class="family-limit">Sólo consulta.${visible.length!==definitions.length?' Otras asignaciones no se exponen.':''}</span></span></label><button type="button" class="family-toggle" aria-expanded="false" aria-controls="${prefix}-${id}" data-expand="${prefix}-${id}">Expandir</button></div><div class="family-body" id="${prefix}-${id}" hidden>${definitions.map(c=>{
         const exposed=visible.some(v=>v.key===c.key),assigned=exposed&&chosen.includes(c.key);
         const availability=!exposed?'Dato fuera de tu ámbito delegado':future.has(c.key)?'Consumidor genérico pendiente de conexión':c.key.startsWith('public_profile_correction')&&selected.governance_class==='ADVISOR'?'El consumidor actual no habilita uso por asesores':'El uso requiere la autoridad y los controles del consumidor';
-        return `<label class="capability-row"><input type="checkbox" disabled data-capability="${esc(c.key)}" data-exposed="${exposed}" ${assigned?'checked':''}><span class="capability-text"><span class="capability-label">${esc(c.label)}</span><span class="capability-description">${esc(c.description)}</span><span class="availability">${esc(availability)}</span><span class="capability-description">${delegation?'Delegación de gestión; no concede uso':exposed?(assigned?'Permiso vigente registrado':'Sin permiso vigente registrado'):'Sin información sobre el permiso'}. Escritura deshabilitada.</span></span></label>`;
+        return `<label class="capability-row"><input type="checkbox" disabled data-capability="${esc(c.key)}" data-exposed="${exposed}" ${assigned?'checked':''}><span class="capability-text"><span class="capability-label">${esc(c.label)}</span><span class="capability-description">${esc(c.description)}</span><span class="availability">${esc(availability)}</span><span class="capability-description">${delegation?'Delegación de gestión; no concede uso':exposed?(assigned?'Permiso vigente registrado':'Sin permiso vigente registrado'):'Sin información sobre el permiso'}. ${!delegation&&(selected.editable_capabilities||[]).includes(c.key)?'Cambios sujetos a confirmación.':'Sólo consulta.'}</span></span></label>`;
       }).join('')}</div></section>`;
     }).join('');
   }
@@ -57,16 +65,20 @@
       <details class="admission-access" open id="access-functions"><summary>ACCESO Y FUNCIONES</summary><div id="capabilities-form"><div class="matrix" id="operational-matrix"><h3 class="matrix-title">Permisos para usar funciones</h3><p class="group-note">El permiso registrado, la autoridad para gestionarlo, el uso efectivo y la disponibilidad del consumidor son distintos.</p>${matrix('use',m.grants)}
       <section class="commercial-group" id="commercial-proposal"><div class="family-heading"><div class="commercial-heading"><span class="family-title">CAPTACIÓN Y VENTAS</span><span class="family-count">Sin capacidades ejecutables ni lector comercial conectado</span></div><button class="family-toggle" type="button" data-expand="commercial-body" aria-expanded="false" aria-controls="commercial-body">Expandir</button></div><div class="family-body" id="commercial-body" hidden>${['Consultar mi código autorizado','Consultar mis clientes atribuidos','Consultar mis ventas y renovaciones elegibles','Consultar mi estado de comisiones'].map(text=>`<label class="capability-row"><input type="checkbox" disabled><span>${text}<span class="capability-description">Función pendiente de integración y autorización específica.</span></span></label>`).join('')}</div></section></div>
       ${master&&authority.can_read_masters?`<details class="master-governance"><summary>Gestión y delegación para asesores</summary><label class="ack-row"><input type="checkbox" disabled ${m.management_granted?'checked':''}> Permiso vigente de administración de asesores</label><p>Usar una función y delegarla son hechos separados. Sólo consulta.</p><div id="delegation-matrix">${matrix('delegate',m.master_delegations||[],true)}</div></details>`:''}
-      <div class="save-area"><div class="save-row"><p class="unsaved">Cambios deshabilitados en esta fase.</p><div class="save-buttons"><button type="button" disabled>Revertir</button><button id="save-permissions" type="button" class="primary" disabled>GUARDAR PERMISOS</button></div></div></div></div></details>
+      <div class="save-area"><div class="save-row"><p class="unsaved" id="pending-permissions">Sólo consulta.</p><div class="save-buttons"><button id="revert-permissions" type="button" disabled>Revertir</button><button id="save-permissions" type="button" class="primary" disabled>GUARDAR PERMISOS</button></div></div><div id="permission-results" class="pending-notice" aria-live="polite" hidden></div></div></div></details>
       <details class="commercial-conditions" id="commercial-conditions"><summary>CONDICIONES COMERCIALES</summary><dl class="commercial-terms"><div><dt>Código del asesor</dt><dd>No conectado; no se ha generado un código.</dd></div><div><dt>Oferta al cliente</dt><dd>Referencia histórica: 15% de descuento al cliente. Aplicabilidad y duración pendientes; sin aplicar.</dd></div><div><dt>Porcentaje de comisión</dt><dd>PENDIENTE DE DEFINICIÓN</dd></div><div><dt>Base de cálculo</dt><dd>PENDIENTE DE DEFINICIÓN</dd></div><div><dt>Recurrencia</dt><dd>Un asesor originador por cliente; incluye renovaciones pagadas mensuales y anuales elegibles, sin reingresar código. No es un cálculo o pago actual.</dd></div><div><dt>Estado comercial</dt><dd>No conectado. D01–D08 pendientes; sin importes devengados o liquidados disponibles.</dd></div></dl><button id="own-commercial-activity" type="button" disabled>MI ACTIVIDAD COMERCIAL</button><p class="commercial-note">El lector propio de clientes, pagos y comisiones requiere contrato y autoridad específicos. No se muestran balances ficticios.</p></details>
-      <details class="reserved"><summary>Gobierno reservado y límites</summary><p>Nombramiento Master, admisión, documentos, MFA y cualquier cambio de permisos requieren una fase autorizada de escritura. Esta pantalla no ejecuta esos comandos.</p></details><details class="history"><summary>HISTORIAL</summary><p class="history-note">Lectura de historia y versiones de evidencia pendiente de integración; no se han inventado eventos.</p></details>`;
+      <details class="reserved"><summary>Gobierno reservado y límites</summary><p>Nombramiento Master, admisión, documentos y MFA requieren una fase autorizada de escritura. Esta pantalla no ejecuta esos comandos.</p></details><details class="history"><summary>HISTORIAL</summary><p class="history-note">Lectura de historia y versiones de evidencia pendiente de integración; no se han inventado eventos.</p></details>`;
     document.querySelectorAll('[data-group-count]').forEach(e=>{e.indeterminate=Number(e.dataset.groupCount)>0&&e.dataset.groupCount!==e.dataset.groupTotal;e.setAttribute('aria-checked',e.indeterminate?'mixed':String(e.checked));});
     document.querySelectorAll('[data-exposed="false"]').forEach(e=>{e.indeterminate=true;e.setAttribute('aria-checked','mixed');});
     $('advisor-detail').querySelectorAll('[data-expand]').forEach(button=>button.onclick=()=>{const body=$(button.dataset.expand);body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));button.textContent=body.hidden?'Expandir':'Contraer';});
+    editor.mount();
   }
-  $('filter-advisors').onclick=()=>{category='ADVISOR';page=1;load();};$('filter-masters').onclick=()=>{if(!authority?.can_read_masters)return;category='MASTER_ADMIN';page=1;load();};
-  $('advisor-search').oninput=e=>{clearTimeout(searchTimer);const value=e.target.value.trim();if(value!==''&&!/^[A-Za-z0-9_.:-]{2,64}$/.test(value)){say('Introduce al menos dos caracteres de una referencia válida.');return;}searchTimer=setTimeout(()=>{q=value;page=1;load();},300);};
-  $('previous-team').onclick=()=>{if(page>1){page--;load();}};$('next-team').onclick=()=>{page++;load();};$('refresh-team').onclick=load;
+  $('filter-advisors').onclick=()=>navigate(()=>{category='ADVISOR';page=1;return load();});
+  $('filter-masters').onclick=()=>{if(authority?.can_read_masters)navigate(()=>{category='MASTER_ADMIN';page=1;return load();});};
+  $('advisor-search').oninput=e=>{clearTimeout(searchTimer);const value=e.target.value.trim();if(value!==''&&!/^[A-Za-z0-9_.:-]{2,64}$/.test(value)){say('Introduce al menos dos caracteres de una referencia válida.');return;}searchTimer=setTimeout(()=>navigate(()=>{q=value;page=1;return load();}),300);};
+  $('previous-team').onclick=()=>{if(page>1)navigate(()=>{page--;return load();});};
+  $('next-team').onclick=()=>navigate(()=>{page++;return load();});$('refresh-team').onclick=()=>navigate(load);
+  document.querySelectorAll('.team-navigation a').forEach(link=>link.onclick=e=>{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!e.altKey){e.preventDefault();navigate(()=>location.assign(link.href));}});
   $('show-directory').onclick=()=>{mobile('directory');$('advisor-search').focus();};$('show-detail').onclick=()=>{mobile('detail');$('detail-title').focus();};$('skip-detail').onclick=()=>mobile('detail');
   load();
 })();

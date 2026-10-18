@@ -1,0 +1,127 @@
+{
+  "result": "PASS",
+  "scope": "Added/changed documentation links and new phase contract",
+  "links_checked": 24,
+  "links": [
+    {
+      "source": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "pass": true
+    },
+    {
+      "source": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/README.md",
+      "target": "identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT01-R2-internal-team-readonly.md",
+      "target": "ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02A-governed-advisor-grants.md",
+      "target": "ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../identity/ASE-INT02B-team-permission-ui.md",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "ASE-INT02A-governed-advisor-grants.md",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../modules/identity/Team/ReadService.php",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../assets/js/internal-team.js",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../assets/js/internal-team-editor.js",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../modules/identity/Team/MutationHttp.php",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../scripts/ase-int02b-qa.py",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../scripts/ase-int02a-qa.py",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../modules/identity/tests/AdvisorMutationFixture.php",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../../scripts/ase-int02b-router.php",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../evidence/ase-int02b/qa.json",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../evidence/ase-int02b/browser.json",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../evidence/ase-int02b/screenshots/",
+      "pass": true
+    },
+    {
+      "source": "docs/identity/ASE-INT02B-team-permission-ui.md",
+      "target": "../evidence/ase-int02b/disposal.json",
+      "pass": true
+    }
+  ]
+}

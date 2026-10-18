@@ -76,3 +76,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## Sucesor acotado ASE-INT02A
 
 [ASE-INT02A](../identity/ASE-INT02A-governed-advisor-grants.md) conecta POST individual grant/revoke mediante el mismo `execute`, con quinto argumento opcional servidor `ACTIVE_ADVISOR_OPERATIONAL`. Cuenta/staff ADVISOR activo, actor distinto y catálogo operativo delegable se verifican bajo locks; credencial/sesión y management/delegación actuales se revalidan. Callers sin ese argumento conservan el contrato histórico; regresiones sintéticas incluidas. Sucede la ausencia total de HTTP sólo para este adapter aislado con CSRF/TLS/origen, no para otros comandos. Auditoría y conflicto canónicos preservados; UI sólo consulta y operación real inactiva.
+
+## Conexión acotada ASE-INT02B
+
+[ASE-INT02B](../identity/ASE-INT02B-team-permission-ui.md) conecta las selecciones aprobadas al adapter individual ASE-INT02A. No modifica `execute`, catálogo, locks ni auditoría. Grupos son selección local; cada comando mantiene transacción propia, autoridad vigente y target ADVISOR activo. UI-2 autorizada, QA sintética nueva, gate default off. Nombramientos, delegación administrativa, admisión y operación real permanecen fuera.

@@ -153,3 +153,7 @@ Registrar cambios de conexión en el journey afectado y en su capability, sin du
 ### J09 — sucesor backend ASE-INT02A
 
 [Comando individual Advisor](../identity/ASE-INT02A-governed-advisor-grants.md): sesión/CSRF/origen → POST exacto → locks actor/target y autoridad actual → writer/auditoría → commit o rollback → refresh autoritativo futuro. La UI aún no realiza esta cadena; deuda `ASE-INT02A-UI-CONNECTION` exige confirmación y resultados parciales, nunca bulk-save atómico/retry ciego. J08 no cambia; sin admisión, Master o pagos.
+
+## J09 — matriz conectada ASE-INT02B
+
+[Flujo verificado](../identity/ASE-INT02B-team-permission-ui.md): snapshot autorizado → borrador del target → refresh/confirmación/refresh → comandos individuales secuenciales → lectura canónica por intento. Conflicto, autoridad perdida o ACK incierto detienen restantes; éxitos previos conservados, sin replay ni compensación. Grupos sólo claves elegibles, ocultos UNKNOWN; descarte al cambiar contexto. Sucede la deuda UI del hito anterior, exclusivamente en feature/QA aislada. J08 y activación sin cambios.

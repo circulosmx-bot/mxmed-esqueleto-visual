@@ -2,18 +2,25 @@
 
 ## Ancla y alcance
 
-- Fecha de verificación documental: **2026-10-17**.
+- Fecha de verificación documental: **2026-10-18**.
 - Baseline oficial fuente verificado: `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`; rama oficial/upstream/remoto coincidentes y limpios al inicio ASE-INT01 R2.
-- Esta entrega: rama aislada `feature/ase-int01-internal-team-readonly`, worktree `/Users/circulodigital/Documents/GitHub/mxmed-ase-int01-readonly`. Fuente oficial `mxmed-step2-vitals-r1` y prototipo visual312ee388 conservados; no confundir con `mxmed-esqueleto-visual`.
+- Hito base ASE-INT01: rama aislada `feature/ase-int01-internal-team-readonly`, worktree `/Users/circulodigital/Documents/GitHub/mxmed-ase-int01-readonly`. Fuente oficial `mxmed-step2-vitals-r1` y prototipo visual312ee388 conservados; no confundir con `mxmed-esqueleto-visual`.
 - Aplicación original `https://localhost:8443/private-app.php` sin cambios. [ASE-INT01 R2](identity/ASE-INT01-R2-internal-team-readonly.md): sección Equipo del staff original con Identity canónica, sólo lecturas autorizadas, preview aislado8141, sin merge/promoción.
 - Aprobación visual R2/COM/ADM registrada con la respuesta real “apruebo”; no autoriza admisión, grants, documentos, finanzas ni operación real. El ancla no pretende ser el hash futuro del cierre.
 
-## Sucesor aislado ASE-INT02A
+## Hito previo aislado ASE-INT02A
 
 - Feature `feature/ase-int02a-governed-advisor-grants`, worktree `mxmed-ase-int02a-governed-grants`, padre `09d3aefcf20266641d81aa128cec05f4a9e4ca03`. Oficial, padre y prototipo conservados.
 - [ASE-INT02A](identity/ASE-INT02A-governed-advisor-grants.md): POST individual grant/revoke a ADVISOR activo, Identity/CSRF canónicos, mismo writer con precondición opcional bajo locks y auditoría atómica por request. Master exige management y delegación exacta. Gate de mutación deshabilitado por defecto.
 - UI original del equipo sigue **sólo consulta**, sin guardado grupal ni cambio visual; la ausencia histórica de adapter de commands queda sucedida únicamente para esta API aislada. 122 checks sintéticos PASS, siete carreras reales, evidencia/descarte propios; no prueba ni activa datos/runtimes reales.
 - Siguiente fase: autorización de conexión UI con confirmación y reconciliación de resultados parciales. ADM/D01–D08, readers pendientes, Master, finanzas y activación mantienen gates separados.
+
+## Sucesor aislado ASE-INT02B
+
+- Entrega actual: `feature/ase-int02b-team-permission-ui`, worktree `mxmed-ase-int02b-team-permission-ui`, padre `05e428cf4354b1f722090c7532ced3784e0d4985`. Los anchors anteriores describen sus hitos históricos; no son la rama actual de esta entrega.
+- [ASE-INT02B](identity/ASE-INT02B-team-permission-ui.md) conecta la matriz aprobada a GET read/CSRF y POST individuales canónicos. Borrador por target, descarte explícito, confirmación, secuencia, éxito parcial e incertidumbre con lectura autoritativa; sin retries ni compensaciones.
+- Disponibilidad servidor y bootstrap; Master sólo delegación exacta, ocultos UNKNOWN. Gate deshabilitado por defecto; sólo QA sintética nueva lo habilita. Gobierno, admisión, documentos, delegaciones Master, finanzas y consumidores incompletos siguen sin conexión en esta UI.
+- QA real con MySQL/Valkey nuevos, audit y carreras de dos conexiones; Chromium/WebKit en cuatro tamaños. CSS aprobados preservados; UI-2 de comportamiento/copy autorizado. Safari físico NOT_RUN y móvil interino. Sin merge, despliegue o operación real. La deuda UI de ASE-INT02A queda sucedida sólo dentro de esta feature.
 
 ## Producto existente
 
@@ -67,7 +74,7 @@
 - **Clínica:** issuer/binding C4 implementado; consumidor profesional todavía deniega incondicionalmente. Alta paciente tiene disparidad de autorización fuente `unresolved`; no se hizo probe ni se cambió autoridad. [Mapa clínico](contexto/FUNCIONES_CLINICAS_MXMED.md).
 - **Infra:** IaC y cierres físicos históricos C3/SES recuperados; packaging actual omite shell/workflows y hay divergencia DB env. AWS/Stripe remotos no verificados. [Mapa AWS](contexto/AWS_Y_ENTORNOS_MXMED.md).
 - **Casos Agenda:** [CTX-MAP03](contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md) traza CTA integrado público y matriz por acción; waitlist/no-show no están en los cinco grants de operador. Call Center conserva contrato futuro y consumidor no acreditado; política por rol, scope waitlist y atribución ordinaria tienen brechas fuente explícitas, sin probes ni permisos nuevos.
-- **Comercial/asesores:** [trazabilidad](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) preserva ventas, captación, Call Center, cupones y Billing separados. ASE-ALIGN01 aprueba combinaciones individuales sin subtipos ni cupo arbitrario de asesores/capacidades; no heredan las dos plazas del operador médico. Director/MASTER delegado conservan gobierno, ADVISOR no recibe autoridad por clase ni autogrants. La antigua ausencia de UI queda sucedida sólo por la matriz de consulta ASE-INT01 R2 en rama aislada; no hay adapter de mutaciones. Grants de revisión/fuentes y revocación son independientes; MFA sujeto/uso se separan del registrador independiente y operaciones sensibles. Runtime real sigue inactivo.
+- **Comercial/asesores:** [trazabilidad](contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md) preserva ventas, captación, Call Center, cupones y Billing separados. ASE-ALIGN01 aprueba combinaciones individuales sin subtipos ni cupo arbitrario de asesores/capacidades; no heredan las dos plazas del operador médico. Director/MASTER delegado conservan gobierno, ADVISOR no recibe autoridad por clase ni autogrants. La antigua ausencia de UI queda sucedida por la matriz ASE-INT01, el backend ASE-INT02A y su conexión individual ASE-INT02B únicamente en features aisladas, con gate apagado por defecto. Grants de revisión/fuentes y revocación son independientes; MFA sujeto/uso se separan del registrador independiente y operaciones sensibles. Runtime real sigue inactivo.
 
 ## Evidencia reciente y reconciliación de tests
 

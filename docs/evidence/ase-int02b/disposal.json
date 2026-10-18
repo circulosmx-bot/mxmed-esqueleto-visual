@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "scope": "Only failed ASE-INT02B directories created by this task; no protected resource removed",
+  "records": [
+    {
+      "report": "failed-20261018T055810Z.json",
+      "report_sha256": "a61124cf46ac0de4c84fc34c3c2c27c521e7652fe319c5f152ec84754d672d18",
+      "owned_directory": "/tmp/mxmed-ase-int02b-u9ocof9k",
+      "owned_processes_stopped_in_report": true,
+      "live_process_and_open_file_check": "PASS",
+      "deleted": true
+    },
+    {
+      "report": "failed-20261018T055821Z.json",
+      "report_sha256": "c598e6badafc00ee7a286e845dcfd27a5e50880c69d83bc4aeaf845220a2d3ca",
+      "owned_directory": "/tmp/mxmed-ase-int02b-xmo_v32g",
+      "owned_processes_stopped_in_report": true,
+      "live_process_and_open_file_check": "PASS",
+      "deleted": true
+    },
+    {
+      "report": "failed-20261018T055857Z.json",
+      "report_sha256": "851ae186c9fa479067ed000cdd8a07a041a3998733f380c116a053e4cf3397e6",
+      "owned_directory": "/tmp/mxmed-ase-int02b-96002xsu",
+      "owned_processes_stopped_in_report": true,
+      "live_process_and_open_file_check": "PASS",
+      "deleted": true
+    }
+  ]
+}

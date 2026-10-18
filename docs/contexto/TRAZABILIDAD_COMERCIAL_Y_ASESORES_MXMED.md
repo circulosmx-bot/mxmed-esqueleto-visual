@@ -211,3 +211,7 @@ Sucede frases previas «checklist/gestión sin adapter gráfico» sólo para lec
 ## COM-10 — sucesor acotado ASE-INT02A
 
 [Grant/revoke individual](../identity/ASE-INT02A-governed-advisor-grants.md) sucede la falta total de adapter HTTP de commands únicamente en feature aislada. Director/Master management+delegación exacta administran sólo ADVISOR activo bajo locks, con CSRF y auditoría canónicos; GUI sigue sin guardado. 122 checks y siete carreras sintéticas PASS; sin grants reales ni activación. No capacidades de familia, ventas/atribución/ledger conectados ni decisiones D01–D08 nuevas. ADM y las dependencias de Master/admisión/finanzas permanecen separadas; COM-01..09 y censo preservados.
+
+## COM-10 — conexión individual ASE-INT02B
+
+[Matriz conectada](../identity/ASE-INT02B-team-permission-ui.md) sucede GUI sin guardado del hito ASE-INT02A sólo en feature aislada. Director/Master exacto, confirmación y ACK por capability, reconciliación y parcialidad explícitas. Sin grant de familia, balances, pagos, código comercial ni decisiones D01–D08/ADM. Servicios originales sin cambios y gate apagado por defecto; censo COM-01..09 preservado.

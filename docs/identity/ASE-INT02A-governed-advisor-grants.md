@@ -96,3 +96,7 @@ La ejecución PASS detuvo sus propios procesos y eliminó su directorio. Rama of
 | REMAINING_CONTEXT_GAPS | Adapter UI individual/confirmación/reconciliación, admisión y Master separados, siete políticas ADM, D01–D08, readers personales/evidencia/comercial, aceptación visual pendiente y autorización operacional. |
 
 NEXT_AUTHORIZATION_REQUIRED: fase explícita para conectar UI con confirmación y fallos parciales. Master/admisión/documentos/finanzas y cualquier merge/despliegue/activación requieren autorizaciones separadas.
+
+## Sucesor UI aislado ASE-INT02B
+
+[ASE-INT02B](ASE-INT02B-team-permission-ui.md) sucede la deuda `ASE-INT02A-UI-CONNECTION` mediante autorización expresa del Director. Conecta la matriz a estos endpoints sin cambiar writer, locks, catálogo, schema individual o auditoría. Borrador, confirmación, secuencia, ACK incierto y refresh verificados en QA sintética nueva. Las afirmaciones UI readonly anteriores describen este hito padre; evidencia 122/siete carreras preservada. Gate sigue apagado por defecto; ninguna activación operacional.

@@ -1,0 +1,3288 @@
+{
+  "result": "PASS",
+  "cases": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        },
+        {
+          "w": 78,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        },
+        {
+          "w": 70,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "result": "PASS",
+      "touch_controls": [
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        },
+        {
+          "w": 68,
+          "h": 44
+        }
+      ]
+    }
+  ],
+  "visual_comparison": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "16px",
+          "columns": "263.062px 496.938px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 496.94,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "16px",
+          "columns": "263.062px 496.938px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 496.94,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "20px",
+          "columns": "358px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "none"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "20px",
+          "columns": "358px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "none"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 358,
+          "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 1280,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 1224,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "24px",
+          "columns": "400px 800px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 800,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 400,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "16px",
+          "columns": "263.0625px 496.9375px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 496.94,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 820,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 776,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "16px",
+          "columns": "263.0625px 496.9375px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 496.94,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        "h1": {
+          "width": 505.52,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "26.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 263.06,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "differences": [],
+      "approved": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "20px",
+          "columns": "358px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "none"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      },
+      "integrated": {
+        ".advisor-workspace": {
+          "width": 390,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".workspace-columns": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "20px",
+          "columns": "358px",
+          "display": "grid"
+        },
+        ".directory": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".detail": {
+          "width": 0,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "none"
+        },
+        "h1": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "22.4px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgba(0, 0, 0, 0)",
+          "radius": "0px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        },
+        ".directory.panel": {
+          "width": 358,
+          "font": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "fontSize": "16px",
+          "color": "rgb(21, 61, 80)",
+          "background": "rgb(255, 255, 255)",
+          "radius": "10px",
+          "gap": "normal",
+          "columns": "none",
+          "display": "block"
+        }
+      }
+    }
+  ],
+  "approved_visual_commit": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+  "comparison": "Approved shared geometry/styles; state content differs by authorized UI-2 connection. No zero-pixel claim.",
+  "api_receipts": [
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "revoke",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "revoke",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 409,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 403,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_corrected_upload"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_request_replacement"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "revoke",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "revoke",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 409,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 503,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    },
+    {
+      "status": 403,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_source_download"
+    },
+    {
+      "status": 200,
+      "operation": "grant",
+      "target": "qa_target",
+      "capability": "media_review_approve"
+    }
+  ],
+  "browser_post_count": 84,
+  "maximum_simultaneous_browser_posts": 1,
+  "audit_event_count": 83,
+  "audit_evidence": [
+    {
+      "actor": "account:qa_director",
+      "target": "qa_advisor",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_improve",
+        "target_account_id": "qa_advisor"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "revoke",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "revoke",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_improve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_corrected_upload",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_request_replacement",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "revoke",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "revoke",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_improve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_source_download",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_master",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    },
+    {
+      "actor": "account:qa_director",
+      "target": "qa_target",
+      "operation": {
+        "after": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "before": {
+          "status": "ACTIVE",
+          "governance_class": "ADVISOR"
+        },
+        "operation": "grant",
+        "capability": "media_review_approve",
+        "target_account_id": "qa_target"
+      }
+    }
+  ],
+  "javascript_errors": [],
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_SMOKE_ONLY",
+  "mutations": "owned synthetic runtime only",
+  "no_live_activation": true
+}

@@ -22,13 +22,15 @@ final class ReadService
         if(!$staff||$staff['status']!=='ACTIVE')throw new ReadFailure(403,'team_read_denied');
         $director=$staff['governance_class']==='DIRECTOR';
         if(!$director&&($staff['governance_class']!=='MASTER_ADMIN'||!(new InternalOperatorGrantRepository($this->pdo))->activeCapabilities($id)->contains(InternalCapabilityCatalog::MANAGE_ADVISORS)))throw new ReadFailure(403,'team_read_denied');
-        return ['class'=>$staff['governance_class'],'delegations'=>$director?[]:$this->delegations($id),'can_read_masters'=>$director,'grant_scope'=>$director?'all_operational':'delegated_operational_only','mutations_enabled'=>false];
+        return ['class'=>$staff['governance_class'],'delegations'=>$director?[]:$this->delegations($id),'can_read_masters'=>$director,'grant_scope'=>$director?'all_operational':'delegated_operational_only','mutations_enabled'=>getenv('MXMED_TEAM_ADVISOR_MUTATIONS_ENABLED')==='1'];
     }
 
     public function read(array $cookies,array $input): array
     {
         // New instance/queries on every request: no authorization cache or browser role input.
         $authority=$this->authority($cookies);
+        $viewer=$this->sessions->resolve($cookies)?->accountId();
+        if($viewer===null)throw new ReadFailure(401,'authentication_required');
         foreach($input as $key=>$value)if(!in_array($key,['category','page','page_size','q','target'],true)||!is_string($value))throw new ReadFailure(400,'invalid_query');
         $category=$input['category']??'ADVISOR';
         if(!in_array($category,['ADVISOR','MASTER_ADMIN'],true))throw new ReadFailure(400,'invalid_category');
@@ -53,9 +55,21 @@ final class ReadService
             $items[]=['account_reference'=>$row['account_id'],'governance_class'=>$row['governance_class'],'staff_status'=>$row['status'],'account_status'=>$row['account_status'],'active_operational_grant_count'=>count($operational),'grants'=>$operational,
                 'management_granted'=>$authority['can_read_masters']&&in_array(InternalCapabilityCatalog::MANAGE_ADVISORS,$grants,true),
                 'master_delegations'=>$authority['can_read_masters']&&$row['governance_class']==='MASTER_ADMIN'?$this->delegations($row['account_id']):null,
+                'editable_capabilities'=>$this->editable($row,$authority,$viewer),
                 'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>null];
         }
         return ['authority'=>$authority,'catalog'=>InternalCapabilityCatalog::all(),'items'=>$items,'page'=>$page,'page_size'=>$size,'has_more'=>$hasMore,'category'=>$category,'grant_semantics'=>'stored_active; use_requires_current_consumer_authority','personal_profile_source'=>'NOT_CONNECTED','identity_review_source'=>'NOT_CONNECTED','commercial_source'=>'NOT_CONNECTED'];
+    }
+
+    /** UI eligibility projection only; every command still uses canonical locked authority.
+     * Preserve the approved UI exclusions for incomplete generic profile consumers and
+     * corrections unavailable to Advisors. No new grant or consumer authority is created. */
+    private function editable(array $row,array $authority,string $viewer): array
+    {
+        if(!$authority['mutations_enabled']||$row['account_id']===$viewer||$row['governance_class']!=='ADVISOR'||$row['status']!=='ACTIVE'||$row['account_status']!=='active')return [];
+        return array_keys(array_filter(InternalCapabilityCatalog::all(),static fn($c)=>$c['kind']==='operational'&&$c['delegable']
+            &&in_array($c['domain'],['media_review','physician_accreditation','professional_sources','provider_claim','provider_commercial'],true)
+            &&($authority['can_read_masters']||in_array($c['key'],$authority['delegations'],true))));
     }
 
     private function grants(string $id,array $authority): array

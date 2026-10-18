@@ -9,15 +9,17 @@ use Identity\Services\{CredentialAuthenticationService,RateLimitService,SessionS
 use Identity\Repositories\{IdentityAccountRepository,AccountCredentialRepository};
 use Identity\Contracts\{RateLimitKeyHasher,SystemClock,Clock,SessionPolicy};
 use Identity\Adapters\{PreviewValkeyClient,PdoSessionAccountStateAdapter};
+$phase=getenv('ASE_TEAM_QA_PHASE')?:'ase-int02a';
+if(!in_array($phase,['ase-int02a','ase-int02b'],true))throw new RuntimeException('isolated_phase_required');
 $owned=(string)getenv('ASE_INT02A_OWNED');
-if(!preg_match('~^/private/tmp/mxmed-ase-int02a-[a-zA-Z0-9_]+$~D',realpath($owned)?:'')||!preg_match('/^mxmed_gate4d_preview_aseint02a_[a-f0-9]{10}$/D',(string)getenv('MXMED_DB_NAME'))||in_array((int)getenv('MXMED_DB_PORT'),[3306,3309],true))throw new RuntimeException('isolated_target_required');
+if(!preg_match('~^/private/tmp/mxmed-'.preg_quote($phase,'~').'-[a-zA-Z0-9_]+$~D',realpath($owned)?:'')||!preg_match('/^mxmed_gate4d_preview_'.str_replace('-','',$phase).'_[a-f0-9]{10}$/D',(string)getenv('MXMED_DB_NAME'))||in_array((int)getenv('MXMED_DB_PORT'),[3306,3309],true))throw new RuntimeException('isolated_target_required');
 $fixture=new PDO('mysql:unix_socket='.$owned.'/mysql.sock;dbname='.getenv('MXMED_DB_NAME').';charset=utf8mb4','ase_fixture',(string)getenv('ASE_INT02A_FIXTURE_PASSWORD'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 if(realpath((string)$fixture->query('SELECT @@datadir')->fetchColumn())!==realpath($owned.'/mysql'))throw new RuntimeException('isolated_datadir_required');
 $identity=IdentityHttpComposition::fromProcessEnvironment();$clock=new SystemClock();$action=$argv[1]??'';
-if($action==='sessions'){
+if(in_array($action,['sessions','refresh_sessions'],true)){
     $authentication=new CredentialAuthenticationService(new IdentityAccountRepository($fixture),new AccountCredentialRepository($fixture),new RateLimitService($fixture,new RateLimitKeyHasher((string)getenv('MXMED_PREVIEW_PEPPER')),$clock),$clock);
     $tokens=[];
-    foreach(['director','master','advisor','target','expired','revoked','suspended','disabled','changed','outsider'] as $actor){
+    foreach($action==='refresh_sessions'?['director','master']:['director','master','advisor','target','expired','revoked','suspended','disabled','changed','outsider'] as $actor){
         $decision=$authentication->authenticate('qa_'.$actor.'@example.test',trim(file_get_contents($owned.'/fixture-password')),[]);
         if(!$decision->isAllowed())throw new RuntimeException('synthetic_authentication_failed');
         $sessions=$identity->sessions();

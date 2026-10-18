@@ -111,3 +111,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT02A — writer reutilizado, sin nuevo esquema
 
 [Contrato](../identity/ASE-INT02A-governed-advisor-grants.md): mismo `internal_operator_grants`, auditoría `platform_audit_events`/`platform_audit_stream_heads` y lecturas cuenta/credencial/staff/delegaciones, con target ADVISOR/ACTIVE bajo locks y una transacción por comando. No DDL de producto ni nuevo store; fuente/privilegios/fixtures sólo en MySQL nuevo de QA, sin consultar instancias existentes. Metadatos y censos históricos no se revalidan ni regeneran.
+
+## ASE-INT02B — proyección y transporte, sin migración
+
+[Contrato](../identity/ASE-INT02B-team-permission-ui.md): read añade disponibilidad y claves editables por target; writer, grants y audit existentes sin cambios. Borrador/token sólo memoria del navegador. No store persistente, schema ni writer alternativo. QA crea exclusivamente datadir/schema y Valkey propios, con SQL/audit reales de fixture; no consulta instancias reales ni acredita DDL operacional.

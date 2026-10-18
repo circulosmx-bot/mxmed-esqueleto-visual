@@ -136,3 +136,7 @@ NEXT_AUTHORIZATION_REQUIRED: revisión de diferencias de esta integración y fas
 ## Sucesor backend aislado ASE-INT02A
 
 [ASE-INT02A](ASE-INT02A-governed-advisor-grants.md), derivado del cierre `09d3aefc`, añade exclusivamente el adapter grant/revoke individual para ADVISOR activo, con precondición transaccional y CSRF canónicos. Sucede la ausencia de adapter de commands sólo en la nueva feature; esta UI y toda evidencia ASE-INT01 permanecen intactas. No habilita guardado, grupos, Master, admisión ni operación real.
+
+## Sucesor UI aislado ASE-INT02B
+
+[ASE-INT02B](ASE-INT02B-team-permission-ui.md), sobre el cierre ASE-INT02A, conecta sólo grant/revoke operativo individual con gate servidor, confirmación y resultados parciales. Este contrato/evidencia ASE-INT01 sigue histórico e intacto en su rama; no se activa su preview ni se habilitan otros comandos.

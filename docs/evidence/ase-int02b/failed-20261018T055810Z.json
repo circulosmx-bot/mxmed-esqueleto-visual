@@ -1,0 +1,166 @@
+{
+  "result": "FAIL",
+  "error": "AssertionError: chromium-1440x900 approved shared geometry",
+  "source_baseline": "05e428cf4354b1f722090c7532ced3784e0d4985",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Canonical strict writer native transaction",
+      "pass": true
+    },
+    {
+      "name": "director authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap director",
+      "pass": true
+    },
+    {
+      "name": "master authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap master",
+      "pass": true
+    },
+    {
+      "name": "Approved CSS byte-identical internal-team.css",
+      "pass": true
+    },
+    {
+      "name": "Approved CSS byte-identical internal-team-commercial.css",
+      "pass": true
+    },
+    {
+      "name": "Approved CSS byte-identical internal-team-admission.css",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440x900 approved shared geometry",
+      "pass": false
+    }
+  ],
+  "check_count": 10,
+  "concurrency": [],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseint02b_c990583092",
+    "new_datadir": "/tmp/mxmed-ase-int02b-u9ocof9k/mysql",
+    "mysql_port": 55754,
+    "valkey_port": 55755,
+    "php_port": 55756,
+    "tls_origin": "https://127.0.0.1:55757",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": false,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_still_read_only": false,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "1d98e55784a1d985601e11b7f794d21357559b0cab79b00b5f1f1a1c5aee5417",
+    "modules/identity/Team/MutationHttp.php": "31c2ae8cbfcffe5fe6ea2b7e6201b7fc8b003a68fcb14cd54ba96a15ceb76535",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "3c0b157b87f1d44ce324caa77257bb911b7fe22d52d355bbb3ba3be08d721573",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "fa150a4b8a46c2fe30067c04e349aaddc73523e474685a80717f2b0f0731aaeb",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71",
+    "modules/identity/http/CanonicalHttpSessionResolver.php": "2e65668ba75c30bc4033bfd0d2a0abf0b8de17dd10b28b72a83385cabb92486f",
+    "modules/identity/http/IdentityHttpComposition.php": "f89f04948b37963dd2ca4d5beb166e44ca6a526e3afa01ae5499c12478e0c2ec",
+    "modules/identity/http/CsrfTokenService.php": "011137a07c9412f0210fabef34a378855c9d8ba8c055c3e773d94651a66b82ec",
+    "modules/identity/http/GovernanceTransport.php": "74daa4265765fe32e6294f8803f0f4bf192a0c3f80a3105d482e68d1d97a9459",
+    "modules/identity/Team/ReadService.php": "2dc65aee0596bc76fce1390e747b920a7437bb9c8ede349030d69eeaa2828a2b",
+    "scripts/ase-int02b-qa.py": "82bae4d112a2ae60c5e3e574ca3151bc2b44ffdb33d0d7c8105a62272365d638",
+    "scripts/ase-int02b-router.php": "b0d336ab93f0143b93c97c1c311f994d0e898e6f502c6b50754892066d3f82da",
+    "assets/js/internal-team.js": "b083019aaad62dddaa2fe5ff2e351a35b8b12f9fe4094179371e81810d0ace50",
+    "assets/js/internal-team-editor.js": "f99fae32d2cf9305d237f16326e84260e0674dee08f8ee78505bf622192c0fa1",
+    "partials/identity/internal-team.php": "e13e0f9d3cc796f2b617e1d7d87a3df4e93af32e4fc5b372bb775eb657995284"
+  }
+}
