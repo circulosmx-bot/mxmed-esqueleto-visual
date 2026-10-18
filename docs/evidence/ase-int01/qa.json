@@ -1,0 +1,1418 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "qa_director successful canonical read ",
+      "pass": true
+    },
+    {
+      "name": "qa_master successful canonical read ",
+      "pass": true
+    },
+    {
+      "name": "Director authority independent of Media grant",
+      "pass": true
+    },
+    {
+      "name": "Original Media boundary still accepts exact Media-only Advisor",
+      "pass": true
+    },
+    {
+      "name": "None denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "None denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_advisor denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_advisor denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_media_only denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_media_only denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_no_management_master denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_no_management_master denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_suspended_actor denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_suspended_actor denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_disabled denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_disabled denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_credential_changed denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_credential_changed denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_customer denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_customer denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_expired denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_expired denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "qa_revoked_session denied at /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "qa_revoked_session denied at /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "No PHP-session/header identity fallback",
+      "pass": true
+    },
+    {
+      "name": "Forged role/actor headers cannot elevate Advisor",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?actor=qa_director",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?role=DIRECTOR",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?capability=internal_advisors_manage",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?page_size=51",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?page=0",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?page=1001",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?q=a",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?q=%25",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?q=person%40example.test",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?target[]=qa_director",
+      "pass": true
+    },
+    {
+      "name": "Unsafe/ambiguous query denied ?category=ADVISOR&category=MASTER_ADMIN",
+      "pass": true
+    },
+    {
+      "name": "Cross-origin read denied",
+      "pass": true
+    },
+    {
+      "name": "Cross-site read denied",
+      "pass": true
+    },
+    {
+      "name": "Same-origin read allowed",
+      "pass": true
+    },
+    {
+      "name": "POST denied by product boundary /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "POST denied by product boundary /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "PUT denied by product boundary /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "PUT denied by product boundary /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "PATCH denied by product boundary /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "PATCH denied by product boundary /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "DELETE denied by product boundary /api/internal/team/read.php",
+      "pass": true
+    },
+    {
+      "name": "DELETE denied by product boundary /internal/media-review/index.php?section=equipo",
+      "pass": true
+    },
+    {
+      "name": "HEAD authorized without response body",
+      "pass": true
+    },
+    {
+      "name": "Minimized output excludes private credentials/contact/evidence fields",
+      "pass": true
+    },
+    {
+      "name": "Exact canonical catalog18/16, no new executable keys",
+      "pass": true
+    },
+    {
+      "name": "Bounded default paging",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?page=2",
+      "pass": true
+    },
+    {
+      "name": "Stable disjoint pagination",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?q=qa_advisor_00",
+      "pass": true
+    },
+    {
+      "name": "Scoped reference search",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?q=qa_customer",
+      "pass": true
+    },
+    {
+      "name": "No unrestricted accounts outside staff",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?q=zz_nomatch",
+      "pass": true
+    },
+    {
+      "name": "Truthful empty result",
+      "pass": true
+    },
+    {
+      "name": "Master cannot enumerate Masters",
+      "pass": true
+    },
+    {
+      "name": "Master target lookup cannot distinguish other Master from missing",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?category=MASTER_ADMIN",
+      "pass": true
+    },
+    {
+      "name": "Director reads Masters independently",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?target=qa_advisor_00",
+      "pass": true
+    },
+    {
+      "name": "qa_master successful canonical read ?target=qa_advisor_00",
+      "pass": true
+    },
+    {
+      "name": "Stored grant differs from use/availability, unknown grant filtered",
+      "pass": true
+    },
+    {
+      "name": "Master gets only exact current delegated grants and count",
+      "pass": true
+    },
+    {
+      "name": "Missing personal/review/history/commercial sources remain null",
+      "pass": true
+    },
+    {
+      "name": "SELECT-only runtime principal rejects SQL writes",
+      "pass": true
+    },
+    {
+      "name": "HTTP reads/denials caused no business SQL changes",
+      "pass": true
+    },
+    {
+      "name": "Current authority/grant revocation reflected revoke_manager",
+      "pass": true
+    },
+    {
+      "name": "qa_master successful canonical read ?target=qa_advisor_00",
+      "pass": true
+    },
+    {
+      "name": "Current authority/grant revocation reflected revoke_delegation",
+      "pass": true
+    },
+    {
+      "name": "qa_director successful canonical read ?target=qa_advisor_00",
+      "pass": true
+    },
+    {
+      "name": "Current authority/grant revocation reflected revoke_grant",
+      "pass": true
+    }
+  ],
+  "native_check_count": 76,
+  "browser_check_count": 176,
+  "cases": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/chromium-1440x900-loading.png",
+        "docs/evidence/ase-int01/browser/chromium-1440x900-directory.png",
+        "docs/evidence/ase-int01/browser/chromium-1440x900-unavailable.png",
+        "docs/evidence/ase-int01/browser/chromium-1440x900-empty.png",
+        "docs/evidence/ase-int01/browser/chromium-1440x900-master.png",
+        "docs/evidence/ase-int01/browser/chromium-1440x900-error.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/chromium-1366x768-loading.png",
+        "docs/evidence/ase-int01/browser/chromium-1366x768-directory.png",
+        "docs/evidence/ase-int01/browser/chromium-1366x768-unavailable.png",
+        "docs/evidence/ase-int01/browser/chromium-1366x768-empty.png",
+        "docs/evidence/ase-int01/browser/chromium-1366x768-master.png",
+        "docs/evidence/ase-int01/browser/chromium-1366x768-error.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/chromium-820x1180-loading.png",
+        "docs/evidence/ase-int01/browser/chromium-820x1180-directory.png",
+        "docs/evidence/ase-int01/browser/chromium-820x1180-unavailable.png",
+        "docs/evidence/ase-int01/browser/chromium-820x1180-empty.png",
+        "docs/evidence/ase-int01/browser/chromium-820x1180-master.png",
+        "docs/evidence/ase-int01/browser/chromium-820x1180-error.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/chromium-390x844-loading.png",
+        "docs/evidence/ase-int01/browser/chromium-390x844-directory.png",
+        "docs/evidence/ase-int01/browser/chromium-390x844-unavailable.png",
+        "docs/evidence/ase-int01/browser/chromium-390x844-empty.png",
+        "docs/evidence/ase-int01/browser/chromium-390x844-master.png",
+        "docs/evidence/ase-int01/browser/chromium-390x844-error.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [
+        {
+          "screenshot": "loading",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "directory",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "unavailable",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "empty",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "master",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "error",
+          "style": "body {}",
+          "csp_rejected": true
+        }
+      ],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/webkit-1440x900-loading.png",
+        "docs/evidence/ase-int01/browser/webkit-1440x900-directory.png",
+        "docs/evidence/ase-int01/browser/webkit-1440x900-unavailable.png",
+        "docs/evidence/ase-int01/browser/webkit-1440x900-empty.png",
+        "docs/evidence/ase-int01/browser/webkit-1440x900-master.png",
+        "docs/evidence/ase-int01/browser/webkit-1440x900-error.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [
+        {
+          "screenshot": "loading",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "directory",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "unavailable",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "empty",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "master",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "error",
+          "style": "body {}",
+          "csp_rejected": true
+        }
+      ],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/webkit-1366x768-loading.png",
+        "docs/evidence/ase-int01/browser/webkit-1366x768-directory.png",
+        "docs/evidence/ase-int01/browser/webkit-1366x768-unavailable.png",
+        "docs/evidence/ase-int01/browser/webkit-1366x768-empty.png",
+        "docs/evidence/ase-int01/browser/webkit-1366x768-master.png",
+        "docs/evidence/ase-int01/browser/webkit-1366x768-error.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [
+        {
+          "screenshot": "loading",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "directory",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "unavailable",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "empty",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "master",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "error",
+          "style": "body {}",
+          "csp_rejected": true
+        }
+      ],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/webkit-820x1180-loading.png",
+        "docs/evidence/ase-int01/browser/webkit-820x1180-directory.png",
+        "docs/evidence/ase-int01/browser/webkit-820x1180-unavailable.png",
+        "docs/evidence/ase-int01/browser/webkit-820x1180-empty.png",
+        "docs/evidence/ase-int01/browser/webkit-820x1180-master.png",
+        "docs/evidence/ase-int01/browser/webkit-820x1180-error.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loading state while canonical read is pending",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Authorized existing-workspace section connected",
+          "pass": true
+        },
+        {
+          "name": "Navigation retains original staff sections",
+          "pass": true
+        },
+        {
+          "name": "Five canonical families16 keys retained",
+          "pass": true
+        },
+        {
+          "name": "All mutation inputs and actions disabled",
+          "pass": true
+        },
+        {
+          "name": "Neutral missing personal fields, no invented portrait/review",
+          "pass": true
+        },
+        {
+          "name": "No applicant/password/file/document endpoint controls",
+          "pass": true
+        },
+        {
+          "name": "Viewport fits and44px targets",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Partial stored grants retain mixed group display",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard expands without changing grants",
+          "pass": true
+        },
+        {
+          "name": "Native keyboard collapses",
+          "pass": true
+        },
+        {
+          "name": "Commercial pending values and historical discount separated",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Truthful bounded empty search",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Director Master read separated from commands",
+          "pass": true
+        },
+        {
+          "name": "Master exact scoped read and Masters filter denied",
+          "pass": true
+        },
+        {
+          "name": "Unavailable grant scope does not claim unassigned",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "Live revoked management clears sensitive rendered data",
+          "pass": true
+        },
+        {
+          "name": "Unavailable canonical reader shows truthful error and no private data",
+          "pass": true
+        },
+        {
+          "name": "Exact screenshotter diagnostic only",
+          "pass": true
+        },
+        {
+          "name": "No storage or application errors/foreign writes",
+          "pass": true
+        }
+      ],
+      "errors": [],
+      "forbidden_requests": [],
+      "capture_diagnostics": [
+        {
+          "screenshot": "loading",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "directory",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "unavailable",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "empty",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "master",
+          "style": "body {}",
+          "csp_rejected": true
+        },
+        {
+          "screenshot": "error",
+          "style": "body {}",
+          "csp_rejected": true
+        }
+      ],
+      "expected_http_diagnostics": [
+        {
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        },
+        {
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "path": "/api/internal/team/read.php",
+          "scope": "Explicit revocation/unavailability test only"
+        }
+      ],
+      "screenshots": [
+        "docs/evidence/ase-int01/browser/webkit-390x844-loading.png",
+        "docs/evidence/ase-int01/browser/webkit-390x844-directory.png",
+        "docs/evidence/ase-int01/browser/webkit-390x844-unavailable.png",
+        "docs/evidence/ase-int01/browser/webkit-390x844-empty.png",
+        "docs/evidence/ase-int01/browser/webkit-390x844-master.png",
+        "docs/evidence/ase-int01/browser/webkit-390x844-error.png"
+      ]
+    }
+  ],
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_MOBILE_SMOKE_ONLY",
+  "scope": "Canonical Identity+SQL read-only integration in a new disposable MySQL instance; no real staff/data",
+  "business_sql_unchanged_by_initial_http_phase": true,
+  "fixture_mutations": "Explicit synthetic-only revocation experiments recorded separately; restored before browser reads",
+  "source_sha256": {
+    "scripts/ase-int01-qa.py": "1f9bffe9990291c0a3297ebe8238840b99c34947a67d8274f6a713d1fde276d4",
+    "scripts/ase-int01-isolated.py": "c2d03cc64e527ee7e469ab9ad73be5233239fc2e2a07cb529aeda4bee5e9c6b0",
+    "scripts/ase-int01-router.php": "9123bff1521d41fa651e9d478978c58bae312392f757991633f64089d608bf1b",
+    "modules/identity/tests/TeamReadFixture.php": "7273e26f04d5f0e227ee04e7abcb052b48e8b1958dd0671a488e80ab6f2479d9",
+    "modules/identity/tests/TeamReadDestinationTest.mjs": "b1227406774c196f8d7962d47c403a9c760e4deb2ee667bfae1b0f994dbb6846",
+    "public/identity/identity-access.js": "117b0855e02582fdee314ec24703e725579a965c928cd9572df9851036adf23e",
+    "internal/media-review/index.php": "72dc638a2b95af7842d8fdb6fc7c32211f45ef81d17768f2a18a681d0e4ddcd3",
+    "partials/identity/physician-onboarding.php": "ab068f936b7e4a1670db18f97d1749d3b7c9ff72584384ee6065cca9ece2604b",
+    "partials/profiles/correction-review.php": "fa1c3d2c2bf28d1e85304f92e4cd4add558d7d6d131368f61c7f96c8f4440f44",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71",
+    "modules/identity/services/SessionService.php": "62c8c1c8acab090406a86474ccebc363bc4bb134b58bc3562adbfca5e7fbd691",
+    "modules/identity/Team/Http.php": "28b3f4a0afdf35f5d61083147a6aa606ab2dc49114235f56df159d0a8da79a93",
+    "modules/identity/Team/Page.php": "8ecbf7e03575d6ae5bb8c4eeff3cf8c57fce9ba59463180e6749933cd6942cf1",
+    "modules/identity/Team/ReadFailure.php": "6a778a4bfd4514275ce5200f7564e58423c14610c3bfb0eed8eb05417a7b13fb",
+    "modules/identity/Team/ReadService.php": "6427f9df562e42b73d00f78c07043911ebe124a31c9953c43c084ef665f71585",
+    "api/internal/team/read.php": "2c309f07f939a32adebd3ac2704b552216c8bd705454ce8d7d01e47ec727e262",
+    "partials/identity/internal-team.php": "73521a9472e0ea74997ff4378c51903fd7e53019147cd6bb3c6afafa62598b47",
+    "assets/js/internal-team.js": "1f9b5da509beb9339faa24994e1c12d33d67c97ed17ae86aef9ab697feb3ce3f",
+    "assets/css/internal-team-admission.css": "c68fbfedb9af99a0f506b05a5108e1e49114973924d70d3275b23fe0211b74a4",
+    "assets/css/internal-team-commercial.css": "ccf65cb86791d2350f597c10b543512378c7fb4861e00bb7d60a44e0ce72ca93",
+    "assets/css/internal-team-readonly.css": "41847050c5bf608133790642e7715534b63f43aa7ecf683bb6daae0fa444a883",
+    "assets/css/internal-team.css": "5fa20409b805b4373714025c7377ffd3ab86b5db3b2be7c4a1bcce7453ead7e0"
+  }
+}

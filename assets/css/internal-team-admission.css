@@ -1,0 +1,41 @@
+/* ASE-ADM01: scoped profile/admission additions; R2 tokens and permission controls retained. */
+.admission-note{font-size:.78rem;line-height:1.65;color:var(--muted);overflow-wrap:anywhere}
+.admission-requests{padding:0 18px 14px;margin:0 0 20px}
+.admission-requests>summary,.admission-section>summary,.admission-access>summary{min-height:44px;align-content:center;cursor:pointer;font-size:.86rem;font-weight:650}
+.admission-request-list{display:grid;gap:10px;margin-top:12px}
+.admission-request{border:1px solid var(--line);border-radius:7px;padding:14px}
+.admission-request strong,.admission-request span{display:block;font-size:.85rem;line-height:1.6}
+.admission-request span{color:var(--muted);font-size:.78rem}
+.admission-request-actions,.admission-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.admission-request button,.admission-actions button{font-size:.78rem;white-space:normal;max-width:100%}
+.admission-request>p{margin-bottom:0}
+.admission-heading-person{display:flex;align-items:flex-start;gap:14px;min-width:0}
+.admission-heading-person>div:last-child{min-width:0}
+.admission-portrait{width:64px;height:64px;flex-shrink:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;display:grid;place-items:center;background:var(--soft);color:var(--teal);font-weight:650}
+.admission-portrait img,.admission-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.admission-directory-meta{display:block;font-size:.7rem;line-height:1.55;color:var(--muted);margin-top:5px}
+.admission-header-contact>p{font-size:.8rem;line-height:1.6;overflow-wrap:anywhere;margin:10px 0 0}
+.admission-indicators{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:.72rem;line-height:1.5}
+.admission-indicators span{border:1px solid var(--line);background:#f4f7f9;border-radius:4px;padding:5px 7px}
+.admission-section{margin:16px 24px;border:1px solid var(--line);border-radius:7px;padding:0 14px 12px}
+.admission-section>button{font-size:.78rem;white-space:normal}
+.admission-access>summary{margin:0 24px;padding:8px 0}
+.admission-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.admission-fields .wizard-field{min-width:0}
+.admission-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+.admission-status-grid>div{padding:10px;border:1px solid var(--line);border-radius:6px;font-size:.8rem;line-height:1.6;min-width:0}
+.admission-status-grid dt{font-weight:650}.admission-status-grid dd{margin:4px 0 0;color:var(--muted);overflow-wrap:anywhere}
+#admission-review,#applicant-preview{width:min(760px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;color:var(--ink)}
+#admission-document{width:min(520px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto}
+#admission-review h2,#applicant-preview h2{font-size:1.15rem;line-height:1.5;margin-top:0;overflow-wrap:anywhere}
+#admission-review h3,#applicant-preview h3{font-size:.9rem}
+#admission-review p,#applicant-preview p,#admission-document p{font-size:.8rem}
+#admission-review .dialog-actions,#applicant-preview .dialog-actions{position:sticky;bottom:-16px;background:white;padding:12px 0;z-index:1}
+.admission-history{padding-left:20px;font-size:.78rem;line-height:1.7;color:var(--muted)}
+.admission-photo-example{display:flex;gap:14px;align-items:flex-start;margin:14px 0}
+.admission-photo-example button{font-size:.8rem;white-space:normal}
+.evidence-placeholder{border:2px dashed #9bb0bd;background:#f4f7f9;padding:30px 18px;text-align:center;line-height:1.7}
+.evidence-placeholder strong{display:block;letter-spacing:.06em;color:var(--muted)}
+#applicant-submit,#applicant-material-change{font-size:.8rem;max-width:100%;white-space:normal}
+@media(max-width:1000px){.admission-section{margin-left:18px;margin-right:18px}.admission-access>summary{margin-left:18px;margin-right:18px}}
+@media(max-width:640px){.admission-fields,.admission-status-grid{grid-template-columns:1fr}.admission-request-actions{flex-direction:column}.admission-request-actions button{width:100%}#admission-review,#applicant-preview,#admission-document{padding:18px}.admission-heading-person{gap:10px}.admission-portrait{width:56px;height:56px}.admission-requests{padding-left:12px;padding-right:12px}.admission-actions{flex-direction:column}.admission-actions button{width:100%}.admission-photo-example{flex-wrap:wrap}#admission-review .dialog-actions,#applicant-preview .dialog-actions{bottom:-18px}}

@@ -133,6 +133,9 @@ La ausencia de evidencia específica deja `VERIFICATION=source-inspected` aun cu
 - **Resultado/estado:** elegibilidad/acreditación vigentes antes de membresía/owner; **S2**. [GOV-SIM02](../identity/GOV-SIM02-physician-ownership-session.md), [GOV03A](../identity/IDENTITY-GOV03A-governance-runtime.md), evidencia histórica/aislada, activación/personas reales pendiente.
 
 ### ID-07 — Staff interno, primer Director, MFA y auditoría de gobierno
+
+- **Sucesor ASE-INT01 R2:** [Equipo interno sólo consulta](../identity/ASE-INT01-R2-internal-team-readonly.md), workspace original→GET/HEAD→Identity\Team\ReadService. Cuenta/staff/sesión actuales; Director Advisors/Masters, Master management+delegación exacta sólo Advisors; Advisor denegado. Datos personales/evidencia/comercial null; ningún command conectado. QA aislada, sin operación real; censo de capacidades no regenerado.
+
 - **Entry/writer:** mismos API/CLI con [FirstDirectorBootstrapService](../../modules/identity/services/FirstDirectorBootstrapService.php), [InternalGovernanceService](../../modules/identity/services/InternalGovernanceService.php), [StaffMfaService](../../modules/identity/services/StaffMfaService.php), [capability catalog](../../modules/identity/services/InternalCapabilityCatalog.php).
 - **Datos/read:** `internal_staff`, grants/delegaciones, `auth_staff_mfa_*`, casos, pruebas y auditoría. Staff interno no es operador de Agenda.
 - **Resultado/gates:** bootstrap/recuperación requieren ceremonia y custodias; MFA no equivale a concesión de capability. **S2**; [bootstrap](../identity/IDENTITY-QA02E-internal-governance-bootstrap-preparation.md). No staff real provisionado por esta tarea ni inferido por tabla existente.

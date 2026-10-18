@@ -112,3 +112,7 @@ La candidata conserva visual diff 0, HTTPS local, cookie segura, CSRF,
 anti-enumeración, guards fail-closed, aislamiento de base/store y rollback
 probado. El smoke móvil es INTERIM_MOBILE_SMOKE_ONLY y la aprobación móvil final
 permanece pendiente.
+
+## ASE-INT01 R2 — Equipo interno, sólo consulta
+
+[Contrato y procedencia](identity/ASE-INT01-R2-internal-team-readonly.md). R2 d871747 aprobado; la respuesta real “apruebo”, al preguntar por COM/ADM, aprueba visualmente las extensiones hasta312ee388. Historia R1/R2/COM/ADM conservada por enlaces inmutables. Composición/directorio-detalle, cinco grupos tri-state y secciones de incorporación/comercial/personal preservados con tres CSS idénticos. Diferencias explícitas para revisión: navegación real/badge, referencia/paginación, retrato neutral/datos ausentes, scope limitado y controles de escritura deshabilitados; sin claim pixel0 ni nueva aprobación inventada. QA8 combinaciones Chromium/WebKit, Safari físico NOT_RUN, móvil interino. No activación ni aprobación de políticas pendientes.

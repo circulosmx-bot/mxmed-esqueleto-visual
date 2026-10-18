@@ -103,3 +103,7 @@ Nueve objetos físicos sin CREATE localizado: `agenda_public_otps`, `clinical_do
 Para una tarea futura: buscar primero el objeto en CSV; abrir writer/read/DDL enlazados y su contrato; comprobar relaciones físicas en snapshot; revalidar sólo metadata necesaria si hay autorización. Este snapshot no sustituye backup, revisión de drift ni firma del despliegue.
 
 Una modificación autorizada debe actualizar las filas de objetos/artefactos afectadas y la fecha/baseline del estado. No regenerar inventarios completos ni ejecutar migraciones automáticamente. No interpretar los candidatos léxicos como una auditoría exhaustiva de cada query dinámica.
+
+## ASE-INT01 R2 — proyección mínima, sin nuevo objeto
+
+[Contrato/read model](../identity/ASE-INT01-R2-internal-team-readonly.md): SELECT de auth_accounts, internal_staff, internal_operator_grants e internal_capability_delegations; credencial únicamente mediante validador Identity actual. Sin perfil personal/evidencia staff/comercial nuevo, DDL real, backfill o copia de datos. QA usa instancia/datadir MySQL nuevos, cinco DDL fuente y principal HTTP SELECT-only; no consulta metadata/filas de instancias existentes. Metadata/censos físicos históricos anteriores no se revalidan ni alteran.

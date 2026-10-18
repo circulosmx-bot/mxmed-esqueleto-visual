@@ -10,6 +10,10 @@ Only the Director appoints/removes Masters and establishes/revokes per-capabilit
 
 Internal suspension changes only `internal_staff.status`. Both generic capability resolution and governance mutations require ACTIVE internal status. Canonical accounts, credentials, sessions, physician memberships and historical records remain intact. Reactivation respects revoked grants. Media Review remains the first consumer of explicit capabilities; its own authentication, capability names, publication and replacement behavior are unchanged.
 
+## Sucesor acotado ASE-INT01 R2
+
+[Integración aprobada de lectura](../identity/ASE-INT01-R2-internal-team-readonly.md) sucede la postergación total de frontend sólo para la sección Equipo en rama/preview aislados. Reusa Identity y catálogo18/16; Director lee Advisors/Masters, Master ACTIVE+management sólo Advisors con grants dentro de sus delegaciones. UI no llama execute; su adapter de commands sigue sin conectar. Perfil/evidencia staff/comercial no conectados, sin nuevos permisos ni cambios al writer. Una sesión puede tocar su store por lifecycle canónico; no datos de gobierno.
+
 ## Migration and deployment prerequisite
 
 Apply `modules/identity/db/migrations/2026_09_10_01_internal_governance.sql` to the canonical identity database after the existing account and operator-grant migrations, before deploying the changed capability resolver. Deployment without this prerequisite fails closed. The migration backfills every existing grant holder, including historical/revoked holders, as an ACTIVE Advisor only when no staff row exists. It does not modify grants, account status, or existing staff state. Inactive accounts and revoked grants remain denied. There is no runtime missing-row fallback.

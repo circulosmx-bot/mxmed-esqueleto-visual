@@ -1,0 +1,79 @@
+{
+  "result": "PASS",
+  "protected_worktrees": [
+    {
+      "worktree": "mxmed-step2-vitals-r1",
+      "tracked_files_checked": 2992,
+      "files_changed": [],
+      "head_unchanged": true,
+      "branch_unchanged": true,
+      "status_unchanged": true,
+      "remote_head_match": true
+    },
+    {
+      "worktree": "mxmed-ase-vis01-prototype",
+      "tracked_files_checked": 3231,
+      "files_changed": [],
+      "head_unchanged": true,
+      "branch_unchanged": true,
+      "status_unchanged": true,
+      "remote_head_match": true
+    }
+  ],
+  "original_listeners": {
+    "8091": {
+      "before": [
+        "90106"
+      ],
+      "after": [
+        "90106"
+      ],
+      "unchanged": true
+    },
+    "8092": {
+      "before": [
+        "1727"
+      ],
+      "after": [
+        "1727"
+      ],
+      "unchanged": true
+    },
+    "8443": {
+      "before": [
+        "93582"
+      ],
+      "after": [
+        "93582"
+      ],
+      "unchanged": true
+    },
+    "6385": {
+      "before": [
+        "1590"
+      ],
+      "after": [
+        "1590"
+      ],
+      "unchanged": true
+    },
+    "8140": {
+      "before": [
+        "76748"
+      ],
+      "after": [
+        "76748"
+      ],
+      "unchanged": true
+    }
+  },
+  "owned_rollback": {
+    "old_owned_directory_deleted": true,
+    "fresh_instance_recreated": true,
+    "canonical_review_session_read": 200
+  },
+  "real_data_access": "NONE: new MySQL instance/datadir only; no existing SQL connection",
+  "real_provider_operations": false,
+  "normal_local_activation": false,
+  "preview_expires": "2026-10-18T12:52:35.593564+00:00"
+}

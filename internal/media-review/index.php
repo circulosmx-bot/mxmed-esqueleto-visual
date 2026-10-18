@@ -2,6 +2,10 @@
 declare(strict_types=1);
 require_once __DIR__.'/../../modules/identity/http/IdentityHttpComposition.php';
 \Identity\Http\IdentityHttpComposition::registerAutoloader();
+if (($_GET['section']??'')==='equipo') {
+    \Identity\Team\Page::show();
+    exit;
+}
 if (($_GET['section']??'')==='correcciones') {
     require_once __DIR__.'/../../modules/profiles/Corrections/bootstrap.php';
     \Profiles\Corrections\ReportReviewPage::show();
@@ -35,7 +39,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <body>
 <main class="inbox">
 <header class="inbox-header"><p class="eyebrow">México Médico · Equipo interno</p><h1>Revisión de medios</h1><p>Consulta las imágenes recibidas para revisión.</p></header>
-<nav aria-label="Equipo interno"><a href="/internal/media-review/index.php?section=acreditacion">Acreditación profesional</a> · <a href="/internal/media-review/index.php?section=correcciones">Informes de perfiles</a></nav>
+<nav aria-label="Equipo interno"><a href="/internal/media-review/index.php?section=acreditacion">Acreditación profesional</a> · <a href="/internal/media-review/index.php?section=correcciones">Informes de perfiles</a> · <a href="/internal/media-review/index.php?section=equipo">Equipo y permisos</a></nav>
 <section id="batch-queue" aria-labelledby="batch-queue-title">
 <h2 id="batch-queue-title">Lotes pendientes de revisión</h2>
 <p id="batch-message" role="status"></p><div id="batch-cards" class="cards"></div>

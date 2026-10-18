@@ -121,6 +121,9 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 - Límite: borrador no es CFDI timbrado. PAC-DEC01 eligió SW primario y Finkok alternativo; adaptar/configurar el proveedor y operar fiscalmente requiere autorización específica, no una nueva selección.
 
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
+
+- Integración aislada vigente: [ASE-INT01 R2 — Equipo y permisos, sólo consulta](identity/ASE-INT01-R2-internal-team-readonly.md), sección `equipo`, reader GET/HEAD, autoridad independiente de Media; sin admisión/mutaciones ni activación.
+
 - UI/API: [workspace staff original](../internal/media-review/index.php), [servicios Identity](../modules/identity/services/).
 - Writers: [InternalGovernanceService](../modules/identity/services/InternalGovernanceService.php), [StaffMfaService](../modules/identity/services/StaffMfaService.php), [PdoAuditEventRepository](../modules/platform/repositories/PdoAuditEventRepository.php); lectura [AuditIntegrityVerifier](../modules/platform/services/AuditIntegrityVerifier.php).
 - Contratos: [GOV-SIM02](identity/GOV-SIM02-physician-ownership-session.md), [GOV03A](identity/IDENTITY-GOV03A-governance-runtime.md), [audit sink](product-completion/canonical-audit-sink-contract-v1.md), [protocolo UI/UX](MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md). QA: [gobierno](../modules/identity/tests/GovernanceGov03ATest.php).

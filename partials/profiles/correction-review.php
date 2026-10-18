@@ -14,7 +14,7 @@ $escape=static fn(string $s):string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITU
 </head>
 <body><main class="inbox" data-correction-review data-csrf="<?= $escape($correctionReviewPage['csrf']) ?>">
 <header class="inbox-header"><p class="eyebrow">México Médico · Equipo interno</p><h1>Informes de perfiles</h1><p>Revisa la información recibida antes de decidir. Aceptar un informe deja cualquier cambio al perfil pendiente de aplicación autorizada.</p></header>
-<nav aria-label="Equipo interno"><a href="/internal/media-review/index.php">Revisión de medios</a> · <a href="/internal/media-review/index.php?section=acreditacion">Acreditación profesional</a></nav>
+<nav aria-label="Equipo interno"><a href="/internal/media-review/index.php">Revisión de medios</a> · <a href="/internal/media-review/index.php?section=acreditacion">Acreditación profesional</a> · <a href="/internal/media-review/index.php?section=equipo">Equipo y permisos</a></nav>
 <section aria-labelledby="correction-queue-title"><div class="section-heading"><h2 id="correction-queue-title">Informes recibidos</h2><button type="button" data-refresh>Actualizar</button></div>
 <p data-review-message role="status" aria-live="polite">Cargando informes…</p><div class="cards" data-report-queue></div>
 <nav class="pagination" aria-label="Páginas de informes"><button type="button" data-previous disabled>Anterior</button><span data-page-number></span><button type="button" data-next disabled>Siguiente</button></nav></section>

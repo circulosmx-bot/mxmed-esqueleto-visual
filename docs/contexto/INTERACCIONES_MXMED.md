@@ -102,6 +102,9 @@ La confirmación pertenece a `ProcessStripeSubscriptionWebhookService`; la activ
 
 ## J09 — Media privada, revisión y proyección
 
+**Workspace sucesor ASE-INT01 R2.** [Equipo y permisos](../identity/ASE-INT01-R2-internal-team-readonly.md) agrega sección independiente antes del guard Media; links de Media/C4/correcciones reutilizados. Media no concede lectura staff. Nuevo GET/HEAD mínimo, sin writers ni cambio al pipeline Media. J08 sólo conserva límites COM aprobados; pagos/atribución/finanzas siguen desconectados. Once journeys preservados.
+
+
 **Cadena.** Foto/galería/logo original → [profile-photo.js](../../assets/js/profile-photo.js), [fotos.js](../../assets/js/fotos.js), intake candidato → [APIs Media](../../api/media/) → identidad/scope/CSRF y validación MIME/tamaño → [ProfilePhotoReviewCandidateService](../../modules/media/services/ProfilePhotoReviewCandidateService.php) / [GalleryReviewCandidateService](../../modules/media/services/GalleryReviewCandidateService.php) / [PhysicianLogoReviewCandidateService](../../modules/media/services/PhysicianLogoReviewCandidateService.php) → [MediaAssetsRepository](../../modules/media/repositories/MediaAssetsRepository.php) + storage privado; [MediaCandidateSubmissionService](../../modules/media/services/MediaCandidateSubmissionService.php) registra submission/audit.
 
 **Vía directa distinta.** Los endpoints directos photo/gallery y [DoctorProfilePhotoService](../../modules/media/services/DoctorProfilePhotoService.php)/[DoctorGalleryService](../../modules/media/services/DoctorGalleryService.php) aún usan `PublicMediaStoragePort` y assets públicos READY. No son equivalentes al intake privado de revisión usado por la UI nueva; ambas rutas fuente se conservan y deben evaluarse por separado.
