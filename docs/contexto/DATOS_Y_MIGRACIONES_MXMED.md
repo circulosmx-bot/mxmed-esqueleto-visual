@@ -123,3 +123,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT03B-PREP01 — inspección de esquema, sin ejecución
 
 [Contrato](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md) documenta tablas staff/grants/delegaciones y casos/challenges/proofs existentes; propone ampliar sólo CHECK de operaciones y contexto tipado, sin archivo SQL nuevo. El paquete ACT03 reemplaza el CHECK y omite dos operaciones de correcciones antes admitidas: hallazgo de fuente que exige preflight/rehearsal posterior, no constatación de DB real. Sin consultas SQL/DDL/DML, nuevos objetos físicos ni regeneración del censo; auditoría y sesión conservan sus dueños.
+
+## ASE-INT03B-IMP01 — CHECK acumulativo y rehearsal
+
+[Contrato/evidencia](../identity/ASE-INT03B-IMP01-master-security-foundation.md): nueva migración `modules/identity/db/migrations/2026_10_18_01_internal_master_governance_operations.sql`, unión exacta de once operaciones históricas y seis Master. Reusa auth_governance_cases.security_context y tablas MFA/staff/grants/delegaciones/audit, sin tablas producto nuevas, seeds, backfill ni enums. A/B/C/E ensayan el nuevo CHECK; D confirma que ACT03 rechaza filas de corrección y se detiene preservando datos/constraints. No acredita schema instalado real ni todas las rutas de upgrade. Tabla de review sólo en fixture descartable.

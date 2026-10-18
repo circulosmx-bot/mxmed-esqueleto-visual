@@ -5,6 +5,7 @@ namespace Identity\Services;
 use Identity\Adapters\SecureRandomMfaSecretGenerator;
 use Identity\Contracts\{Clock,MfaSecretGeneratorPort,SystemClock};
 use PDO;
+use Identity\MasterGovernance\Policy as MasterPolicy;
 
 /** RFC 6238 TOTP with encrypted secrets, bounded drift, action binding, throttling and durable replay prevention. */
 final class StaffMfaService
@@ -60,13 +61,20 @@ final class StaffMfaService
     {
         if($this->security===null)throw new \RuntimeException('staff_mfa_canonical_security_required');
         foreach([$actor,$target,$beneficiary] as $id)$this->assertId($id);$this->assertReference($caseId);
-        if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY'],true))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
+        if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY'],true)&&!MasterPolicy::known($operation))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
+        $masterContext=null;
+        if(MasterPolicy::known($operation)){
+            $masterContext=MasterPolicy::mfaCase($this->pdo,['actor_account_id'=>$actor,'operation'=>$operation,'case_id'=>$caseId,'target_account_id'=>$target,'beneficiary_account_id'=>$beneficiary,'profile_doctor_id'=>$profile],$this->clock->now(),$reauthentication??[]);
+            $q=$this->pdo->prepare("SELECT factor_id FROM auth_staff_mfa_factors WHERE account_id=? AND status='ACTIVE' FOR UPDATE");$q->execute([$actor]);
+            if($q->fetchColumn()===false)throw new \RuntimeException('staff_mfa_enrolled_factor_required');
+        }
         $this->assertOperationAuthority($actor,$operation);if($this->security!==null){if(($reauthentication['account_id']??null)!==$actor)throw new \RuntimeException('staff_mfa_reauthentication_required');$this->security->assertLive($reauthentication,true);}
         $now=$this->clock->now();$raw=rtrim(strtr(base64_encode(random_bytes(32)),'+/','-_'),'=');
+        $expires=$masterContext===null?$now->modify('+5 minutes'):new \DateTimeImmutable($masterContext['intent']['expires_at'],new \DateTimeZone('UTC'));
         $id='challenge_'.bin2hex(random_bytes(16));$s=$this->pdo->prepare("INSERT INTO auth_staff_mfa_challenges(challenge_id,actor_account_id,operation,case_id,target_account_id,beneficiary_account_id,profile_doctor_id,nonce_hash,status,expires_at) VALUES(?,?,?,?,?,?,?,?,'PENDING',?)");
-        $s->execute([$id,$actor,$operation,$caseId,$target,$beneficiary,$profile,hash('sha256',$raw),$this->sql($now->modify('+5 minutes'))]);
+        $s->execute([$id,$actor,$operation,$caseId,$target,$beneficiary,$profile,hash('sha256',$raw),$this->sql($expires)]);
         if($this->security!==null){$u=$this->pdo->prepare('UPDATE auth_staff_mfa_challenges SET reauthentication_context=? WHERE challenge_id=?');$u->execute([json_encode($reauthentication,JSON_THROW_ON_ERROR),$id]);}
-        return ['challenge_id'=>$id,'challenge'=>$raw,'expires_at'=>$now->modify('+5 minutes')];
+        return ['challenge_id'=>$id,'challenge'=>$raw,'expires_at'=>$expires];
     }
 
     public function verifyChallenge(string $actor,string $sessionId,int $credentialVersion,string $challengeId,string $rawChallenge,string $code):array
@@ -74,6 +82,9 @@ final class StaffMfaService
         if($this->security===null)throw new \RuntimeException('staff_mfa_canonical_security_required');
         if($credentialVersion<1||strlen($sessionId)<8)throw new \RuntimeException('staff_mfa_verification_denied');
         $result=$this->transaction(function()use($actor,$sessionId,$credentialVersion,$challengeId,$rawChallenge,$code):array{
+            // New staff operations use account -> case -> challenge -> proof/factor order.
+            $pre=MasterPolicy::row($this->pdo,'SELECT * FROM auth_staff_mfa_challenges WHERE challenge_id=?',[$challengeId]);
+            if(MasterPolicy::known($pre['operation']))MasterPolicy::mfaCase($this->pdo,$pre,$this->clock->now(),json_decode((string)$pre['reauthentication_context'],true,32,JSON_THROW_ON_ERROR));
             $now=$this->clock->now();$s=$this->pdo->prepare('SELECT * FROM auth_staff_mfa_challenges WHERE challenge_id=? FOR UPDATE');$s->execute([$challengeId]);$c=$s->fetch(PDO::FETCH_ASSOC);
             if(!is_array($c)||$c['actor_account_id']!==$actor||$c['status']!=='PENDING'||new \DateTimeImmutable($c['expires_at'],new \DateTimeZone('UTC'))<=$now
                 ||!hash_equals($c['nonce_hash'],hash('sha256',$rawChallenge))||(int)$c['attempts_count']>=5||($c['blocked_until']!==null&&new \DateTimeImmutable($c['blocked_until'],new \DateTimeZone('UTC'))>$now))
@@ -109,6 +120,11 @@ final class StaffMfaService
     {
         if($this->security===null)throw new \RuntimeException('staff_mfa_canonical_security_required');
         if($transaction!==$this->pdo||!$this->pdo->inTransaction())throw new \RuntimeException('staff_mfa_transaction_required');
+        if(MasterPolicy::known($operation)){
+            $pre=MasterPolicy::row($this->pdo,'SELECT * FROM auth_staff_mfa_proofs WHERE proof_id=?',[$proofId]);
+            MasterPolicy::mfaCase($this->pdo,$pre,$this->clock->now());
+            MasterPolicy::row($this->pdo,'SELECT * FROM auth_staff_mfa_challenges WHERE challenge_id=? FOR UPDATE',[$pre['challenge_id']]);
+        }
         $s=$this->pdo->prepare('SELECT * FROM auth_staff_mfa_proofs WHERE proof_id=? FOR UPDATE');$s->execute([$proofId]);$p=$s->fetch(PDO::FETCH_ASSOC);$now=$this->clock->now();
         $exact=is_array($p)&&$p['actor_account_id']===$actor&&$p['staff_session_id']===$sessionId&&(int)$p['credential_version']===$credentialVersion
             &&$p['operation']===$operation&&$p['case_id']===$caseId&&$p['target_account_id']===$target&&$p['beneficiary_account_id']===$beneficiary
@@ -156,6 +172,7 @@ final class StaffMfaService
     }
     private function operationAllowed(string $staffClass,string $actor,string $operation):bool
     {
+        if(MasterPolicy::known($operation))return $staffClass==='DIRECTOR';
         return in_array($staffClass,['DIRECTOR','MASTER_ADMIN'],true)
             ||($staffClass==='ADVISOR'&&StaffRoutineOperationPolicy::allowAdvisor($this->pdo,$actor,$operation));
     }
@@ -170,6 +187,10 @@ final class StaffMfaService
     {
         $context=json_decode((string)($challenge['reauthentication_context']??''),true,32,JSON_THROW_ON_ERROR);
         if(!is_array($context)||($context['account_id']??null)!==$actor||($context['session_id']??null)!==$session||($context['credential_version']??null)!==$version)throw new \RuntimeException('staff_mfa_reauthentication_mismatch');
+        if(MasterPolicy::known($challenge['operation'])){
+            MasterPolicy::mfaCase($this->pdo,$challenge,$this->clock->now(),$context);
+            if(new \DateTimeImmutable($challenge['expires_at'],new \DateTimeZone('UTC'))<=$this->clock->now())throw new \RuntimeException('staff_mfa_challenge_expired');
+        }
         $this->security->assertLive($context,true);
     }
     private function factor(string $id,bool $lock):array{$s=$this->pdo->prepare('SELECT * FROM auth_staff_mfa_factors WHERE factor_id=?'.($lock?' FOR UPDATE':''));$s->execute([$id]);$r=$s->fetch(PDO::FETCH_ASSOC);if(!is_array($r))throw new \RuntimeException('staff_mfa_factor_unavailable');return $r;}

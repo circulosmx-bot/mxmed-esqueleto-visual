@@ -29,11 +29,17 @@
 - Botones/modal aprobados, borrador de permisos protegido, refresh y ACK incierto sin retry. 223 checks dirigidos, seis carreras SQL y ocho combinaciones Chromium/WebKit; CSS aprobado preservado. Safari físico NOT_RUN y móvil interino.
 - Gate default off; recursos sintéticos propios dispuestos, cinco worktrees/listeners/pointer protegidos sin cambios. Sin merge, promoción, operación real, Master/admisión o decisiones comerciales D06.
 
-## Preparación vigente ASE-INT03B-PREP01
+## Preparación histórica ASE-INT03B-PREP01
 
 - Entrega documental en `feature/ase-int03b-master-governance-prep`, worktree `mxmed-ase-int03b-master-governance-prep`, padre exacto `b23d4b924d1170fc250afe3ed01555838ee684c8`. [Contrato privilegiado Master](identity/ASE-INT03B-PREP01-master-privileged-authorization.md): autoridad aprobada, operaciones directas existentes y flujo HTTP/MFA específico aún no implementado.
 - Allowlist MFA y CHECK de casos no admiten Master; ampliar sólo nombres no basta: falta Director-only, contexto exacto y consumo proof/mutación/audit en una transacción. Inspección detecta reemplazo no acumulativo del CHECK en ACT03; requiere rehearsal posterior, sin afirmar schema instalado.
 - UI-2 propuesta pendiente, controles Master deshabilitados; admisión/identidad y D01–D08 siguen separados. Sólo fuente/documentación inspeccionadas, sin QA de producto nueva, DDL/DML, MFA real, merge, despliegue o activación.
+
+## Sucesor aislado ASE-INT03B-IMP01
+
+- Feature `feature/ase-int03b-master-privileged-backend`, padre exacto `e71f3618772ff652a40bb597d45c199d5e851d75`. [Fundación Master](identity/ASE-INT03B-IMP01-master-security-foundation.md): cuatro decisiones aprobadas; seis operaciones Director-only con caso, contraseña, MFA y proof/writer/audit en un PDO. Concepto UI-2 aprobado; conexión IMP02 pendiente.
+- Promoción producto **BLOCKED_PENDING_STAFF_IDENTITY_REVIEW**; snapshot positivo sólo en fixture CLI sintético. Gate propio default off. Controles Master, layout y derechos históricos preservados; no activación real.
+- Rehearsal de CHECK acumulativo en MySQL nuevo; ACT02 con filas de corrección → ACT03 se detiene por incompatibilidad histórica, conservando datos. No declara todas las rutas PASS. 321 checks PASS y nueve carreras observadas; límites exactos en contrato/evidencia. Infra nueva dispuesta y siete worktrees/listeners/pointer preservados.
 
 ## Producto existente
 

@@ -1,0 +1,65 @@
+{
+  "resources": [
+    {
+      "evidence": "failed-20261018T144501Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-wa140jhw",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T144522Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-licd9ed0",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T144555Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-vl_pof5a",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T144608Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-9nn52lcp",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T144630Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-kxc0tlkd",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T144657Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-mzw_xx27",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T144725Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-wsfvbm5b",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T145110Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-615z7njd",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T145230Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-ancuimew",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    },
+    {
+      "evidence": "failed-20261018T145530Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03b-dod72lmg",
+      "ownership": "phase/datadir in failed report; process stop verified; no process references",
+      "deleted": true
+    }
+  ],
+  "protected_resources_touched": false
+}

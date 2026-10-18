@@ -10,7 +10,7 @@ use Identity\Repositories\{IdentityAccountRepository,AccountCredentialRepository
 use Identity\Contracts\{RateLimitKeyHasher,SystemClock,Clock,SessionPolicy};
 use Identity\Adapters\{PreviewValkeyClient,PdoSessionAccountStateAdapter};
 $phase=getenv('ASE_TEAM_QA_PHASE')?:'ase-int02a';
-if(!in_array($phase,['ase-int02a','ase-int02b','ase-int03a'],true))throw new RuntimeException('isolated_phase_required');
+if(!in_array($phase,['ase-int02a','ase-int02b','ase-int03a','ase-int03b'],true))throw new RuntimeException('isolated_phase_required');
 $owned=(string)getenv('ASE_INT02A_OWNED');
 if(!preg_match('~^/private/tmp/mxmed-'.preg_quote($phase,'~').'-[a-zA-Z0-9_]+$~D',realpath($owned)?:'')||!preg_match('/^mxmed_gate4d_preview_'.str_replace('-','',$phase).'_[a-f0-9]{10}$/D',(string)getenv('MXMED_DB_NAME'))||in_array((int)getenv('MXMED_DB_PORT'),[3306,3309],true))throw new RuntimeException('isolated_target_required');
 $fixture=new PDO('mysql:unix_socket='.$owned.'/mysql.sock;dbname='.getenv('MXMED_DB_NAME').';charset=utf8mb4','ase_fixture',(string)getenv('ASE_INT02A_FIXTURE_PASSWORD'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);

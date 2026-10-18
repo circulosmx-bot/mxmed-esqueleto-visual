@@ -12,6 +12,10 @@ final class GovernanceRuntime
         public readonly StaffMfaService $mfa,private ProfileOwnershipStepUpIssuanceService $beneficiaryStepUp,
         private ProfileMembershipRoleChangeService $roleChanges,private \Identity\Contracts\Clock $clock=new \Identity\Contracts\SystemClock()){}
 
+    public static function staff(PDO $pdo,GovernanceSecurityContext $security,StaffMfaService $mfa,
+        \Identity\Contracts\StaffIdentityReviewPort $reviews,\Identity\Contracts\Clock $clock=new \Identity\Contracts\SystemClock()): \Identity\MasterGovernance\Cases
+    {return GovernanceCaseSecurity::staff($pdo,$security,$mfa,$reviews,$clock);}
+
     /** @param array<string,string|null> $dimensions */
     public function issueBeneficiaryStepUp(AuthenticatedAccessContext $actor,string $caseId,string $email,string $password,array $dimensions):array
     {

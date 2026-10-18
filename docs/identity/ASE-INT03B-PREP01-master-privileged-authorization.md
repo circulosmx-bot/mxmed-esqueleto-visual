@@ -153,3 +153,7 @@ Referencias de QA **leídas, no ejecutadas**: [Gov03B](../../modules/identity/te
 | REMAINING_CONTEXT_GAPS | Implementación/ensayo Master pendientes, decisiones ADM/UI-2/elegibilidad, coordinación sesión/commit y orden de migraciones por verificar en entorno aislado autorizado. No se atribuye schema real inspeccionado. |
 
 Resultado de preparación: `READY_MXMED_ASE_INT03B_MASTER_SECURITY_CONTRACT_COMPLETE`. Próxima autorización: implementación/ensayo sintéticos acotados y decisiones anteriores; no nombramiento real, enrollment, DDL operacional ni activación.
+
+## Sucesor autorizado ASE-INT03B-IMP01
+
+Las cuatro recomendaciones de esta preparación fueron aprobadas expresamente en IMP01, incluido concepto UI-2. [Contrato sucesor](ASE-INT03B-IMP01-master-security-foundation.md) registra implementación backend, evidencia sintética y límites actuales. Este documento conserva el diagnóstico previo; no representa ya ausencia de código Master. Reader real de identidad y conexión UI IMP02 permanecen pendientes, sin activación real.

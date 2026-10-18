@@ -300,3 +300,7 @@ Actualizar sólo IDs afectados por una operación posterior autorizada, con ruta
 ## ID-07 — preparación privilegiada ASE-INT03B-PREP01
 
 [Contrato](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md): P=autoridad exclusiva Director y separación de poderes aprobadas; S=comandos Master directos existentes, seguridad específica propuesta; C=HTTP/UI Master desconectados; V=inspección documental, sin QA nueva; O=inactivo. ID-02/03 se reutilizarían para reauth/sesión, sin otro motor. No modifica el censo ni concede capabilities.
+
+## ID-07 — sucesor ASE-INT03B-IMP01
+
+[Fundación Master](../identity/ASE-INT03B-IMP01-master-security-foundation.md): P=cuatro decisiones Director aprobadas; S=seis operaciones privilegiadas y elegibilidad tipada fail-closed; C=API preparada detrás de gate propio, UI pendiente IMP02; V=QA sintética dirigida y rehearsal, límites en evidencia; O=inactivo. Reusa ID-02/ID-03 para credenciales y sesión; no amplía el censo ni ADM.

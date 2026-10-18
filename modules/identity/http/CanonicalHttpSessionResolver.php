@@ -9,11 +9,11 @@ use Identity\Services\SessionService;
 final class CanonicalHttpSessionResolver
 {
     public function __construct(private SessionService $sessions) {}
-    public function resolve(array $cookies): ?AuthenticatedAccessContext
+    public function resolve(array $cookies,bool $observeOnly=false): ?AuthenticatedAccessContext
     {
         $token = $cookies['__Host-mxmed_session'] ?? null;
         if (!is_string($token) || $token === '') return null;
-        $decision = $this->sessions->validate($token);
+        $decision = $this->sessions->validate($token,$observeOnly);
         return $decision->allowed() ? $decision->context() : null;
     }
 }

@@ -128,3 +128,7 @@ permanece pendiente.
 ## ASE-INT03B-PREP01 — ficha de seguridad pendiente
 
 [Ficha UI-2](identity/ASE-INT03B-PREP01-master-privileged-authorization.md#ficha-ui-2-y-decisiones-del-director) propone confirmación/reauth/TOTP y estados de fallo/expiración/incertidumbre en Equipo. Entrega actual UI-0 documental; no implementación ni aprobación nueva. Preserva baseline visual `312ee388`, botones de designación y separación uso/gestión/delegación; controles Master siguen deshabilitados. Deuda `ASE-INT03B-PRIVILEGED-UI`, decisión del Director antes de implementar conducta nueva según protocolo.
+
+## ASE-INT03B-IMP01 — concepto UI-2 aprobado, conexión pendiente
+
+El Director aprobó selección → consecuencias → confirmación → contraseña → MFA → resultado/reconciliación. [IMP01](identity/ASE-INT03B-IMP01-master-security-foundation.md) implementa sólo backend; IMP02 requiere revisión separada para conectar controles. Layout, header, navegación y baseline visual312ee388 conservados; acciones Master continúan deshabilitadas. La deuda ASE-INT03B-PRIVILEGED-UI sigue abierta para conexión, no para aprobación conceptual.

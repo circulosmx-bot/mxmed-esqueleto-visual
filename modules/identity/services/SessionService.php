@@ -68,7 +68,7 @@ final class SessionService
         return new SessionCreationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token));
     }
 
-    public function validate(?string $rawToken): SessionValidationDecision
+    public function validate(?string $rawToken,bool $observeOnly=false): SessionValidationDecision
     {
         if ($rawToken === null || $rawToken === '') return new SessionValidationDecision(false, ReasonCode::SESSION_MISSING);
         try { $token = new SessionToken($rawToken); $digest = $this->tokens->digest($token); }
@@ -79,18 +79,18 @@ final class SessionService
         if ($record === null) return new SessionValidationDecision(false, ReasonCode::SESSION_INVALID);
         $now = $this->clock->now();
         if ($record->state() !== SessionState::ACTIVE) return new SessionValidationDecision(false, $this->terminalReason($record->state()));
-        if ($now >= $record->absoluteExpiresAt()) { $this->safeRevoke($digest, SessionState::ABSOLUTE_EXPIRED); return new SessionValidationDecision(false, ReasonCode::SESSION_ABSOLUTE_EXPIRED); }
-        if ($now >= $record->expiresAt()) { $this->safeRevoke($digest, SessionState::IDLE_EXPIRED); return new SessionValidationDecision(false, ReasonCode::SESSION_IDLE_EXPIRED); }
+        if ($now >= $record->absoluteExpiresAt()) { if(!$observeOnly)$this->safeRevoke($digest, SessionState::ABSOLUTE_EXPIRED); return new SessionValidationDecision(false, ReasonCode::SESSION_ABSOLUTE_EXPIRED); }
+        if ($now >= $record->expiresAt()) { if(!$observeOnly)$this->safeRevoke($digest, SessionState::IDLE_EXPIRED); return new SessionValidationDecision(false, ReasonCode::SESSION_IDLE_EXPIRED); }
         if ($record->principal()->accountStatus() !== AccountStatus::ACTIVE) return new SessionValidationDecision(false, $this->accountReason($record->principal()->accountStatus()));
         if ($this->accounts !== null) {
             try { $state = $this->accounts->current($record->principal()->accountId()); }
             catch (\Throwable) { return new SessionValidationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
-            if (!is_array($state)) { $this->safeRevoke($digest, ReasonCode::SESSION_REVOKED); return new SessionValidationDecision(false, ReasonCode::SESSION_REVOKED); }
+            if (!is_array($state)) { if(!$observeOnly)$this->safeRevoke($digest, ReasonCode::SESSION_REVOKED); return new SessionValidationDecision(false, ReasonCode::SESSION_REVOKED); }
             $status = (string)($state['status'] ?? '');
-            if ($status !== AccountStatus::ACTIVE) { $reason = $this->accountReason($status); $this->safeRevoke($digest, $reason); return new SessionValidationDecision(false, $reason); }
-            if ((int)($state['credential_version'] ?? 0) !== $record->principal()->credentialVersion()) { $this->safeRevoke($digest, ReasonCode::CREDENTIAL_VERSION_MISMATCH); return new SessionValidationDecision(false, ReasonCode::CREDENTIAL_VERSION_MISMATCH); }
+            if ($status !== AccountStatus::ACTIVE) { $reason = $this->accountReason($status); if(!$observeOnly)$this->safeRevoke($digest, $reason); return new SessionValidationDecision(false, $reason); }
+            if ((int)($state['credential_version'] ?? 0) !== $record->principal()->credentialVersion()) { if(!$observeOnly)$this->safeRevoke($digest, ReasonCode::CREDENTIAL_VERSION_MISMATCH); return new SessionValidationDecision(false, ReasonCode::CREDENTIAL_VERSION_MISMATCH); }
         }
-        if ($this->touchActivity && $now->getTimestamp() - $record->lastSeenAt()->getTimestamp() >= $this->policy->touchIntervalSeconds()) {
+        if (!$observeOnly && $this->touchActivity && $now->getTimestamp() - $record->lastSeenAt()->getTimestamp() >= $this->policy->touchIntervalSeconds()) {
             try { $touched = $this->store->touch($digest, $now, $this->policy); }
             catch (\Throwable) { return new SessionValidationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
             // A concurrent revoke/expiry may remove the record after read().

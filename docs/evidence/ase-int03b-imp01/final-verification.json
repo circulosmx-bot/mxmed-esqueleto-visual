@@ -1,0 +1,54 @@
+{
+  "source_syntax": "24 PHP files / 2 Python AST PASS",
+  "local_links_and_anchors": 856,
+  "source_hashes_match_final_qa": false,
+  "protected_worktrees": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    }
+  },
+  "protected_listeners_unchanged": true,
+  "preview_pointer_unchanged": true,
+  "master_ui_changed": false,
+  "real_database_connections": 0,
+  "context_sync": "PASS_UPDATED",
+  "post_qa_change": {
+    "file": "scripts/ase-int03b-qa.py",
+    "change": "remove trailing whitespace only; Python AST identical",
+    "tested_sha256": "49237a5dd5b5089e86f5dadfa0afdda4c0dae690faa983054094b728ed892e4d",
+    "delivered_sha256": "8aad036a4de633e61927a63ce91e6e3c7de99cb5ecdc338465a876c1afda92fa",
+    "product_source_hashes_unchanged": true
+  }
+}

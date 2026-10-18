@@ -88,3 +88,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## Preparación Master ASE-INT03B-PREP01
 
 [Contrato de seguridad propuesto](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md): distingue comandos directos existentes de HTTP privilegiado aún ausente. Preserva clase/management/delegación/uso y democión canónica; documenta allowlist MFA, CHECK de casos, Director-only y consumo/audit atómicos pendientes. Sólo documentación; no altera writer, esquema, grants ni gates.
+
+## ASE-INT03B-IMP01 — sucesor backend
+
+[Fundación implementada](../identity/ASE-INT03B-IMP01-master-security-foundation.md): seis comandos Director-only, caso exacto, contraseña/MFA y consumo/writer/audit en un PDO. Conserva clase, gestión, delegación y uso independientes; democión conserva grants operativos y estados. Promoción producto bloqueada por reader de revisión interna ausente; QA positiva sólo con adapter CLI sintético. Gate default off y UI Master inactiva.

@@ -165,3 +165,7 @@ Registrar cambios de conexión en el journey afectado y en su capability, sin du
 ## J09 — flujo Master propuesto ASE-INT03B-PREP01
 
 [Contrato y secuencia](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md): selección/snapshot → confirmación → reauth canónica → MFA exacto → locks/consumo/mutación/audit → refresh/reconciliación. Es propuesta, no journey conectado ni probado; casos actuales son específicos de otros dominios. Preserva J09 existente y frontera J08; no nuevas asignaciones comerciales.
+
+## J09 — sucesor backend ASE-INT03B-IMP01
+
+[Secuencia implementada](../identity/ASE-INT03B-IMP01-master-security-foundation.md): abrir intención servidor → confirmar digest/contraseña Director → TOTP → proof exacto → locks/revalidación/consumo/writer/audit atómicos → reconciliar caso/UUID/audit. UI-2 aprobada conceptualmente; conexión IMP02 pendiente. Logout anterior al check final deniega; después de ese punto no se promete fencing SQL/Valkey. Conserva frontera J08 y atribución comercial.

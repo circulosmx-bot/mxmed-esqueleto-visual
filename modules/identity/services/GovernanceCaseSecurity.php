@@ -11,6 +11,11 @@ final class GovernanceCaseSecurity
     public function __construct(private PDO $pdo,public readonly GovernanceSecurityContext $sessions,
         private InitialOwnerEligibilityPort $eligibility,public readonly ?Ed25519ExternalTrustAnchorAdapter $trust,
         public readonly CanonicalGovernanceAuditAdapter $audit) {}
+    /** Separate closed staff variant; does not relax the ownership v2 contract below. */
+    public static function staff(PDO $pdo,GovernanceSecurityContext $security,StaffMfaService $mfa,
+        \Identity\Contracts\StaffIdentityReviewPort $reviews,\Identity\Contracts\Clock $clock): \Identity\MasterGovernance\Cases
+    {return new \Identity\MasterGovernance\Cases($pdo,$security,$mfa,$reviews,$clock);}
+
     public function usesConnection(PDO $pdo):bool{return $pdo===$this->pdo;}
 
     public static function snapshot(array $m):array

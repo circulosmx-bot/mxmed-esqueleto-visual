@@ -10,10 +10,19 @@ use RuntimeException;
 /** Canonical writer. HTTP adapters enforce transport/CSRF; the optional target scope is server-owned. */
 final class InternalGovernanceService
 {
-    public function __construct(private PDO $pdo,private CanonicalHttpSessionResolver $sessions){}
+    public function __construct(private PDO $pdo,private CanonicalHttpSessionResolver $sessions,private ?\Identity\MasterGovernance\Cases $masterCases=null)
+    {if($masterCases!==null&&!$masterCases->usesConnection($pdo))throw new RuntimeException('master_connection_mismatch');}
     public const ACTIVE_ADVISOR_OPERATIONAL='active_advisor_operational';
     public const ADVISOR_LIFECYCLE='advisor_lifecycle';
     public function execute(array $cookies,string $operation,string $target,?string $capability=null,?string $targetPrecondition=null):array
+    {return $this->perform($cookies,$operation,$target,$capability,$targetPrecondition);}
+    public function executePrivileged(array $cookies,string $caseId,string $proofId,string $rawProof):array
+    {
+        if($this->masterCases===null)throw new RuntimeException('master_composition_required');
+        [$operation,$target,$capability]=$this->masterCases->command($caseId);
+        return $this->perform($cookies,$operation,$target,$capability,null,[$caseId,$proofId,$rawProof]);
+    }
+    private function perform(array $cookies,string $operation,string $target,?string $capability,?string $targetPrecondition,?array $privileged=null):array
     {
         if(!in_array($operation,['register','appoint_master','remove_master','suspend','reactivate','grant','revoke','delegate','revoke_delegation'],true))throw new RuntimeException('governance_invalid_operation');
         $hasCapability=in_array($operation,['grant','revoke','delegate','revoke_delegation'],true);
@@ -53,6 +62,7 @@ final class InternalGovernanceService
             }
             if($t&&$t['governance_class']==='DIRECTOR'&&!in_array($operation,['grant','revoke'],true))throw new RuntimeException('governance_director_protected');
             if($lifecycleOnly&&$t['status']!==($operation==='suspend'?'ACTIVE':'SUSPENDED'))throw new RuntimeException('governance_conflict');
+            $masterCase=$privileged===null?null:$this->masterCases->consume($this->pdo,$session,...[...$privileged,$operation,$target,$capability]);
             if($operation==='register'){
                 if($t||$accounts[$target]!=='active')throw new RuntimeException('governance_conflict');
                 $this->pdo->prepare("INSERT INTO internal_staff(account_id,governance_class,status) VALUES(?,'ADVISOR','ACTIVE')")->execute([$target]);
@@ -83,9 +93,10 @@ final class InternalGovernanceService
             }
             $s=$this->pdo->prepare('SELECT governance_class,status FROM internal_staff WHERE account_id=?');$s->execute([$target]);$after=$s->fetch(PDO::FETCH_ASSOC);
             $writer=new CanonicalAuditWriter(CanonicalAuditPolicyRegistry::canonical(),new CanonicalAuditMetadataSanitizer(),new TrustedAuditContextValidator(),new RandomAuditUuidProvider(),new SystemAuditUtcClock(),new HmacSha256AuditIpHasher(new EnvironmentAuditSecretProvider()),new CoarseAuditUserAgentSummarizer(),new JoinedPdoCanonicalAuditTransactionAdapter($this->pdo),new CanonicalAuditSealer(new CanonicalAuditSerializer()),new AuditV1PhysicalMapper());
-            $context=TrustedAuditContext::fromServer($actor,'account',$a['governance_class'],'internal_governance',$this->uuid(),$this->uuid(),(string)$session->session()->sessionId(),null,null,'ADMIN','internal-governance/'.$operation);
-            $writer->append(new CanonicalAuditEventInput('INTERNAL_GOVERNANCE_CHANGED','SUCCESS','ADMIN_DECISION','account',$actor,'internal_staff',$target,['operation'=>$operation,'target_account_id'=>$target,'capability'=>$capability,'before'=>$t,'after'=>$after]),$context);
-            if(!$this->pdo->commit())throw new RuntimeException('governance_commit_failed');return ['account_id'=>$target,...$after];
+            $context=TrustedAuditContext::fromServer($actor,'account',$a['governance_class'],'internal_governance',$this->uuid(),$masterCase['operation_id']??$this->uuid(),(string)$session->session()->sessionId(),null,null,'ADMIN','internal-governance/'.$operation);
+            $auditEvent=$writer->append(new CanonicalAuditEventInput('INTERNAL_GOVERNANCE_CHANGED','SUCCESS','ADMIN_DECISION','account',$actor,'internal_staff',$target,['operation'=>$operation,'target_account_id'=>$target,'capability'=>$capability,'before'=>$t,'after'=>$after]),$context);
+            $result=$masterCase===null?['account_id'=>$target,...$after]:$this->masterCases->finish($this->pdo,$masterCase,$after,(string)$auditEvent->value('event_id'));
+            if(!$this->pdo->commit())throw new RuntimeException('governance_commit_failed');return $result;
         }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
     private function uuid():string{return (new RandomAuditUuidProvider())->generateCanonicalUuid();}

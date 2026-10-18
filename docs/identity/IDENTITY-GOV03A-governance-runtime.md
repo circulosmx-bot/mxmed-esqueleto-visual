@@ -134,3 +134,7 @@ La contención clínica y la política de contactos profesionales ordinarios no 
 ## Extensión propuesta Master — ASE-INT03B-PREP01
 
 [Contrato dirigido](ASE-INT03B-PREP01-master-privileged-authorization.md): MFA y casos actuales no autorizan nombramientos Master. Propone seis operaciones exactas y contexto staff tipado en casos existentes, conservando intactos ownership/recovery, enrollment y evidencia externa. Registra composición transaccional pendiente, límite SQL/Valkey y CHECKs no acumulativos de paquetes posteriores. No ejecuta migraciones ni amplía autoridad o ceremonias reales; no sucede las autorizaciones operacionales pendientes de este documento.
+
+## Extensión Master implementada — ASE-INT03B-IMP01
+
+[Contrato sucesor](ASE-INT03B-IMP01-master-security-foundation.md): variante staff tipada y seis operaciones Director-only en emisión, verificación y consumo MFA. Reutiliza seguridad canónica y writer; no modifica ceremonias de enrollment ni autoridades clínicas. Check final de sesión después de locks/proof y antes de mutación; no atomicidad SQL/Valkey. Migración aditiva ensayada en infraestructura nueva; ruta histórica ACT02 con correcciones → ACT03 bloqueada sin modificar datos. No activación operacional.

@@ -1,0 +1,1562 @@
+{
+  "result": "PASS",
+  "error": null,
+  "source_baseline": "e71f3618772ff652a40bb597d45c199d5e851d75",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Canonical strict writer native transaction",
+      "pass": true
+    },
+    {
+      "name": "director authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap director",
+      "pass": true
+    },
+    {
+      "name": "master authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap master",
+      "pass": true
+    },
+    {
+      "name": "Union derived from versioned sources",
+      "pass": true
+    },
+    {
+      "name": "A final effective CHECK union",
+      "pass": true
+    },
+    {
+      "name": "A existing rows audit FK indexes preserved",
+      "pass": true
+    },
+    {
+      "name": "A CHECK FIRST_DIRECTOR_BOOTSTRAP",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INITIAL_OWNER",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "A CHECK INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "A CHECK MFA_RECOVERY",
+      "pass": true
+    },
+    {
+      "name": "A CHECK OWNER_REMOVAL",
+      "pass": true
+    },
+    {
+      "name": "A CHECK OWNER_REPLACEMENT",
+      "pass": true
+    },
+    {
+      "name": "A CHECK PHYSICIAN_AUTHORITY_CHANGE",
+      "pass": true
+    },
+    {
+      "name": "A CHECK PHYSICIAN_ENROLLMENT_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "A CHECK PHYSICIAN_EVIDENCE_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "A CHECK PROFESSIONAL_SOURCE_PROVISION",
+      "pass": true
+    },
+    {
+      "name": "A CHECK PUBLIC_PROFILE_CORRECTION_APPLY",
+      "pass": true
+    },
+    {
+      "name": "A CHECK PUBLIC_PROFILE_CORRECTION_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "A unknown is CHECK denied",
+      "pass": true
+    },
+    {
+      "name": "A CHECK UNKNOWN_OPERATION",
+      "pass": true
+    },
+    {
+      "name": "A FK and CHECK enforcement on",
+      "pass": true
+    },
+    {
+      "name": "B final effective CHECK union",
+      "pass": true
+    },
+    {
+      "name": "B existing rows audit FK indexes preserved",
+      "pass": true
+    },
+    {
+      "name": "B CHECK FIRST_DIRECTOR_BOOTSTRAP",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INITIAL_OWNER",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "B CHECK INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "B CHECK MFA_RECOVERY",
+      "pass": true
+    },
+    {
+      "name": "B CHECK OWNER_REMOVAL",
+      "pass": true
+    },
+    {
+      "name": "B CHECK OWNER_REPLACEMENT",
+      "pass": true
+    },
+    {
+      "name": "B CHECK PHYSICIAN_AUTHORITY_CHANGE",
+      "pass": true
+    },
+    {
+      "name": "B CHECK PHYSICIAN_ENROLLMENT_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "B CHECK PHYSICIAN_EVIDENCE_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "B CHECK PROFESSIONAL_SOURCE_PROVISION",
+      "pass": true
+    },
+    {
+      "name": "B CHECK PUBLIC_PROFILE_CORRECTION_APPLY",
+      "pass": true
+    },
+    {
+      "name": "B CHECK PUBLIC_PROFILE_CORRECTION_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "B unknown is CHECK denied",
+      "pass": true
+    },
+    {
+      "name": "B CHECK UNKNOWN_OPERATION",
+      "pass": true
+    },
+    {
+      "name": "B FK and CHECK enforcement on",
+      "pass": true
+    },
+    {
+      "name": "C ACT03 mismatch observed",
+      "pass": true
+    },
+    {
+      "name": "C final effective CHECK union",
+      "pass": true
+    },
+    {
+      "name": "C existing rows audit FK indexes preserved",
+      "pass": true
+    },
+    {
+      "name": "C CHECK FIRST_DIRECTOR_BOOTSTRAP",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INITIAL_OWNER",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "C CHECK INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "C CHECK MFA_RECOVERY",
+      "pass": true
+    },
+    {
+      "name": "C CHECK OWNER_REMOVAL",
+      "pass": true
+    },
+    {
+      "name": "C CHECK OWNER_REPLACEMENT",
+      "pass": true
+    },
+    {
+      "name": "C CHECK PHYSICIAN_AUTHORITY_CHANGE",
+      "pass": true
+    },
+    {
+      "name": "C CHECK PHYSICIAN_ENROLLMENT_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "C CHECK PHYSICIAN_EVIDENCE_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "C CHECK PROFESSIONAL_SOURCE_PROVISION",
+      "pass": true
+    },
+    {
+      "name": "C CHECK PUBLIC_PROFILE_CORRECTION_APPLY",
+      "pass": true
+    },
+    {
+      "name": "C CHECK PUBLIC_PROFILE_CORRECTION_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "C unknown is CHECK denied",
+      "pass": true
+    },
+    {
+      "name": "C CHECK UNKNOWN_OPERATION",
+      "pass": true
+    },
+    {
+      "name": "C FK and CHECK enforcement on",
+      "pass": true
+    },
+    {
+      "name": "D ACT03 incompatible correction upgrade stops without row changes",
+      "pass": true
+    },
+    {
+      "name": "E ACT03 mismatch observed",
+      "pass": true
+    },
+    {
+      "name": "E final effective CHECK union",
+      "pass": true
+    },
+    {
+      "name": "E existing rows audit FK indexes preserved",
+      "pass": true
+    },
+    {
+      "name": "E CHECK FIRST_DIRECTOR_BOOTSTRAP",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INITIAL_OWNER",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "E CHECK INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "E CHECK MFA_RECOVERY",
+      "pass": true
+    },
+    {
+      "name": "E CHECK OWNER_REMOVAL",
+      "pass": true
+    },
+    {
+      "name": "E CHECK OWNER_REPLACEMENT",
+      "pass": true
+    },
+    {
+      "name": "E CHECK PHYSICIAN_AUTHORITY_CHANGE",
+      "pass": true
+    },
+    {
+      "name": "E CHECK PHYSICIAN_ENROLLMENT_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "E CHECK PHYSICIAN_EVIDENCE_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "E CHECK PROFESSIONAL_SOURCE_PROVISION",
+      "pass": true
+    },
+    {
+      "name": "E CHECK PUBLIC_PROFILE_CORRECTION_APPLY",
+      "pass": true
+    },
+    {
+      "name": "E CHECK PUBLIC_PROFILE_CORRECTION_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "E unknown is CHECK denied",
+      "pass": true
+    },
+    {
+      "name": "E CHECK UNKNOWN_OPERATION",
+      "pass": true
+    },
+    {
+      "name": "E FK and CHECK enforcement on",
+      "pass": true
+    },
+    {
+      "name": "appoint canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Appointment creates no implicit powers",
+      "pass": true
+    },
+    {
+      "name": "Duplicate execution consumes once",
+      "pass": true
+    },
+    {
+      "name": "Challenge replay",
+      "pass": true
+    },
+    {
+      "name": "manage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "delegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "unmanage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Management revoke retains delegation",
+      "pass": true
+    },
+    {
+      "name": "manage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "undelegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "delegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "remove canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Demotion preserves operational grants and state",
+      "pass": true
+    },
+    {
+      "name": "Normal product review source fails closed",
+      "pass": true
+    },
+    {
+      "name": "Review UNKNOWN",
+      "pass": true
+    },
+    {
+      "name": "Review PENDING",
+      "pass": true
+    },
+    {
+      "name": "Review REJECTED",
+      "pass": true
+    },
+    {
+      "name": "Wrong review account",
+      "pass": true
+    },
+    {
+      "name": "Wrong review credential version",
+      "pass": true
+    },
+    {
+      "name": "master cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "master cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "master cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "master cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "master cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "master cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "advisor cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "advisor cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "advisor cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "advisor cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "advisor cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "advisor cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "target cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "target cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "target cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "target cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "target cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "target cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "suspended cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "suspended cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "suspended cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "suspended cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "suspended cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "suspended cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "disabled cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "disabled cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "disabled cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "disabled cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "disabled cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "disabled cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "changed cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "changed cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "changed cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "changed cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "changed cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "changed cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "revoked cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "revoked cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "revoked cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "revoked cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "revoked cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "revoked cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "expired cannot open INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "expired cannot open INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "expired cannot open INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "expired cannot open INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "expired cannot open INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "expired cannot open INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "Target ineligible qa_director",
+      "pass": true
+    },
+    {
+      "name": "Target ineligible qa_outsider",
+      "pass": true
+    },
+    {
+      "name": "Target ineligible qa_nonexistent",
+      "pass": true
+    },
+    {
+      "name": "Target ineligible qa_suspended_target",
+      "pass": true
+    },
+    {
+      "name": "Target ineligible qa_disabled_target",
+      "pass": true
+    },
+    {
+      "name": "Wrong Director password",
+      "pass": true
+    },
+    {
+      "name": "Wrong intent digest",
+      "pass": true
+    },
+    {
+      "name": "Review changed after preview",
+      "pass": true
+    },
+    {
+      "name": "expired_case denied",
+      "pass": true
+    },
+    {
+      "name": "expired_case no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "expired_case proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "expired_proof denied",
+      "pass": true
+    },
+    {
+      "name": "expired_proof no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "expired_proof proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "expired_reauth denied",
+      "pass": true
+    },
+    {
+      "name": "expired_reauth no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "expired_reauth proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "revoked_factor denied",
+      "pass": true
+    },
+    {
+      "name": "revoked_factor no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "revoked_factor proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_proof denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_proof no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_proof proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_operation denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_operation no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_operation proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_target denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_target no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_target proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_case denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_case no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_case proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_digest denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_digest no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_digest proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_session denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_session no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_session proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "wrong_version denied",
+      "pass": true
+    },
+    {
+      "name": "wrong_version no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "wrong_version proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "audit_failure denied",
+      "pass": true
+    },
+    {
+      "name": "audit_failure no effective mutation",
+      "pass": true
+    },
+    {
+      "name": "audit_failure proof and case rollback",
+      "pass": true
+    },
+    {
+      "name": "appoint canonical case result",
+      "pass": true
+    },
+    {
+      "name": "manage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "delegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "No management increase activeSUSPENDED",
+      "pass": true
+    },
+    {
+      "name": "No delegation increase activeSUSPENDED",
+      "pass": true
+    },
+    {
+      "name": "unmanage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "undelegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "remove canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Reduction never reactivates activeSUSPENDED",
+      "pass": true
+    },
+    {
+      "name": "appoint canonical case result",
+      "pass": true
+    },
+    {
+      "name": "manage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "delegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "No management increase disabledACTIVE",
+      "pass": true
+    },
+    {
+      "name": "No delegation increase disabledACTIVE",
+      "pass": true
+    },
+    {
+      "name": "unmanage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "undelegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "remove canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Reduction never reactivates disabledACTIVE",
+      "pass": true
+    },
+    {
+      "name": "appoint canonical case result",
+      "pass": true
+    },
+    {
+      "name": "manage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "delegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "No management increase disabledSUSPENDED",
+      "pass": true
+    },
+    {
+      "name": "No delegation increase disabledSUSPENDED",
+      "pass": true
+    },
+    {
+      "name": "unmanage canonical case result",
+      "pass": true
+    },
+    {
+      "name": "undelegate canonical case result",
+      "pass": true
+    },
+    {
+      "name": "remove canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Reduction never reactivates disabledSUSPENDED",
+      "pass": true
+    },
+    {
+      "name": "Race target suspended",
+      "pass": true
+    },
+    {
+      "name": "Race target promoted",
+      "pass": true
+    },
+    {
+      "name": "Race actor suspended",
+      "pass": true
+    },
+    {
+      "name": "Race credential rotated",
+      "pass": true
+    },
+    {
+      "name": "Race review version changed",
+      "pass": true
+    },
+    {
+      "name": "Advisor grants API regression",
+      "pass": true
+    },
+    {
+      "name": "Advisor lifecycle suspend",
+      "pass": true
+    },
+    {
+      "name": "Advisor lifecycle reactivate",
+      "pass": true
+    },
+    {
+      "name": "UI/catalog preserved assets/js/internal-team.js",
+      "pass": true
+    },
+    {
+      "name": "UI/catalog preserved assets/js/internal-team-editor.js",
+      "pass": true
+    },
+    {
+      "name": "UI/catalog preserved partials/identity/internal-team.php",
+      "pass": true
+    },
+    {
+      "name": "UI/catalog preserved modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "name": "No external notification",
+      "pass": true
+    },
+    {
+      "name": "Production eligibility cannot consume synthetic approved review",
+      "pass": true
+    },
+    {
+      "name": "MFA issuance director only MASTER_ADMIN",
+      "pass": true
+    },
+    {
+      "name": "MFA issuance director only ADVISOR",
+      "pass": true
+    },
+    {
+      "name": "MFA verification director only MASTER_ADMIN",
+      "pass": true
+    },
+    {
+      "name": "MFA verification director only ADVISOR",
+      "pass": true
+    },
+    {
+      "name": "MFA consumption director only MASTER_ADMIN",
+      "pass": true
+    },
+    {
+      "name": "MFA consumption director only ADVISOR",
+      "pass": true
+    },
+    {
+      "name": "No implicit MFA enrollment",
+      "pass": true
+    },
+    {
+      "name": "Expired challenge rejected",
+      "pass": true
+    },
+    {
+      "name": "TOTP invalid attempt 1",
+      "pass": true
+    },
+    {
+      "name": "TOTP invalid attempt 2",
+      "pass": true
+    },
+    {
+      "name": "TOTP invalid attempt 3",
+      "pass": true
+    },
+    {
+      "name": "TOTP invalid attempt 4",
+      "pass": true
+    },
+    {
+      "name": "TOTP invalid attempt 5",
+      "pass": true
+    },
+    {
+      "name": "MFA attempts persisted",
+      "pass": true
+    },
+    {
+      "name": "Factor lock denies valid TOTP",
+      "pass": true
+    },
+    {
+      "name": "appoint canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Exact capability challenge digest binding",
+      "pass": true
+    },
+    {
+      "name": "management granted concurrently denies stale proof",
+      "pass": true
+    },
+    {
+      "name": "delegation granted concurrently denies stale proof",
+      "pass": true
+    },
+    {
+      "name": "remove canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Concurrent duplicate has exactly one commit",
+      "pass": true
+    },
+    {
+      "name": "remove canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Logout before final authority check denies",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive FIRST_DIRECTOR_BOOTSTRAP",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive INITIAL_OWNER",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive MFA_RECOVERY",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive OWNER_REMOVAL",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive OWNER_REPLACEMENT",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive PHYSICIAN_AUTHORITY_CHANGE",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive PHYSICIAN_ENROLLMENT_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive PHYSICIAN_EVIDENCE_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive PROFESSIONAL_SOURCE_PROVISION",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive PUBLIC_PROFILE_CORRECTION_APPLY",
+      "pass": true
+    },
+    {
+      "name": "Historical MFA primitive PUBLIC_PROFILE_CORRECTION_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "appoint canonical case result",
+      "pass": true
+    },
+    {
+      "name": "Director master HTTP CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Master HTTP no-store no CORS",
+      "pass": true
+    },
+    {
+      "name": "HTTP authority None",
+      "pass": true
+    },
+    {
+      "name": "HTTP authority master",
+      "pass": true
+    },
+    {
+      "name": "HTTP authority advisor",
+      "pass": true
+    },
+    {
+      "name": "HTTP authority disabled",
+      "pass": true
+    },
+    {
+      "name": "HTTP authority revoked",
+      "pass": true
+    },
+    {
+      "name": "HTTP transport CSRF dict_keys(['Origin'])",
+      "pass": true
+    },
+    {
+      "name": "HTTP transport CSRF dict_keys(['Origin'])",
+      "pass": true
+    },
+    {
+      "name": "HTTP transport CSRF dict_keys(['Sec-Fetch-Site'])",
+      "pass": true
+    },
+    {
+      "name": "HTTP transport CSRF dict_keys(['X-CSRF-Token'])",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 296",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 297",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 298",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 299",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 300",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 301",
+      "pass": true
+    },
+    {
+      "name": "HTTP closed JSON 302",
+      "pass": true
+    },
+    {
+      "name": "HTTP method GET",
+      "pass": true
+    },
+    {
+      "name": "HTTP method HEAD",
+      "pass": true
+    },
+    {
+      "name": "HTTP method PUT",
+      "pass": true
+    },
+    {
+      "name": "HTTP method DELETE",
+      "pass": true
+    },
+    {
+      "name": "PHP payload bounded before transport parsing",
+      "pass": true
+    },
+    {
+      "name": "HTTP JSON media type",
+      "pass": true
+    },
+    {
+      "name": "HTTP exact case opened",
+      "pass": true
+    },
+    {
+      "name": "GET case returns current intent",
+      "pass": true
+    },
+    {
+      "name": "GET case returns current intent",
+      "pass": true
+    },
+    {
+      "name": "GET leaves case MFA and audit unchanged",
+      "pass": true
+    },
+    {
+      "name": "HTTP wrong password denies",
+      "pass": true
+    },
+    {
+      "name": "HTTP canonical password and challenge",
+      "pass": true
+    },
+    {
+      "name": "HTTP exact TOTP proof",
+      "pass": true
+    },
+    {
+      "name": "HTTP one command commits",
+      "pass": true
+    },
+    {
+      "name": "Lost ACK reconciles exact case and audit",
+      "pass": true
+    },
+    {
+      "name": "HTTP replay no second mutation",
+      "pass": true
+    },
+    {
+      "name": "HTTP cannot select test eligibility",
+      "pass": true
+    },
+    {
+      "name": "Master default gate off despite Advisor gate on",
+      "pass": true
+    }
+  ],
+  "check_count": 321,
+  "concurrency": [
+    {
+      "name": "target suspended",
+      "independent_connections": true,
+      "observed_lock_waits": [
+        [
+          7915,
+          7914
+        ]
+      ],
+      "denied": true
+    },
+    {
+      "name": "target promoted",
+      "independent_connections": true,
+      "observed_lock_waits": [
+        [
+          7932,
+          7931
+        ]
+      ],
+      "denied": true
+    },
+    {
+      "name": "actor suspended",
+      "independent_connections": true,
+      "observed_lock_waits": [
+        [
+          7949,
+          7948
+        ]
+      ],
+      "denied": true
+    },
+    {
+      "name": "credential rotated",
+      "independent_connections": true,
+      "observed_lock_waits": [
+        [
+          7968,
+          7967
+        ]
+      ],
+      "denied": true
+    },
+    {
+      "name": "review version changed",
+      "independent_connections": true,
+      "observed_lock_waits": [
+        [
+          7997,
+          7996
+        ]
+      ],
+      "denied": true
+    },
+    {
+      "name": "management granted concurrently",
+      "observed_lock_waits": [
+        [
+          8145,
+          8144
+        ]
+      ],
+      "independent_connections": true,
+      "denied": true
+    },
+    {
+      "name": "delegation granted concurrently",
+      "observed_lock_waits": [
+        [
+          8159,
+          8158
+        ]
+      ],
+      "independent_connections": true,
+      "denied": true
+    },
+    {
+      "name": "duplicate proof execution",
+      "observed_lock_waits": [
+        [
+          8185,
+          8184
+        ],
+        [
+          8186,
+          8184
+        ],
+        [
+          8186,
+          8185
+        ]
+      ],
+      "independent_connections": true,
+      "effective_mutations": 1
+    },
+    {
+      "name": "canonical Valkey logout before final check",
+      "observed_lock_waits": [
+        [
+          8211,
+          8210
+        ]
+      ],
+      "independent_connections": true,
+      "denied": true,
+      "sql_valkey_atomicity_claimed": false
+    }
+  ],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseint03b_1c5d9a611e",
+    "new_datadir": "/tmp/mxmed-ase-int03b-da1ewhy_/mysql",
+    "mysql_port": 50027,
+    "valkey_port": 50028,
+    "php_port": 50029,
+    "tls_origin": "https://127.0.0.1:50030",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": true,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_still_read_only": false,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "ed3469b891ccfb84421a218d0394d34d30a0bf701adaaf2c79c7ebf77a4f1957",
+    "modules/identity/Team/MutationHttp.php": "0e0ef1e18bbe3165f795da6264e9dba682228219038e1e900b61a99bbb7fdaf1",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "862ff7c609c1f5bcea537e3f3f8ef35c7d91b6b0cb14d544c983bfd95a3b66d1",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "24acd071dffe0f2dbf6855efc2ccbf79b0c7a06a20681923f86c855e7256711d",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71",
+    "modules/identity/http/CanonicalHttpSessionResolver.php": "633051263883e5be65253a514669c41cc8e4da03457284b302c6d62ffe63b0c6",
+    "modules/identity/http/IdentityHttpComposition.php": "f89f04948b37963dd2ca4d5beb166e44ca6a526e3afa01ae5499c12478e0c2ec",
+    "modules/identity/http/CsrfTokenService.php": "011137a07c9412f0210fabef34a378855c9d8ba8c055c3e773d94651a66b82ec",
+    "modules/identity/http/GovernanceTransport.php": "74daa4265765fe32e6294f8803f0f4bf192a0c3f80a3105d482e68d1d97a9459",
+    "modules/identity/Team/ReadService.php": "1dcbf75462246748a304e7bdf2d82a8ec3ff63919584b0f1c619a95ab9c37627",
+    "modules/identity/MasterGovernance/Policy.php": "5d831930c50c105728645aa2527733564122f631bfd6a6e2bbb0076f16026d16",
+    "modules/identity/MasterGovernance/Http.php": "e6abeae1eecdb544250ca41028efc6dce5971815884e38719da0fbff262bd92f",
+    "modules/identity/MasterGovernance/Composition.php": "df4e7a784777fc4dfce0530c10bcce6787d1c821f3772a8813e146c9f9d05fe7",
+    "modules/identity/MasterGovernance/Cases.php": "699647cde993a274021dcd3159f549ff1ee4ab587a94f0c1accff276d2dd4b8e",
+    "api/internal/team/master/execute.php": "43cb9d7a71e4055e13f2fade09845fa141b0b5b48d05248e5ac7a8b437a69660",
+    "api/internal/team/master/cancel.php": "510f119c880ddc4a54f4c8b0a90430f35c7175ebbbfc7594b5909c4beddd6445",
+    "api/internal/team/master/expire.php": "cf74e04fea06890a7627acaec3e02aac0f7141fb64bc55c0b20673075249c093",
+    "api/internal/team/master/csrf.php": "e5118b9b23afc1c513cfa293e7164007949128c942df4fd3dee45ceb677b34e6",
+    "api/internal/team/master/confirm.php": "a69781ee5d71b65684dc73f10a15c2df1225d4a29c567e41f225e9d920b4aa33",
+    "api/internal/team/master/read.php": "036ebb71d575ebf2e39a2d8cbb879d1ce597e3f80f38bc222d944c041c7a69e8",
+    "api/internal/team/master/open.php": "775b8914c804a5126500b6bca925ede7f58a19b6e2d4e5c64834e25f7260d752",
+    "api/internal/team/master/verify.php": "1c6bb7ed1e557ddcfe0e8bdccc6d84137da653cf56d82a28e489bec0e015f6ce",
+    "modules/identity/contracts/StaffIdentityReviewPort.php": "46cba3eff93cc6802077cedce0b9aee210ced8a81f50ba1ed7406de115ba4192",
+    "modules/identity/contracts/StaffIdentityReviewSnapshot.php": "e93f8d3635adca117355033c57ec271e997400519b63a25db90232856e2ffb9b",
+    "modules/identity/adapters/UnavailableStaffIdentityReview.php": "f73c64f9bcb59b4869b2ab67688e8cd027f81281f9f4ff0e9874ec9b66dcdb3a",
+    "modules/identity/services/StaffMfaService.php": "89a78b6ddfff3df5552d0dc13ceb2171d439810a6f14dc2ea788d65f8d363e2f",
+    "modules/identity/services/SessionService.php": "774bbf46676012a8f07f737977d2619595c5ab5370849a9eae132318177ccb8b",
+    "modules/identity/services/GovernanceRuntime.php": "513c6f369881cc5b3a67f7eafe1725b6daaf0f13e0cad50f762ad69cd994f093",
+    "modules/identity/services/GovernanceCaseSecurity.php": "f0b7f02968c8b9d9d8b6f2901c77f37f821abe5ba84f0bafdd14a2bcddc9e275",
+    "modules/identity/tests/MasterGovernanceFixture.php": "9fca88df3828b59d929bd5a3e905d7436f5bfb2a3d86ebd02ce291dc4431f21d",
+    "modules/identity/db/migrations/2026_10_18_01_internal_master_governance_operations.sql": "62510c1e36eec8327f3e97c94918df9a862bc6a0197d324d5929a61b3a37def1",
+    "scripts/ase-int03b-qa.py": "49237a5dd5b5089e86f5dadfa0afdda4c0dae690faa983054094b728ed892e4d",
+    "scripts/ase-int03b-extra-qa.py": "88d2b5aea05759f2c510c8d9b99605a9fd3c503c6f2c05c00a06b6202c2ed25a",
+    "scripts/ase-int03b-router.php": "cea8c3d96e97017b05aa44d9927afe31e83852295fa2461b52949888aa1528ab"
+  }
+}

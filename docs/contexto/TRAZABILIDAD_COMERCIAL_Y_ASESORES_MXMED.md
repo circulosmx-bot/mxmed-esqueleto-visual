@@ -223,3 +223,7 @@ Sucede frases previas «checklist/gestión sin adapter gráfico» sólo para lec
 ## COM-10 — preparación de gobierno Master
 
 [ASE-INT03B-PREP01](../identity/ASE-INT03B-PREP01-master-privileged-authorization.md) define seguridad propuesta para designación, management y delegación exacta; conserva uso independiente. Democión existente revoca gestión/delegaciones, preserva grants operativos, estado staff e historia. No implementa HTTP/UI Master ni atribución, comisiones, cartera o decisiones D01–D08; siete políticas ADM pendientes. Contexto documental, no activación.
+
+## COM-10 — sucesor backend Master ASE-INT03B-IMP01
+
+[Fundación](../identity/ASE-INT03B-IMP01-master-security-foundation.md) implementa gobierno Director-only y preserva democión sin borrar atribución/historia/grants operativos. No resuelve D06 ni cambia D01–D08, cartera, comisiones o las siete políticas ADM. Identidad interna autoritativa sigue pendiente; UI y operación real no habilitadas.
