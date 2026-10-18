@@ -104,6 +104,8 @@ La confirmación pertenece a `ProcessStripeSubscriptionWebhookService`; la activ
 
 ## J09 — Media privada, revisión y proyección
 
+**Referencia ASE-ADM01, sin ampliar el consumer:** [contrato de perfil/admisión interna](../identity/ASE-ADM01-staff-admission-personal-profile.md) propone retrato staff independiente de evidencia, no publicación automática. Reusa patrones de validación/orientación/re-encoding y almacenamiento/lectura privados sólo tras definir propósito, namespace, retención y autoridad propios. El writer de foto médica publica; cifrado/reader C4 están ligados al ámbito médico. Ningún grant Media/C4 autoriza revisar IDs staff por sí mismo. No cambia J09 ni conecta nuevo writer/reader; sólo UI sintética en el prototipo existente.
+
 **Cadena.** Foto/galería/logo original → [profile-photo.js](../../assets/js/profile-photo.js), [fotos.js](../../assets/js/fotos.js), intake candidato → [APIs Media](../../api/media/) → identidad/scope/CSRF y validación MIME/tamaño → [ProfilePhotoReviewCandidateService](../../modules/media/services/ProfilePhotoReviewCandidateService.php) / [GalleryReviewCandidateService](../../modules/media/services/GalleryReviewCandidateService.php) / [PhysicianLogoReviewCandidateService](../../modules/media/services/PhysicianLogoReviewCandidateService.php) → [MediaAssetsRepository](../../modules/media/repositories/MediaAssetsRepository.php) + storage privado; [MediaCandidateSubmissionService](../../modules/media/services/MediaCandidateSubmissionService.php) registra submission/audit.
 
 **Vía directa distinta.** Los endpoints directos photo/gallery y [DoctorProfilePhotoService](../../modules/media/services/DoctorProfilePhotoService.php)/[DoctorGalleryService](../../modules/media/services/DoctorGalleryService.php) aún usan `PublicMediaStoragePort` y assets públicos READY. No son equivalentes al intake privado de revisión usado por la UI nueva; ambas rutas fuente se conservan y deben evaluarse por separado.
@@ -125,6 +127,8 @@ Cobrar un plan MXMED por Stripe no timbra un CFDI al paciente. SW es PAC primari
 <a id="j11-notificación-qr-y-acción-remota"></a>
 
 ## J11 — Notificación, QR y acción remota
+
+**Referencia ASE-ADM01:** la futura autocompletación staff preautorizada necesita propósito propio, destinatario/solicitud exactos, expiración/revocación/aceptación única, matching autenticado y acceso posterior por cuenta/ámbito, no por el enlace solo. [Contrato](../identity/ASE-ADM01-staff-admission-personal-profile.md) identifica el primer handoff ausente: los tokens/notificaciones actuales de email/recovery/operador no constituyen invitación/admisión staff. No se envían invitaciones ni se implementa token/endpoint en esta extensión estática.
 
 Traza detallada [F11](INTERACCIONES_CLINICAS_MXMED.md#f11): emisor autorizado → token/session acotado → entrega/presentación QR → dispositivo receptor con token propio → validación de propósito/estado/TTL → bytes/acción permitida → consumo/expiración/revocación → polling/read model del emisor.
 

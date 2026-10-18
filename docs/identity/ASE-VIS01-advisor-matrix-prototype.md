@@ -1,5 +1,15 @@
 # ASE-VIS01 R2 — prototipo reversible del equipo interno
 
+## ASE-ADM01 — perfil personal y revisión interna, misma superficie
+
+**Sucesor acotado, 2026-10-17, inicio `bee02e51`:** [contrato único de incorporación y acreditación interna del asesor](ASE-ADM01-staff-admission-personal-profile.md) refina Persona → Categoría → Permisos → Revisión y añade solicitudes/preview propio dentro del mismo workspace. Conserva directorio izquierdo/detalle derecho, Masters, catálogo y matriz únicos; **CONDICIONES COMERCIALES** se reutiliza. R2 sigue aprobado; ASE-COM01 y estas adiciones tienen revisiones visuales pendientes separadas. No se atribuye nueva aceptación física Safari.
+
+El diccionario y el caso propuestos separan preparación asistida, confirmación personal, cuenta/verificación de contactos, revisión de evidencia, admisión, acceso staff, grants, MFA y condiciones comerciales. Retrato interno independiente del documento; miniatura/header con nombre y contactos ficticios, estados de revisión/acceso distintos. Secciones contraíbles **DATOS PERSONALES**, **IDENTIDAD Y DOCUMENTACIÓN**, **ACCESO Y FUNCIONES**, **CONDICIONES COMERCIALES**, **HISTORIAL**; solicitudes remotas sólo preautorizadas, sin portal público. Master sólo Advisors dentro de autoridad explícita; no autoaprobación o nombramiento Master. Los rótulos de revisión son UX, sin nuevos enums/keys.
+
+No archivos reales o elegidos por el usuario/cámara: retratos sintéticos y placeholders **DOCUMENTO DE EJEMPLO** empaquetados, sin cargas, endpoints, notificaciones, storage ni evidencia personal real. La autoridad de revisor es simulada y no demuestra protección backend. Identity/gobierno y primitivas privadas existentes se contrastan en el contrato; perfil/caso/token/reviewer/storage de staff y activación siguen desconectados. No usar registros C4/VID/CRD, invitaciones médicas o grants de acreditación profesional para resolverlo. No ASE-INT01 ni cambios D01–D08.
+
+[QA de admisión](../../prototypes/ase-vis01/evidence/adm01/browser/summary.json), [aislamiento](../../prototypes/ase-vis01/evidence/adm01/isolation.json), [enlaces](../../prototypes/ase-vis01/evidence/adm01/context-links.json). Chromium/WebKit en cuatro viewports, fixtures y límites de DOM/teclado declarados en evidencia; Safari físico `NOT_RUN`. R1/R2/COM previos permanecen históricos. Misma URL8140, expiración `2026-10-25T00:00:00Z` y retiro seguro de este contrato. `OPERATIONAL_STATUS=PROTOTYPE_ONLY_NOT_OPERATIONAL`; sólo nuevas superficies ADM requieren aprobación visual, sin reabrir R2 aprobado ni dar por aprobado comercial.
+
 ## ASE-COM01 — aprobación R2 conservada y extensión comercial aislada
 
 **Sucesor vigente, 2026-10-17:** el Director denomina expresamente R2 `d87174774de6526d54082c1b7a770b228c472746` **visualmente aprobado** en ASE-COM01. Se conserva esa aprobación; las menciones anteriores de aprobación R2 pendiente más abajo son historia de su entrega. No se infiere Safari físico ni autorización de integración. Sólo las adiciones comerciales esperan nueva revisión visual.

@@ -11,6 +11,9 @@ import threading
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 ROUTES = {
+    '/admission.js': (HERE / 'admission.js', 'text/javascript; charset=utf-8'),
+    '/admission.css': (HERE / 'admission.css', 'text/css; charset=utf-8'),
+    '/portrait-example.svg': (HERE / 'portrait-example.svg', 'image/svg+xml'),
     '/': (HERE / 'index.html', 'text/html; charset=utf-8'),
     '/style.css': (HERE / 'style.css', 'text/css; charset=utf-8'),
     '/commercial.js': (HERE / 'commercial.js', 'text/javascript; charset=utf-8'),

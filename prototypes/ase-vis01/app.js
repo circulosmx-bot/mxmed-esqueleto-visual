@@ -75,7 +75,7 @@
     let previousFocus=null;
     dialog.addEventListener('keydown',event=>{
       if(event.key!=='Tab')return;
-      const controls=[...dialog.querySelectorAll('button,input,select,[tabindex="0"]')].filter(e=>!e.disabled && !e.hidden && e.getClientRects().length);
+      const controls=[...dialog.querySelectorAll('button,input,select,textarea,[tabindex="0"]')].filter(e=>!e.disabled && !e.hidden && e.getClientRects().length);
       if(!controls.length)return;
       event.preventDefault();const index=controls.indexOf(document.activeElement);
       controls[(index<0?(event.shiftKey?controls.length-1:0):(index+(event.shiftKey?-1:1)+controls.length)%controls.length)].focus();
@@ -122,9 +122,11 @@
       if($('retry-directory'))$('retry-directory').onclick=()=>{directoryState='ready';$('directory-state').value='ready';render();};return;
     }
     const normal=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    const visible=list.filter(m=>normal(m.name).includes(normal(query)));
-    content.innerHTML=visible.length?`<ul class="advisor-list">${visible.map(m=>`<li><button type="button" class="advisor-card" data-member="${m.id}" aria-pressed="${selected.id===m.id}"><span class="avatar" aria-hidden="true">${m.name.split(' ').map(n=>n[0]).join('')}</span><span class="advisor-card-copy"><span class="advisor-name">${esc(m.name)}</span><span class="advisor-meta">${status(m)}<span>${m.grants.size} ${m.grants.size===1?'permiso asignado':'permisos asignados'}${m.requested?` · ${m.requested.size} propuestos`:''}</span></span></span>${selected.id===m.id?'<span class="selection-mark" aria-hidden="true">✓</span>':''}</button></li>`).join('')}</ul>`:list.length?'<div class="empty-state"><strong>Sin resultados.</strong>Prueba con otro nombre.</div>':'<div class="empty-state"><strong>Aún no hay integrantes de esta categoría.</strong></div>';
+    const displayName=m=>window.ASE_VIS01_PRESENTATION_NAMES?.[m.id]||m.name;
+    const visible=list.filter(m=>normal(displayName(m)).includes(normal(query)));
+    content.innerHTML=visible.length?`<ul class="advisor-list">${visible.map(m=>`<li><button type="button" class="advisor-card" data-member="${m.id}" aria-pressed="${selected.id===m.id}"><span class="avatar" aria-hidden="true">${m.name.split(' ').map(n=>n[0]).join('')}</span><span class="advisor-card-copy"><span class="advisor-name">${esc(displayName(m))}</span><span class="advisor-meta">${status(m)}<span>${m.grants.size} ${m.grants.size===1?'permiso asignado':'permisos asignados'}${m.requested?` · ${m.requested.size} propuestos`:''}</span></span></span>${selected.id===m.id?'<span class="selection-mark" aria-hidden="true">✓</span>':''}</button></li>`).join('')}</ul>`:list.length?'<div class="empty-state"><strong>Sin resultados.</strong>Prueba con otro nombre.</div>':'<div class="empty-state"><strong>Aún no hay integrantes de esta categoría.</strong></div>';
     content.querySelectorAll('[data-member]').forEach(button=>button.onclick=()=>choose(members.find(m=>m.id===button.dataset.member)));
+    document.dispatchEvent(new Event('ase-vis01-directory-rendered'));
   }
   function reason(key,kind,targetCategory=selected.category) {
     if(future.has(key))return 'Sin flujo conectado · sólo lectura';
@@ -234,7 +236,7 @@
   function wizardEligible(key,kind='use') {return available(key,kind==='delegate'?'ADVISOR':wizard.category) && (mode==='director' || (kind==='use' && mode==='master' && active(actor()) && actor().manage && actor().delegations.has(key)));}
   function openWizard() {
     if($('add-member').disabled)return;
-    transition(()=>{wizard={name:'Nora Cedro',email:'nora.cedro@example.test',category:'ADVISOR',scenario:'new',grants:new Set(),delegations:new Set(),manage:false,ack:false};wizardStep=0;renderWizard();showOnboarding();});
+    transition(()=>{wizard={name:'Nora Cedro',surname1:'',surname2:'',admissionPath:'assisted',city:'',email:'nora.cedro@example.test',category:'ADVISOR',scenario:'new',grants:new Set(),delegations:new Set(),manage:false,ack:false};wizardStep=0;renderWizard();showOnboarding();});
   }
   function renderWizard() {
     const content=$('onboarding-content');$('onboarding-feedback').textContent='';
@@ -245,6 +247,12 @@
     if(wizardStep===0){
       content.innerHTML=`<label class="wizard-field" for="member-name">Nombre completo ficticio<input id="member-name" autocomplete="off" maxlength="80" value="${esc(wizard.name)}"></label><label class="wizard-field" for="member-email">Correo ficticio<input id="member-email" type="email" autocomplete="off" maxlength="120" value="${esc(wizard.email)}" aria-describedby="fictional-email-hint"></label><p id="fictional-email-hint" class="group-note">Usa exclusivamente el dominio example.test. Nunca se consulta si una cuenta real existe.</p><label class="wizard-field" for="identity-case">Situación ficticia para revisar<select id="identity-case">${Object.entries(cases).map(([key,value])=>`<option value="${key}" ${wizard.scenario===key?'selected':''}>${value[0]}</option>`).join('')}</select></label>`;
       $('member-name').oninput=e=>{wizard.name=e.target.value;};$('member-email').oninput=e=>{wizard.email=e.target.value;};$('identity-case').onchange=e=>{wizard.scenario=e.target.value;};
+      $('member-name').previousSibling.textContent='Nombre(s) ficticios';
+      content.insertAdjacentHTML('afterbegin',`<p class="admission-note"><strong>INCORPORACIÓN Y ACREDITACIÓN INTERNA DEL ASESOR</strong><br>Propuesta de diseño; no es acreditación médica. Sólo datos ficticios.</p><label class="wizard-field" for="admission-path">Vía de preparación<select id="admission-path"><option value="assisted">Asistida por administrador</option><option value="remote">Remota preautorizada · propuesta sin enviar</option></select></label>`);
+      $('member-name').closest('label').insertAdjacentHTML('afterend',`<div class="admission-fields"><label class="wizard-field" for="admission-first-surname">Primer Apellido · ficticio<input id="admission-first-surname" maxlength="60" autocomplete="off" value="${esc(wizard.surname1)}"></label><label class="wizard-field" for="admission-second-surname">Segundo Apellido · si aplica<input id="admission-second-surname" maxlength="60" autocomplete="off" value="${esc(wizard.surname2)}"></label></div>`);
+      content.insertAdjacentHTML('beforeend',`<label class="wizard-field" for="admission-mobile">Móvil · referencia ficticia<input id="admission-mobile" value="TEL-EJEMPLO" readonly aria-describedby="admission-phone-hint"></label><p class="group-note" id="admission-phone-hint">Sin verificar. No se envían SMS ni se capturan teléfonos reales.</p><label class="wizard-field" for="admission-city">Ciudad / estado · opcional y ficticio<input id="admission-city" maxlength="80" value="${esc(wizard.city)}" placeholder="Ciudad de ejemplo" autocomplete="off"></label><p class="admission-note">La preparación conserva al administrador como autor. La persona deberá confirmar sus datos y aceptaciones; define su propia contraseña mediante Identity. No se envía ninguna invitación.</p>`);
+      $('admission-path').value=wizard.admissionPath;$('admission-path').onchange=e=>{wizard.admissionPath=e.target.value;};
+      $('admission-first-surname').oninput=e=>{wizard.surname1=e.target.value;};$('admission-second-surname').oninput=e=>{wizard.surname2=e.target.value;};$('admission-city').oninput=e=>{wizard.city=e.target.value;};
     }else if(wizardStep===1){
       content.innerHTML=`<label class="wizard-field" for="member-category">Categoría interna<select id="member-category"><option value="ADVISOR">Asesor</option><option value="MASTER_ADMIN" ${mode==='director'?'':'disabled'}>Administrador maestro · sólo Director</option></select></label><p>Una sola incorporación guía identidad, categoría y permisos; la persona define su propia contraseña y aceptación legal. El administrador no las sustituye.</p><p class="pending-notice">Designar un Master requiere confirmación explícita del Director y un futuro contrato de seguridad reforzada. Esta pantalla no lo implementa.</p>`;
       $('member-category').value=wizard.category;$('member-category').onchange=e=>{wizard.category=mode==='director'?e.target.value:'ADVISOR';wizard.ack=false;wizard.grants.forEach(key=>{if(!wizardEligible(key))wizard.grants.delete(key);});if(wizard.category!=='MASTER_ADMIN'){wizard.manage=false;wizard.delegations.clear();}};
@@ -258,14 +266,16 @@
       if($('master-confirm')){$('master-confirm').checked=wizard.ack;$('next-onboarding').disabled=!wizard.ack;$('master-confirm').onchange=e=>{wizard.ack=e.target.checked;$('next-onboarding').disabled=!wizard.ack;};}
     }
     $('onboarding-title').textContent=`Agregar integrante · paso ${wizardStep+1} de 4`;
+    if(wizardStep===3)content.insertAdjacentHTML('beforeend',`<p class="admission-note">Vía: ${wizard.admissionPath==='remote'?'remota preautorizada propuesta, sin enviar':'preparación asistida'}. Los apellidos y datos preparados requieren confirmación personal. Revisión de identidad, admisión, relación staff, permisos y MFA se resolverán por separado. Una solicitud no activa acceso.</p>`);
   }
   function nextWizard() {
     if(wizardStep===0 && (!wizard.name.trim() || !/^[^\s@]+@example\.test$/i.test(wizard.email))){$('onboarding-feedback').textContent='Escribe un nombre ficticio y un correo del dominio example.test.';return;}
     if(wizardStep<3){wizardStep++;renderWizard();$('onboarding-title').focus();return;}
     if(wizard.category==='MASTER_ADMIN' && (mode!=='director' || !wizard.ack))return;
     if(wizard.scenario==='duplicate'){$('onboarding-feedback').textContent=cases.duplicate[2];return;}
-    const entry=fixture(`proposed-${++sequence}`,wizard.name.trim(),null,[],wizard.category);
+    const entry=fixture(`proposed-${++sequence}`,[wizard.name,wizard.surname1,wizard.surname2].map(v=>v.trim()).filter(Boolean).join(' '),null,[],wizard.category);
     entry.stage=cases[wizard.scenario][1];entry.pendingMessage=cases[wizard.scenario][2];entry.requested=new Set(wizard.grants);entry.proposedDelegations=new Set(wizard.delegations);entry.proposedManagement=wizard.manage;entry.events=['Incorporación propuesta; sin activación ni entrega de mensajes.'];
+    document.dispatchEvent(new CustomEvent('ase-vis01-admission-proposed',{detail:{id:entry.id,name:entry.name,given:wizard.name,first:wizard.surname1,second:wizard.surname2,email:wizard.email,city:wizard.city,path:wizard.admissionPath,scenario:wizard.scenario,category:wizard.category,requested:[...wizard.grants],inviter:mode==='director'?'Dirección ficticia':'Lucía Castaño · Master ficticia'}}));
     members.push(entry);selected=entry;category=entry.category;query='';$('advisor-search').value='';resetDraft();render();mobileView('detail');onboarding.close();say(`Solicitud simulada: ${stateLabel(entry)}. No se creó una cuenta, no se envió una invitación y no se concedieron permisos reales.`);wizard=null;focusDetail();
   }
   function render(){renderDirectory();renderDetail();}

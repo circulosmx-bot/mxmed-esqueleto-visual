@@ -1,0 +1,94 @@
+{
+  "result": "PASS",
+  "official_head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "official_branch": "ux/consultation-step2-vitals-r1",
+  "official_upstream": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "official_worktree_clean": true,
+  "official_tracked_files_compared": 2992,
+  "official_files_changed": [],
+  "baseline_manifest_sha256": "612a4dfc63337ff3c0149f91ff32c7de91bf49bd54a98d4f7fb0fc642f52a97e",
+  "original_listeners_before": {
+    "8091": [
+      "90106"
+    ],
+    "8092": [
+      "1727"
+    ],
+    "8443": [
+      "93582"
+    ],
+    "6385": [
+      "1590"
+    ]
+  },
+  "original_listeners_after": {
+    "8091": [
+      "90106"
+    ],
+    "8092": [
+      "1727"
+    ],
+    "8443": [
+      "93582"
+    ],
+    "6385": [
+      "1590"
+    ]
+  },
+  "original_listener_processes_unchanged": true,
+  "product_code_changed": false,
+  "sql_reads": 0,
+  "sql_writes": 0,
+  "real_documents_used": false,
+  "real_account_or_staff_changes": false,
+  "provider_calls": 0,
+  "notifications": 0,
+  "real_data_changed": false,
+  "prototype_http_checks": [
+    {
+      "method": "HEAD",
+      "path": "/",
+      "status": 200,
+      "scope": "owned static preview only"
+    },
+    {
+      "method": "GET",
+      "path": "/admission.js",
+      "status": 200,
+      "scope": "owned static preview only"
+    },
+    {
+      "method": "GET",
+      "path": "/admission.css",
+      "status": 200,
+      "scope": "owned static preview only"
+    },
+    {
+      "method": "GET",
+      "path": "/portrait-example.svg",
+      "status": 200,
+      "scope": "owned static preview only"
+    },
+    {
+      "method": "GET",
+      "path": "/api/identity/session",
+      "status": 404,
+      "scope": "owned static preview only"
+    },
+    {
+      "method": "GET",
+      "path": "/docs/README.md",
+      "status": 404,
+      "scope": "owned static preview only"
+    },
+    {
+      "method": "POST",
+      "path": "/",
+      "status": 405,
+      "scope": "owned static preview only"
+    }
+  ],
+  "preview_expiry": "2026-10-25T00:00:00Z",
+  "runtime_limit": "Only owned static preview restarted; no operational admission or ASE-INT01.",
+  "review_limits": "Synthetic DOM scope only; no backend security acceptance; no physical Safari."
+}

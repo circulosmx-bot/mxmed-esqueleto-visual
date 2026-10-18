@@ -37,6 +37,15 @@ Sobre `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`, el Director aprobó sólo la c
 
 Sucesor visual aislado sobre `6e7def31`, fuente oficial `f92f37f1` intacta. Director aprobó interfaz común Asesores/Masters, incorporación guiada y familias contraíbles con selección visual de capabilities individuales. Sólo Director propone/retira Masters y configura gestión/delegaciones; Master gestiona asesores dentro de autoridad y scopes exactos. [Contrato R2](../identity/ASE-VIS01-advisor-matrix-prototype.md#ase-vis01-r2--revisión-vigente-sin-integración). **P:** decisiones funcionales aprobadas, apariencia final pendiente. **S:** mock en memoria extendido. **C:** sin reader/API, invitación/admisión ni step-up Master conectados. **V:** QA R2 separada de R1 en contrato. **O:** no operativo, sin cuentas/grants/MFA/datos o listeners reales modificados. Grupos no son grants genéricos; onboarding no es transacción global ni autorización activa. COM-10/ID-07 conservan fuentes/owners y counts.
 
+<a id="ase-adm01"></a>
+## ASE-ADM01 — admisión y perfil personal internos, extensión aislada
+
+Inicio prototipo bee02e51/fuente f92f37f1, 2026-10-17. [Contrato de incorporación y acreditación interna del asesor](../identity/ASE-ADM01-staff-admission-personal-profile.md) sucede sólo la falta de contrato/preview personal de COM-10/ID-07: datos y retrato separados de evidencia restringida, dos entradas asistida/remota→un caso, revisión/admisión/cuenta/acceso/grants/MFA independientes. No acreditación médica ni relación laboral inferida. R2 visualmente aprobado; superficies nuevas ADM y comerciales pendientes por separado.
+
+`InternalGovernanceService::execute` con operación `register` ya crea relación ADVISOR ACTIVE para cuenta activa y no hace revisión personal: falta el gate/orquestación legítimo de admisión antes de conectarlo. Registro/email/tokens/sesión/gobierno/MFA existentes no son perfil personal completo; mapa de datos y fuentes médicas/paciente/alias se contrastaron antes de declarar el enlace staff `NOT_FOUND_IN_INSPECTED_SCOPE`. Revisor de documentos staff necesita autoridad exacta por definir; `physician_accreditation_review`, gestión de grants o ver el directorio no bastan. Master sólo Advisors autorizado, Director conserva designación Master, sin self-approval.
+
+**P:** verificación antes de operación aprobada; campos/retención/reviewer/activación pendientes de ratificar. **S:** mismo mock con fixture ficticia, no motor de admisión. **C:** perfil/caso/evidencia/invitación staff y handoff→setup→gobierno no conectados. **V:** QA estática y evidencia ADM en contrato, sin backend/Safari físico. **O:** sin cuenta/staff/grants/MFA/SQL/archivos o notificación real, fuente/entorno preservados. COM-02/03/04/06/07/08/09 y D01–D08 no cambian: admisión aprobada no activa ventas, no asigna origen comercial ni devenga comisión. Sin capacidades/clases/enums nuevos, ni ASE-INT01.
+
 <a id="ase-com01"></a>
 ## ASE-COM01 — sucesor comercial de la política y del prototipo R2
 

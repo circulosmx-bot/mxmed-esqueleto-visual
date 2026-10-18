@@ -1,0 +1,4438 @@
+{
+  "result": "PASS",
+  "scope": "All local paths, Markdown anchors and source-line anchors in10 affected context documents",
+  "checked_count": 886,
+  "failures": [],
+  "checks": [
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "README.md#mapas-actuales-del-sistema--ctx-map02",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "clinical/UX-ALIGN01-prescription-presentation-assessment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/GOV-SIM02-physician-ownership-session.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/C4-EV01-protected-evidence-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/C4-ADM02-IMP02-physician-authority-issuer.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/C4-UI01-original-physician-onboarding.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/C4-ACT01-operational-activation-package.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/PUB-ENR02-pending-enrollment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/PUB-ENR03-reviewed-resolution-handoff.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "profiles/PUB-COR01-secure-intake-human-review.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "profiles/PUB-COR02-governed-typed-application.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ACT02-integrated-public-workflows.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ACT03-governed-professional-sources.md#cierre-verificado",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "product-completion/iw01-internal-governance-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../AGENTS.md#sincronización-obligatoria-de-contexto--ctx-sync01",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md#context-sync",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../modules/identity/Operational/OperationalRuntime.php",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../modules/identity/Operational/DeploymentPackage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../modules/identity/db/migrations/2026_10_17_07_professional_source_provisioning.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ACT03-governed-professional-sources.md#teléfonos-free-contratos-distintos",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/ACT03-governed-professional-sources.md#cierre-verificado",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../modules/platform/tests/PhysicianCredentialAuditPolicyTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../modules/profiles/tests/PublicProfileHeroConsultorioContactLayoutTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "../modules/clinical/qa/clin_auth02a_contract.php",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/COBERTURA_Y_PENDIENTES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/COBERTURA_Y_PENDIENTES_MXMED.md#ctx-map03",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md",
+      "pass": true
+    },
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "README.md#historia-decisiones-y-continuidad",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "./MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "./MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "../prototypes/ase-vis01/evidence/",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/ASE-VIS01-advisor-matrix-prototype.md#ase-vis01-r2--revisión-vigente-sin-integración",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "../prototypes/ase-vis01/evidence/r2/",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "../prototypes/ase-vis01/evidence/com01/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "../prototypes/ase-vis01/evidence/com01/r2-regression/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "../prototypes/ase-vis01/evidence/adm01/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "../prototypes/ase-vis01/evidence/adm01/isolation.json",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "ESTADO_ACTUAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/INTERACCIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/INTERACCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/COBERTURA_Y_PENDIENTES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/AGENDA_CANALES_Y_PERMISOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "contexto/STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/http/PrivateApplicationAccessResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/http/IdentityHttpComposition.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/services/SessionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "product-completion/authentication-productization-contract-v1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/tests/PrivateSession02ContractTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../assets/js/app.js",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/controllers/DoctorContactPointsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/repositories/DoctorContactPointsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/controllers/PublicProfileController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/repositories/PublicProfileRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT03-governed-professional-sources.md#teléfonos-free-contratos-distintos",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/tests/Act03FreeContactTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../public/identity/acceso.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../public/identity/perfil-medico.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Accreditation/PhysicianEvidenceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Accreditation/ProfessionalAuthorityIssuer.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/services/VerifiedPhysicianIdentityService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/services/VerifiedDoctorCredentialService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/ProfessionalSources/SourceProvisioningService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Accreditation/EvidenceAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/C4-EV01-protected-evidence-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/C4-ADM02-IMP02-physician-authority-issuer.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/C4-UI01-original-physician-onboarding.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/tests/Act03IntegrationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../public/identity/perfil-medico.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Accreditation/PublicEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Accreditation/ReviewedEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Accreditation/EnrollmentResolutionAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/PUB-ENR02-pending-enrollment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/PUB-ENR03-reviewed-resolution-handoff.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../scripts/pub-enr03-browser-qa.py",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/Corrections/ReportService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/Corrections/ReportReviewService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/Corrections/ApplicationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/profiles/Corrections/PublicPhoneCorrectionAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "profiles/PUB-COR01-secure-intake-human-review.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "profiles/PUB-COR02-governed-typed-application.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../scripts/pub-cor02-browser-qa.py",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/subscriptions/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/subscriptions/repositories/ProfileSubscriptionRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/subscriptions/services/CurrentSubscriptionReadModelService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/subscriptions/services/PublicCommercialPlanSource.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT02-integrated-public-workflows.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/subscriptions/tests/ExistingCapabilityAuthorityServiceTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../assets/js/perfil/consultorio/multisede.js",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/agenda/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/agenda/controllers/ConsultoriosController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/agenda/repositories/ConsultoriosRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/agenda/controllers/GoogleGeocodeController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/agenda/README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MAPEO_AGENDA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/agenda/tests/",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../partials/private-app/operators.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../assets/js/agenda/operators-panel.js",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/operators/ProfileOperatorService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/operators/OperatorPresentationRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/operators/OperatorPanelReadiness.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/OP-IMP01_OPERATOR_FOUNDATION.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/OP-INT04_NORMAL_LOCAL_OPERATORS_INTEGRATION.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/OP-ACT01_NORMAL_LOCAL_DEPLOYMENT_PACKAGE.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/tests/OperatorFoundationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../scripts/op-imp07-contract-qa.py",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/patients/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/clinical/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/patients/controllers/SearchDoctorPatientsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/http/CanonicalClinicalIdentityResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/patients/repositories/PatientsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/patients/repositories/PatientDetailsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/clinical/",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "ARQUITECTURA_CLINICA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "clinical/DECISION_FUENTES_DE_VERDAD.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "clinical/CLIN-AUTH02A_URGENT_CONTAINMENT.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/patients/tests/PatientReadAuthorizationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/clinical/ui/viewer.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/clinical/ui/document.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/_lib/clinical_prescription_v2.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/_lib/clinical_prescription_lifecycle.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/_lib/clinical_prescription_history.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/_lib/clinical_professional_presentation.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../assets/css/clinical-doc-base.css",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "clinical/UX-ALIGN01-prescription-presentation-assessment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "product-completion/SIG03A-canonical-signature.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/clinical/qa/rec_preview01_contract.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/clinical/qa/doc_rec_std03a_footer_test.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/media/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/media/services/DoctorProfilePhotoService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/media/services/GalleryApprovalService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/media/repositories/MediaAssetsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/media/docs/private-review-candidates.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "product-completion/media-review-mr12a2-original-archive.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "architecture/MXMED_MEDIA_STORAGE_IMAGE_OPTIMIZATION_AND_SEMANTIC_METADATA.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/media/tests/PrivateMediaStorageTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/billing/patient-profiles.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../api/billing/issuance.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/billing/services/PatientBillingProfilesService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/billing/services/InvoiceDraftService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/billing/repositories/PatientBillingProfilesRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/billing/repositories/InvoiceRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/billing/README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "billing/FISC02B_ISSUANCE_CORE.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "billing/PAC_DEC01_PROVIDER_SELECTION_AND_INTEGRATION_STRATEGY.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/billing/tests/IssuanceCoreTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/services/",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/services/StaffMfaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/platform/repositories/PdoAuditEventRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/platform/services/AuditIntegrityVerifier.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/GOV-SIM02-physician-ownership-session.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/IDENTITY-GOV03A-governance-runtime.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "product-completion/canonical-audit-sink-contract-v1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/tests/GovernanceGov03ATest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../scripts/normal-local-identity.py",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../scripts/normal-local-https-proxy.py",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../infra/aws/README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Operational/OperationalRuntime.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Operational/WorkflowFactory.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Operational/ActivationGuard.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/Operational/DeploymentPackage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "product-completion/identity-normal-local-composition.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "product-completion/identity-normal-local-ui-https.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT02-integrated-public-workflows.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../modules/identity/tests/Act02IntegrationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../scripts/gov03b-disposable-qa.py",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_DECISIONES_V2_CAPACIDADES_AUTORIDAD_PERMISOS.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../README_extra.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../pendientes_integracion.txt",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "dev/LOCAL_DEV_SERVERS.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MAPA_TOTAL_SISTEMA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_INDICE_FINAL_V2_ACTIVITIES_CHECKPOINTS_EVIDENCE.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/C4-ACT01-operational-activation-package.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT02-integrated-public-workflows.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "../AGENTS.md#sincronización-obligatoria-de-contexto--ctx-sync01",
+      "pass": true
+    },
+    {
+      "file": "docs/README.md",
+      "target": "MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md#context-sync",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "COBERTURA_Y_PENDIENTES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "METADATOS_LOCALES_MXMED.json",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "OBJETOS_SQL_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "ARTEFACTOS_SQL_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "COMPARACION_MIGRACIONES_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "RUTINAS_Y_TRIGGERS_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "RESUMEN_INVENTARIO_MXMED.json",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/repositories/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/services/RegistrationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/services/SessionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/services/R3ProfileGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/ProfessionalSources/SourceProvisioningService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/repositories/PrivateProfileRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/repositories/DoctorContactPointsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/services/VerifiedPhysicianIdentityService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/services/VerifiedDoctorCredentialService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/repositories/PublicProfileRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/repositories/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/controllers/AppointmentWriteController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/repositories/ConsultoriosRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/patients/repositories/PatientsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/patients/repositories/PatientDetailsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/http/CanonicalClinicalIdentityResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../api/_lib/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../api/clinical/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/signatures/PhysicianSignatureService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/signatures/SignatureHandoffService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/media/repositories/MediaAssetsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/media/services/DoctorProfilePhotoService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/media/services/MediaCandidateSubmissionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/billing/services/PatientBillingProfilesService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/billing/services/InvoiceDraftService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/billing/services/InvoiceArchiveService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationDirectoryService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationMasterService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationTeamService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareProviderCoverageService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/platform/services/CanonicalAuditWriter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/platform/repositories/PdoCanonicalAuditTransactionAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/platform/repositories/JoinedPdoCanonicalAuditTransactionAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/platform/services/AuditIntegrityVerifier.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/platform/services/RetentionPolicyRegistry.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../api/catalog/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../sepomex-local.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../tools/import_catalog_cp_colonias_from_dump.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md#dependencias-compartidas",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/Operational/DeploymentPackage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_16_05_public_physician_enrollment.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_16_06_reviewed_physician_enrollment.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/db/2026_10_16_01_public_correction_reports.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/db/2026_10_16_02_correction_applications.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/subscriptions/db/2026_10_16_01_preloaded_public_free_source.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/deployment/act02/metadata.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/db/migrations/2026_10_17_07_professional_source_provisioning.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../identity/ACT02-integrated-public-workflows.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/services/SessionStoreFactory.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/EvidenceCipher.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/identity/ProfessionalSources/SourceProvisioningService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportCipher.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/media/storage/LocalPersistentPrivateMediaStorage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../../modules/billing/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "COBERTURA_Y_PENDIENTES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/identity/physician-enrollment.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../public/identity/perfil-medico.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/identity/physician-enrollment.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PublicEnrollmentHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PublicEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ReviewedEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/EnrollmentResolutionAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PhysicianEvidenceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ProfessionalAuthorityIssuer.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/ProfessionalSources/SourceProvisioningService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/services/R3ProfileGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/PUB-ENR03-reviewed-resolution-handoff.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ProfessionalMatchCandidates.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md#pub-05--formar-parte-y-resolución-sin-perfil-nuevo-automático",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/PUB-ENR03-reviewed-resolution-handoff.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/public-profile-correction.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/profiles/public/correction-reports.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/profiles/internal/correction-review.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportReviewService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/profile-correction-application.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ApplicationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ApplicationAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/PublicPhoneCorrectionAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../profiles/PUB-COR01-secure-intake-human-review.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../profiles/PUB-COR02-governed-typed-application.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-pub01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-matriz",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/perfil/consultorio/multisede.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/agenda/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/agenda/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/http/PrivateApplicationAccessResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/controllers/ConsultoriosController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/controllers/ScheduleController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/security/PrivateAgendaRoutePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/controllers/AvailabilityController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/controllers/PublicAppointmentsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/patients/services/PublicBookingPatientIdentityResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../agenda/PUBLIC_BOOKING_P3.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/controllers/AppointmentWriteController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/repositories/AppointmentWriteRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/agenda/services/ClinicalEncounterBridge.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../clinical/DECISION_AGENDA_CREATES_CLINICAL_ENCOUNTER_V1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../MAPEO_AGENDA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INTERACCIONES_CLINICAS_MXMED.md#f05",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INTERACCIONES_CLINICAS_MXMED.md#f06",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../clinical/UX-ALIGN01-prescription-presentation-assessment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-op01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-identidad",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-esp01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-cc01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/agenda/canonical-operators.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/agenda/operators-panel.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/profile-operators/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/operators/OperatorHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/operators/ProfileOperatorService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/services/ProfileOperatorCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/identity/operators/OperatorPresentationRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/OP-IMP01_OPERATOR_FOUNDATION.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/OP-IMP02_ISOLATED_OPERATORS_RUNBOOK.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/OP-INT04_NORMAL_LOCAL_OPERATORS_INTEGRATION.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#descuentos-com-09",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#casos-com-01-a-com-08",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#j08--plan--pago--evento--activación--entitlements",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/profile-photo.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../assets/js/fotos.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/media/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/ProfilePhotoReviewCandidateService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/GalleryReviewCandidateService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/PhysicianLogoReviewCandidateService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/repositories/MediaAssetsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/MediaCandidateSubmissionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/DoctorProfilePhotoService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/DoctorGalleryService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../api/internal/media-review/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/PhysicianLogoApprovalService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/MediaReviewBatchService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/MediaReplacementService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/PublicLogoMediaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/services/HistoricalOriginalArchive.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../architecture/MXMED_MEDIA_STORAGE_IMAGE_OPTIMIZATION_AND_SEMANTIC_METADATA.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../../modules/media/docs/mr11-1-operational-closeout.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#j10--contexto-clínico--receptoremisor--borradorarchivo--límite-pac",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "INTERACCIONES_CLINICAS_MXMED.md#f11",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#integraciones-externas-y-recursos-compartidos",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "COBERTURA_Y_PENDIENTES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "COBERTURA_Y_PENDIENTES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../ESTADO_ACTUAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/core/private-entry.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/core/private-session.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/http/PrivateApplicationAccessResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/http/CanonicalClinicalIdentityResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../product-completion/authentication-productization-contract-v1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/tests/PrivateSession02ContractTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/core/navigation.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/core/dirty-tracker.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/core/explicit-save-surface.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../profiles/listing.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/controllers/PublicDiscoveryController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/profiles/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/repositories/PublicDiscoveryRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../PERFIL_PUBLICO_MEDICO_ENDPOINT_PUBLICO_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/tests/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public-profile-panel.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public-profile-about.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/controllers/PublicProfileController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/repositories/PublicProfileRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../PERFIL_PUBLICO_MEDICO_IDENTIDAD_CANONICA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/tests/PublicProfileHeroConsultorioContactLayoutTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/services/PublicProfilePlanCapabilities.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/subscriptions/services/PublicCommercialPlanSource.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/tests/PublicProfileVisualFidelityContactTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/ACT03-governed-professional-sources.md#teléfonos-free-contratos-distintos",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/identity/physician-enrollment.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PublicEnrollmentHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/identity/physician-enrollment.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PublicEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ReviewedEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/PUB-ENR02-pending-enrollment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/PUB-ENR03-reviewed-resolution-handoff.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md#j01-claim-existente",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ProfessionalMatchCandidates.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md#j02-formar-parte",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public-profile-correction.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/profile-correction-review.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/profile-correction-application.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/profiles/public/correction-reports.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/profiles/internal/correction-review.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportReviewService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ApplicationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/Corrections/PublicPhoneCorrectionAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../profiles/PUB-COR01-secure-intake-human-review.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../profiles/PUB-COR02-governed-typed-application.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md#j03-correcciones",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/app.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/profiles/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/controllers/DoctorContactPointsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/repositories/DoctorContactPointsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "COBERTURA_Y_PENDIENTES_MXMED.md#preguntas-de-recuperación",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/perfil/datos-generales.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/perfil/professional-information.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/perfil/credenciales.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/profiles/professional-information.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/controllers/PrivateProfileController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/services/ProfessionalInformationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/services/PublicDisplayNamePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/services/ProfileThemeCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/UX-ALIGN01-product-experience.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/perfil/consultorio/multisede.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/security/PrivateAgendaRoutePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/ConsultoriosController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/repositories/ConsultoriosRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/profiles/services/PhysicianEmergencyContactsService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/ConsVis01ContractTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/GoogleGeocodeController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/helpers/consultorio_map.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/perfil/consultorio/consultorio-ordering.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/agenda/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/profiles/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/_lib/clinical_professional_presentation.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/DocRecStd03AIntegrationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/ConsVis01ContractTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/crear-cuenta.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/verificar-correo.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/identity-access.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/RegistrationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/EmailVerificationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../product-completion/authentication-productization-contract-v1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/tests/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/acceso.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/recuperar-acceso.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/restablecer-acceso.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/CredentialAuthenticationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/RecoveryService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/identity/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/SessionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../product-completion/identity-normal-local-composition.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/tests/PrivateSession02ContractTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/identity/professional-sources.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/identity/physician-onboarding.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/ProfessionalSources/SourceProvisioningService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/ProfessionalSources/SourceEvidenceReference.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public/identity/perfil-medico.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PhysicianOnboardingHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PhysicianEvidenceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ProfessionalIssuanceWorkflow.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ProfessionalAuthorityIssuer.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/repositories/ProfessionalAccountBindingProjection.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/C4-EV01-protected-evidence-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/C4-ADM02-IMP02-physician-authority-issuer.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/identity/governance.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../scripts/governance-ceremony.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/R3ProfileGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/PhysicianOwnershipPolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/ProfileMembershipRoleChangeService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/GOV-SIM02-physician-ownership-session.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/IDENTITY-GOV03A-governance-runtime.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/FirstDirectorBootstrapService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/StaffMfaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/IDENTITY-QA02E-internal-governance-bootstrap-preparation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#workspace-com-10",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/agenda/agenda-workspace.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/agenda/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/http/PrivateApplicationAccessResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/security/PrivateAgendaRoutePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/AppointmentWriteController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/repositories/AppointmentWriteRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/AppointmentsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/Gate8DAppointmentLifecycleIdempotencyTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-med01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/ScheduleController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/repositories/ScheduleRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/AvailabilityBlocksController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/repositories/OverrideRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/repositories/AgendaSettingsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/Gate8CCanonicalScheduleAvailabilityTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../MAPEO_AGENDA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public-profile-next-available.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public-profile-daily.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/PublicDailyAvailability.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/AvailabilityController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../agenda/PUBLIC_AVAILABILITY_P1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/PublicDailyAvailabilityTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md#j04-consultorio-y-reserva",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../profiles/doctor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-pub01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public-book.html",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public-agenda.html",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../public-cancel.html",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public/agenda-wizard.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/public/agenda-cancel.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/agenda/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/PublicAppointmentsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/PublicOtpController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/OtpSender.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../agenda/PUBLIC_OTP_P2.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../agenda/PUBLIC_BOOKING_P3.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../agenda/PUBLIC_CANCEL_P4.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../aws/MXMED_EMAIL_OTP_PROVIDER_CLOSEOUT.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/WaitlistController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/PatientFlagsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/AmbiguousPatientReconciliationController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/PatientBehaviorService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../agenda/waitlist/PASO_5_Reglas_Operativas_y_Roles_v1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/AmbiguousPatientReconciliationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-esp01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/agenda/agf01-followups.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/ClinicalEncounterBridge.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/clinical/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../clinical/DECISION_AGENDA_CREATES_CLINICAL_ENCOUNTER_V1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/controllers/MedicalGroupsController.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/repositories/MedicalGroupsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../partials/private-app/operators.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/agenda/canonical-operators.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/agenda/operators-panel.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/operators/ProfileOperatorService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/operators/OperatorHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/OP-IMP01_OPERATOR_FOUNDATION.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/OP-IMP02_ISOLATED_OPERATORS_RUNBOOK.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/OP-ACT01_NORMAL_LOCAL_DEPLOYMENT_PACKAGE.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/services/ProfileOperatorCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/OP-INT04_NORMAL_LOCAL_OPERATORS_INTEGRATION.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-op01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/agenda/operators-panel.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/operators/OperatorPresentationRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/identity/operators/OperatorPanelReadiness.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../scripts/op-imp07-contract-qa.py",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/profile-photo.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/fotos.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/media/profile-photo.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/media/gallery.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/DoctorProfilePhotoService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/DoctorGalleryService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/repositories/MediaAssetsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../architecture/MXMED_MEDIA_STORAGE_IMAGE_OPTIMIZATION_AND_SEMANTIC_METADATA.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/tests/DoctorProfilePhotoHttpTest.mjs",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/media/physician-logo-review-candidate.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/internal/media-review/approve-logo.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/PhysicianLogoApprovalService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/LogoImprovementService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/HistoricalOriginalArchive.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/PublicLogoMediaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../product-completion/media-review-mr12a2-original-archive.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/tests/PhysicianLogoReviewTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/media-review-inbox.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/owner-media-review.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/internal/media-review/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/media/review-batch-submit.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/MediaCandidateSubmissionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/MediaReviewBatchService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/MediaReplacementService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/services/MediaReviewInboxService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/docs/private-review-candidates.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/media/docs/mr11-1-operational-closeout.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md#j09-media",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../provider/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../provider/provider.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/http/ProviderManagementApi.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationManagementAuthorizationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationDirectoryService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationClaimService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/tests/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../provider/qa/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/http/ProviderManagementApi.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationMasterService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareProviderCoverageService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareStudyProviderMatchingService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/http/ProviderManagementApi.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationTeamService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationInviteeResolutionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/CanonicalAuditWriter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/CanonicalAuditPolicyRegistry.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/AuditIntegrityVerifier.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../product-completion/canonical-audit-sink-contract-v1.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/tests/PhysicianCredentialAuditPolicyTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/AuthorizationBoundary.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/CanonicalSourceRoutePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/ContextPropagator.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/SupportAssistedAccessEvaluator.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../modules/platform/services/PrivilegedAccessActivationGate.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../MXMED_DECISIONES_V2_CAPACIDADES_AUTORIDAD_PERMISOS.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../product-completion/audit-mp01h-activation-readiness.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/catalog/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../sepomex-local.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/data/README_SEPOMEX.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/core/dashboard.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../MAPA_TOTAL_SISTEMA_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/messages.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../assets/js/subscription-messages.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/verify-password.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../api/verify-sms.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../tools/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../scripts/",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "PUNTOS_ENTRADA_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../../provider/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "COBERTURA_Y_PENDIENTES_MXMED.md#raíces-y-exclusiones",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "FUNCIONES_CLINICAS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "AWS_Y_ENTORNOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "INVENTARIO_FUENTES_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "PUNTOS_ENTRADA_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "METADATOS_LOCALES_MXMED.json",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "INVENTARIO_FUNCIONAL_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#capacidades-de-planes-y-pago",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "INTERACCIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../README.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../product-completion/iw01-internal-governance-foundation.md#ase-align01-v2--política-aprobada-de-capacidades-individuales",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../product-completion/iw01-internal-governance-foundation.md#verificación-ase-align01-v2",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-VIS01-advisor-matrix-prototype.md#ase-vis01-r2--revisión-vigente-sin-integración",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ASE-COM01-commercial-attribution-recurring-commission.md#extensión-de-la-ui-aprobada-y-verificación",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/PublicCommercialPlanSource.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/db/2026_10_16_01_preloaded_public_free_source.sql",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/PUB-ENR02-pending-enrollment.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/PUB-ENR03-reviewed-resolution-handoff.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../public/identity/perfil-medico.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../assets/js/identity/physician-enrollment.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PublicEnrollmentHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PublicEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/ReviewedEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#subs-02--seleccionar-catálogo-y-preparar-ruta-de-pago",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/services/ProfileGovernancePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/platform/contracts/SupportAssistedAccessContract.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/platform/services/SupportAssistedAccessEvaluator.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/C4-EV01-protected-evidence-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/C4-ADM02-IMP02-physician-authority-issuer.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/C4-UI01-original-physician-onboarding.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "#politica-ase-align01-v2",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/services/StaffRoutineOperationPolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PhysicianOnboardingPage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PhysicianOnboardingHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/EvidenceAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/Accreditation/PhysicianEvidenceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/repositories/InternalOperatorGrantRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/services/InternalOperatorAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../private-app.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../assets/js/app.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/repositories/SubscriptionPlanPriceRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/SubscriptionPlanPriceResolverService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/BuildSubscriptionPaymentRoutePreviewService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/repositories/SubscriptionPaymentRouteRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/CreateSubscriptionCheckoutFromPaymentRouteService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/StripePaymentIntentProviderService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#subs-09--vencimiento-renovación-cancelación-y-recurrencia",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/OP-POL02_NONMEDICAL_OPERATOR_IMPLEMENTATION_READINESS.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "STRIPE_Y_SERVICIOS_EXTERNOS_MXMED.md#bill-04--compositor-cálculo-exacto-y-preview-de-borrador",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../product-completion/iw01-internal-governance-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/IDENTITY-QA02E-internal-governance-bootstrap-preparation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/GOV03B-DEC01-policy-reconciliation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/C4-ACT01-operational-activation-package.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ACT02-integrated-public-workflows.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../identity/ACT03-governed-professional-sources.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../assets/js/media-review-inbox.js",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/media/http/MediaReviewHttpContext.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../api/internal/media-review/pending.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "#politica-ase-align01-v2",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportReviewService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ApplicationAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ApplicationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportReviewPage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/profiles/Corrections/ReportHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../../modules/identity/services/ProfileGovernancePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "#prototipo-ase-vis01",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "AGENDA_CANALES_Y_PERMISOS_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+      "target": "../PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "ASE-VIS01-advisor-matrix-prototype.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../product-completion/iw01-internal-governance-foundation.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/RegistrationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/repositories/IdentityAccountRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/repositories/AccountCredentialRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/repositories/AccountConsentRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/EmailVerificationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/repositories/OneTimeTokenRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/http/CanonicalHttpSessionResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/SessionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/contracts/SessionStorePort.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/repositories/InternalOperatorGrantRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/contracts/OneTimeTokenPurpose.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/contracts/NotificationMessage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/contracts/IdentityNotificationPort.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/GovernanceStaffMfaCeremony.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/services/StaffMfaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/Accreditation/PhoneVerificationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/agenda/contracts/OtpProviderPort.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/Accreditation/PhysicianEvidenceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/Accreditation/EvidenceAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/Accreditation/EvidenceCipher.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/media/contracts/PrivateMediaStoragePort.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/media/storage/LocalPersistentPrivateMediaStorage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/media/services/GdPublicLogoProcessor.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/media/services/DoctorProfilePhotoService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/media/repositories/MediaAssetsRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../contexto/OBJETOS_SQL_MXMED.csv",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/profiles/repositories/VerifiedPhysicianIdentityRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../modules/identity/operators/OperatorPresentationRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/isolation.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/context-links.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/r2-regression/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "target": "ASE-VIS01-advisor-matrix-prototype.md#preview-expiración-y-descarte-seguro",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/isolation.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/adm01/context-links.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/com01/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/com01/r2-regression/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/com01/browser/",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/com01/isolation.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/RegistrationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/EmailVerificationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/contracts/IdentityNotificationPort.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/contracts/NotificationMessage.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/contracts/OneTimeTokenPurpose.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/adapters/PreviewIdentityNotificationAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/http/IdentityHttpComposition.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/adapters/SesIdentityNotificationAdapter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/GovernanceStaffMfaCeremony.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/GovernanceSecurityContext.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/StaffMfaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/height-comparison.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/baseline.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-collapsed.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/webkit-820x1180-collapsed.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/webkit-390x844-collapsed.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-master-administration.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-unified-onboarding.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-expanded-partial.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/browser/chromium-1440x900-multi-confirmation.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/r2/isolation.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../MXMED_REGISTRO_CONTRATOS_VISUALES.md#ase-vis01--matriz-individual-de-asesores-prototipo",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../internal/media-review/index.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../assets/css/media-review-inbox.css",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/ProfileGovernancePolicy.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/ProfessionalSources/SourceProvisioningService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/Accreditation/PhysicianOnboardingHttp.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/Accreditation/EvidenceAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/Accreditation/ReviewedEnrollmentService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/profiles/Corrections/ReportReviewService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/profiles/Corrections/ApplicationAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/profiles/Corrections/ApplicationService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/agenda/services/HealthcareOrganizationClaimService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/subscriptions/services/ProviderOrganizationSubscriptionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/http/CanonicalHttpSessionResolver.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/SessionService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/repositories/InternalOperatorGrantRepository.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/identity/services/InternalOperatorAuthority.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/platform/services/CanonicalAuditWriter.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../api/identity/governance.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../modules/platform/audit/read/AuditReadService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/browser/summary.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/browser/chromium-1440x900-directory-matrix.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/browser/webkit-820x1180-directory-matrix.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/browser/webkit-390x844-directory-matrix.png",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/isolation.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/context-links.json",
+      "pass": true
+    },
+    {
+      "file": "docs/identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "target": "../../prototypes/ase-vis01/evidence/",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../../modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md#ase-align01-v2--capacidad-individual-y-acreditación-rutinaria",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../../modules/identity/services/GovernanceStaffMfaCeremony.php",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../../modules/identity/services/StaffMfaService.php",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../identity/ASE-VIS01-advisor-matrix-prototype.md",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../identity/ASE-VIS01-advisor-matrix-prototype.md#ase-vis01-r2--revisión-vigente-sin-integración",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../identity/ASE-COM01-commercial-attribution-recurring-commission.md",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../identity/ASE-ADM01-staff-admission-personal-profile.md",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../../modules/identity/tests/AdvisorRoutineCapabilityIntegrationTest.php",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../../scripts/gov03b-disposable-qa.py",
+      "pass": true
+    },
+    {
+      "file": "docs/product-completion/iw01-internal-governance-foundation.md",
+      "target": "../../scripts/ase-align01-browser-qa.py",
+      "pass": true
+    }
+  ]
+}

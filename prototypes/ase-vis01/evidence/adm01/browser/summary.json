@@ -1,0 +1,5605 @@
+{
+  "task": "ASE-ADM01",
+  "scope": "Static fictional admission/profile prototype only; no backend security or live accreditation acceptance",
+  "started_utc": "2026-10-18T03:16:55.547525+00:00",
+  "branch": "prototype/ase-vis01-advisor-capability-matrix",
+  "commit_at_test": "bee02e5106d443abeeecaa2a88ec8caf2c1db6d1",
+  "commit_binding": "Candidate source SHA256 must match final commit tree",
+  "source_sha256": {
+    "prototypes/ase-vis01/index.html": "85102c50f1d283e1ed17d3ddc28f03ae5b4a70bb816552724bc4c0415b45b917",
+    "prototypes/ase-vis01/app.js": "13163aa6e490deea93823ee939206ebd4bd9fc07cc07932b4954377d3c32a78e",
+    "prototypes/ase-vis01/style.css": "5fa20409b805b4373714025c7377ffd3ab86b5db3b2be7c4a1bcce7453ead7e0",
+    "prototypes/ase-vis01/catalog.js": "deb3a1741e555afd38806ed5ceb6148851b131935553b4b054aa3d1546be8533",
+    "prototypes/ase-vis01/commercial.js": "1b957c12ca40e2f6e294c7e3819156e37226099091ecc9ca61341da4cf073c39",
+    "prototypes/ase-vis01/commercial.css": "ccf65cb86791d2350f597c10b543512378c7fb4861e00bb7d60a44e0ce72ca93",
+    "prototypes/ase-vis01/admission.js": "b714999c5fec418279d7661176bb36598d7eb70224ee25bc2fb6eba8f0785408",
+    "prototypes/ase-vis01/admission.css": "c68fbfedb9af99a0f506b05a5108e1e49114973924d70d3275b23fe0211b74a4",
+    "prototypes/ase-vis01/portrait-example.svg": "8d36142dd2ba1f577d23d943bab71e59ddd52db166bf47de2bc3f4c9a676a26e",
+    "prototypes/ase-vis01/serve.py": "9c53d56981794c1d5c1a7a3a064fe790592643fcfccdbf648a90600abf6c259b",
+    "prototypes/ase-vis01/admission-qa.py": "fb62c8b736c55aa701b6980aebf7bfe7e1b60c7ac640375cf38dfd7479873dd7",
+    "prototypes/ase-vis01/admission-regression.py": "0e445d0cf5bf76fa5ca742d5cbbc042407894eece280a0721cbad58e5ce34693",
+    "prototypes/ase-vis01/qa.py": "79b850857eec23c5f98aaa11683760e7d6dc2ce69e4e0fbae5995ee57a54c8dd",
+    "prototypes/ase-vis01/commercial-qa.py": "1c38a31a609058eb845725a87c394e5d22e66a0797e8e624fcf3268b4f2c69cc",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71",
+    "assets/css/media-review-inbox.css": "80f5f75c10aea188bbd2f4de9a1df27e31eadb28232d246711507cb0a09090b9"
+  },
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_MOBILE_SMOKE_ONLY",
+  "r2_approval_preserved": true,
+  "commercial_visual_approval_pending": true,
+  "new_visual_approval_pending": true,
+  "real_documents_used": false,
+  "real_account_or_staff_changes": false,
+  "capture_tool_qualification": {
+    "driver_path": "/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/driver/package/lib/server/screenshotter.js",
+    "sha256": "9aaff6c173c6a9a1c80e831dd92ccc24097243d49ad600dc87c4bc1fad9c625b",
+    "body_style_line": 31,
+    "rule": "Only exact WebKit body {} mutation plus matching CSP denial during screenshot; no driver/CSP bypass; other errors fatal."
+  },
+  "accessibility_limits": "DOM/keyboard/focus/modal/44px/overflow smoke only; no physical Safari or screen-reader acceptance.",
+  "cases": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1440x900-clarification.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-1366x768-clarification.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-820x1180-clarification.png"
+      ]
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/chromium-390x844-clarification.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-profile",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "remote-proposal",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "applicant-completion",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "document-placeholder",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "review-setup-pending",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "version-history",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "clarification",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1440x900-clarification.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-profile",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "remote-proposal",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "applicant-completion",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "document-placeholder",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "review-setup-pending",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "version-history",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "clarification",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-1366x768-clarification.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-profile",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "remote-proposal",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "applicant-completion",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "document-placeholder",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "review-setup-pending",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "version-history",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "clarification",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-820x1180-clarification.png"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "result": "PASS",
+      "error": null,
+      "checks": [
+        {
+          "name": "Loopback static 200 with no connection/form/object capability",
+          "pass": true
+        },
+        {
+          "name": "Explicit non-operational prototype scope",
+          "pass": true
+        },
+        {
+          "name": "No real file selection, camera capture or delegated password field",
+          "pass": true
+        },
+        {
+          "name": "Exact R2 approved canonical catalog snapshot preserved",
+          "pass": true
+        },
+        {
+          "name": "Canonical catalog remains18 with no admission/commercial capability invented",
+          "pass": true
+        },
+        {
+          "name": "Five R2 operational families and exact16 keys preserved",
+          "pass": true
+        },
+        {
+          "name": "One permission matrix and one commercial section, no duplicated editors",
+          "pass": true
+        },
+        {
+          "name": "Portrait shown in directory and selected header from internal illustration only",
+          "pass": true
+        },
+        {
+          "name": "Other members retain neutral portrait fallback",
+          "pass": true
+        },
+        {
+          "name": "Identity review and access are distinct selected-header indicators",
+          "pass": true
+        },
+        {
+          "name": "Required personal/evidence/access/commercial/history collapsibles retained",
+          "pass": true
+        },
+        {
+          "name": "Commercial proposed four-activity group preserved separately",
+          "pass": true
+        },
+        {
+          "name": "Commercial unresolved rate/basis and15% customer distinction retained",
+          "pass": true
+        },
+        {
+          "name": "Recurring paid monthly/annual renewals remain in commercial scope",
+          "pass": true
+        },
+        {
+          "name": "Directory and selected profile: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Directory and selected profile: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Directory and selected profile: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "assisted: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "assisted: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "assisted: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "assisted: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "assisted: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "assisted: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "assisted: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Original onboarding remains four steps",
+          "pass": true
+        },
+        {
+          "name": "remote: mobile reference never claims SMS verification",
+          "pass": true
+        },
+        {
+          "name": "remote: no password or file selection in assisted preparation",
+          "pass": true
+        },
+        {
+          "name": "remote: intended functions remain individual requests",
+          "pass": true
+        },
+        {
+          "name": "remote: review never asserts delivered invitation or active authority",
+          "pass": true
+        },
+        {
+          "name": "Remote invitation proposal: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Remote invitation proposal: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Remote invitation proposal: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "remote: closes after fictional request without active grant creation",
+          "pass": true
+        },
+        {
+          "name": "remote: account/invitation effects remain unexecuted",
+          "pass": true
+        },
+        {
+          "name": "remote: administrator provenance never fabricates applicant confirmation",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant restricted to own case, no category/inviter/grants editor",
+          "pass": true
+        },
+        {
+          "name": "Self-completion has core personal data and separate confirmations",
+          "pass": true
+        },
+        {
+          "name": "Missing evidence cannot silently submit as reviewed/active",
+          "pass": true
+        },
+        {
+          "name": "Applicant own completion: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Applicant own completion: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Applicant own completion: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "applicant-preview: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "applicant-preview: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Applicant submit remains only fictional own-case submission",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Seven independent account/contact/review/admission/access/MFA states",
+          "pass": true
+        },
+        {
+          "name": "New account/email remain pending despite document submission",
+          "pass": true
+        },
+        {
+          "name": "Telephone never falsely marked verified without provider",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Factual acknowledgement alone cannot replace opening exact evidence version",
+          "pass": true
+        },
+        {
+          "name": "Protected evidence is plainly fictional document, never portrait image",
+          "pass": true
+        },
+        {
+          "name": "No real document URL, download or encoded identity payload",
+          "pass": true
+        },
+        {
+          "name": "Synthetic document preview: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Synthetic document preview: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Synthetic document preview: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Escape from evidence returns focus to exact review entry",
+          "pass": true
+        },
+        {
+          "name": "Review transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Routine factual review is separate from admission approval",
+          "pass": true
+        },
+        {
+          "name": "Approval transition preserves keyboard focus inside modal",
+          "pass": true
+        },
+        {
+          "name": "Approval preserves pending personal setup",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Review cannot activate financial conditions or all grants",
+          "pass": true
+        },
+        {
+          "name": "Reviewed version1 binds the submitted name and separate portrait",
+          "pass": true
+        },
+        {
+          "name": "Review approved with setup pending: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Review approved with setup pending: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Review approved with setup pending: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "admission-review: modal has keyboard controls",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Tab wraps to first control",
+          "pass": true
+        },
+        {
+          "name": "admission-review: Shift+Tab wraps to last control",
+          "pass": true
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees retained version without internal reviewer notes",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Material change retains reviewed version while new version needs review",
+          "pass": true
+        },
+        {
+          "name": "Reviewed-v1 name/photo/document metadata never overwritten by new material version",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Existing legitimate account differs from new pending account",
+          "pass": true
+        },
+        {
+          "name": "Unreadable evidence cannot complete or approve review",
+          "pass": true
+        },
+        {
+          "name": "Uncertain evidence requests clarification instead of verified badge",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Clarification requested: no horizontal overflow",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "modalOverflow": [],
+            "small": [],
+            "unlabeled": []
+          }
+        },
+        {
+          "name": "Clarification requested: controls and checkbox labels >=44px",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Clarification requested: visible inputs have accessible labels",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Only exact WebKit screenshot body-style injection qualified",
+          "pass": true,
+          "detail": {
+            "styles": [
+              "body {}"
+            ],
+            "messages": [
+              "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+            ]
+          }
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant sees own clarification without staff-only document custody",
+          "pass": true
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Clarification response is a new evidence version",
+          "pass": true
+        },
+        {
+          "name": "Clarification-v1 unreadable metadata retained beside legible response-v2",
+          "pass": true
+        },
+        {
+          "name": "Rejection blocks operational access without deleting prior history",
+          "pass": true
+        },
+        {
+          "name": "Submission/review never creates ACTIVE operational access",
+          "pass": true,
+          "detail": "sin acceso operativo"
+        },
+        {
+          "name": "Application/review opens at its named heading",
+          "pass": true
+        },
+        {
+          "name": "Applicant rejection stays bounded, no reviewer-only evidence controls",
+          "pass": true
+        },
+        {
+          "name": "Existing Master management alone does not grant evidence review",
+          "pass": true
+        },
+        {
+          "name": "Explicit proposed Master review scope reaches Advisors only",
+          "pass": true
+        },
+        {
+          "name": "Master cannot approve own application",
+          "pass": true
+        },
+        {
+          "name": "Only Director may propose another Master",
+          "pass": true
+        },
+        {
+          "name": "Master cannot reach the Master directory or self-management",
+          "pass": true
+        },
+        {
+          "name": "Ordinary peer view has no protected-evidence/review actions",
+          "pass": true
+        },
+        {
+          "name": "Peer cannot impersonate another applicant through preview controls",
+          "pass": true
+        },
+        {
+          "name": "Master without management cannot prepare admission or inspect evidence",
+          "pass": true
+        },
+        {
+          "name": "Director can inspect proposed Master case explicitly",
+          "pass": true
+        },
+        {
+          "name": "R2 existing individual use state remains distinct",
+          "pass": true
+        },
+        {
+          "name": "Permission change retains explicit individual confirmation",
+          "pass": true
+        },
+        {
+          "name": "Commercial own-only fictitious customers remain isolated",
+          "pass": true
+        },
+        {
+          "name": "Conceptual repeat still produces no extra commission result",
+          "pass": true
+        },
+        {
+          "name": "No document scans/camera/password accepted anywhere",
+          "pass": true
+        },
+        {
+          "name": "No persistence, APIs, delivery, scanner, camera or provider action",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted static GETs and no unqualified errors",
+          "pass": true,
+          "detail": {
+            "forbidden": [],
+            "errors": []
+          }
+        }
+      ],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/assets/css/media-review-inbox.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/style.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/catalog.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/app.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/commercial.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.css",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/admission.js",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "path": "/portrait-example.svg",
+          "method": "GET",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "forbidden_requests": [],
+      "application_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-profile",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "remote-proposal",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "applicant-completion",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "document-placeholder",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "review-setup-pending",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "version-history",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        },
+        {
+          "screenshot": "clarification",
+          "style": "body {}",
+          "csp_rejected": true,
+          "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+          "scope": "Exact DOM mutation and screenshot timing only"
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-directory-profile.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-remote-proposal.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-applicant-completion.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-document-placeholder.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-review-setup-pending.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-version-history.png",
+        "prototypes/ase-vis01/evidence/adm01/browser/webkit-390x844-clarification.png"
+      ]
+    }
+  ],
+  "result": "PASS",
+  "check_count": 916,
+  "finished_utc": "2026-10-18T03:17:26.479214+00:00"
+}

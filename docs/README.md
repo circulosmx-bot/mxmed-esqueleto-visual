@@ -125,6 +125,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 - UI/API: [workspace staff original](../internal/media-review/index.php), [servicios Identity](../modules/identity/services/).
 - Writers: [InternalGovernanceService](../modules/identity/services/InternalGovernanceService.php), [StaffMfaService](../modules/identity/services/StaffMfaService.php), [PdoAuditEventRepository](../modules/platform/repositories/PdoAuditEventRepository.php); lectura [AuditIntegrityVerifier](../modules/platform/services/AuditIntegrityVerifier.php).
 - Contratos: [GOV-SIM02](identity/GOV-SIM02-physician-ownership-session.md), [GOV03A](identity/IDENTITY-GOV03A-governance-runtime.md), [audit sink](product-completion/canonical-audit-sink-contract-v1.md), [protocolo UI/UX](MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md). QA: [gobierno](../modules/identity/tests/GovernanceGov03ATest.php).
+- Incorporación personal de staff: [ASE-ADM01 — contrato y preview aislado](identity/ASE-ADM01-staff-admission-personal-profile.md), diccionario, revisión interna, privacidad, entradas asistida/remota y conexiones pendientes; R2 aprobado, extensiones ADM/comercial pendientes. Sin admisión real ni ASE-INT01.
 - Límite: documentos previos pueden describir emisores luego implementados; no inferir staff, grants, MFA o firma desde roles/planes.
 
 ### Infraestructura y despliegue — PENDING_AUTHORIZATION

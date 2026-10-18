@@ -57,6 +57,14 @@ Los prefijos sirven para agrupar, no para conceder permisos. El CSV detalla cada
 
 Los writers de familias compartidas también figuran como consumidores en otras familias; no se crea otra copia de identidad/paciente/precio/audit. Un writer fuente puede estar bloqueado antes de SQL por autoridad o readiness.
 
+### ASE-ADM01 — perfil personal y evidencia de staff, contrato aislado
+
+Lectura dirigida 2026-10-17 sobre fuente f92f37f1/prototipo bee02e51; se revisaron este mapa, los 204 nombres del CSV y fuentes Identity/Media/personales, **sin nueva lectura SQL**. [Contrato de admisión interna](../identity/ASE-ADM01-staff-admission-personal-profile.md) propone dos entradas/un caso y diccionario; no cambia objetos, enums, writers ni los denominadores históricos anteriores.
+
+`auth_accounts` conserva email/estado/verificación y credenciales/consents separados; `internal_staff` relaciona cuenta/clase/estado/fechas, sin ser expediente personal completo. Nombres/retrato de `profiles_doctors`, identidad nominal de VID, maestro global de pacientes y alias de `OperatorPresentationRepository` tienen dueños/propósitos distintos: ninguno acredita un perfil staff ni vincula personas por parecido. Tras esta consulta del mapa y fuentes, perfil/caso/retrato interno/revisión staff son `NOT_FOUND_IN_INSPECTED_SCOPE`; no se infiere ausencia universal de un almacén de personas ni se crea una segunda cuenta humana.
+
+Metadata/storage/cifrado C4 y Media son referencias de primitivas, no destinos para staff. Namespace privado y AAD de C4, ámbitos médicos, writer público de foto y retención/borrado de imágenes públicas impiden reutilización directa como expediente o retrato interno. Falta finalidad, caso/sujeto/versiones/reader exactos y custodia staff aprobados. Las clases del diccionario son propuestas conceptuales, no nuevas tablas, objetos de retención ni llaves ejecutables. Ningún documento personal se guarda en este prototipo; sólo placeholders ficticios empaquetados.
+
 ## Relaciones físicas frente a lógicas
 
 - **Físicas:** cada FK exacta y regla se conserva en el snapshot y en el CSV por tabla; contar restricciones y columnas por separado. Para cualquier cambio, recuperar tipos/collations compuestos, UNIQUEs, CHECKs y triggers, no sólo el nombre del padre.
