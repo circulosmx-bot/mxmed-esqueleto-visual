@@ -105,3 +105,7 @@ Revisión staged detectó un espacio final en el harness nuevo: se retiró despu
 ## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
 
 [COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) atiende el bloqueo histórico de ruta D mediante sucesor previo al ALTER incompatible. Conserva este rehearsal y la migración Master de 17 operaciones; no habilita identity-review ni appointment. Ver evidencia nueva sin reinterpretar el resultado histórico.
+
+## Sucesor documental ASE-ADM02-POL01
+
+[Política de admisión staff](ASE-ADM02-POL01-staff-admission-policy.md) sucede únicamente la condición de siete principios ADM pendientes: el Director los aprobó, con detalles legales/retención/delegación y adaptadores aún pendientes. Define backing autoritativo y transaccional del port actual de tres campos; no lo implementa ni conecta. UnavailableStaffIdentityReview continúa incondicional en HTTP y appointment sigue BLOCKED_PENDING_STAFF_IDENTITY_REVIEW. Evidencia y QA de IMP01 conservadas, sin nueva ejecución.

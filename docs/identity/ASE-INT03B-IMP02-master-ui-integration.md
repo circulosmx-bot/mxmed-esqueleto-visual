@@ -82,3 +82,7 @@ Revisión visual directa de contraseña desktop Chromium/WebKit, contraseña mó
 ## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
 
 [COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) sucede sólo el bloqueo de migración D en ensayo SQL separado. Las 812 comprobaciones y la integración UI de este hito permanecen como evidencia histórica; no se repiten ni modifican controles/writers/MFA. Appointment real y activación siguen bloqueados.
+
+## Sucesor documental ASE-ADM02-POL01
+
+[Política staff](ASE-ADM02-POL01-staff-admission-policy.md) registra aprobación de siete principios ADM, no resolución completa de sus detalles ni conexión producto. UI-0: sin cambio de controles, layout o copy; revisión real y appointment siguen bloqueados. Legacy ACTIVE no acredita identidad, datos/evidencia siguen sin reader y + AGREGAR INTEGRANTE no se habilita. COMPAT01 conserva su reparación SQL posterior; ninguna evidencia histórica se reescribe.

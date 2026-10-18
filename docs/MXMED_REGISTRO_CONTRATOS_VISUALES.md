@@ -136,3 +136,7 @@ El Director aprobó selección → consecuencias → confirmación → contrase�
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 [IMP02](identity/ASE-INT03B-IMP02-master-ui-integration.md) ejecuta la conexión UI-2 expresamente autorizada: modal existente por etapas, controles de designación/gestión/delegación individual y mensajes de seguridad. CSS/header/navegación/layout R2/COM/ADM conservados; no UI-3. Appointment visible deshabilitado con motivo. Deuda de conexión IMP01 se sucede sólo en esta feature aislada; no activación ni revisión física Safari.
+
+## ASE-ADM02-POL01 — política UI-0, sin modificación visual
+
+[Contrato vigente](identity/ASE-ADM02-POL01-staff-admission-policy.md): siete principios de admisión/identidad aprobados por respuesta explícita “apruebo”; no una nueva aprobación visual ni implementación. Conserva baseline312ee388 y aprobaciones R2/COM/ADM; propone semántica de estados/legacy y reutiliza + AGREGAR INTEGRANTE sin habilitarlo. Retrato/datos principales sólo para directorio autorizado, ID scans fuera; fuente personal/documental aún desconectada. Legal, retención, catálogo extranjero, autoridad exacta y futuras fases pendientes; sin QA visual nueva, Safari físico ni activación.

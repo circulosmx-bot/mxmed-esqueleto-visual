@@ -96,3 +96,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 [UI privilegiada IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta controles existentes a casos/contraseña/MFA/comandos exactos y reconciliación canónica. Clase, management, delegación y uso siguen separados. Appointment producto bloqueado por review interna ausente; democión preserva estado/historia/grants. Sin operación real.
+
+## Sucesor de política staff ASE-ADM02-POL01
+
+[Contrato de admisión e identidad](../identity/ASE-ADM02-POL01-staff-admission-policy.md) registra siete principios aprobados por el Director; detalles legales/retención/delegación e implementación pendientes. No altera IW01 ni register: la operación string de execute sigue creando ADVISOR ACTIVE para cuenta activa, sin revisión documental. El futuro canal de admisión requiere guarda transaccional en el mismo writer y resolver orden grants/MFA antes de live; no invocación prematura ni segundo writer. Legacy conserva estado/audit sin etiqueta de identidad verificada. Authority de revisión staff y lectura ID no proviene de management o grants médicos; Master appointment sigue bloqueado sin snapshot autoritativo.

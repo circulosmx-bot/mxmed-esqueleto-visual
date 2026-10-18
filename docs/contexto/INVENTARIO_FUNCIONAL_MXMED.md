@@ -312,3 +312,7 @@ Actualizar sólo IDs afectados por una operación posterior autorizada, con ruta
 ## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
 
 ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-check.md) corrige una dependencia de persistencia, sin capacidades, autoridad o UI nuevas. P=preservación histórica autorizada; S=sucesor SQL; C=manifiesto y preflight; V=ensayo SQL aislado; O=inactivo.
+
+## ID-07 / COM-10 — política ASE-ADM02-POL01
+
+[Contrato documental](../identity/ASE-ADM02-POL01-staff-admission-policy.md): P=siete principios staff aprobados, detalles pendientes; S=Identity/gobierno/port existentes sin cambios; C=admisión/perfil/evidencia/revisión/activación sin conectar; V=inspección y validación documental, sin QA producto; O=inactivo. Reutiliza ID-01/02/03, preserva frontera ID-04/05 y J08; no nuevas capabilities ejecutables, censos ni grants. Master review/admisión necesitan autoridad específica; management y acreditación médica no la conceden.

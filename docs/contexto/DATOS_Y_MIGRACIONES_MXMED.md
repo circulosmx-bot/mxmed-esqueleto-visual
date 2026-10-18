@@ -135,3 +135,9 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
 
 [Ruta versionada COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-check.md): diez etapas ACT02 intactas → CHECK compatible 18_02 → objetos ACT03 18_03, cuyo cuerpo coincide con el histórico 17_07. CHECK 11 antes de Master y 17 después de su migración explícita. D conserva correcciones; H exige recuperación de preestado verificado en target nuevo, nunca rollback DDL supuesto. Metadata/receipts reales no inspeccionados.
+
+## ASE-ADM02-POL01 — contrato lógico staff, sin schema
+
+[Política vigente](../identity/ASE-ADM02-POL01-staff-admission-policy.md): principios aprobados; caso/perfil/confirmación, invitación, retrato/evidencia, revisión/admisión y resultado de handoff son **objetos lógicos propuestos**, no tablas/enums/DDL autorizados. Reutiliza auth_accounts/credentials/consents/one_time_tokens e internal_staff/grants/delegaciones/audit; consents actuales sólo terms/privacy_notice y tokens sin propósito staff. No filas consultadas, datos físicos ni censo modificados.
+
+El snapshot Master real sólo contiene account_id, credential_version, review_version; respaldo futuro debe ligar revisión aprobada vigente, versiones documentales y materialidad bajo la misma transacción. No usar tablas C4 como autoridad staff. Register sigue creando ADVISOR ACTIVE sin revisión; futura guarda dentro del mismo writer, sin alterar callers IW01. Retención/custodia/legal pendientes impiden intake real. COMPAT01 y migraciones históricas se conservan intactos.

@@ -52,6 +52,13 @@
 - Feature `feature/act03-governance-check-compat01`, padre exacto `e3182791fd414c1195e3a7bb64bbb60d20d00530`. [Sucesor SQL](identity/ACT03-CHECK-COMPAT01-historical-case-check.md) sustituye la ruta del CHECK ACT03 antes del fallo histórico, conservando fuentes/evidencia anteriores.
 - Paquete ACT02 intacto → CHECK compatible 11 → mismos objetos ACT03; Master 17 requiere su extensión separada. UI/writers/MFA intactos. 408 checks SQL PASS en A–H; D conserva correcciones y H recupera mediante backup verificado en datadir nuevo, con replay in-place bloqueado. Diez datadirs finales retirados y nueve worktrees protegidos sin cambios; sin conexiones reales, merge, despliegue o activación.
 
+## Política vigente ASE-ADM02-POL01 — UI-0
+
+- Padre exacto `732938df607dc508f50f14e564ada86bba4590ca`; entrega documental aislada `feature/ase-adm02-staff-admission-policy`. [Contrato de admisión e identidad staff](identity/ASE-ADM02-POL01-staff-admission-policy.md) registra la respuesta explícita “apruebo” a siete **principios**: documento individual, revisor autorizado, custodia privada, aceptación personal, cambios versionados, invitación individual y activación condicionada.
+- Sucede las referencias históricas a siete principios ADM pendientes; **no resuelve enteramente** detalles legales/retención/catálogo extranjero/delegación/implementación. Dos canales convergen en un caso; Identity, gobierno, MFA y audit canónicos preservados. D01–D08 comerciales intactos.
+- Fuente y conexión sin cambios: `execute(..., 'register', ...)` crea Advisor ACTIVE y necesita futura guarda de admisión transaccional; snapshot Master sólo cuenta/credencial/reviewVersion, reader producto indisponible. Appointment real sigue bloqueado. Legacy ACTIVE sin revisión no se etiqueta verificado ni se suspende masivamente.
+- Sólo inspección y verificación documental; sin QA de producto, SQL, archivos personales, grants/MFA/cuentas/envíos reales o activación. Fases ADM-IMP01..05 propuestas, cada una requiere autorización; intake real cerrado mientras custodia/retención esenciales sigan pendientes.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

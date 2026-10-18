@@ -177,3 +177,9 @@ J09: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta sele
 ## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
 
 J01/J02/J09 mantienen flujos y autoridades. [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-check.md) conserva compatibilidad de casos de corrección/fuentes/Master al instalar schema; no cambia HTTP, sesión, UI o comandos. No-op exige metadata más evidencia, y parciales se detienen antes de cualquier replay.
+
+## J09 — política de admisión ASE-ADM02-POL01, sin conexión nueva
+
+[Contrato vigente](../identity/ASE-ADM02-POL01-staff-admission-policy.md): asistida y remota preautorizada → un caso → matching Identity legítimo → confirmación/aceptación personal → evidencia versionada → revisión humana independiente → decisión de admisión → configuración y handoff canónico → readiness por función. Siete principios aprobados; detalles e implementación pendientes. No upload=aprobación ni ACTIVE=identidad revisada.
+
+A–H definen cuenta existente/nueva/pendiente, duplicados, revocación/expiración, staff legacy, fallo parcial y ACK perdido. Ninguna transacción global o retry ciego; futura precondición dentro del writer y orden grants/MFA deben impedir acceso prematuro. Master exige snapshot autoritativo exacto y sigue bloqueado con reader indisponible. J08 conserva comisiones/D01–D08; no mensajes, cuentas o journeys reales ejecutados.
