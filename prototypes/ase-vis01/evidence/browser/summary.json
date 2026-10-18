@@ -1,0 +1,4832 @@
+{
+  "task": "ASE-VIS01",
+  "started_utc": "2026-10-18T00:18:00.918959+00:00",
+  "branch": "prototype/ase-vis01-advisor-capability-matrix",
+  "commit_at_test": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "commit_binding": "Candidate tested before commit; verify these file digests against the final commit tree.",
+  "source_sha256": {
+    "prototypes/ase-vis01/index.html": "c5a1b120de85ff5e4c90dc643aaa04a2cd69f9bbf425dae4e79f996efbcc1df7",
+    "prototypes/ase-vis01/style.css": "5b328d0c75b8bd52193c982866d318d456e77d95aaf45423921b46ae7f937073",
+    "prototypes/ase-vis01/app.js": "5bd9a5c5dd41941f9d039e4ea565d4c32c244db54a510a4adf92e78525a0e43b",
+    "prototypes/ase-vis01/catalog.js": "deb3a1741e555afd38806ed5ceb6148851b131935553b4b054aa3d1546be8533",
+    "prototypes/ase-vis01/serve.py": "45823ad88a913b8e7e45d5939cdfa3e4fd51af8ce6346f994a8009e992011310",
+    "prototypes/ase-vis01/qa.py": "f7335fe80bf880323e8d85e2bae75d8fc23ad8dd33b7a1752b452b00b69b0fab",
+    "prototypes/ase-vis01/export-catalog.php": "dd7939642f8a2603834f1983c85dd9378d271cb56420844dc3fcd2afcc02aa09",
+    "assets/css/media-review-inbox.css": "80f5f75c10aea188bbd2f4de9a1df27e31eadb28232d246711507cb0a09090b9",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71"
+  },
+  "url": "http://127.0.0.1:8140/",
+  "scope": "Synthetic static UI only; no original runtime, API or database access.",
+  "physical_safari": "NOT_RUN",
+  "final_visual_approval": false,
+  "mobile": "INTERIM_SMOKE_ONLY",
+  "accessibility_limits": "DOM/keyboard/focus/label/status smoke only, not a screen-reader or full accessibility audit. macOS WebKit may skip links on Tab according to platform keyboard preferences; skip link focus and activation are tested explicitly.",
+  "cases": [
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 1440,
+            "document": 1440,
+            "body": 1440
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "400px 800px",
+            "children": [
+              {
+                "x": 108,
+                "y": 265.46875,
+                "width": 400
+              },
+              {
+                "x": 532,
+                "y": 265.46875,
+                "width": 800
+              }
+            ]
+          }
+        },
+        {
+          "name": "Keyboard reaches the skip link first",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre."
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno."
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\n\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible."
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/chromium-1440x900-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1440x900-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1440x900-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1440x900-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1440x900-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [],
+      "mobile_classification": null
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 1366,
+            "document": 1366,
+            "body": 1366
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "400px 800px",
+            "children": [
+              {
+                "x": 71,
+                "y": 265.46875,
+                "width": 400
+              },
+              {
+                "x": 495,
+                "y": 265.46875,
+                "width": 800
+              }
+            ]
+          }
+        },
+        {
+          "name": "Keyboard reaches the skip link first",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre."
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno."
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\n\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible."
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/chromium-1366x768-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1366x768-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1366x768-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1366x768-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-1366x768-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [],
+      "mobile_classification": null
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 820,
+            "document": 820,
+            "body": 820
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "263.062px 496.938px",
+            "children": [
+              {
+                "x": 22,
+                "y": 283.21875,
+                "width": 263.0625
+              },
+              {
+                "x": 301.0625,
+                "y": 283.21875,
+                "width": 496.9375
+              }
+            ]
+          }
+        },
+        {
+          "name": "Keyboard reaches the skip link first",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre."
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno."
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\n\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible."
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/chromium-820x1180-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-820x1180-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-820x1180-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-820x1180-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-820x1180-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [],
+      "mobile_classification": null
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 390,
+            "document": 390,
+            "body": 390
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "358px",
+            "children": [
+              {
+                "x": 16,
+                "y": 336.734375,
+                "width": 358
+              },
+              {
+                "x": 16,
+                "y": 1133.609375,
+                "width": 358
+              }
+            ]
+          }
+        },
+        {
+          "name": "Keyboard reaches the skip link first",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre."
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno."
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\n\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible."
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/chromium-390x844-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-390x844-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-390x844-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-390x844-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/chromium-390x844-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [],
+      "mobile_classification": "INTERIM_SMOKE_ONLY"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 1440,
+            "document": 1440,
+            "body": 1440
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "400px 800px",
+            "children": [
+              {
+                "x": 108,
+                "y": 265.453125,
+                "width": 400
+              },
+              {
+                "x": 532,
+                "y": 265.453125,
+                "width": 800
+              }
+            ]
+          }
+        },
+        {
+          "name": "Skip link accepts focus (WebKit platform Tab policy documented)",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre.\n"
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno.\n"
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible.\n\n"
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/webkit-1440x900-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1440x900-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1440x900-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1440x900-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1440x900-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-matrix",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "save-confirmation",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "simulation-history",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conflict",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "directory-error",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "mobile_classification": null
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 1366,
+            "document": 1366,
+            "body": 1366
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "400px 800px",
+            "children": [
+              {
+                "x": 71,
+                "y": 265.453125,
+                "width": 400
+              },
+              {
+                "x": 495,
+                "y": 265.453125,
+                "width": 800
+              }
+            ]
+          }
+        },
+        {
+          "name": "Skip link accepts focus (WebKit platform Tab policy documented)",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre.\n"
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno.\n"
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible.\n\n"
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/webkit-1366x768-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1366x768-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1366x768-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1366x768-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-1366x768-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-matrix",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "save-confirmation",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "simulation-history",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conflict",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "directory-error",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "mobile_classification": null
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 820,
+            "document": 820,
+            "body": 820
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "263.0625px 496.9375px",
+            "children": [
+              {
+                "x": 22,
+                "y": 283.203125,
+                "width": 263.0625
+              },
+              {
+                "x": 301.0625,
+                "y": 283.203125,
+                "width": 496.9375
+              }
+            ]
+          }
+        },
+        {
+          "name": "Skip link accepts focus (WebKit platform Tab policy documented)",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre.\n"
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno.\n"
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible.\n\n"
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/webkit-820x1180-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-820x1180-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-820x1180-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-820x1180-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-820x1180-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-matrix",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "save-confirmation",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "simulation-history",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conflict",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "directory-error",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "mobile_classification": null
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "result": "PASS",
+      "checks": [
+        {
+          "name": "Static prototype loads with HTTP 200",
+          "pass": true
+        },
+        {
+          "name": "CSP prohibits backend connections and form submission",
+          "pass": true
+        },
+        {
+          "name": "UI is explicitly non-operational",
+          "pass": true
+        },
+        {
+          "name": "Spanish page and exact heading",
+          "pass": true
+        },
+        {
+          "name": "Page source anchor identifies isolated branch",
+          "pass": true
+        },
+        {
+          "name": "Catalog exactly represented: 18 definitions, 16 independent operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Two governance authorities have no operational checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Operational groups cover all rendered capabilities exactly once",
+          "pass": true
+        },
+        {
+          "name": "A: one-capability fictional advisor",
+          "pass": true
+        },
+        {
+          "name": "Selected advisor remains visibly and semantically selected",
+          "pass": true
+        },
+        {
+          "name": "Four future functions remain read-only",
+          "pass": true
+        },
+        {
+          "name": "N: Future workflow gap explained",
+          "pass": true
+        },
+        {
+          "name": "Two class-restricted consumers remain read-only",
+          "pass": true
+        },
+        {
+          "name": "Director can edit only ten currently represented eligible functions",
+          "pass": true
+        },
+        {
+          "name": "Native labels and descriptions are associated with all checkboxes",
+          "pass": true
+        },
+        {
+          "name": "Individual capability label click targets are at least 44px high",
+          "pass": true
+        },
+        {
+          "name": "Checkbox technical identifiers are absent from visible product text",
+          "pass": true
+        },
+        {
+          "name": "Viewport has no horizontal document overflow",
+          "pass": true,
+          "detail": {
+            "width": 390,
+            "document": 390,
+            "body": 390
+          }
+        },
+        {
+          "name": "Responsive composition retains desktop/tablet columns or mobile stack",
+          "pass": true,
+          "detail": {
+            "columns": "358px",
+            "children": [
+              {
+                "x": 16,
+                "y": 336.6875,
+                "width": 358
+              },
+              {
+                "x": 16,
+                "y": 1133.546875,
+                "width": 358
+              }
+            ]
+          }
+        },
+        {
+          "name": "Skip link accepts focus (WebKit platform Tab policy documented)",
+          "pass": true
+        },
+        {
+          "name": "Keyboard focus has a visible outline",
+          "pass": true,
+          "detail": {
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        {
+          "name": "Skip link focuses advisor detail",
+          "pass": true
+        },
+        {
+          "name": "Status regions are announced politely",
+          "pass": true
+        },
+        {
+          "name": "B: three independent permissions and same-page selection",
+          "pass": true
+        },
+        {
+          "name": "G: selection moves focus to the new advisor heading",
+          "pass": true
+        },
+        {
+          "name": "C: all sixteen operational permissions can be represented without arbitrary maximum",
+          "pass": true
+        },
+        {
+          "name": "D: active advisor with zero grants",
+          "pass": true
+        },
+        {
+          "name": "E: suspended advisor preserves two grants and blocks editing",
+          "pass": true
+        },
+        {
+          "name": "Master administration is limited to three exact delegated capabilities",
+          "pass": true,
+          "detail": [
+            "media_review_approve",
+            "media_review_read",
+            "physician_accreditation_review"
+          ]
+        },
+        {
+          "name": "F: Master lacking management authority cannot modify any grant or lifecycle",
+          "pass": true
+        },
+        {
+          "name": "Missing management authority explained",
+          "pass": true,
+          "detail": "Este Master no tiene autorización para administrar asesores. Los controles permanecen en consulta."
+        },
+        {
+          "name": "Master cannot administer self or change own lifecycle",
+          "pass": true
+        },
+        {
+          "name": "H: grant and revocation remain explicitly unsaved",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Dirty proposal blocks lifecycle until resolved",
+          "pass": true
+        },
+        {
+          "name": "Unsaved grant does not change directory saved count",
+          "pass": true
+        },
+        {
+          "name": "I: explicit save opens labelled native confirmation dialog",
+          "pass": true
+        },
+        {
+          "name": "Confirmation separates exact grants",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation separates exact revocations",
+          "pass": true,
+          "detail": "Conceder (1)\nAprobar medios\nRevocar (1)\nConsultar revisión de medios\n"
+        },
+        {
+          "name": "Confirmation describes mock scope",
+          "pass": true,
+          "detail": "Revisa los cambios para Aurora Naranjo. Esta confirmación sólo actualiza la simulación en memoria."
+        },
+        {
+          "name": "Dialog focuses non-destructive cancel first",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Modal focus remains trapped after Shift+Tab",
+          "pass": true
+        },
+        {
+          "name": "Native Escape cancels dialog",
+          "pass": true
+        },
+        {
+          "name": "Escape restores keyboard-triggering save focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "save-permissions"
+          }
+        },
+        {
+          "name": "Escape preserves draft",
+          "pass": true,
+          "detail": "2 cambios sin guardar"
+        },
+        {
+          "name": "Changing selection protects unsaved proposal",
+          "pass": true,
+          "detail": "¿Descartar los cambios pendientes?"
+        },
+        {
+          "name": "Cancelling selection change preserves selected advisor and draft",
+          "pass": true
+        },
+        {
+          "name": "Cancel restores keyboard-triggering directory focus",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": ""
+          }
+        },
+        {
+          "name": "Revert restores saved grant without backend activity",
+          "pass": true
+        },
+        {
+          "name": "Revert retains useful focus after replacing detail controls",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "J: grant and revoke feedback is explicit simulation",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "No canonical server success is claimed",
+          "pass": true,
+          "detail": "Simulación guardada. Concedidos: 1. Revocados: 1. No hubo cambios reales."
+        },
+        {
+          "name": "In-memory save updates saved state and clears dirty flag",
+          "pass": true
+        },
+        {
+          "name": "Confirmed save moves focus to the replaced detail heading",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "O: five lifecycle history examples plus simulated grant/revoke entries remain discoverable",
+          "pass": true
+        },
+        {
+          "name": "K: stale version rejects save, preserves pending proposal and disables save",
+          "pass": true
+        },
+        {
+          "name": "Conflict does not claim a successful update",
+          "pass": true,
+          "detail": "Conflicto simulado: no se aplicó ningún cambio de tu propuesta."
+        },
+        {
+          "name": "Conflict focuses its recovery alert after replacing the form",
+          "pass": true,
+          "detail": {
+            "tag": "DIV",
+            "id": "conflict-banner"
+          }
+        },
+        {
+          "name": "Conflict leaves saved directory count unchanged",
+          "pass": true
+        },
+        {
+          "name": "Explicit conflict refresh discards proposal and restores current saved state",
+          "pass": true
+        },
+        {
+          "name": "Suspension confirmation explains preservation",
+          "pass": true,
+          "detail": "Aurora Naranjo: la suspensión bloquea futuras acciones operativas y conserva todos sus permisos e historial. No elimina la cuenta. Sólo es una simulación."
+        },
+        {
+          "name": "Cancelling suspension retains active status",
+          "pass": true
+        },
+        {
+          "name": "Cancelling lifecycle confirmation restores its keyboard trigger",
+          "pass": true,
+          "detail": {
+            "tag": "BUTTON",
+            "id": "lifecycle"
+          }
+        },
+        {
+          "name": "Suspension changes only fictional status and preserves grants/history",
+          "pass": true
+        },
+        {
+          "name": "Confirmed suspension restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Suspension is explicitly simulated",
+          "pass": true,
+          "detail": "Suspensión simulada. Permisos e historial conservados; no se modificó ninguna cuenta real."
+        },
+        {
+          "name": "Reactivation preserves saved grants/history and enables eligible editing",
+          "pass": true
+        },
+        {
+          "name": "Confirmed reactivation restores useful focus in replaced detail",
+          "pass": true,
+          "detail": {
+            "tag": "H2",
+            "id": "detail-title"
+          }
+        },
+        {
+          "name": "Explicit discard switches selected advisor without applying draft",
+          "pass": true
+        },
+        {
+          "name": "Name search is case-insensitive",
+          "pass": true
+        },
+        {
+          "name": "M: no-results state is explicit",
+          "pass": true,
+          "detail": "Sin resultados.\nPrueba con otro nombre.\n"
+        },
+        {
+          "name": "L: empty directory state",
+          "pass": true,
+          "detail": "Aún no hay asesores.\nLa incorporación vinculará una cuenta existente con el equipo interno.\n"
+        },
+        {
+          "name": "Empty directory has coherent empty detail",
+          "pass": true,
+          "detail": "Selecciona un asesor\nSus permisos y su historial aparecerán aquí cuando el directorio esté disponible.\n\n"
+        },
+        {
+          "name": "Loading state is busy and announced",
+          "pass": true
+        },
+        {
+          "name": "Directory error is announced and retry is available",
+          "pass": true
+        },
+        {
+          "name": "Retry restores fictional directory without re-registration",
+          "pass": true
+        },
+        {
+          "name": "Add advisor describes existing-account association",
+          "pass": true,
+          "detail": "La incorporación vinculará al equipo interno una cuenta legítima de Identity ya existente. No crea una cuenta nueva."
+        },
+        {
+          "name": "Add advisor has no account-creation or real submit control",
+          "pass": true
+        },
+        {
+          "name": "Placeholder closes without creating fictional extra advisor",
+          "pass": true
+        },
+        {
+          "name": "All displayed controls meet 44px minimum height",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "All states preserve viewport width",
+          "pass": true
+        },
+        {
+          "name": "No browser persistence attempted; storage and cookies stay empty",
+          "pass": true,
+          "detail": {
+            "overflow": false,
+            "undersized": [],
+            "storageAttempts": [],
+            "local": 0,
+            "session": 0,
+            "cookies": "",
+            "forms": [
+              {
+                "action": null,
+                "method": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "No session cookies or origins persisted in context",
+          "pass": true
+        },
+        {
+          "name": "Only allowlisted local GET resources were requested",
+          "pass": true,
+          "detail": [
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/assets/css/media-review-inbox.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/style.css",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/catalog.js",
+              "origin": "http://127.0.0.1:8140"
+            },
+            {
+              "method": "GET",
+              "path": "/app.js",
+              "origin": "http://127.0.0.1:8140"
+            }
+          ]
+        },
+        {
+          "name": "No application script/console errors; exact verified capture-tool diagnostic separated",
+          "pass": true,
+          "detail": []
+        },
+        {
+          "name": "Reload discards all mock administration changes",
+          "pass": true
+        },
+        {
+          "name": "Rapid reopening survives the previous queued dialog close event",
+          "pass": true
+        },
+        {
+          "name": "Rapidly reopened confirmation retains and executes its own mock action",
+          "pass": true
+        },
+        {
+          "name": "Rapid-reopen regression causes no application script errors or forbidden requests",
+          "pass": true,
+          "detail": []
+        }
+      ],
+      "screenshots": [
+        "prototypes/ase-vis01/evidence/browser/webkit-390x844-directory-matrix.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-390x844-save-confirmation.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-390x844-simulation-history.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-390x844-conflict.png",
+        "prototypes/ase-vis01/evidence/browser/webkit-390x844-directory-error.png"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/assets/css/media-review-inbox.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/style.css",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/catalog.js",
+          "origin": "http://127.0.0.1:8140"
+        },
+        {
+          "method": "GET",
+          "path": "/app.js",
+          "origin": "http://127.0.0.1:8140"
+        }
+      ],
+      "page_errors": [],
+      "capture_tool_diagnostics": [
+        {
+          "screenshot": "directory-matrix",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "save-confirmation",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "simulation-history",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "conflict",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        },
+        {
+          "screenshot": "directory-error",
+          "source": "Playwright WebKit screenshot syncAnimations",
+          "timing": "Only during page.screenshot; observed DOM mutation and matching console event.",
+          "injected_style": "body {}",
+          "csp_rejected": true,
+          "message": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+        }
+      ],
+      "mobile_classification": "INTERIM_SMOKE_ONLY"
+    }
+  ],
+  "capture_tool_qualification": {
+    "driver_path": "/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/driver/package/lib/server/screenshotter.js",
+    "sha256": "9aaff6c173c6a9a1c80e831dd92ccc24097243d49ad600dc87c4bc1fad9c625b",
+    "function": "inPagePrepareForScreenshots",
+    "body_style_line": 31,
+    "qualification": "WebKit-only screenshot synchronization attempts an inline body {} style. Strict CSP rejects it. A capture diagnostic is accepted only when exact text, DOM style mutation and screenshot timing match; all other errors remain fatal. No CSP bypass or driver modification."
+  },
+  "finished_utc": "2026-10-18T00:18:23.972375+00:00",
+  "result": "PASS",
+  "check_count": 728
+}

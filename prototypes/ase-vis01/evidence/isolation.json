@@ -1,0 +1,19 @@
+{
+  "catalog_export_matches_source": true,
+  "static_http_status": 200,
+  "csp": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; form-action 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  "product_and_filesystem_routes_not_exposed": true,
+  "writes_rejected": true,
+  "official_port_rejected": true,
+  "past_expiry_rejected": true,
+  "rollback_reopen_then_stop_own_server": true,
+  "original_tracked_files_compared": 2992,
+  "original_files_changed": [],
+  "original_source_head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "original_worktree_clean": true,
+  "original_listener_processes_unchanged": true,
+  "rollback_port": 8141,
+  "preview_port_preserved": 8140,
+  "database_connections": 0,
+  "original_http_requests": 0
+}

@@ -112,3 +112,26 @@ La candidata conserva visual diff 0, HTTPS local, cookie segura, CSRF,
 anti-enumeración, guards fail-closed, aislamiento de base/store y rollback
 probado. El smoke móvil es INTERIM_MOBILE_SMOKE_ONLY y la aprobación móvil final
 permanece pendiente.
+
+<a id="ase-vis01--matriz-individual-de-asesores-prototipo"></a>
+## 6. ASE-VIS01 — matriz individual de asesores, prototipo
+
+| Campo | Propuesta de revisión, sin aprobación visual final |
+|---|---|
+| `surfaceId` | `INTERNAL_ADVISOR_CAPABILITY_MATRIX_PROTOTYPE` |
+| Contrato | [ASE-VIS01](identity/ASE-VIS01-advisor-matrix-prototype.md) |
+| Fuente protegida | `ux/consultation-step2-vitals-r1` @ `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`; original 8443/8091/8092 sin integración |
+| Branch/worktree | `prototype/ase-vis01-advisor-capability-matrix` / `mxmed-ase-vis01-prototype`; commit exacto en entrega Git |
+| URL verificada / expiración | `http://127.0.0.1:8140/` / `2026-10-25T00:00:00Z`; servidor propio loopback, PID/commit en entrega |
+| Concepto aprobado | Directorio izquierdo y checklist individual derecho; aprobación del Director, 2026-10-17 |
+| Composición y copy | Dos columnas desktop, selección en página; **ASESORES Y PERMISOS**, **Administración individual de funciones autorizadas.**, **PROTOTIPO — NO OPERATIVO** |
+| Tokens / jerarquía | Lenguaje del workspace interno existente: fuente de sistema, azules sobrios, bordes claros; identidad/estado y grants separados de disponibilidad del consumidor |
+| Interacciones | Buscar/seleccionar, borrador en memoria, guardar explícito con concesiones/retiros, revertir, conflicto simulado, suspender/reactivar e historial ficticio |
+| Catálogo | 18 claves fuente: 16 operativas delegables representadas individualmente, dos de gobierno separadas; consumidores incompletos/restringidos identificados |
+| Responsive / accesibilidad | Viewports 1440×900, 1366×768, 820×1180 y 390×844; resultados/capturas en contrato. Móvil sólo `INTERIM_MOBILE_SMOKE_ONLY` |
+| Capturas / QA | [Evidencia](../prototypes/ase-vis01/evidence/); ocho recorridos Chromium/WebKit, 728 checks y 40 capturas. DOM/teclado/rollback PASS; avisos estrictamente de herramienta WebKit documentados en contrato; Safari físico NOT_RUN |
+| Estado | `UI-3_PROTOTYPE_PENDING_DIRECTOR_VISUAL_APPROVAL`; no staff/grants reales, integración ni activación |
+| Prohibido | Conectar comandos/DB/API reales, tocar UI original, promover a 8091, inferir autoridad por clase o activar funciones por un checkbox |
+| Gate | **“Apruebo visualmente esta versión.”** no recibida. El concepto aprobado no equivale a apariencia/responsive/interacción final aprobados |
+
+Este registro sucede únicamente la ausencia de un prototipo visual para la matriz futura de IW01/ASE-ALIGN01 V2. La administración real de asesores sigue `READY_BACKEND_UI_NOT_CONNECTED`; no modifica los contratos visuales de Media, C4, correcciones, Agenda, pacientes ni planes.

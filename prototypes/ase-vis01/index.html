@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asesores y permisos · Prototipo México Médico</title>
+  <link rel="stylesheet" href="/assets/css/media-review-inbox.css">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/catalog.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#advisor-detail">Ir a los permisos del asesor</a>
+  <main class="advisor-workspace">
+    <header class="workspace-header">
+      <div><p class="eyebrow">México Médico · Equipo interno</p><h1>ASESORES Y PERMISOS</h1><p class="subtitle">Administración individual de funciones autorizadas.</p></div>
+      <span class="prototype-badge">PROTOTIPO — NO OPERATIVO</span>
+    </header>
+    <div class="preview-notice"><strong>Vista de revisión con personas ficticias.</strong> Los cambios sólo duran mientras esta página permanece abierta. No se envían solicitudes de administración.</div>
+    <details class="review-controls">
+      <summary>Escenarios de revisión</summary>
+      <div class="review-grid">
+        <label for="authority-view">Vista de autoridad<select id="authority-view"><option value="director">Director</option><option value="master">Master con delegación parcial</option><option value="missing">Master sin autorización de gestión</option><option value="self">Master sobre su propia cuenta</option></select></label>
+        <label for="directory-state">Estado del directorio<select id="directory-state"><option value="ready">Con asesores ficticios</option><option value="empty">Directorio vacío</option><option value="loading">Cargando</option><option value="error">Error de consulta</option></select></label>
+        <label class="conflict-option" for="simulate-conflict"><input type="checkbox" id="simulate-conflict"> Simular conflicto al confirmar el próximo guardado</label>
+      </div>
+      <p>Estas opciones muestran estados de diseño; no representan una sesión ni permisos reales.</p>
+    </details>
+    <p id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+    <div class="workspace-columns">
+      <aside class="directory panel" aria-labelledby="directory-heading">
+        <div class="panel-heading"><h2 id="directory-heading">Asesores</h2><span id="directory-count" class="muted"></span></div>
+        <label for="advisor-search" class="search-label">Buscar por nombre</label>
+        <input id="advisor-search" type="search" placeholder="Nombre del asesor" autocomplete="off">
+        <div id="directory-content" aria-live="polite"></div>
+        <button id="add-advisor" class="add-button" type="button">+ Agregar asesor</button>
+        <p class="directory-note">Sin cupo de asesores de plataforma. Las dos plazas de operadores por médico pertenecen a otra función.</p>
+      </aside>
+      <section id="advisor-detail" class="detail panel" aria-labelledby="detail-title" tabindex="-1"></section>
+    </div>
+    <footer class="preview-footer"><p>ASE-VIS01 · UI-3 · Apariencia pendiente de aprobación del Director.</p><details><summary>Referencia de esta revisión</summary><p>Rama: prototype/ase-vis01-advisor-capability-matrix<br>Commit: <span id="preview-commit">__PREVIEW_COMMIT__</span><br>Fuente: f92f37f1958af5140a96c04cb52c5c1ce7af8e01<br>Caducidad de esta vista: __PREVIEW_EXPIRY__</p></details></footer>
+  </main>
+  <dialog id="confirmation" aria-labelledby="confirmation-title" aria-describedby="confirmation-description">
+    <h2 id="confirmation-title"></h2><p id="confirmation-description"></p><div id="confirmation-body"></div>
+    <div class="dialog-actions"><button id="cancel-confirmation" type="button" autofocus>Cancelar</button><button id="accept-confirmation" type="button" class="primary">Confirmar simulación</button></div>
+  </dialog>
+</body>
+</html>
