@@ -71,6 +71,11 @@
 - Registro/verificación/login canónicos probados con cuenta nueva sintética; cuenta existente conservada. Perfil propio confirmado/corregido por HTTP IMP01. La composición HTTP de invitaciones permanece indisponible por políticas productivas no ratificadas; ninguna excepción positiva por env/fixture.
 - 201 checks PASS, siete escenarios concurrentes y dos regresiones audit; límites en contrato/evidencia. Recursos propios dispuestos y doce worktrees/listeners/pointer protegidos. UI R2/COM/ADM, Master fail-closed y COMPAT01 preservados. Sin cuentas/envíos/DB/staff/grants reales, merge, deploy o activación.
 
+## Sucesor aislado ASE-ADM02-IMP03 — UI-0
+
+- Padre27e0da02a4daf15d3c1a32ab5590e2527e835b52; feature `feature/ase-adm02-private-staff-media`. [Media staff privada](identity/ASE-ADM02-IMP03-private-staff-media.md): retrato WebP privado y evidencia JPEG/PNG validada, propósitos/AAD distintos, versiones inmutables, solicitante exacto, audit y reconciliación de huérfanos/ACK/ausencias. Sin writer público ni modificación de casos/invitaciones.
+- 312 checks PASS, nueve escenarios concurrentes y tres tests audit; recursos propios dispuestos. Producto sin endpoints de upload/download; composición indisponible por políticas pendientes. PDF no implementado; no reviewer/identidad aprobada, Master readiness, UI, datos reales ni activación. Trece worktrees anteriores y runtimes protegidos; pruebas sólo en infraestructura nueva propia.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

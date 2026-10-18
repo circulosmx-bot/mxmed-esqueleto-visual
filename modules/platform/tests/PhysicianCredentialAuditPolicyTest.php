@@ -132,8 +132,8 @@ $metadata=[
 ];
 $rows=CanonicalAuditPolicyRegistry::canonicalRows();
 $laterEvents=['PHYSICIAN_EVIDENCE_CHANGED','PHYSICIAN_AUTHORITY_CHANGED',
-    'PUBLIC_PROFILE_CORRECTION_RECEIVED','PUBLIC_PROFILE_CORRECTION_REVIEWED','PUBLIC_PROFILE_CORRECTION_APPLICATION','STAFF_ADMISSION_CASE_CHANGED','STAFF_ADMISSION_CASE_READ'];
-check(count($rows)===59 && count(CanonicalAuditEventType::all())===59,'59 reviewed events/policies through ASE-ADM02-IMP01');
+    'PUBLIC_PROFILE_CORRECTION_RECEIVED','PUBLIC_PROFILE_CORRECTION_REVIEWED','PUBLIC_PROFILE_CORRECTION_APPLICATION','STAFF_ADMISSION_CASE_CHANGED','STAFF_ADMISSION_CASE_READ','STAFF_MEDIA_CHANGED','STAFF_MEDIA_READ'];
+check(count($rows)===61 && count(CanonicalAuditEventType::all())===61,'61 reviewed events/policies through ASE-ADM02-IMP03');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
 // The reviewed OP-IMP07 catalog at d195328b had 52 rows. Later C4 and
 // public-correction events are append-only, not changes to credential policy.

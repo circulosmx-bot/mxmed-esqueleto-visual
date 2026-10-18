@@ -6,7 +6,7 @@ use Platform\Services\{CanonicalAuditPolicyRegistry,CanonicalAuditMetadataSaniti
 $registry=CanonicalAuditPolicyRegistry::canonical();$rows=CanonicalAuditPolicyRegistry::canonicalRows();
 function requireCheck(bool $ok,string $name):void{if(!$ok)throw new RuntimeException($name);}
 requireCheck(hash('sha256',json_encode(array_slice($rows,0,57),JSON_UNESCAPED_SLASHES))==='8233dcbacce77aee64fa40ce4ebd97e55003f21daf2f0092cd353f4e66d7c62a','all_57_historical_policies_unchanged');
-requireCheck(array_column(array_slice($rows,57),'event_type')===['STAFF_ADMISSION_CASE_CHANGED','STAFF_ADMISSION_CASE_READ'],'two_exact_appended_events');
+requireCheck(array_column(array_slice($rows,57,2),'event_type')===['STAFF_ADMISSION_CASE_CHANGED','STAFF_ADMISSION_CASE_READ'],'two_exact_appended_events');
 foreach(['STAFF_ADMISSION_CASE_CHANGED','STAFF_ADMISSION_CASE_READ'] as $event){
  $policy=$registry->policyFor($event);
  requireCheck((new SourceModuleCatalog())->moduleForEvent($event)==='ADMIN','canonical_module');

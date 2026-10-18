@@ -1,0 +1,1208 @@
+{
+  "result": "FAIL",
+  "error": "OperationalError: (1054, \"Unknown column 'event_type' in 'where clause'\")",
+  "source_baseline": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Private no-store csrf",
+      "pass": true
+    },
+    {
+      "name": "Private no-store prepare",
+      "pass": true
+    },
+    {
+      "name": "A Director prepares exact case",
+      "pass": true
+    },
+    {
+      "name": "Private no-store read",
+      "pass": true
+    },
+    {
+      "name": "E Director provenance, no personal confirmation",
+      "pass": true
+    },
+    {
+      "name": "Unbound case cannot be confirmed by Director",
+      "pass": true
+    },
+    {
+      "name": "H/I no preparation authority master",
+      "pass": true
+    },
+    {
+      "name": "Exact case read denied master",
+      "pass": true
+    },
+    {
+      "name": "H/I no preparation authority advisor",
+      "pass": true
+    },
+    {
+      "name": "Exact case read denied advisor",
+      "pass": true
+    },
+    {
+      "name": "H/I no preparation authority outsider",
+      "pass": true
+    },
+    {
+      "name": "Exact case read denied outsider",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session None",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session expired",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session revoked",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session changed",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session disabled",
+      "pass": true
+    },
+    {
+      "name": "M CSRF required",
+      "pass": true
+    },
+    {
+      "name": "M cross origin denied",
+      "pass": true
+    },
+    {
+      "name": "M foreign Fetch-Site denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP method denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP unknown query denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP duplicate keys denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP oversized denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP non JSON denied",
+      "pass": true
+    },
+    {
+      "name": "N/X forbidden field actor",
+      "pass": true
+    },
+    {
+      "name": "N/X forbidden field bound_account_id",
+      "pass": true
+    },
+    {
+      "name": "N/X forbidden field binding_reference",
+      "pass": true
+    },
+    {
+      "name": "N/X forbidden field identity_verified",
+      "pass": true
+    },
+    {
+      "name": "N/X forbidden field photo_reference",
+      "pass": true
+    },
+    {
+      "name": "N/X forbidden field mobile",
+      "pass": true
+    },
+    {
+      "name": "N invalid proposed role",
+      "pass": true
+    },
+    {
+      "name": "N category immutable",
+      "pass": true
+    },
+    {
+      "name": "Private no-store prepare",
+      "pass": true
+    },
+    {
+      "name": "S same operation same outcome",
+      "pass": true
+    },
+    {
+      "name": "S operation cannot change payload",
+      "pass": true
+    },
+    {
+      "name": "S another operation same recipient conflicts",
+      "pass": true
+    },
+    {
+      "name": "Private no-store result",
+      "pass": true
+    },
+    {
+      "name": "T lost ACK read exact persisted result",
+      "pass": true
+    },
+    {
+      "name": "T other actor cannot read operation",
+      "pass": true
+    },
+    {
+      "name": "Private no-store prepare",
+      "pass": true
+    },
+    {
+      "name": "Private no-store read",
+      "pass": true
+    },
+    {
+      "name": "Remote channel is same case and no binding",
+      "pass": true
+    },
+    {
+      "name": "F CLI exact synthetic account binding",
+      "pass": true
+    },
+    {
+      "name": "Private no-store read",
+      "pass": true
+    },
+    {
+      "name": "Canonical account email only after binding",
+      "pass": true
+    },
+    {
+      "name": "G wrong applicant cannot confirm",
+      "pass": true
+    },
+    {
+      "name": "Private no-store confirm",
+      "pass": true
+    },
+    {
+      "name": "F exact linked applicant confirmation",
+      "pass": true
+    },
+    {
+      "name": "Private no-store read",
+      "pass": true
+    },
+    {
+      "name": "O personal confirmation distinct from identity approval",
+      "pass": true
+    },
+    {
+      "name": "Private no-store correct",
+      "pass": true
+    },
+    {
+      "name": "Private no-store read",
+      "pass": true
+    },
+    {
+      "name": "P material change invalidates confirmation preserves prior bytes",
+      "pass": true
+    },
+    {
+      "name": "Q stale expected version",
+      "pass": true
+    },
+    {
+      "name": "Cross case operation substitution",
+      "pass": true
+    },
+    {
+      "name": "R two independent writers actually wait on SQL case lock",
+      "pass": true
+    },
+    {
+      "name": "R exactly one write wins expected_version",
+      "pass": true
+    },
+    {
+      "name": "S concurrent duplicate has one canonical result",
+      "pass": true
+    },
+    {
+      "name": "Authority revoked during lock wait denies write",
+      "pass": true
+    },
+    {
+      "name": "U audit failure rolls back create and update",
+      "pass": true
+    },
+    {
+      "name": "Private no-store revoke",
+      "pass": true
+    },
+    {
+      "name": "Revocation persists",
+      "pass": true
+    },
+    {
+      "name": "Revoked intent cannot be reused",
+      "pass": true
+    },
+    {
+      "name": "Revoked case old prepare replay denied",
+      "pass": true
+    },
+    {
+      "name": "Private no-store result",
+      "pass": true
+    },
+    {
+      "name": "Revoked outcome remains reconcilable",
+      "pass": true
+    },
+    {
+      "name": "Immutable historical version SQL update",
+      "pass": true
+    },
+    {
+      "name": "Immutable historical version SQL delete",
+      "pass": true
+    },
+    {
+      "name": "FK rejects cross-case current version",
+      "pass": true
+    },
+    {
+      "name": "CHECK rejects approval state",
+      "pass": true
+    },
+    {
+      "name": "Schema FK and CHECK active",
+      "pass": true
+    },
+    {
+      "name": "C canonical table unchanged auth_accounts",
+      "pass": true
+    },
+    {
+      "name": "C canonical table unchanged auth_account_credentials",
+      "pass": true
+    },
+    {
+      "name": "B/W canonical table unchanged internal_staff",
+      "pass": true
+    },
+    {
+      "name": "D canonical table unchanged internal_operator_grants",
+      "pass": true
+    },
+    {
+      "name": "D canonical table unchanged internal_capability_delegations",
+      "pass": true
+    },
+    {
+      "name": "Audit exact case actor and no personal payload",
+      "pass": true
+    },
+    {
+      "name": "Private reads audited without personal values",
+      "pass": true
+    },
+    {
+      "name": "V/Z unavailable staff review still fails closed",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/MasterGovernance/Composition.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/contracts/StaffIdentityReviewPort.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/contracts/StaffIdentityReviewSnapshot.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/adapters/UnavailableStaffIdentityReview.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/services/InternalGovernanceService.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/services/InternalCapabilityCatalog.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged modules/identity/Operational/DeploymentPackage.php",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged assets/js/internal-team.js",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged assets/js/internal-team-master.js",
+      "pass": true
+    },
+    {
+      "name": "Protected source unchanged partials/identity/internal-team.php",
+      "pass": true
+    },
+    {
+      "name": "X no file endpoints",
+      "pass": true
+    },
+    {
+      "name": "No notification delivery",
+      "pass": true
+    },
+    {
+      "name": "Y unrelated application gates off",
+      "pass": true
+    },
+    {
+      "name": "Y new feature default-off returns unavailable",
+      "pass": true
+    },
+    {
+      "name": "HTTP SQL principal cannot establish account binding",
+      "pass": true
+    },
+    {
+      "name": "CHECK refuses incomplete binding",
+      "pass": true
+    },
+    {
+      "name": "Immutable operation result SQL update",
+      "pass": true
+    },
+    {
+      "name": "Unsigned direct HTTP transport denied",
+      "pass": true
+    },
+    {
+      "name": "No fixture binding accessible over HTTP",
+      "pass": true
+    },
+    {
+      "name": "Canonical audit policy regression",
+      "pass": true
+    },
+    {
+      "name": "AI all 101 foundation checks passed before invitation tests",
+      "pass": true
+    },
+    {
+      "name": "IMP02 migration installed only after verified owned datadir",
+      "pass": true
+    },
+    {
+      "name": "AL invitation HTTP default disabled issue",
+      "pass": true
+    },
+    {
+      "name": "AL invitation HTTP default disabled reissue",
+      "pass": true
+    },
+    {
+      "name": "AL invitation HTTP default disabled revoke",
+      "pass": true
+    },
+    {
+      "name": "AL invitation HTTP default disabled accept",
+      "pass": true
+    },
+    {
+      "name": "AL invitation HTTP default disabled result",
+      "pass": true
+    },
+    {
+      "name": "AL invitation HTTP default disabled csrf",
+      "pass": true
+    },
+    {
+      "name": "AL enabling flag still requires unratified production policy",
+      "pass": true
+    },
+    {
+      "name": "No invitation test entry over HTTP",
+      "pass": true
+    },
+    {
+      "name": "A/B exact case, purpose, version and creator",
+      "pass": true
+    },
+    {
+      "name": "C invitation creates no staff or account",
+      "pass": true
+    },
+    {
+      "name": "D delivery acknowledged only by inert owner-only sink",
+      "pass": true
+    },
+    {
+      "name": "Token entropy and digest-only persistence",
+      "pass": true
+    },
+    {
+      "name": "Email not plaintext or unsalted hash in invitation",
+      "pass": true
+    },
+    {
+      "name": "E canonical registration pending with two personal consents",
+      "pass": true
+    },
+    {
+      "name": "Registration alone leaves case unbound",
+      "pass": true
+    },
+    {
+      "name": "L unverified canonical login denied",
+      "pass": true
+    },
+    {
+      "name": "K email/token without session denied",
+      "pass": true
+    },
+    {
+      "name": "F actual canonical verification consumed token and activated Identity only",
+      "pass": true
+    },
+    {
+      "name": "H atomic matching verified account binding and consumption",
+      "pass": true
+    },
+    {
+      "name": "X exact duplicate acceptance returns canonical receipt",
+      "pass": true
+    },
+    {
+      "name": "Conflicting acceptance operation intention denied",
+      "pass": true
+    },
+    {
+      "name": "Y ACK reconciliation uses actor-owned result",
+      "pass": true
+    },
+    {
+      "name": "Result not visible to another account",
+      "pass": true
+    },
+    {
+      "name": "W consumed token cannot bind another account",
+      "pass": true
+    },
+    {
+      "name": "Z bound applicant own canonical HTTP read",
+      "pass": true
+    },
+    {
+      "name": "Z cannot read other case",
+      "pass": true
+    },
+    {
+      "name": "AA own correction through IMP01 HTTP",
+      "pass": true
+    },
+    {
+      "name": "AA own confirmation through IMP01 HTTP",
+      "pass": true
+    },
+    {
+      "name": "Personal confirmation distinct from accreditation",
+      "pass": true
+    },
+    {
+      "name": "AB applicant cannot inject proposed_category",
+      "pass": true
+    },
+    {
+      "name": "AB applicant cannot inject creator_account_id",
+      "pass": true
+    },
+    {
+      "name": "AB applicant cannot inject recipient_email",
+      "pass": true
+    },
+    {
+      "name": "AB applicant cannot inject bound_account_id",
+      "pass": true
+    },
+    {
+      "name": "AB applicant cannot inject grant",
+      "pass": true
+    },
+    {
+      "name": "AA cannot correct other case",
+      "pass": true
+    },
+    {
+      "name": "G existing canonical account authenticates and normalized recipient accepts",
+      "pass": true
+    },
+    {
+      "name": "I wrong account",
+      "pass": true
+    },
+    {
+      "name": "J case display name equal to applicant name is irrelevant",
+      "pass": true
+    },
+    {
+      "name": "M invalid current account/session disabled",
+      "pass": true
+    },
+    {
+      "name": "M invalid current account/session suspended",
+      "pass": true
+    },
+    {
+      "name": "M invalid current account/session changed",
+      "pass": true
+    },
+    {
+      "name": "M invalid current account/session expired",
+      "pass": true
+    },
+    {
+      "name": "M invalid current account/session revoked",
+      "pass": true
+    },
+    {
+      "name": "M matching invalid current account/staff disabled",
+      "pass": true
+    },
+    {
+      "name": "M matching invalid current account/staff suspended",
+      "pass": true
+    },
+    {
+      "name": "Existing ACTIVE staff requires separate review",
+      "pass": true
+    },
+    {
+      "name": "Existing staff untouched and unbound",
+      "pass": true
+    },
+    {
+      "name": "N expired token",
+      "pass": true
+    },
+    {
+      "name": "Expiration terminal persisted",
+      "pass": true
+    },
+    {
+      "name": "Expired token cannot revive after backwards clock",
+      "pass": true
+    },
+    {
+      "name": "SQL terminal state cannot reactivate",
+      "pass": true
+    },
+    {
+      "name": "O revoked token",
+      "pass": true
+    },
+    {
+      "name": "Revoked token stays terminal under clock rollback",
+      "pass": true
+    },
+    {
+      "name": "P replaced token denied",
+      "pass": true
+    },
+    {
+      "name": "R former recipient cannot use new token",
+      "pass": true
+    },
+    {
+      "name": "R explicit Director intention changes recipient",
+      "pass": true
+    },
+    {
+      "name": "Reissue same operation does not deliver another invitation",
+      "pass": true
+    },
+    {
+      "name": "S revoked case",
+      "pass": true
+    },
+    {
+      "name": "S revoked case leaves unbound",
+      "pass": true
+    },
+    {
+      "name": "T changed profile version",
+      "pass": true
+    },
+    {
+      "name": "T changed profile version leaves unbound",
+      "pass": true
+    },
+    {
+      "name": "U wrong case/token pair",
+      "pass": true
+    },
+    {
+      "name": "V cross-case token substitution",
+      "pass": true
+    },
+    {
+      "name": "AD/AE no invitation management master",
+      "pass": true
+    },
+    {
+      "name": "No unauthorized revoke master",
+      "pass": true
+    },
+    {
+      "name": "AD/AE no invitation management advisor",
+      "pass": true
+    },
+    {
+      "name": "No unauthorized revoke advisor",
+      "pass": true
+    },
+    {
+      "name": "AD/AE no invitation management new",
+      "pass": true
+    },
+    {
+      "name": "No unauthorized revoke new",
+      "pass": true
+    },
+    {
+      "name": "AC suspended Director cannot issue",
+      "pass": true
+    },
+    {
+      "name": "Failed transport retains pending creation",
+      "pass": true
+    },
+    {
+      "name": "Lost delivery ACK replay never resends",
+      "pass": true
+    },
+    {
+      "name": "Pending result reconciles canonical creation",
+      "pass": true
+    },
+    {
+      "name": "Explicit reissue recovers failed delivery and invalidates old",
+      "pass": true
+    },
+    {
+      "name": "AG audit failure rolls back consumption binding and receipt",
+      "pass": true
+    },
+    {
+      "name": "AG successful retry only after authoritative absence confirmed",
+      "pass": true
+    },
+    {
+      "name": "Race warmup creates canonical attempt bucket",
+      "pass": true
+    },
+    {
+      "name": "Q independent connections wait then consume exactly once",
+      "pass": true
+    },
+    {
+      "name": "Duplicate race warmup creates canonical attempt bucket",
+      "pass": true
+    },
+    {
+      "name": "Concurrent same operation has one identical receipt",
+      "pass": true
+    },
+    {
+      "name": "Replacement/acceptance serialized with one winning intention",
+      "pass": true
+    },
+    {
+      "name": "Final session revalidation rolls back acceptance after Valkey logout",
+      "pass": true
+    },
+    {
+      "name": "AH unknown and rate-blocked valid invitation have identical generic errors",
+      "pass": true
+    },
+    {
+      "name": "AH canonical attempt bucket persisted",
+      "pass": true
+    },
+    {
+      "name": "SQL recipient intent immutable",
+      "pass": true
+    },
+    {
+      "name": "SQL expiry cannot be extended",
+      "pass": true
+    },
+    {
+      "name": "SQL receipt immutable",
+      "pass": true
+    },
+    {
+      "name": "Invitation principal cannot write auth_accounts",
+      "pass": true
+    },
+    {
+      "name": "Invitation principal cannot write internal_staff",
+      "pass": true
+    },
+    {
+      "name": "Invitation principal cannot write internal_operator_grants",
+      "pass": true
+    },
+    {
+      "name": "No plaintext recipient or raw invitation in SQL/audit",
+      "pass": true
+    },
+    {
+      "name": "AK no staff/grant/delegation changes internal_staff",
+      "pass": true
+    },
+    {
+      "name": "AK no staff/grant/delegation changes internal_operator_grants",
+      "pass": true
+    },
+    {
+      "name": "AK no staff/grant/delegation changes internal_capability_delegations",
+      "pass": true
+    },
+    {
+      "name": "AF existing accounts and credentials untouched",
+      "pass": true
+    },
+    {
+      "name": "Only one explicitly synthetic canonical account created",
+      "pass": true
+    },
+    {
+      "name": "AJ Master fail-closed regression was executed",
+      "pass": true
+    },
+    {
+      "name": "Synthetic token/key files removed after verification",
+      "pass": true
+    },
+    {
+      "name": "IMP03 preconditions: all 201 admission/invitation regressions passed",
+      "pass": true
+    },
+    {
+      "name": "A/B portrait transformed privately to WebP",
+      "pass": true
+    },
+    {
+      "name": "I embedded portrait metadata removed",
+      "pass": true
+    },
+    {
+      "name": "D ciphertext only private 0600 at exact staff namespace",
+      "pass": true
+    },
+    {
+      "name": "C/D evidence stays distinct original validated raster, privately encrypted",
+      "pass": true
+    },
+    {
+      "name": "C portrait permission/request cannot read evidence purpose",
+      "pass": true
+    },
+    {
+      "name": "Metadata exact account/profile/source actor provenance",
+      "pass": true
+    },
+    {
+      "name": "E actual MIME mismatch",
+      "pass": true
+    },
+    {
+      "name": "F malformed raster",
+      "pass": true
+    },
+    {
+      "name": "G input byte bound",
+      "pass": true
+    },
+    {
+      "name": "H side resource bound",
+      "pass": true
+    },
+    {
+      "name": "H pixel resource bound",
+      "pass": true
+    },
+    {
+      "name": "E trailing active/polyglot payload",
+      "pass": true
+    },
+    {
+      "name": "PDF intentionally not implemented",
+      "pass": true
+    },
+    {
+      "name": "Evidence rejects metadata-bearing source outside explicit subset",
+      "pass": true
+    },
+    {
+      "name": "JPEG actual decode accepted only as private evidence",
+      "pass": true
+    },
+    {
+      "name": "J/K replacement increments asset version preserves prior cipher/history",
+      "pass": true
+    },
+    {
+      "name": "W exact duplicate returns canonical asset without another file",
+      "pass": true
+    },
+    {
+      "name": "W conflicting same operation content rejected",
+      "pass": true
+    },
+    {
+      "name": "AB lost ACK reconciles persisted operation and audit",
+      "pass": true
+    },
+    {
+      "name": "M other legitimate applicant",
+      "pass": true
+    },
+    {
+      "name": "O unauthorized Master",
+      "pass": true
+    },
+    {
+      "name": "P Advisor peer",
+      "pass": true
+    },
+    {
+      "name": "Director directory authority is not evidence authority",
+      "pass": true
+    },
+    {
+      "name": "N token/no session",
+      "pass": true
+    },
+    {
+      "name": "Disabled canonical account",
+      "pass": true
+    },
+    {
+      "name": "Stale canonical credential",
+      "pass": true
+    },
+    {
+      "name": "Revoked session",
+      "pass": true
+    },
+    {
+      "name": "L own other case cannot substitute asset",
+      "pass": true
+    },
+    {
+      "name": "Q forged exact asset/case/version",
+      "pass": true
+    },
+    {
+      "name": "Q forged exact asset/case/version",
+      "pass": true
+    },
+    {
+      "name": "Q forged exact asset/case/version",
+      "pass": true
+    },
+    {
+      "name": "Q forged exact asset/case/version",
+      "pass": true
+    },
+    {
+      "name": "Other applicant cannot reconcile operation",
+      "pass": true
+    }
+  ],
+  "check_count": 235,
+  "concurrency": [
+    {
+      "name": "admin_applicant_same_version",
+      "independent_connections": true,
+      "lock_wait_observed": true,
+      "one_commit": true
+    },
+    {
+      "name": "duplicate_operation",
+      "independent_connections": true,
+      "same_canonical_result": true
+    },
+    {
+      "name": "director_suspension_while_waiting",
+      "lock_wait_observed": true,
+      "denied": true
+    },
+    {
+      "name": "invitation_acceptance_single_consumption",
+      "independent_connections": true,
+      "lock_wait_observed": true,
+      "one_commit": true
+    },
+    {
+      "name": "invitation_duplicate_acceptance",
+      "independent_connections": true,
+      "same_canonical_result": true
+    },
+    {
+      "name": "acceptance_vs_reissue",
+      "independent_connections": true,
+      "lock_wait_observed": true,
+      "one_commit": true
+    },
+    {
+      "name": "session_revocation_before_commit",
+      "independent_connections": true,
+      "lock_wait_observed": true,
+      "binding_rolled_back": true
+    }
+  ],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseadm02imp01_7f6a960cc9",
+    "new_datadir": "/tmp/mxmed-ase-adm02imp01-xp1wf5o9/mysql",
+    "mysql_port": 60790,
+    "valkey_port": 60791,
+    "php_port": 60792,
+    "tls_origin": "https://127.0.0.1:60793",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": false,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_changed": false,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "ed3469b891ccfb84421a218d0394d34d30a0bf701adaaf2c79c7ebf77a4f1957",
+    "modules/identity/Team/MutationHttp.php": "0e0ef1e18bbe3165f795da6264e9dba682228219038e1e900b61a99bbb7fdaf1",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "9261c3cd0e6a41441183b93b62001f81dd1de7820c76bfc1f83f43badd34eb8a",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "24acd071dffe0f2dbf6855efc2ccbf79b0c7a06a20681923f86c855e7256711d",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71",
+    "modules/identity/http/CanonicalHttpSessionResolver.php": "633051263883e5be65253a514669c41cc8e4da03457284b302c6d62ffe63b0c6",
+    "modules/identity/http/IdentityHttpComposition.php": "f89f04948b37963dd2ca4d5beb166e44ca6a526e3afa01ae5499c12478e0c2ec",
+    "modules/identity/http/CsrfTokenService.php": "011137a07c9412f0210fabef34a378855c9d8ba8c055c3e773d94651a66b82ec",
+    "modules/identity/http/GovernanceTransport.php": "74daa4265765fe32e6294f8803f0f4bf192a0c3f80a3105d482e68d1d97a9459",
+    "modules/identity/Team/ReadService.php": "64ef2eaad19f25037b82b56f35d3b16d870822eccef407bc867219729a89101e",
+    "modules/identity/StaffAdmission/UnitOfWork.php": "fe6b985405fbaf833cf51ad27b35e8cd955d10a905bb1cb9ecc80e52ef877acf",
+    "modules/identity/StaffAdmission/Service.php": "7f0e31883f73652e28628f5e931dea13f61988e4ae7c01a5d5c6e53fdda475b6",
+    "modules/identity/StaffAdmission/Audit.php": "7c20ca51b73753a1861a1bd9405cd0b19368cf8dba2a6d6bb6a807051817863d",
+    "modules/identity/StaffAdmission/InvitationInput.php": "a576a7fffa4732d95ca8031282faedde44621225bc14bc0d6d245a22cc622d75",
+    "modules/identity/StaffAdmission/InvitationHttp.php": "7ddec85f3aa492421cd25061db9aeb4fe2203427c31fad315188a499e9e381a6",
+    "modules/identity/StaffAdmission/Http.php": "decf6532dcd006c83f2a0f308ef10641f228e2afbdc9f57ba7e3d0d6e4045fe4",
+    "modules/identity/StaffAdmission/InvitationPolicy.php": "f06f34d042c40ce77567c5c811b9264a353f43051b22139d5b80deb0c0f37256",
+    "modules/identity/StaffAdmission/InvitationComposition.php": "019c6f023e9bea1f4928f90947cd7916bd2d8fc744590fc10c189763bfecd642",
+    "modules/identity/StaffAdmission/Composition.php": "2782a00e0b02eb95d2214e20741f33cbb47491844350b5a5125a5b8d66b278d9",
+    "modules/identity/StaffAdmission/Input.php": "dd2d08dd67f2d6750c271b2c7669c31b30abb685593621a6f17081dce2cc486b",
+    "modules/identity/StaffAdmission/InvitationService.php": "0d89b4607eebe3400a9c9fdc26d3e8081e99b820b4876fcf1d5f73f633f23773",
+    "modules/identity/StaffAdmission/InvitationDeliveryPort.php": "595aaca362c70abc9d724a261beb81bc7830c7276a8d8cebff81ab9627303146",
+    "api/internal/staff-admission/correct.php": "28367f5661fbc1d164136155b6015fd7fc2bd5787dfb81723a131a5e8a2145f5",
+    "api/internal/staff-admission/update.php": "b839b0dfcce2b6a0c44e7dbf62bf97312b824d3a5905ef41bf23a0ebd2b8a458",
+    "api/internal/staff-admission/invitation-revoke.php": "44559e6eac8d6bda52727bd801a69f27005a1b54549f254f08a3f6281c335172",
+    "api/internal/staff-admission/invitation-accept.php": "d8038e00bba2e748b7a29acf4dbf86987c71583bd5e3f83a960dea14b1d428c9",
+    "api/internal/staff-admission/result.php": "33edd6e29ddd06d408ed2d7268bb571f2623f02db62671c5f5496b2788c74821",
+    "api/internal/staff-admission/prepare.php": "6112c77a04ae019591947ec8aa8a5d0f34db852b5cdeb8ce3643be409f6befb1",
+    "api/internal/staff-admission/revoke.php": "f59e45f661d2c780b863f6f9995d9090866d98f135707ab535713a977a8956ee",
+    "api/internal/staff-admission/csrf.php": "c0aa2fd34dd4384d0dc9f14013a4be7bda515b65bce3738f48de61e021399699",
+    "api/internal/staff-admission/confirm.php": "6d6a8ad2715d22c5c50827cf40ecfcaf9409448ade511216eb63ca63119f1a20",
+    "api/internal/staff-admission/invitation-reissue.php": "e22f66398e048b0c8bcec62936d8fcef35e1007fac03688b17da6a97c21618ca",
+    "api/internal/staff-admission/read.php": "2db8fae5f030964e76336f088d3e7ef940dd02dcee6825cdf541b1097961ebda",
+    "api/internal/staff-admission/invitation-issue.php": "04c85527d568a637f49cf6401ac431a9a262a16b806bb72584becc44ac4469b1",
+    "api/internal/staff-admission/invitation-csrf.php": "d68721214d06773af45ee9fdd0acc466440c5ceff0d360ae27ad6bbc87dff30e",
+    "api/internal/staff-admission/invitation-result.php": "dc28b1c3a0954ba71b4d0036fb268e1fc97a827b818069702e138b7298ea315d",
+    "modules/identity/db/migrations/2026_10_18_04_staff_admission_foundation.sql": "440908fe4dd6a39f30770d3f3f12b16031fdd4b180c5a328ff435416dd16f352",
+    "modules/identity/tests/StaffAdmissionFixture.php": "24400d1368f4c00b1a8c717a3d4d8b00b0d6d2106303de77c2ed4c74cc3beff2",
+    "scripts/ase-adm02-foundation-qa.py": "aba2442dae638c257a6e0a7b0fbe8c97f6f9fa34d02e741bfe150b820b20dd19",
+    "scripts/ase-adm02-foundation-checks.py": "7c4ae60c627e3db0f07b8e0a78bb91ecf134d3d672c6d383ffbbf83a6649b064",
+    "scripts/ase-adm02-router.php": "63d02db07f07b8a99518f50b92b4e01981e23cc43ed84433ab0c411f105330e1",
+    "modules/platform/services/CanonicalAuditPolicyRegistry.php": "322171b925896d7090878e9076e0356f27a81974e815d94d58a1813396f9c2bd",
+    "modules/platform/contracts/CanonicalAuditEventType.php": "1a6eb88aad45d6eea5d5c1426707e5d604b3ec8d87f29a124e2bfb2a3cdb8077",
+    "modules/platform/services/SourceModuleCatalog.php": "3f3b8f948258bf5fe35becf8a92179e3bc731223c3d2030a4f0c27a6aa3f59e6",
+    "modules/platform/services/CorrelatableOperationCatalog.php": "2c788630d17c3fad4fcd22c029ae3afd821985df8589cd5df25f35c9b4c32fb8"
+  }
+}

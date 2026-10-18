@@ -115,3 +115,7 @@ Limitaciones: no positivo HTTP de invitación por políticas pendientes; no UI/b
 | REMAINING_CONTEXT_GAPS | TTL/canal/plantillas/legales/retención/custodia/catálogo extranjero/delegación Master; composición productiva y futura UI; IMP03 evidencia, IMP04 revisión, IMP05 grants/MFA/handoff. |
 
 Siguiente autorización: ratificar decisiones pendientes y aprobar la fase posterior concreta. Esta entrega no autoriza invitaciones reales, merge, despliegue ni apertura operacional de admisión.
+
+## Sucesor aislado ADM-IMP03
+
+[Media staff privada](ASE-ADM02-IMP03-private-staff-media.md) añade retrato/evidencia con propósitos separados, cifrado staff, versiones inmutables y reconciliación SQL/archivos. Reutiliza el vínculo canónico y no modifica casos/perfiles/invitaciones. Sólo solicitante propio en CLI sintético; sin upload/download HTTP, reviewer, aprobación, staff/grants o activación. Custodia/retención/límites/PDF y readers operativos siguen pendientes.

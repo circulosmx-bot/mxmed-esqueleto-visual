@@ -108,3 +108,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## ADM-IMP02 — vínculo sin autoridad staff
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Director vigente emite/reemite/revoca; Master con management no recibe autoridad nueva. Cuenta legítima acepta su caso sin register/grants/MFA/review. Relación staff preexistente se deniega para revisión separada, sin reactivación/democión/promoción. Perfil confirmado no satisface StaffIdentityReviewPort. HTTP invitación sigue cerrado por políticas pendientes.
+
+## ADM-IMP03 — media privada sin autoridad de gobierno
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): Retrato no acredita identidad y evidencia almacenada no equivale a revisión humana. Sólo solicitante de caso exacto lee/escribe en fundación callable; Director no adquiere reader raw por directorio, Master/Advisor pares y grants ajenos denegados. Reader/reviewer/custodia futuros pendientes; UnavailableStaffIdentityReview y appointment fail-closed intactos.

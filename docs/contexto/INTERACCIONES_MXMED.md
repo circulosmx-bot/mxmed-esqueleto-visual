@@ -191,3 +191,7 @@ A–H definen cuenta existente/nueva/pendiente, duplicados, revocación/expiraci
 ## J09 — aceptación de invitación ADM-IMP02
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Director prepara → autoriza email exacto → intención/token propios → entrega inerte → registro/verificación/login canónicos o cuenta existente → aceptación exacta → consumo/vínculo/audit en SQL → lectura/corrección/confirmación propias IMP01. Fallo entrega conserva pending; ACK se reconcilia por operación sin replay ciego. HTTP invitación no disponible por política productiva pendiente; positivo CLI sintético. J08/D01–D08 y Master indisponible preservados.
+
+## J09 — media privada parcial IMP03
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): Cuenta vinculada legítimamente → sesión/caso exactos → validar raster → retrato derivado o evidencia original del subset → cifrar/escribir inmutable → SQL metadata/recibo/audit → lectura propia/reconciliación. Fallo SQL conserva ciphertext; ACK consulta resultado sin retry; ausencias/integridad/key fallan cerradas. No transacción distribuida ni borrado compensatorio. Sin revisión/activación/HTTP/UI; J08/D01–D08 conservados.

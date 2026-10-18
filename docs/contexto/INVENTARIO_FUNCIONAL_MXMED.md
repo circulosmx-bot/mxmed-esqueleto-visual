@@ -324,3 +324,7 @@ ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-chec
 ## ID-07 / COM-10 — ADM-IMP02 aislado
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): P=Director autoriza destinatario y aceptación personal; S=invitación/recibo/binding al caso existente; C=servicios canónicos y endpoints preparados, composición HTTP indisponible por políticas productivas pendientes; V=QA sintética con Identity real y confirmación propia HTTP IMP01; O=inactivo. Reuso ID-01/02/03, sin catálogo/grants nuevos.
+
+## ID-07 / COM-10 — media staff IMP03
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): P=propósitos privados separados, own-applicant; S=StaffMedia y dos tablas/eventos, reuso Identity/UnitOfWork/GD/puerto privado; C=callable, sin endpoints ni readers directorio/reviewer; V=QA sintética/carreras/audit; O=inactivo. Sin nuevas capabilities ni datos reales.

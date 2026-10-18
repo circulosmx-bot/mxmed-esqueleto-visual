@@ -1,0 +1,438 @@
+{
+  "result": "PASS",
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "branch": "feature/act03-governance-check-compat01",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "branch": "feature/ase-adm02-staff-admission-policy",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "branch": "feature/ase-adm02-staff-case-foundation",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "branch": "feature/ase-adm02-staff-invitation-binding",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "branch": "feature/act03-governance-check-compat01",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "branch": "feature/ase-adm02-staff-admission-policy",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "branch": "feature/ase-adm02-staff-case-foundation",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "branch": "feature/ase-adm02-staff-invitation-binding",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_unchanged": true,
+  "qa_checks": 312,
+  "concurrency_scenarios": 9,
+  "source_hashes_match_qa": true,
+  "php_lint_files": 11,
+  "python_syntax": "PASS",
+  "audit_policy_tests": 3,
+  "pdf_intake": "NOT_IMPLEMENTED",
+  "product_http": "UNAVAILABLE",
+  "ui_changed": false,
+  "real_personal_data_used": false,
+  "operational_activation": false,
+  "markdown_local_links_checked": 854,
+  "markdown_local_links": "PASS",
+  "preserved_source_files": 240,
+  "preserved_source_paths": [
+    "modules/identity/StaffAdmission/Audit.php",
+    "modules/identity/StaffAdmission/Composition.php",
+    "modules/identity/StaffAdmission/Http.php",
+    "modules/identity/StaffAdmission/Input.php",
+    "modules/identity/StaffAdmission/InvitationComposition.php",
+    "modules/identity/StaffAdmission/InvitationDeliveryPort.php",
+    "modules/identity/StaffAdmission/InvitationHttp.php",
+    "modules/identity/StaffAdmission/InvitationInput.php",
+    "modules/identity/StaffAdmission/InvitationPolicy.php",
+    "modules/identity/StaffAdmission/InvitationService.php",
+    "modules/identity/StaffAdmission/Service.php",
+    "modules/identity/StaffAdmission/UnitOfWork.php",
+    "modules/identity/Accreditation/EnrollmentNotificationAdapter.php",
+    "modules/identity/Accreditation/EnrollmentResolutionAuthority.php",
+    "modules/identity/Accreditation/EvidenceAudit.php",
+    "modules/identity/Accreditation/EvidenceAuthority.php",
+    "modules/identity/Accreditation/EvidenceCipher.php",
+    "modules/identity/Accreditation/EvidenceHttpBoundary.php",
+    "modules/identity/Accreditation/PhoneVerificationService.php",
+    "modules/identity/Accreditation/PhysicianAdmissionComposition.php",
+    "modules/identity/Accreditation/PhysicianEvidenceService.php",
+    "modules/identity/Accreditation/PhysicianOnboardingHttp.php",
+    "modules/identity/Accreditation/PhysicianOnboardingPage.php",
+    "modules/identity/Accreditation/ProfessionalAuthorityIssuer.php",
+    "modules/identity/Accreditation/ProfessionalIssuanceWorkflow.php",
+    "modules/identity/Accreditation/ProfessionalMatchCandidates.php",
+    "modules/identity/Accreditation/ProfileRequestMatcher.php",
+    "modules/identity/Accreditation/ProtectedPhysicianEvidencePort.php",
+    "modules/identity/Accreditation/PublicEnrollmentHttp.php",
+    "modules/identity/Accreditation/PublicEnrollmentRuntime.php",
+    "modules/identity/Accreditation/PublicEnrollmentService.php",
+    "modules/identity/Accreditation/ReviewedEnrollmentService.php",
+    "modules/identity/MasterGovernance/Cases.php",
+    "modules/identity/MasterGovernance/Composition.php",
+    "modules/identity/MasterGovernance/Http.php",
+    "modules/identity/MasterGovernance/Policy.php",
+    "modules/media/bin/submit-inactive-review-batches.php",
+    "modules/media/bootstrap.php",
+    "modules/media/contracts/HistoricalArchivePort.php",
+    "modules/media/contracts/PrivateMediaStoragePort.php",
+    "modules/media/contracts/PublicMediaPurpose.php",
+    "modules/media/contracts/PublicMediaStoragePort.php",
+    "modules/media/db/migrations/2026_09_03_01_create_media_assets.sql",
+    "modules/media/db/migrations/2026_09_08_doctor_gallery.sql",
+    "modules/media/db/migrations/2026_09_08_doctor_profile_photo.sql",
+    "modules/media/db/migrations/2026_09_08_media_review_candidates.sql",
+    "modules/media/db/migrations/2026_09_08_media_review_pending_logo.sql",
+    "modules/media/db/migrations/2026_09_09_media_review_auto_proposal.sql",
+    "modules/media/db/migrations/2026_09_10_media_review_improvement_input.sql",
+    "modules/media/db/migrations/2026_09_11_media_review_replacement_feedback.sql",
+    "modules/media/db/migrations/2026_09_12_media_review_batches.sql",
+    "modules/media/db/migrations/2026_09_13_media_review_item_submission.sql",
+    "modules/media/db/migrations/2026_09_15_doctor_gallery_display_order.sql",
+    "modules/media/docs/mr02-item-review-submission.md",
+    "modules/media/docs/mr02-status-copy-alignment.md",
+    "modules/media/docs/mr11-1-operational-closeout.md",
+    "modules/media/docs/mr11-4a-scheduler-iam-boundary.md",
+    "modules/media/docs/mr11-4b-periodic-job-runtime.md",
+    "modules/media/docs/private-review-candidates.md",
+    "modules/media/http/LogoImprovementHttp.php",
+    "modules/media/http/MediaReplacementHttp.php",
+    "modules/media/http/MediaReviewBatchHttp.php",
+    "modules/media/http/MediaReviewHttpContext.php",
+    "modules/media/http/MediaReviewHttpController.php",
+    "modules/media/http/MediaReviewInterventionHttp.php",
+    "modules/media/http/ProfilePhotoApprovalHttp.php",
+    "modules/media/private-bootstrap.php",
+    "modules/media/repositories/LogoReferenceRepository.php",
+    "modules/media/repositories/MediaAssetsRepository.php",
+    "modules/media/services/BatchOriginals.php",
+    "modules/media/services/ConservativeLogoBackground.php",
+    "modules/media/services/DoctorGalleryService.php",
+    "modules/media/services/DoctorProfilePhotoService.php",
+    "modules/media/services/GalleryApprovalService.php",
+    "modules/media/services/GalleryCapacity.php",
+    "modules/media/services/GalleryReviewCandidateService.php",
+    "modules/media/services/GallerySessionScope.php",
+    "modules/media/services/GdPublicLogoProcessor.php",
+    "modules/media/services/HistoricalOriginalArchive.php",
+    "modules/media/services/LogoImprovementService.php",
+    "modules/media/services/LosslessLogoInput.php",
+    "modules/media/services/MediaCandidateSubmissionService.php",
+    "modules/media/services/MediaReplacementReasons.php",
+    "modules/media/services/MediaReplacementService.php",
+    "modules/media/services/MediaReviewAccessService.php",
+    "modules/media/services/MediaReviewAudit.php",
+    "modules/media/services/MediaReviewAuthority.php",
+    "modules/media/services/MediaReviewBatchInboxService.php",
+    "modules/media/services/MediaReviewBatchService.php",
+    "modules/media/services/MediaReviewInboxService.php",
+    "modules/media/services/MediaReviewInterventionService.php",
+    "modules/media/services/MediaSubmissionActor.php",
+    "modules/media/services/MediaSubmissionState.php",
+    "modules/media/services/PhysicianLogoApprovalService.php",
+    "modules/media/services/PhysicianLogoReviewCandidateService.php",
+    "modules/media/services/PhysicianMediaReviewCandidateService.php",
+    "modules/media/services/ProfilePhotoApprovalAudit.php",
+    "modules/media/services/ProfilePhotoApprovalService.php",
+    "modules/media/services/ProfilePhotoReviewCandidateService.php",
+    "modules/media/services/PublicLogoMediaService.php",
+    "modules/media/services/TemporaryOriginalsZip.php",
+    "modules/media/storage/LocalDisposableHistoricalArchive.php",
+    "modules/media/storage/LocalPersistentPrivateMediaStorage.php",
+    "modules/media/storage/LocalPersistentPublicMediaStorage.php",
+    "modules/media/tests/DoctorGalleryHttpTest.mjs",
+    "modules/media/tests/DoctorProfilePhotoBrowserTest.mjs",
+    "modules/media/tests/DoctorProfilePhotoFailureTest.php",
+    "modules/media/tests/DoctorProfilePhotoHttpTest.mjs",
+    "modules/media/tests/EmptyReviewBatchRaceTest.mjs",
+    "modules/media/tests/EmptyReviewBatchTest.php",
+    "modules/media/tests/GalleryCountLimitBrowserTest.mjs",
+    "modules/media/tests/GalleryOrderingBrowserTest.mjs",
+    "modules/media/tests/GalleryOrderingHttpTest.mjs",
+    "modules/media/tests/GalleryOrderingTest.php",
+    "modules/media/tests/GalleryReviewAtomicTest.php",
+    "modules/media/tests/GalleryReviewFixture.php",
+    "modules/media/tests/GalleryReviewHttpTest.mjs",
+    "modules/media/tests/GalleryReviewInputTest.php",
+    "modules/media/tests/GalleryReviewPolicyTest.php",
+    "modules/media/tests/GalleryReviewRaceTest.mjs",
+    "modules/media/tests/GalleryReviewRaceWorker.php",
+    "modules/media/tests/GalleryReviewTest.php",
+    "modules/media/tests/GalleryReviewVisual.mjs",
+    "modules/media/tests/GallerySessionScopeTest.php",
+    "modules/media/tests/ItemSubmissionHttpTest.mjs",
+    "modules/media/tests/ItemSubmissionMigrationTest.php",
+    "modules/media/tests/ItemSubmissionQa.mjs",
+    "modules/media/tests/ItemSubmissionRaceTest.mjs",
+    "modules/media/tests/ItemSubmissionTest.php",
+    "modules/media/tests/LogoImprovementAlgorithmTest.php",
+    "modules/media/tests/LogoImprovementAtomicTest.php",
+    "modules/media/tests/LogoImprovementBenchmark.php",
+    "modules/media/tests/LogoImprovementFixture.php",
+    "modules/media/tests/LogoImprovementHttpTest.mjs",
+    "modules/media/tests/LogoImprovementPolicyTest.php",
+    "modules/media/tests/LogoImprovementRaceTest.mjs",
+    "modules/media/tests/LogoImprovementRaceWorker.php",
+    "modules/media/tests/LogoImprovementReviewInputTest.php",
+    "modules/media/tests/LogoImprovementTest.php",
+    "modules/media/tests/LogoImprovementVisual.mjs",
+    "modules/media/tests/LosslessLogoAtomicTest.php",
+    "modules/media/tests/LosslessLogoInputTest.php",
+    "modules/media/tests/MediaFoundationStaticTest.php",
+    "modules/media/tests/MediaMigrationDatabaseTest.php",
+    "modules/media/tests/MediaReplacementAtomicTest.php",
+    "modules/media/tests/MediaReplacementFixture.php",
+    "modules/media/tests/MediaReplacementHttpTest.mjs",
+    "modules/media/tests/MediaReplacementPolicyTest.php",
+    "modules/media/tests/MediaReplacementRaceTest.mjs",
+    "modules/media/tests/MediaReplacementRaceWorker.php",
+    "modules/media/tests/MediaReplacementTest.php",
+    "modules/media/tests/MediaReplacementVisual.mjs",
+    "modules/media/tests/MediaReviewAccessTest.php",
+    "modules/media/tests/MediaReviewHttpTest.mjs",
+    "modules/media/tests/MediaReviewInboxBrowserTest.mjs",
+    "modules/media/tests/MediaReviewInboxTest.php",
+    "modules/media/tests/MediaReviewInterventionFixture.php",
+    "modules/media/tests/MediaReviewInterventionHttpTest.mjs",
+    "modules/media/tests/MediaReviewInterventionPolicyTest.php",
+    "modules/media/tests/MediaReviewInterventionRaceTest.mjs",
+    "modules/media/tests/MediaReviewInterventionRaceWorker.php",
+    "modules/media/tests/MediaReviewInterventionTest.php",
+    "modules/media/tests/MediaReviewInterventionVisual.mjs",
+    "modules/media/tests/MediaReviewReadSnapshot.php",
+    "modules/media/tests/OriginalArchiveTest.php",
+    "modules/media/tests/OwnerMediaReviewBrowserTest.mjs",
+    "modules/media/tests/OwnerMediaReviewHttpTest.mjs",
+    "modules/media/tests/OwnerMediaReviewInlineBrowserTest.mjs",
+    "modules/media/tests/OwnerMediaReviewQaLogin.mjs",
+    "modules/media/tests/PhysicianLogoApprovalTest.php",
+    "modules/media/tests/PhysicianLogoCandidateAtomicTest.php",
+    "modules/media/tests/PhysicianLogoOwnerHttpQA.mjs",
+    "modules/media/tests/PhysicianLogoReviewFixture.php",
+    "modules/media/tests/PhysicianLogoReviewHttpTest.mjs",
+    "modules/media/tests/PhysicianLogoReviewPolicyTest.php",
+    "modules/media/tests/PhysicianLogoReviewRaceTest.mjs",
+    "modules/media/tests/PhysicianLogoReviewRaceWorker.php",
+    "modules/media/tests/PhysicianLogoReviewTest.php",
+    "modules/media/tests/PhysicianLogoReviewVisual.mjs",
+    "modules/media/tests/PrivateMediaStorageTest.php",
+    "modules/media/tests/ProductiveOperatorHttpTest.mjs",
+    "modules/media/tests/ProfilePhotoApprovalFixture.php",
+    "modules/media/tests/ProfilePhotoApprovalHttpTest.mjs",
+    "modules/media/tests/ProfilePhotoApprovalTest.php",
+    "modules/media/tests/ProfilePhotoApprovalVisual.mjs",
+    "modules/media/tests/ProfilePhotoInputLimitsTest.php",
+    "modules/media/tests/ProfilePhotoOrientationTest.php",
+    "modules/media/tests/ProfilePhotoReviewCandidateHttpTest.mjs",
+    "modules/media/tests/ProfilePhotoReviewCandidateTest.php",
+    "modules/media/tests/PublicLogoPersistenceTest.php",
+    "modules/media/tests/PublicLogoProcessorTest.php",
+    "modules/media/tests/PublicMediaStorageTest.php",
+    "modules/media/tests/ReviewBatchAtomicTest.php",
+    "modules/media/tests/ReviewBatchDirectorSnapshot.php",
+    "modules/media/tests/ReviewBatchFixture.php",
+    "modules/media/tests/ReviewBatchHttpTest.mjs",
+    "modules/media/tests/ReviewBatchRaceTest.mjs",
+    "modules/media/tests/ReviewBatchRaceWorker.php",
+    "modules/media/tests/ReviewBatchTest.php",
+    "modules/media/tests/ReviewBatchVisual.mjs",
+    "modules/media/tests/ReviewCandidateFixture.php",
+    "modules/identity/db/migrations/2026_07_19_01_create_auth_accounts.sql",
+    "modules/identity/db/migrations/2026_07_19_01_rollback_auth_accounts.sql",
+    "modules/identity/db/migrations/2026_07_19_02_create_auth_account_consents.sql",
+    "modules/identity/db/migrations/2026_07_19_02_rollback_auth_account_consents.sql",
+    "modules/identity/db/migrations/2026_07_19_03_create_auth_account_memberships.sql",
+    "modules/identity/db/migrations/2026_07_19_03_rollback_auth_account_memberships.sql",
+    "modules/identity/db/migrations/2026_07_20_04_create_auth_account_credentials.sql",
+    "modules/identity/db/migrations/2026_07_20_04_rollback_auth_account_credentials.sql",
+    "modules/identity/db/migrations/2026_07_20_05_create_auth_account_one_time_tokens.sql",
+    "modules/identity/db/migrations/2026_07_20_05_rollback_auth_account_one_time_tokens.sql",
+    "modules/identity/db/migrations/2026_07_20_06_create_auth_rate_limit_buckets.sql",
+    "modules/identity/db/migrations/2026_07_20_06_rollback_auth_rate_limit_buckets.sql",
+    "modules/identity/db/migrations/2026_09_08_07_create_internal_operator_grants.sql",
+    "modules/identity/db/migrations/2026_09_08_07_rollback_internal_operator_grants.sql",
+    "modules/identity/db/migrations/2026_09_10_01_internal_governance.sql",
+    "modules/identity/db/migrations/2026_10_14_01_create_profile_ownership_governance.sql",
+    "modules/identity/db/migrations/2026_10_14_01_rollback_profile_ownership_governance.sql",
+    "modules/identity/db/migrations/2026_10_14_02_profile_ownership_r3_endorsements.sql",
+    "modules/identity/db/migrations/2026_10_14_02_rollback_profile_ownership_r3_endorsements.sql",
+    "modules/identity/db/migrations/2026_10_15_01_identity_governance_r3_runtime.sql",
+    "modules/identity/db/migrations/2026_10_15_01_rollback_identity_governance_r3_runtime.sql",
+    "modules/identity/db/migrations/2026_10_15_02_profile_operator_foundation.sql",
+    "modules/identity/db/migrations/2026_10_15_02_rollback_profile_operator_foundation.sql",
+    "modules/identity/db/migrations/2026_10_15_03_operator_qa_outbox.sql",
+    "modules/identity/db/migrations/2026_10_15_03_rollback_operator_qa_outbox.sql",
+    "modules/identity/db/migrations/2026_10_15_04_operator_presentations.sql",
+    "modules/identity/db/migrations/2026_10_15_04_rollback_operator_presentations.sql",
+    "modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql",
+    "modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql",
+    "modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql",
+    "modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql",
+    "modules/identity/db/migrations/2026_10_16_05_public_physician_enrollment.sql",
+    "modules/identity/db/migrations/2026_10_16_06_reviewed_physician_enrollment.sql",
+    "modules/identity/db/migrations/2026_10_17_07_professional_source_provisioning.sql",
+    "modules/identity/db/migrations/2026_10_18_01_internal_master_governance_operations.sql",
+    "modules/identity/db/migrations/2026_10_18_02_professional_source_check_compat01.sql",
+    "modules/identity/db/migrations/2026_10_18_03_professional_source_objects_compat01.sql",
+    "modules/identity/db/migrations/2026_10_18_04_staff_admission_foundation.sql",
+    "modules/identity/db/migrations/2026_10_18_05_staff_admission_invitations.sql"
+  ],
+  "context_sync_status": "PASS_UPDATED",
+  "diff_whitespace": "PASS"
+}

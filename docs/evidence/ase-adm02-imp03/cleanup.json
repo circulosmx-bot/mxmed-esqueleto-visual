@@ -1,0 +1,18 @@
+{
+  "failed_owned_instances": [
+    {
+      "report": "failed-20261018T165621Z.json",
+      "owned_directory": "/tmp/mxmed-ase-adm02imp01-89iupx0w",
+      "ownership_and_process_absence_verified": true,
+      "removed": true
+    },
+    {
+      "report": "failed-20261018T165713Z.json",
+      "owned_directory": "/tmp/mxmed-ase-adm02imp01-xp1wf5o9",
+      "ownership_and_process_absence_verified": true,
+      "removed": true
+    }
+  ],
+  "successful_owned_instance_disposed": true,
+  "forensic_erasure_claimed": false
+}

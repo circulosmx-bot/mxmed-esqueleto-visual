@@ -149,3 +149,7 @@ El snapshot Master real sólo contiene account_id, credential_version, review_ve
 ## ASE-ADM02-IMP02 — invitación y recibo
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP02-staff-invitation-binding.md): Migración18_05 posterior a18_04 añade auth_staff_admission_invitations y auth_staff_admission_invitation_operations, tres triggers, FKs y una intención ACTIVE por caso. HMAC de destinatario por caso, digest de token aleatorio, expiración/estados terminales y recibos inmutables; binding en el mismo caso IMP01. Audit59 intacto. Sin email/token raw en SQL, cambios históricos/COMPAT01, backfill, staff ni DDL real.
+
+## ASE-ADM02-IMP03 — versiones de media privadas
+
+[Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): Migración18_06 añade auth_staff_media_assets/operations, cuatro triggers, FK a perfil capturado/cuenta/versión anterior y unique caso+purpose+asset_version. Current derivado, sin sobrescribir historia. Cipher staff/key-id/hash ciphertext, refs custodia/retención, actor/tiempo y recibo/audit; sin plain bytes en SQL. Catálogo audit61 conserva políticas59 previas. IMP01/02, schema COMPAT01 y DeploymentPackage intactos; ningún DDL real.

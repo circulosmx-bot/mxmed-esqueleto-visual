@@ -114,3 +114,7 @@ Siguiente autorización: ADM-IMP02 acotado para invitación preautorizada y hand
 ## Sucesor aislado ADM-IMP02
 
 [Invitación y binding](ASE-ADM02-IMP02-staff-invitation-binding.md) implementa intención Director/email protegido, tokens propios, aceptación con Identity real y vínculo atómico al mismo caso. La ausencia anterior de binding producto queda sucedida sólo en fuente/QA aislada. Composición HTTP de invitaciones sigue cerrada por TTL/canal/legal pendientes; positivo canónico CLI y confirmación propia HTTP IMP01. No staff/review/grants/activación ni UI.
+
+## Sucesor aislado ADM-IMP03
+
+[Media staff privada](ASE-ADM02-IMP03-private-staff-media.md) añade retrato/evidencia con propósitos separados, cifrado staff, versiones inmutables y reconciliación SQL/archivos. Reutiliza el vínculo canónico y no modifica casos/perfiles/invitaciones. Sólo solicitante propio en CLI sintético; sin upload/download HTTP, reviewer, aprobación, staff/grants o activación. Custodia/retención/límites/PDF y readers operativos siguen pendientes.
