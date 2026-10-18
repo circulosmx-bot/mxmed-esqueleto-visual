@@ -7,10 +7,13 @@
     const row=data=>data?.items?.[0];
     const editable=()=>base?.authority?.mutations_enabled===true?(row(base)?.editable_capabilities||[]).filter(k=>base.catalog[k]?.kind==='operational'&&base.catalog[k]?.delegable):[];
     const lifecycleOperations=()=>base?.authority?.mutations_enabled===true?(row(base)?.lifecycle_operations||[]).filter(op=>['suspend','reactivate'].includes(op)):[];
-    const available=()=>editable().length||lifecycleOperations().length;
+    const removalAllowed=()=>base?.authority?.mutations_enabled===true&&row(base)?.removal_allowed===true;
+    const available=()=>editable().length||lifecycleOperations().length||removalAllowed();
+    const displayName=()=>{const p=row(base)?.personal_profile;return p?[p.given_names,p.first_surname,p.second_surname].filter(Boolean).join(' '):'Perfil personal pendiente';};
+    const restriction=()=>row(base)?.staff_status==='REMOVED'?'Baja definitiva: no admite reactivación ni nuevos permisos.':row(base)?.account_status!=='active'?'Cuenta Identity inactiva; permisos operativos bloqueados.':row(base)?.governance_class==='MASTER_ADMIN'?'Esta matriz edita asesores; el gobierno Master tiene autorización independiente.':row(base)?.staff_status==='SUSPENDED'?'Asesor suspendido: reactívalo antes de editar permisos.':base?.authority?.mutations_enabled!==true?'Cambios no habilitados en este entorno.':'Funciones no habilitadas para este asesor o fuera de tu ámbito autorizado.';
     const operations=()=>editable().filter(k=>draft.has(k)!==row(base).grants.includes(k)).map(capability=>({operation:draft.has(capability)?'grant':'revoke',target:row(base).account_reference,capability}));
     const dirty=()=>!!base&&operations().length>0;
-    const fingerprint=data=>JSON.stringify({actor:data.authority,member:row(data)&&{id:row(data).account_reference,kind:row(data).governance_class,status:row(data).staff_status,account:row(data).account_status,grants:[...row(data).grants].sort(),editable:[...(row(data).editable_capabilities||[])].sort(),lifecycle:row(data).lifecycle_operations||[]},catalog:data.catalog});
+    const fingerprint=data=>JSON.stringify({actor:data.authority,member:row(data)&&{id:row(data).account_reference,kind:row(data).governance_class,status:row(data).staff_status,account:row(data).account_status,grants:[...row(data).grants].sort(),editable:[...(row(data).editable_capabilities||[])].sort(),lifecycle:row(data).lifecycle_operations||[],removal:row(data).removal_allowed===true},catalog:data.catalog});
     const sameScope=(a,b)=>fingerprint({...a,items:[{...row(a),grants:row(b).grants}]})===fingerprint(b);
     async function request(path,options={}){
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
@@ -57,17 +60,18 @@
         group.disabled=!enabled||!eligible.length;group.checked=!unknown&&count===inputs.length;group.indeterminate=unknown||(count>0&&count<inputs.length);group.setAttribute('aria-checked',group.indeterminate?'mixed':String(group.checked));
         group.onchange=()=>{if(!group.disabled){const select=!eligible.every(i=>draft.has(i.dataset.capability));eligible.forEach(i=>select?draft.add(i.dataset.capability):draft.delete(i.dataset.capability));mount();}};
         family.querySelector('.family-count').textContent=`${count} de ${visible.length} permisos visibles · ${eligible.length} editables`;
-        family.querySelector('.family-limit').textContent=unknown?'Otras asignaciones son desconocidas y no se modificarán.':eligible.length?'La selección es un borrador; requiere confirmación.':'Sólo consulta.';
+        family.querySelector('.family-limit').textContent=unknown?'Otras asignaciones son desconocidas y no se modificarán.':eligible.length?'La selección es un borrador; requiere confirmación.':restriction();
       });
       $('lifecycle').disabled=!enabled||!lifecycleOperations().length;
-      $('lifecycle').onclick=changeLifecycle;
+      $('lifecycle').onclick=()=>changeLifecycle();
+      if($('remove-member')){$('remove-member').disabled=!enabled||!removalAllowed();$('remove-member').onclick=()=>changeLifecycle('remove_advisor');}
       const ops=operations();$('save-permissions').disabled=!enabled||!ops.length;$('revert-permissions').disabled=busy||!ops.length;
       $('save-permissions').onclick=save;$('revert-permissions').onclick=()=>{draft=new Set(row(base).grants);mount();};
-      $('pending-permissions').textContent=busy?'Procesando la revisión…':ops.length?`${ops.filter(x=>x.operation==='grant').length} concesiones y ${ops.filter(x=>x.operation==='revoke').length} retiros pendientes`:enabled?'Sin cambios pendientes.':'Sólo consulta; cambios no disponibles para este integrante.';
+      $('pending-permissions').textContent=busy?'Procesando la revisión…':ops.length?`${ops.filter(x=>x.operation==='grant').length} concesiones y ${ops.filter(x=>x.operation==='revoke').length} retiros pendientes`:enabled?'Sin cambios pendientes.':restriction();
       $('pending-permissions').classList.toggle('dirty',ops.length>0);
       $('team-mode').textContent=token&&available()?'CAMBIOS CON CONFIRMACIÓN':'SÓLO CONSULTA';
       const panel=$('permission-results');panel.hidden=!message&&!outcomes.length;
-      panel.innerHTML=`<p id="permission-result-title" tabindex="-1"><strong>${esc(message)}</strong></p>${outcomes.length?`<ul>${outcomes.map(o=>`<li data-outcome="${esc(o.state)}">${o.operation==='grant'?'Conceder':'Retirar'} ${esc(base.catalog[o.capability]?.label||'Permiso')} — ${esc({success:'Confirmado por el servidor',failed:'No aplicado: solicitud rechazada',unknown:'Resultado incierto; no se reintentó',not_attempted:'No intentado',sending:'Enviando…'}[o.state])}${o.observed?`<br>${esc(o.observed)}`:''}</li>`).join('')}</ul>`:''}${lifecycleResult?`<p data-lifecycle-outcome="${esc(lifecycleResult.state)}">${esc(lifecycleResult.operation==='suspend'?'Suspender asesor':'Reactivar asesor')} — ${esc({success:'Comando confirmado por el servidor.',failed:'Solicitud rechazada; no aplicada.',unknown:'Resultado incierto; no se reintentó.',sending:'Enviando…'}[lifecycleResult.state])}</p>`:''}${!busy&&(outcomes.length||lifecycleResult||!known)?'<button id="reconcile-permissions" type="button">Consultar estado actual</button>':''}`;
+      panel.innerHTML=`<p id="permission-result-title" tabindex="-1"><strong>${esc(message)}</strong></p>${outcomes.length?`<ul>${outcomes.map(o=>`<li data-outcome="${esc(o.state)}">${o.operation==='grant'?'Conceder':'Retirar'} ${esc(base.catalog[o.capability]?.label||'Permiso')} — ${esc({success:'Confirmado por el servidor',failed:'No aplicado: solicitud rechazada',unknown:'Resultado incierto; no se reintentó',not_attempted:'No intentado',sending:'Enviando…'}[o.state])}${o.observed?`<br>${esc(o.observed)}`:''}</li>`).join('')}</ul>`:''}${lifecycleResult?`<p data-lifecycle-outcome="${esc(lifecycleResult.state)}">${esc(lifecycleResult.operation==='remove_advisor'?'Baja definitiva':lifecycleResult.operation==='suspend'?'Suspender asesor':'Reactivar asesor')} — ${esc({success:'Comando confirmado por el servidor.',failed:'Solicitud rechazada; no aplicada.',unknown:'Resultado incierto; no se reintentó.',sending:'Enviando…'}[lifecycleResult.state])}</p>`:''}${!busy&&(outcomes.length||lifecycleResult||!known)?'<button id="reconcile-permissions" type="button">Consultar estado actual</button>':''}`;
       if($('reconcile-permissions'))$('reconcile-permissions').onclick=followUp;
     }
     async function current(target){return read({category:'ADVISOR',target});}
@@ -83,18 +87,19 @@
       catch(_){known=false;message='ESTADO PENDIENTE DE CONFIRMAR';}
       finally{busy=false;mount();$('permission-result-title')?.focus();}
     }
-    async function changeLifecycle(){
-      if(busy||!token||!known||!lifecycleOperations().length)return;
+    async function changeLifecycle(requested=null){
+      if(busy||!token||!known||(requested==='remove_advisor'?!removalAllowed():!lifecycleOperations().length))return;
       if(dirty()){message='Resuelve los permisos pendientes: guárdalos o usa Revertir antes de cambiar el acceso staff.';mount();$('permission-result-title')?.focus();return;}
-      busy=true;const previous=base,target=row(base).account_reference,operation=lifecycleOperations()[0],next=operation==='suspend'?'SUSPENDED':'ACTIVE';let sent=false;
+      busy=true;const previous=base,target=row(base).account_reference,operation=requested||lifecycleOperations()[0],next=operation==='remove_advisor'?'REMOVED':operation==='suspend'?'SUSPENDED':'ACTIVE';let sent=false;
       mount();
       try{
         const fresh=await current(target);
         if(fingerprint(fresh)!==fingerprint(previous)){token='';adoptCurrent(fresh);message='CONFLICTO: cambió el integrante o tu autoridad. Actualiza y revisa antes de confirmar.';return;}
         token=await bootstrap();
-        const action=operation==='suspend'?'Suspender asesor':'Reactivar asesor';
-        const consequence=operation==='suspend'?'Se bloqueará su siguiente acceso operativo como staff.':'El acceso seguirá sujeto a sus permisos vigentes, MFA y controles de cada función. No se habilita una cuenta desactivada ni se restauran permisos revocados.';
-        if(!(await confirm(action,`Nombre no disponible · Cuenta: ${target}.`, `<p>${consequence}</p><p>Se conservan permisos e historia. No se acredita identidad ni se deciden comisiones futuras.</p>`,action)))return;
+        const removing=operation==='remove_advisor';
+        const action=removing?'Dar de baja definitiva':operation==='suspend'?'Suspender asesor':'Reactivar asesor';
+        const consequence=removing?'La relación staff quedará dada de baja definitivamente. Se revocarán todos sus permisos internos y delegaciones. No podrá reactivarse desde esta pantalla. La cuenta Identity y el historial se conservan.':operation==='suspend'?'Se bloqueará su siguiente acceso operativo como staff.':'El acceso seguirá sujeto a sus permisos vigentes, MFA y controles de cada función. No se habilita una cuenta desactivada ni se restauran permisos revocados.';
+        if(!(await confirm(action,`${displayName()} · Cuenta: ${target}.`, `<p>${consequence}</p><p>${removing?'No se eliminan datos ni se alteran relaciones médicas o comerciales.':'Se conservan permisos e historia. No se acredita identidad ni se deciden comisiones futuras.'}</p>`,action)))return;
         const latest=await current(target);
         if(fingerprint(latest)!==fingerprint(previous)){token='';adoptCurrent(latest);message='CONFLICTO: cambió el integrante o tu autoridad durante la confirmación. Revisa nuevamente.';return;}
         outcomes=[];lifecycleResult={operation,state:'sending'};message='Actualizando acceso staff…';mount();sent=true;
@@ -107,7 +112,7 @@
         token='';
         try{
           const data=await current(target);adoptCurrent(data);
-          const consistent=fingerprint({...previous,items:[{...row(previous),staff_status:next,editable_capabilities:row(data).editable_capabilities,lifecycle_operations:row(data).lifecycle_operations}]})===fingerprint(data);
+          const consistent=fingerprint({...previous,items:[{...row(previous),staff_status:next,editable_capabilities:row(data).editable_capabilities,lifecycle_operations:row(data).lifecycle_operations,removal_allowed:row(data).removal_allowed,...(operation==='remove_advisor'?{grants:[]}:{} )}]})===fingerprint(data);
           if(lifecycleResult.state==='success')message=consistent?'CAMBIO DE ACCESO CONFIRMADO':'CONFLICTO: el comando fue confirmado, pero el estado actual cambió. Revisa nuevamente.';
           if(lifecycleResult.state==='unknown')message='ESTADO PENDIENTE DE CONFIRMAR · Lectura actual consultada; no permite atribuir el cambio al comando incierto.';
           if(available()){try{token=await bootstrap();}catch(_){token='';}}
@@ -123,7 +128,7 @@
         if(fingerprint(fresh)!==fingerprint(confirmedBase)){token='';adoptCurrent(fresh);message='CONFLICTO: cambió el estado o tu ámbito. Revisa la nueva lectura y prepara de nuevo los cambios.';return;}
         token=await bootstrap();
         const list=ops.map(o=>`<li>${o.operation==='grant'?'Conceder':'Retirar'} ${esc(base.catalog[o.capability].label)}${o.capability==='media_review_source_download'?' — permite acceder a originales privados, sujeto a los controles de la función.':o.capability==='media_review_approve'?' — permite aprobar publicación, sujeto a los controles de la función.':''}</li>`).join('');
-        const agreed=await confirm('Confirmar permisos del asesor',`Nombre no disponible · Cuenta: ${target}. ${ops.filter(o=>o.operation==='grant').length} concesiones y ${ops.filter(o=>o.operation==='revoke').length} retiros. Cada cambio se confirma individualmente; puede haber resultados parciales.`,`<div class="change-list"><ul>${list}</ul></div>`);
+        const agreed=await confirm('Confirmar permisos del asesor',`${displayName()} · Cuenta: ${target}. ${ops.filter(o=>o.operation==='grant').length} concesiones y ${ops.filter(o=>o.operation==='revoke').length} retiros. Cada cambio se confirma individualmente; puede haber resultados parciales.`,`<div class="change-list"><ul>${list}</ul></div>`);
         if(!agreed)return;
         const latest=await current(target);
         if(fingerprint(latest)!==fingerprint(confirmedBase)){token='';adoptCurrent(latest);message='CONFLICTO: cambió el estado o tu ámbito. Revisa y confirma una nueva propuesta.';return;}

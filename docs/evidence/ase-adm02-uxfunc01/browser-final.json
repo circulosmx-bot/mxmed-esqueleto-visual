@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "checks": [
+    "chromium 1366: header action, canonical profile, removal and groups available, no overflow",
+    "chromium 820: header action, canonical profile, removal and groups available, no overflow",
+    "chromium 390: header action, canonical profile, removal and groups available, no overflow",
+    "webkit 1366: header action, canonical profile, removal and groups available, no overflow",
+    "webkit 820: header action, canonical profile, removal and groups available, no overflow",
+    "webkit 390: header action, canonical profile, removal and groups available, no overflow"
+  ],
+  "source_sha256": {
+    "assets/js/internal-team.js": "d6777f89b0a0fa73c2c3ee25740e0840fc191bae97d7153ac92ce7ef88b5b9b8",
+    "assets/js/internal-team-editor.js": "335547f2cfa059e287f62ed4e276ce6d41dafafcd059752bd5d7618d24320747",
+    "assets/js/internal-team-master.js": "dc5b65db0def8315249e8bc51a5d648ec971f620d759e743e70f0c68a6077c03",
+    "assets/js/staff-workflow.js": "7fcdf8c24999cac9008abc840a59e5a83e8722255590d85e28570dc3e38d6b23"
+  }
+}

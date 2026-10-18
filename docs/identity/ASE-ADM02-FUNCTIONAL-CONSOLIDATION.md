@@ -74,3 +74,7 @@ La revisión Chromium aislada se abre con `python3 scripts/ase-adm02-workflow-re
 | CONTEXT_SYNC_STATUS | PASS_UPDATED; verificación final enlazada; no activación. |
 | DOCUMENTATION_COMMIT | Commit de consolidación informado en entrega, sin hash autorreferente. |
 | REMAINING_CONTEXT_GAPS | Sólo gates productivos legales/custodia/retención/eliminación/límites/canal/seguridad y autorización de integración; PDF y catálogo extranjero diferidos. |
+
+## Corrección sucesora UXFUNC01
+
+[ASE-ADM02-UXFUNC01](ASE-ADM02-UXFUNC01.md) sucede la presentación/disponibilidad de acciones de esta consolidación y añade la baja definitiva de Advisor solicitada expresamente. Conserva Identity, admisión, media privada, MFA y gobierno Master independientes; la evidencia anterior describe su commit histórico.

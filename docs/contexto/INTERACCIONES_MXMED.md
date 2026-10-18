@@ -199,3 +199,7 @@ A–H definen cuenta existente/nueva/pendiente, duplicados, revocación/expiraci
 ## Consolidación staff aislada
 
 J09: preparación → invitación/Identity → confirmación → documentos agrupados → revisión Director/MFA → admisión canónica → grants individuales. Separación de identidad/admisión/relación/permisos/Master/envíos. J08 y D01–D08 preservados. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).
+
+## J09 — UXFUNC01
+
+[UXFUNC01](../identity/ASE-ADM02-UXFUNC01.md): abrir alta limpia → preparar caso existente; grupo → borrador → confirmación → comandos individuales → reconsulta. Baja definitiva: Director/Advisor elegible → confirmación explícita → locks/revocación/audit atómicos → REMOVED sin reactivación. Suspensión conserva su flujo distinto; Master no usa baja directa.

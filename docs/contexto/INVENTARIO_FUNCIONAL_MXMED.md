@@ -332,3 +332,7 @@ ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-chec
 ## Consolidación staff aislada
 
 ID-07 / COM-10: flujo sintético integrado de admisión, revisión y alta Advisor; reusa ID-01/02/03, sin permisos implícitos. UI del equipo existente conectada sólo en ensayo propietario. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).
+
+## ID-07 / COM-10 — UXFUNC01
+
+[Corrección dirigida](../identity/ASE-ADM02-UXFUNC01.md): UI-2 autorizada; baja definitiva del equipo confirmada por Director. Writer canónico y estado terminal REMOVED, grupos editables según autoridad, alta visible y nombres sólo de fuente personal autorizada. Exclusivamente sintético; ninguna capacidad/rol ni activación productiva nueva.

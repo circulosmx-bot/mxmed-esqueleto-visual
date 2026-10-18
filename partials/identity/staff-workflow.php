@@ -6,7 +6,7 @@
 <ol class="wizard-steps"><li>Persona</li><li>Documentos</li><li>Revisión</li><li>Admisión</li></ol>
 <p id="wf-status" role="status" aria-live="polite">Validando sesión…</p>
 <label class="wizard-field">Solicitud <select id="wf-cases"><option value="">Seleccionar</option></select></label><button id="wf-refresh" type="button">Actualizar</button>
-<div id="wf-director" hidden><button id="wf-new" type="button">+ AGREGAR INTEGRANTE</button><label class="wizard-field">Correo del destinatario <input id="wf-email" type="email" autocomplete="off"></label><button id="wf-invite" type="button">Preparar invitación</button><p>La invitación de ensayo se entrega únicamente al buzón local privado.</p></div>
+<div id="wf-director" hidden><button id="wf-new" type="button">Preparar solicitud</button><label class="wizard-field">Correo del destinatario <input id="wf-email" type="email" autocomplete="off"></label><button id="wf-invite" type="button">Preparar invitación</button><p>La invitación de ensayo se entrega únicamente al buzón local privado.</p></div>
 <details class="admission-section" open><summary>DATOS PERSONALES</summary>
 <div class="admission-fields"><label class="wizard-field">Nombre(s) <input id="wf-given_names" maxlength="120"></label><label class="wizard-field">Primer apellido <input id="wf-first_surname" maxlength="120"></label><label class="wizard-field">Segundo apellido <input id="wf-second_surname" maxlength="120"></label>
 <label class="wizard-field">Estado <input id="wf-operation_state" maxlength="120"></label><label class="wizard-field">Ciudad <input id="wf-operation_city" maxlength="120"></label>

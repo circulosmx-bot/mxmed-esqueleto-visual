@@ -41,7 +41,7 @@ final class MutationHttp
             if(!is_string($csrf)||strlen($csrf)>256||!$identity->csrf()->validAuthenticated($csrf,$session->session()->tokenDigest()))throw new ReadFailure(403,'access_denied');
             $body=self::body($raw,$lifecycle);
             if($lifecycle){
-                $result=(new InternalGovernanceService($pdo,$resolver))->execute($_COOKIE,$body['operation'],$body['target'],null,InternalGovernanceService::ADVISOR_LIFECYCLE);
+                $result=(new InternalGovernanceService($pdo,$resolver))->execute($_COOKIE,$body['operation'],$body['target'],null,$body['operation']==='remove_advisor'?InternalGovernanceService::ADVISOR_REMOVAL:InternalGovernanceService::ADVISOR_LIFECYCLE);
                 self::respond(['result'=>'changed','operation'=>$body['operation'],'target'=>$body['target'],'staff_status'=>$result['status'],'refresh_required'=>true,'consumer_authority'=>'independently_required']);return;
             }
             (new InternalGovernanceService($pdo,$resolver))->execute($_COOKIE,$body['operation'],$body['target'],$body['capability'],InternalGovernanceService::ACTIVE_ADVISOR_OPERATIONAL);
@@ -69,7 +69,7 @@ final class MutationHttp
         // Flat JSON object: count key tokens including duplicates before PHP collapses them.
         preg_match_all('/"(?:[^"\\\\]|\\\\.)*"\s*:/s',$raw,$matches);
         if(count($matches[0])!==($lifecycle?2:3))throw new ReadFailure(400,'invalid_request');
-        if(!in_array($body['operation'],$lifecycle?['suspend','reactivate']:['grant','revoke'],true)||!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$body['target']))throw new ReadFailure(400,'invalid_request');
+        if(!in_array($body['operation'],$lifecycle?['suspend','reactivate','remove_advisor']:['grant','revoke'],true)||!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$body['target']))throw new ReadFailure(400,'invalid_request');
         if($lifecycle)return $body;
         $definition=InternalCapabilityCatalog::all()[$body['capability']]??null;
         if(!$definition||$definition['kind']!=='operational'||$definition['delegable']!==true)throw new ReadFailure(400,'invalid_request');

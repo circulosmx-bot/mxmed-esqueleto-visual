@@ -1,0 +1,45 @@
+{
+  "result": "PASS",
+  "source_baseline": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+  "functional_checks": 35,
+  "security_checks": 8,
+  "browser_viewport_checks": 6,
+  "tested_source_hashes_match": true,
+  "final_source_sha256": {
+    "assets/js/internal-team-editor.js": "335547f2cfa059e287f62ed4e276ce6d41dafafcd059752bd5d7618d24320747",
+    "assets/js/internal-team-master.js": "dc5b65db0def8315249e8bc51a5d648ec971f620d759e743e70f0c68a6077c03",
+    "assets/js/internal-team.js": "d6777f89b0a0fa73c2c3ee25740e0840fc191bae97d7153ac92ce7ef88b5b9b8",
+    "assets/js/staff-workflow.js": "7fcdf8c24999cac9008abc840a59e5a83e8722255590d85e28570dc3e38d6b23",
+    "modules/identity/Team/MutationHttp.php": "b4a476568be5980ad25a8ce89913e5c505a39c2761073bfc04246002e7e3877a",
+    "modules/identity/Team/ReadService.php": "68cfd2e7743a26dc78b1eef10d0749ec6051856795cfb708703252d30f8b03ea",
+    "modules/identity/services/InternalGovernanceService.php": "0f997ee8b384752932a57e078f6656989b112ae3c693d737170f12248fac5b09",
+    "partials/identity/internal-team.php": "a4070528ec5d94450fe84369418c4977db382eb0a40fe6cfd564c7a969a2cbec",
+    "partials/identity/staff-workflow.php": "9b5cf9c490cb28cd8d2be8840c045bcfb9f9e50a6365ec5e444b5d90db77a0b2",
+    "scripts/ase-adm02-workflow-checks.py": "4e14d5a51f53c73c4b33aa0e605e3eefacde0769aa54724b520ee600fffbb17e",
+    "scripts/ase-adm02-workflow-qa.py": "e884d12f8ee519137bc3fd6424bafc536047e0c9a55a5cfcc2bf15aee5cb2d99",
+    "modules/identity/db/migrations/2026_10_18_08_staff_definitive_removal.sql": "41bee90c680eaf84ea39b81877b406d7267141b1dfa7bf3d1f131a9b230a479e",
+    "scripts/ase-adm02-uxfunc01-checks.py": "75cd4d83fc764efd9982d04441550c8fb70230a6828f7344b8546f638e187fab",
+    "scripts/ase-adm02-uxfunc01-qa.py": "14337a45a064282583625940658ce78d444d2b4b8ebf7b0a0cf8251e2fc453b6",
+    "scripts/ase-adm02-uxfunc01-security.py": "1b14175725ebddf9a88d081d2c770716ceeff0ed72a633df5a58caf294af37e5"
+  },
+  "protected_worktrees_and_listeners_unchanged": true,
+  "canonical_audit_policy_tests": 2,
+  "syntax": "PASS",
+  "context_sync_status": "PASS_UPDATED",
+  "production_activation": false,
+  "real_personal_data_used": false,
+  "preview": {
+    "url": "https://127.0.0.1:53813/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792446715.3569438,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-k4zxx7ey",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "limits": [
+    "Master governance remains independently closed",
+    "Unavailable Advisor consumers remain non-editable",
+    "Legacy staff without personal source remains explicitly pending",
+    "No physical Safari or final mobile approval",
+    "Migration installed only in new owned synthetic instance"
+  ],
+  "local_links_checked": 762
+}

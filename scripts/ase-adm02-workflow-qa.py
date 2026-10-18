@@ -10,6 +10,7 @@ PHASE='ase-adm02imp01'
 EXPECTED_BRANCH='feature/ase-adm02-functional-consolidation'
 ROUTER='scripts/ase-adm02-workflow-router.php'
 HOOK=None
+REVIEW_SECONDS=3600
 EXTRA_PROTECTED=['mxmed-ase-int02a-governed-grants','mxmed-ase-int02b-team-permission-ui','mxmed-ase-int03a-advisor-lifecycle','mxmed-ase-int03b-master-governance-prep','mxmed-ase-int03b-master-privileged-backend','mxmed-ase-int03b-master-ui','mxmed-act03-governance-check-compat01','mxmed-ase-adm02-staff-admission-policy','mxmed-ase-adm02-staff-case-foundation','mxmed-ase-adm02-staff-invitation-binding','mxmed-ase-adm02-private-staff-media']
 EXTRA_SOURCES=[]
 EXTRA_WRITABLE_TABLES=[]
@@ -135,6 +136,12 @@ def main():
         spec_setup=__import__('importlib.util',fromlist=['spec_from_file_location'])
         spec=spec_setup.spec_from_file_location('wf_setup',ROOT/'scripts/ase-adm02-workflow-checks.py');wf=spec_setup.module_from_spec(spec);spec.loader.exec_module(wf)
         wf.setup({**locals(),'ROOT':ROOT},check)
+        assert 3600<=REVIEW_SECONDS<=86400
+        review_deadline=time.time()+REVIEW_SECONDS
+        if REVIEW_SECONDS>3600:
+            approval=json.loads((owned/'workflow-approval.json').read_text());approval['expires']=int(review_deadline);(owned/'workflow-approval.json').write_text(json.dumps(approval))
+            deployment=json.loads((owned/'admission-deployment.json').read_text());deployment['expires_at']=datetime.datetime.fromtimestamp(review_deadline,datetime.timezone.utc).isoformat();payload=json.dumps(deployment);(owned/'admission-deployment.json').write_text(payload);env['MXMED_GOVERNANCE_DEPLOYMENT_AUTHORIZATION_SHA256']=hashlib.sha256(payload.encode()).hexdigest()
+        (owned/'review-env.json').write_text(json.dumps(env))
         spawn('php',['php','-S','127.0.0.1:'+str(php_port),'-t',str(ROOT),str(ROOT/ROUTER)]);wait_until(lambda:port_ready(php_port))
         subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(owned/'key.pem'),'-out',str(owned/'cert.pem'),'-days','1','-subj','/CN=127.0.0.1','-addext','subjectAltName=IP:127.0.0.1'],capture_output=True,check=True)
         class Handler(http.server.BaseHTTPRequestHandler):
@@ -176,9 +183,9 @@ def main():
             finally:c.close()
         from importlib.util import spec_from_file_location, module_from_spec
         spec=spec_from_file_location('admission_checks',ROOT/'scripts/ase-adm02-workflow-checks.py')
-        tests=module_from_spec(spec);spec.loader.exec_module(tests);tests.run({**locals(),'ROOT':ROOT,'BASE':BASE},check,concurrency)
+        tests=module_from_spec(spec);spec.loader.exec_module(tests);(HOOK or tests.run)({**locals(),'ROOT':ROOT,'BASE':BASE},check,concurrency)
         if os.environ.get('MXMED_KEEP_OWNED_WORKFLOW')=='1':
-            expiry=time.time()+3600
+            expiry=review_deadline
             (owned/'review-info.json').write_text(json.dumps({'url':origin+'/internal/media-review/index.php?section=equipo','expiry_unix':expiry,'owner_pid':os.getpid()}))
             files=[*ROOT.glob('modules/identity/StaffWorkflow/*.php'),*ROOT.glob('modules/identity/StaffMedia/*.php'),*ROOT.glob('modules/identity/StaffAdmission/*.php'),*ROOT.glob('scripts/ase-adm02-workflow*'),ROOT/'modules/identity/services/InternalGovernanceService.php',ROOT/'modules/identity/services/StaffMfaService.php',ROOT/'modules/identity/MasterGovernance/Composition.php',ROOT/'modules/identity/db/migrations/2026_10_18_07_staff_workflow.sql',ROOT/'modules/identity/tests/StaffWorkflowFixture.php',ROOT/'assets/js/staff-workflow.js',ROOT/'assets/js/internal-team.js',ROOT/'partials/identity/internal-team.php',ROOT/'partials/identity/staff-workflow.php']
             after=protected();assert before==after

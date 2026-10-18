@@ -157,3 +157,7 @@ El snapshot Master real sólo contiene account_id, credential_version, review_ve
 ## Consolidación staff aislada
 
 Migración18_07: conjuntos documentales, intenciones, revisiones y recibos del mismo caso. CHECK gobierno conserva17 propósitos y añade STAFF_ADMISSION_REVIEW; factores/challenges/proofs canónicos. INSERT staff sigue exclusivamente en InternalGovernanceService; sin instalación real. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).
+
+## UXFUNC01 — baja definitiva staff, SQL preparado
+
+[Contrato](../identity/ASE-ADM02-UXFUNC01.md): migración2026_10_18_08 amplía internal_staff.status con REMOVED, limitado a ADVISOR y terminal por trigger. La baja revoca grants/delegaciones con auditoría en la misma transacción. Conserva cuenta, casos e historia. Sólo instalada en infraestructura nueva sintética; no DDL operacional.

@@ -168,3 +168,7 @@
 - [Historia y decisiones](README.md#historia-decisiones-y-continuidad) se recuperan bajo demanda; el contenido histórico se conserva con avisos de sucesor donde corresponde.
 
 Cierre ASE-ADM02-FUNCTIONAL-CONSOLIDATION: 41 checks integrados PASS, revisión visual automatizada Chromium/WebKit y CTX-SYNC01 PASS_UPDATED; fuentes/14 worktrees/listeners protegidos. Evidencia final en el contrato enlazado. Activación productiva permanece cerrada.
+
+## Corrección dirigida ASE-ADM02-UXFUNC01
+
+[UXFUNC01](identity/ASE-ADM02-UXFUNC01.md), base66056af7: alta visible y formulario limpio; confirmaciones con nombre autorizado; restricciones de permisos explícitas; baja definitiva de Advisor exclusiva del Director, distinta de suspensión, por writer/auditoría canónicos. Estado terminal REMOVED, sin borrar Identity/historia ni permitir reactivación. Migración sólo preparada/aplicada al ensayo desechable. Master mantiene su autorización independiente. Verificación dirigida PASS: 35 checks, ocho pruebas de seguridad y Chromium/WebKit a 1366/820/390; CTX-SYNC01 PASS_UPDATED. 8091 y consolidación anterior preservados.

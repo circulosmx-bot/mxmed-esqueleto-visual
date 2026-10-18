@@ -57,6 +57,7 @@ final class ReadService
                 'master_delegations'=>$authority['can_read_masters']&&$row['governance_class']==='MASTER_ADMIN'?$this->delegations($row['account_id']):null,
                 'editable_capabilities'=>$this->editable($row,$authority,$viewer),
                 'lifecycle_operations'=>$authority['mutations_enabled']&&$row['account_id']!==$viewer&&$row['governance_class']==='ADVISOR'&&$row['account_status']==='active'&&in_array($row['status'],['ACTIVE','SUSPENDED'],true)?[$row['status']==='ACTIVE'?'suspend':'reactivate']:[],
+                'removal_allowed'=>$authority['mutations_enabled']&&$authority['class']==='DIRECTOR'&&$row['account_id']!==$viewer&&$row['governance_class']==='ADVISOR'&&in_array($row['status'],['ACTIVE','SUSPENDED'],true),
                 'master_actions'=>$this->masterActions($row,$authority,$viewer,$grants),
                 'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>null];
         }

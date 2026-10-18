@@ -1,0 +1,39 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Canonical direct writer rejects reactivate for removed staff",
+      "pass": true
+    },
+    {
+      "name": "Canonical direct writer rejects grant for removed staff",
+      "pass": true
+    },
+    {
+      "name": "Canonical direct writer rejects register for removed staff",
+      "pass": true
+    },
+    {
+      "name": "Canonical direct writer rejects appoint_master for removed staff",
+      "pass": true
+    },
+    {
+      "name": "Identity session survives; canonical staff consumer denies permission",
+      "pass": true
+    },
+    {
+      "name": "Terminal trigger blocks status restoration",
+      "pass": true
+    },
+    {
+      "name": "Two independent writer connections: one removal only",
+      "pass": true
+    },
+    {
+      "name": "Concurrent removal has one audit event",
+      "pass": true
+    }
+  ],
+  "independent_connections": true,
+  "real_data_used": false
+}

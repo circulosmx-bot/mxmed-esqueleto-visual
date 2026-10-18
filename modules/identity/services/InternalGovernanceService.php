@@ -14,6 +14,7 @@ final class InternalGovernanceService
     {if($masterCases!==null&&!$masterCases->usesConnection($pdo))throw new RuntimeException('master_connection_mismatch');}
     public const ACTIVE_ADVISOR_OPERATIONAL='active_advisor_operational';
     public const ADVISOR_LIFECYCLE='advisor_lifecycle';
+    public const ADVISOR_REMOVAL='advisor_removal';
     public function execute(array $cookies,string $operation,string $target,?string $capability=null,?string $targetPrecondition=null):array
     {return $this->perform($cookies,$operation,$target,$capability,$targetPrecondition);}
     public function executePrivileged(array $cookies,string $caseId,string $proofId,string $rawProof):array
@@ -29,13 +30,15 @@ final class InternalGovernanceService
     }
     private function perform(array $cookies,string $operation,string $target,?string $capability,?string $targetPrecondition,?array $privileged=null,?array $admission=null):array
     {
-        if(!in_array($operation,['register','appoint_master','remove_master','suspend','reactivate','grant','revoke','delegate','revoke_delegation'],true))throw new RuntimeException('governance_invalid_operation');
+        if(!in_array($operation,['register','appoint_master','remove_master','remove_advisor','suspend','reactivate','grant','revoke','delegate','revoke_delegation'],true))throw new RuntimeException('governance_invalid_operation');
         $hasCapability=in_array($operation,['grant','revoke','delegate','revoke_delegation'],true);
         if($hasCapability!==($capability!==null))throw new RuntimeException('governance_invalid_request');
         $definition=$hasCapability?InternalCapabilityCatalog::require($capability):null;
         $advisorOnly=$targetPrecondition===self::ACTIVE_ADVISOR_OPERATIONAL;
         $lifecycleOnly=$targetPrecondition===self::ADVISOR_LIFECYCLE;
-        $strict=$advisorOnly||$lifecycleOnly;
+        $removalOnly=$targetPrecondition===self::ADVISOR_REMOVAL;
+        $strict=$advisorOnly||$lifecycleOnly||$removalOnly;
+        if(($operation==='remove_advisor')!==$removalOnly)throw new RuntimeException('governance_invalid_request');
         if($targetPrecondition!==null&&!$strict)throw new RuntimeException('governance_invalid_request');
         if($advisorOnly&&(!in_array($operation,['grant','revoke'],true)||$definition['kind']!=='operational'||$definition['delegable']!==true))throw new RuntimeException('governance_invalid_request');
         if($lifecycleOnly&&!in_array($operation,['suspend','reactivate'],true))throw new RuntimeException('governance_invalid_request');
@@ -51,7 +54,7 @@ final class InternalGovernanceService
             $a=$staff[$actor];$t=$staff[$target];
             if($strict){
                 // Current locking reads above, not an HTTP precheck or an MVCC snapshot.
-                if($actor===$target||$accounts[$target]!=='active'||!$t||$t['governance_class']!=='ADVISOR'||($advisorOnly&&$t['status']!=='ACTIVE')||!in_array($t['status'],['ACTIVE','SUSPENDED'],true))throw new RuntimeException('governance_target_ineligible');
+                if($actor===$target||(!$removalOnly&&$accounts[$target]!=='active')||!$t||$t['governance_class']!=='ADVISOR'||($advisorOnly&&$t['status']!=='ACTIVE')||!in_array($t['status'],['ACTIVE','SUSPENDED'],true))throw new RuntimeException('governance_target_ineligible');
                 $s=$this->pdo->prepare('SELECT credential_version FROM auth_account_credentials WHERE account_id=? FOR UPDATE');$s->execute([$actor]);
                 if((int)$s->fetchColumn()!==$session->principal()->credentialVersion())throw new RuntimeException('governance_denied');
                 // Recheck expiry/revocation after a possible lock wait, through canonical Identity.
@@ -60,6 +63,8 @@ final class InternalGovernanceService
             }
             if($accounts[$actor]!=='active'||!$a||$a['status']!=='ACTIVE')throw new RuntimeException('governance_denied');
             $director=$a['governance_class']==='DIRECTOR';
+            if($removalOnly&&!$director)throw new RuntimeException('governance_denied');
+            if($t&&$t['status']==='REMOVED')throw new RuntimeException('governance_target_ineligible');
             if(!$director){
                 if($a['governance_class']!=='MASTER_ADMIN'||$actor===$target||!$this->activeGrant($actor,InternalCapabilityCatalog::MANAGE_ADVISORS,$strict))throw new RuntimeException('governance_denied');
                 if(!in_array($operation,['register','suspend','reactivate','grant','revoke'],true)||($t!==null&&$t['governance_class']!=='ADVISOR'))throw new RuntimeException('governance_denied');
@@ -86,6 +91,10 @@ final class InternalGovernanceService
                 $this->pdo->prepare("UPDATE internal_staff SET governance_class='ADVISOR' WHERE account_id=?")->execute([$target]);
                 $this->pdo->prepare("UPDATE internal_capability_delegations SET status='REVOKED',revoked_at=CURRENT_TIMESTAMP(6) WHERE master_account_id=? AND status='ACTIVE'")->execute([$target]);
                 $this->revoke($target,InternalCapabilityCatalog::MANAGE_ADVISORS);
+            }elseif($operation==='remove_advisor'){
+                $this->pdo->prepare("UPDATE internal_staff SET status='REMOVED' WHERE account_id=?")->execute([$target]);
+                $this->pdo->prepare("UPDATE internal_operator_grants SET status='REVOKED',revoked_at=CURRENT_TIMESTAMP(6) WHERE account_id=? AND status='ACTIVE'")->execute([$target]);
+                $this->pdo->prepare("UPDATE internal_capability_delegations SET status='REVOKED',revoked_at=CURRENT_TIMESTAMP(6) WHERE master_account_id=? AND status='ACTIVE'")->execute([$target]);
             }elseif(in_array($operation,['suspend','reactivate'],true)){
                 $next=$operation==='suspend'?'SUSPENDED':'ACTIVE';if(!$t||$t['status']===$next)throw new RuntimeException('governance_conflict');
                 $this->pdo->prepare('UPDATE internal_staff SET status=? WHERE account_id=?')->execute([$next,$target]);
@@ -107,6 +116,7 @@ final class InternalGovernanceService
             $context=TrustedAuditContext::fromServer($actor,'account',$a['governance_class'],'internal_governance',$this->uuid(),$masterCase['operation_id']??$this->uuid(),(string)$session->session()->sessionId(),null,null,'ADMIN','internal-governance/'.$operation);
             $auditEvent=$writer->append(new CanonicalAuditEventInput('INTERNAL_GOVERNANCE_CHANGED','SUCCESS','ADMIN_DECISION','account',$actor,'internal_staff',$target,['operation'=>$operation,'target_account_id'=>$target,'capability'=>$capability,'before'=>$t,'after'=>$after]),$context);
             $result=$masterCase===null?['account_id'=>$target,...$after]:$this->masterCases->finish($this->pdo,$masterCase,$after,(string)$auditEvent->value('event_id'));
+            if($removalOnly){$live=$this->sessions->resolve($cookies,true);if(!$live||$live->accountId()!==$actor||(string)$live->session()->sessionId()!==(string)$session->session()->sessionId())throw new RuntimeException('governance_denied');}
             if($admission!==null){
                 $admission[0]->finishAdmission($this->pdo,$session,$admissionGate,(string)$auditEvent->value('event_id'));
                 $live=$this->sessions->resolve($cookies,true);
