@@ -4,7 +4,7 @@
 <title>Equipo interno y permisos · México Médico</title>
 <link rel="stylesheet" href="/assets/css/media-review-inbox.css"><link rel="stylesheet" href="/assets/css/internal-team.css">
 <link rel="stylesheet" href="/assets/css/internal-team-commercial.css"><link rel="stylesheet" href="/assets/css/internal-team-admission.css"><link rel="stylesheet" href="/assets/css/internal-team-readonly.css">
-<script src="/assets/js/internal-team-editor.js" defer></script><script src="/assets/js/internal-team.js" defer></script></head><body>
+<script src="/assets/js/internal-team-editor.js" defer></script><script src="/assets/js/internal-team-master.js" defer></script><script src="/assets/js/internal-team.js" defer></script></head><body>
 <a class="skip-link" href="#advisor-detail" id="skip-detail">Ir al detalle del integrante</a>
 <main class="advisor-workspace">
 <header class="workspace-header"><div><p class="eyebrow">México Médico · Equipo interno</p><h1>EQUIPO INTERNO Y PERMISOS</h1><p class="subtitle">Administración de asesores, administradores y funciones autorizadas.</p></div><span id="team-mode" class="prototype-badge">SÓLO CONSULTA</span></header>

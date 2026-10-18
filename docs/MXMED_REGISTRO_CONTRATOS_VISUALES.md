@@ -132,3 +132,7 @@ permanece pendiente.
 ## ASE-INT03B-IMP01 — concepto UI-2 aprobado, conexión pendiente
 
 El Director aprobó selección → consecuencias → confirmación → contraseña → MFA → resultado/reconciliación. [IMP01](identity/ASE-INT03B-IMP01-master-security-foundation.md) implementa sólo backend; IMP02 requiere revisión separada para conectar controles. Layout, header, navegación y baseline visual312ee388 conservados; acciones Master continúan deshabilitadas. La deuda ASE-INT03B-PRIVILEGED-UI sigue abierta para conexión, no para aprobación conceptual.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+[IMP02](identity/ASE-INT03B-IMP02-master-ui-integration.md) ejecuta la conexión UI-2 expresamente autorizada: modal existente por etapas, controles de designación/gestión/delegación individual y mensajes de seguridad. CSS/header/navegación/layout R2/COM/ADM conservados; no UI-3. Appointment visible deshabilitado con motivo. Deuda de conexión IMP01 se sucede sólo en esta feature aislada; no activación ni revisión física Safari.

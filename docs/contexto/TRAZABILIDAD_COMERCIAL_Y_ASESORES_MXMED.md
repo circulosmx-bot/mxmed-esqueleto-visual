@@ -227,3 +227,7 @@ Sucede frases previas «checklist/gestión sin adapter gráfico» sólo para lec
 ## COM-10 — sucesor backend Master ASE-INT03B-IMP01
 
 [Fundación](../identity/ASE-INT03B-IMP01-master-security-foundation.md) implementa gobierno Director-only y preserva democión sin borrar atribución/historia/grants operativos. No resuelve D06 ni cambia D01–D08, cartera, comisiones o las siete políticas ADM. Identidad interna autoritativa sigue pendiente; UI y operación real no habilitadas.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta gobierno Master individual sin autoridad comercial implícita. Comisión recurrente de COM aprobada preservada, D01–D08 y siete políticas ADM sin decisiones nuevas. Retirar Master no determina derechos económicos futuros ni borra atribución.

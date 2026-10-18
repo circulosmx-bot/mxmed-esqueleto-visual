@@ -9,7 +9,7 @@ use Identity\Services\{GovernanceSecurityContext,StaffMfaService,GovernanceRunti
 use Identity\MasterGovernance\Composition;
 use Identity\Contracts\{Clock,StaffIdentityReviewPort,StaffIdentityReviewSnapshot,MfaSecretGeneratorPort};
 $owned=realpath((string)getenv('ASE_INT02A_OWNED'));
-if(!$owned||!preg_match('~^/private/tmp/mxmed-ase-int03b-[a-zA-Z0-9_]+$~D',$owned)||!preg_match('/^mxmed_gate4d_preview_aseint03b_[a-f0-9]{10}$/D',(string)getenv('MXMED_DB_NAME'))||in_array((int)getenv('MXMED_DB_PORT'),[3306,3309],true))throw new RuntimeException('test_owned_target_required');
+if(!$owned||!preg_match('~^/private/tmp/mxmed-ase-int03b(?:ui)?-[a-zA-Z0-9_]+$~D',$owned)||!preg_match('/^mxmed_gate4d_preview_aseint03b(?:ui)?_[a-f0-9]{10}$/D',(string)getenv('MXMED_DB_NAME'))||in_array((int)getenv('MXMED_DB_PORT'),[3306,3309],true))throw new RuntimeException('test_owned_target_required');
 $identity=IdentityHttpComposition::fromProcessEnvironment();$p=$identity->pdo();
 if(realpath((string)$p->query('SELECT @@datadir')->fetchColumn())!==$owned.'/mysql')throw new RuntimeException('test_datadir_mismatch');
 $input=json_decode(stream_get_contents(STDIN),true,32,JSON_THROW_ON_ERROR);

@@ -1,0 +1,69 @@
+{
+  "result": "PASS",
+  "cases": [
+    {
+      "engine": "webkit",
+      "viewport": "1440x900",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "N/A"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "1366x768",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "N/A"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "820x1180",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "N/A"
+    },
+    {
+      "engine": "webkit",
+      "viewport": "390x844",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "INTERIM_SMOKE_ONLY"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1440x900",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "N/A"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "1366x768",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "N/A"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "820x1180",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "N/A"
+    },
+    {
+      "engine": "chromium",
+      "viewport": "390x844",
+      "five_real_http_ui_operations": "PASS",
+      "appointment": "PRODUCT_BLOCKED",
+      "mobile": "INTERIM_SMOKE_ONLY"
+    }
+  ],
+  "runtime_errors": [],
+  "physical_safari": "NOT_RUN",
+  "mobile": "INTERIM_SMOKE_ONLY",
+  "appointment_positive_http": "NOT_RUN_PRODUCT_GATE_BLOCKED",
+  "appointment_positive_presentation": "PURE_DOM_ONLY_NO_AUTHORITY_OR_HTTP",
+  "actual_lost_ack_injected": true,
+  "lost_ack_transport": "Playwright route.fetch same-origin clone retains cookie/body/CSRF/proof and supplies browser-generated Origin/Fetch-Site; response aborted after canonical backend returns",
+  "screenshots_mask_secrets": true
+}

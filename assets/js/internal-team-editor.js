@@ -153,6 +153,6 @@
       finally{busy=false;mount();if(message)$('permission-result-title')?.focus();else $('save-permissions')?.focus();}
     }
     window.addEventListener('beforeunload',e=>{if(dirty()||busy||!known){e.preventDefault();e.returnValue='';}});
-    return {adopt,reset,mount,canLeave,get busy(){return busy;}};
+    return {adopt,reset,mount,canLeave,dirty,get busy(){return busy||dialogOpen;},get uncertain(){return !known;}};
   };
 })();

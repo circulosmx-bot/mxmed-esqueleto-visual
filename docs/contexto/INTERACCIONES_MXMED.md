@@ -168,4 +168,8 @@ Registrar cambios de conexión en el journey afectado y en su capability, sin du
 
 ## J09 — sucesor backend ASE-INT03B-IMP01
 
-[Secuencia implementada](../identity/ASE-INT03B-IMP01-master-security-foundation.md): abrir intención servidor → confirmar digest/contraseña Director → TOTP → proof exacto → locks/revalidación/consumo/writer/audit atómicos → reconciliar caso/UUID/audit. UI-2 aprobada conceptualmente; conexión IMP02 pendiente. Logout anterior al check final deniega; después de ese punto no se promete fencing SQL/Valkey. Conserva frontera J08 y atribución comercial.
+[Secuencia implementada](../identity/ASE-INT03B-IMP01-master-security-foundation.md): abrir intención servidor → confirmar digest/contraseña Director → TOTP → proof exacto → locks/revalidación/consumo/writer/audit atómicos → reconciliar caso/UUID/audit. UI-2 aprobada conceptualmente; conexión sucedida por IMP02 aislado. Logout anterior al check final deniega; después de ese punto no se promete fencing SQL/Valkey. Conserva frontera J08 y atribución comercial.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+J09: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta selección/ack → open → intención servidor/contraseña → TOTP → ejecución única → read caso/UUID/audit → refresh. Borradores protegidos, bloqueo de contexto y secretos efímeros; ACK incierto no reintenta. J08 y decisiones comerciales no cambian.

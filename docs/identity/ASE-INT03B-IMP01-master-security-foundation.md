@@ -97,3 +97,7 @@ PRODUCT_POLICY: cuatro decisiones aprobadas y separación de poderes. SOURCE_IMP
 Cierre sintético: **321 checks PASS / nueve carreras observadas**. Rehearsal A/B/C/E PASS; D BLOCKED_HISTORICAL_ACT03_CHECK, no upgrade general PASS. La ejecución final detuvo procesos y eliminó su datadir propio. [Disposición de intentos fallidos](../evidence/ase-int03b-imp01/failed-resources-disposal.json) verifica ownership y ausencia de procesos antes de retirar sólo sus directorios; reportes sanitizados preservados. El campo heredado `ui_still_read_only=false` del runner describe que Advisor ya tiene mutaciones anteriores; las acciones **Master** siguen deshabilitadas (security-boundaries.json).
 
 Revisión staged detectó un espacio final en el harness nuevo: se retiró después de QA sin cambiar su AST ni fuente producto. qa.json conserva el hash realmente probado; [verificación final](../evidence/ase-int03b-imp01/final-verification.json) registra ambos hashes y la única diferencia cosmética, sin atribuir una nueva ejecución.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+[IMP02](ASE-INT03B-IMP02-master-ui-integration.md) sucede la desconexión UI: mismo writer/caso/proof, proyección de disponibilidad y flujo individual con reconciliación. Contrato de seguridad, review producto ausente, límite SQL/Valkey y ruta D bloqueada se preservan. Los controles sólo se habilitan en QA nueva con autoridad canónica; no operación real.

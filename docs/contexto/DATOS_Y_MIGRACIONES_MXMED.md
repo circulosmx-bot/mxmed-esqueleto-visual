@@ -127,3 +127,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT03B-IMP01 — CHECK acumulativo y rehearsal
 
 [Contrato/evidencia](../identity/ASE-INT03B-IMP01-master-security-foundation.md): nueva migración `modules/identity/db/migrations/2026_10_18_01_internal_master_governance_operations.sql`, unión exacta de once operaciones históricas y seis Master. Reusa auth_governance_cases.security_context y tablas MFA/staff/grants/delegaciones/audit, sin tablas producto nuevas, seeds, backfill ni enums. A/B/C/E ensayan el nuevo CHECK; D confirma que ACT03 rechaza filas de corrección y se detiene preservando datos/constraints. No acredita schema instalado real ni todas las rutas de upgrade. Tabla de review sólo en fixture descartable.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+[IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) no añade SQL/tablas/enums. ReadService proyecta operaciones exactas disponibles y csrf proyecta factor listo; UI consume casos/proofs/audit existentes. Appointment reader indisponible. La ruta D permanece BLOCKED_HISTORICAL_ACT03_CHECK; no reparación, borrado histórico ni DDL persistente.

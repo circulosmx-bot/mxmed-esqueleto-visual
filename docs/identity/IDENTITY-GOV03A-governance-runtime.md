@@ -138,3 +138,7 @@ La contención clínica y la política de contactos profesionales ordinarios no 
 ## Extensión Master implementada — ASE-INT03B-IMP01
 
 [Contrato sucesor](ASE-INT03B-IMP01-master-security-foundation.md): variante staff tipada y seis operaciones Director-only en emisión, verificación y consumo MFA. Reutiliza seguridad canónica y writer; no modifica ceremonias de enrollment ni autoridades clínicas. Check final de sesión después de locks/proof y antes de mutación; no atomicidad SQL/Valkey. Migración aditiva ensayada en infraestructura nueva; ruta histórica ACT02 con correcciones → ACT03 bloqueada sin modificar datos. No activación operacional.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+[Conexión IMP02](ASE-INT03B-IMP02-master-ui-integration.md): GET csrf proyecta disponibilidad del factor desde contexto de enrollment; GET browser acepta sólo Referer exact-origin cuando falta Origin, con Fetch-Site same-origin. POST y seguridad transaccional IMP01 intactos. No enrolamiento nuevo HTTP, proof compartido o segundo writer. Route D sigue bloqueada y gate apagado fuera de QA.

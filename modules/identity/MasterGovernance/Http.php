@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace Identity\MasterGovernance;
 use Identity\Http\{IdentityHttpComposition,CanonicalHttpSessionResolver,GovernanceTransport};
 use Identity\Team\ReadFailure;
-/** No frontend activation. Closed actions only; all effective authority is server-derived. */
+/** Closed actions only; all effective authority is server-derived. */
 final class Http
 {
     public static function handle(string $action):void
@@ -22,13 +22,21 @@ final class Http
             if($get&&$raw!=='')throw new ReadFailure(400,'invalid_request');
             if(!GovernanceTransport::secure($_SERVER,$raw,(string)getenv('MXMED_GOVERNANCE_PROXY_KEY')))throw new ReadFailure(403,'access_denied');
             $identity=IdentityHttpComposition::fromProcessEnvironment();
-            if(($_SERVER['HTTP_ORIGIN']??'')!==$identity->allowedOrigin()||($_SERVER['HTTP_SEC_FETCH_SITE']??'')!=='same-origin')throw new ReadFailure(403,'access_denied');
+            // Same-origin browser GET omits Origin; accept only its exact-origin Referer. POST still requires Origin.
+            $origin=$_SERVER['HTTP_ORIGIN']??'';
+            $sameOrigin=$origin===$identity->allowedOrigin()||($get&&$origin===''&&str_starts_with($_SERVER['HTTP_REFERER']??'',$identity->allowedOrigin().'/'));
+            if(!$sameOrigin||($_SERVER['HTTP_SEC_FETCH_SITE']??'')!=='same-origin')throw new ReadFailure(403,'access_denied');
             $identity->pdo()->setAttribute(\PDO::ATTR_EMULATE_PREPARES,false);
             $actor=(new CanonicalHttpSessionResolver($identity->sessions()))->resolve($_COOKIE,$get);
             if(!$actor)throw new ReadFailure(401,'authentication_required');
             Policy::director($identity->pdo(),$actor->accountId(),$actor->principal()->credentialVersion());
             $runtime=Composition::fromIdentity($identity);$runtime->cases->authority($actor);
-            if($action==='csrf'){self::respond(['csrf_token'=>$identity->csrf()->issueAuthenticated($actor->session()->tokenDigest())]);return;}
+            if($action==='csrf'){
+                $q=$identity->pdo()->prepare("SELECT enrollment_context FROM auth_staff_mfa_factors WHERE account_id=? AND status='ACTIVE'");$q->execute([$actor->accountId()]);
+                $rawFactor=$q->fetchColumn();$factor=$rawFactor===false?null:json_decode($rawFactor,true,32,JSON_THROW_ON_ERROR);
+                $ready=is_array($factor)&&($factor['subject']['account_id']??null)===$actor->accountId()&&(($factor['action_blocked_until']??null)===null||new \DateTimeImmutable($factor['action_blocked_until'])<=new \DateTimeImmutable());
+                self::respond(['csrf_token'=>$identity->csrf()->issueAuthenticated($actor->session()->tokenDigest()),'state'=>$ready?'READY_FOR_EXACT_ACTION':'MISSING_MFA_FACTOR','appointment'=>'MISSING_IDENTITY_REVIEW']);return;
+            }
             if($action==='read'){self::respond($runtime->cases->read($actor,$match[1]));return;}
             if(!preg_match('~^application/json(?:\s*;\s*charset=utf-8)?$~i',trim($_SERVER['CONTENT_TYPE']??'')))throw new ReadFailure(415,'json_required');
             $csrf=$_SERVER['HTTP_X_CSRF_TOKEN']??'';

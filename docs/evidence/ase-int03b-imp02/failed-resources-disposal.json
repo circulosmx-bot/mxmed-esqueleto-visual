@@ -1,0 +1,76 @@
+{
+  "result": "PASS",
+  "only_this_phase_owned_directories": true,
+  "reports": [
+    {
+      "report": "failed-20261018T151108Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-fk_f6ji2",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T151259Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-fiubhn_3",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T151502Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-uvhbanbn",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T151702Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-ms3qdun1",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T151850Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-rpu615rt",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T152118Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-_t_bien9",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T152330Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-x_yzk_lb",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T152549Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-zcgyuay_",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T152909Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-3ghibeos",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    },
+    {
+      "report": "failed-20261018T153132Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int03bui-da_cg1r3",
+      "ownership_verified": true,
+      "processes_stopped_verified": true,
+      "disposed": true
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "product_appointment": "BLOCKED_PENDING_STAFF_IDENTITY_REVIEW",
+  "test_adapter": "CLI_ONLY_OWNED_DATADIR",
+  "http_composition": "NORMAL_FAIL_CLOSED_REVIEW",
+  "master_ui_enabled": true,
+  "session_authorization_point": "AFTER_LOCKS_AND_PROOF_BEFORE_MUTATION",
+  "logout_before_point_denied": true,
+  "sql_valkey_atomicity": false,
+  "uncertain_response": "RECONCILE_CASE_UUID_AND_AUDIT_NO_AUTOMATIC_RETRY",
+  "actual_lost_network_ack_injected": true,
+  "response_ignored_then_reconciled": true,
+  "real_staff_changed": false,
+  "master_ui_scope": "ONLY_NEW_OWNED_SYNTHETIC_QA",
+  "original_runtime_master_ui_enabled": false,
+  "product_master_ready": false
+}

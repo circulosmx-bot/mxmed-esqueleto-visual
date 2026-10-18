@@ -57,9 +57,31 @@ final class ReadService
                 'master_delegations'=>$authority['can_read_masters']&&$row['governance_class']==='MASTER_ADMIN'?$this->delegations($row['account_id']):null,
                 'editable_capabilities'=>$this->editable($row,$authority,$viewer),
                 'lifecycle_operations'=>$authority['mutations_enabled']&&$row['account_id']!==$viewer&&$row['governance_class']==='ADVISOR'&&$row['account_status']==='active'&&in_array($row['status'],['ACTIVE','SUSPENDED'],true)?[$row['status']==='ACTIVE'?'suspend':'reactivate']:[],
+                'master_actions'=>$this->masterActions($row,$authority,$viewer,$grants),
                 'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>null];
         }
         return ['authority'=>$authority,'catalog'=>InternalCapabilityCatalog::all(),'items'=>$items,'page'=>$page,'page_size'=>$size,'has_more'=>$hasMore,'category'=>$category,'grant_semantics'=>'stored_active; use_requires_current_consumer_authority','personal_profile_source'=>'NOT_CONNECTED','identity_review_source'=>'NOT_CONNECTED','commercial_source'=>'NOT_CONNECTED'];
+    }
+
+    /** Availability only; the privileged composition and locked writer authorize each action. */
+    private function masterActions(array $row,array $authority,string $viewer,array $grants):array
+    {
+        $result=['state'=>'NO_AUTHORITY','appointment'=>'MISSING_IDENTITY_REVIEW','operations'=>[]];
+        if(!$authority['can_read_masters']||$row['account_id']===$viewer)return $result;
+        if(getenv('MXMED_MASTER_GOVERNANCE_ENABLED')!=='1'){$result['state']='MASTER_GATE_DISABLED';return $result;}
+        if($row['governance_class']==='ADVISOR'){$result['state']='MISSING_IDENTITY_REVIEW';return $result;}
+        if($row['governance_class']!=='MASTER_ADMIN'||!in_array($row['status'],['ACTIVE','SUSPENDED'],true)||!in_array($row['account_status'],['active','disabled'],true))return $result;
+        $result['state']='READY_FOR_EXACT_ACTION';$result['operations'][]=['operation'=>'INTERNAL_MASTER_REMOVE','capability'=>null];
+        $increase=$row['status']==='ACTIVE'&&$row['account_status']==='active';
+        $manage=in_array(InternalCapabilityCatalog::MANAGE_ADVISORS,$grants,true);
+        if($manage||$increase)$result['operations'][]=['operation'=>$manage?'INTERNAL_ADVISOR_MANAGEMENT_REVOKE':'INTERNAL_ADVISOR_MANAGEMENT_GRANT','capability'=>InternalCapabilityCatalog::MANAGE_ADVISORS];
+        $delegations=$this->delegations($row['account_id']);
+        foreach(InternalCapabilityCatalog::all() as $key=>$definition){
+            if($definition['kind']!=='operational'||!$definition['delegable'])continue;
+            $assigned=in_array($key,$delegations,true);
+            if($assigned||$increase)$result['operations'][]=['operation'=>$assigned?'INTERNAL_CAPABILITY_DELEGATION_REVOKE':'INTERNAL_CAPABILITY_DELEGATE','capability'=>$key];
+        }
+        return $result;
     }
 
     /** UI eligibility projection only; every command still uses canonical locked authority.

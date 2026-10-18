@@ -37,9 +37,15 @@
 
 ## Sucesor aislado ASE-INT03B-IMP01
 
-- Feature `feature/ase-int03b-master-privileged-backend`, padre exacto `e71f3618772ff652a40bb597d45c199d5e851d75`. [Fundación Master](identity/ASE-INT03B-IMP01-master-security-foundation.md): cuatro decisiones aprobadas; seis operaciones Director-only con caso, contraseña, MFA y proof/writer/audit en un PDO. Concepto UI-2 aprobado; conexión IMP02 pendiente.
+- Feature `feature/ase-int03b-master-privileged-backend`, padre exacto `e71f3618772ff652a40bb597d45c199d5e851d75`. [Fundación Master](identity/ASE-INT03B-IMP01-master-security-foundation.md): cuatro decisiones aprobadas; seis operaciones Director-only con caso, contraseña, MFA y proof/writer/audit en un PDO. Concepto UI-2 aprobado; conexión sucedida por IMP02 aislado.
 - Promoción producto **BLOCKED_PENDING_STAFF_IDENTITY_REVIEW**; snapshot positivo sólo en fixture CLI sintético. Gate propio default off. Controles Master, layout y derechos históricos preservados; no activación real.
 - Rehearsal de CHECK acumulativo en MySQL nuevo; ACT02 con filas de corrección → ACT03 se detiene por incompatibilidad histórica, conservando datos. No declara todas las rutas PASS. 321 checks PASS y nueve carreras observadas; límites exactos en contrato/evidencia. Infra nueva dispuesta y siete worktrees/listeners/pointer preservados.
+
+## Sucesor aislado ASE-INT03B-IMP02
+
+- Feature `feature/ase-int03b-master-ui`, padre exacto `ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7`. [Conexión UI-2 autorizada](identity/ASE-INT03B-IMP02-master-ui-integration.md) sobre modal/controles/familias existentes; sin rediseño ni segundo writer.
+- Cinco acciones elegibles con caso/contraseña/MFA y reconciliación; propuesta Master visible pero **BLOCKED_PENDING_STAFF_IDENTITY_REVIEW**. Borradores/contexto protegidos, secretos sólo en memoria, no retries. Gates propios off fuera de QA.
+- QA sintética cerrada: 812 checks PASS, nueve carreras, Chromium/WebKit en cuatro viewports y 64 capturas. Infra propia dispuesta y ocho worktrees/listeners/pointer preservados. Route D sigue BLOCKED_HISTORICAL_ACT03_CHECK. Sin merge, deploy, staff/MFA/DB reales ni runtime original modificado; móvil interino y Safari físico NOT_RUN.
 
 ## Producto existente
 

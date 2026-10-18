@@ -303,4 +303,8 @@ Actualizar sólo IDs afectados por una operación posterior autorizada, con ruta
 
 ## ID-07 — sucesor ASE-INT03B-IMP01
 
-[Fundación Master](../identity/ASE-INT03B-IMP01-master-security-foundation.md): P=cuatro decisiones Director aprobadas; S=seis operaciones privilegiadas y elegibilidad tipada fail-closed; C=API preparada detrás de gate propio, UI pendiente IMP02; V=QA sintética dirigida y rehearsal, límites en evidencia; O=inactivo. Reusa ID-02/ID-03 para credenciales y sesión; no amplía el censo ni ADM.
+[Fundación Master](../identity/ASE-INT03B-IMP01-master-security-foundation.md): P=cuatro decisiones Director aprobadas; S=seis operaciones privilegiadas y elegibilidad tipada fail-closed; C=API preparada detrás de gate propio, UI sucedida por IMP02 aislado; V=QA sintética dirigida y rehearsal, límites en evidencia; O=inactivo. Reusa ID-02/ID-03 para credenciales y sesión; no amplía el censo ni ADM.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+[IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md), ID-07/COM-10: P=UI-2 autorizada; S=proyección Master y controlador de caso, reutiliza ID-02/03; C=controles existentes conectados a ocho endpoints, appointment no disponible; V=812 checks sintéticos PASS, nueve carreras y Chromium/WebKit en cuatro viewports, ver evidencia del contrato; O=inactivo. No nuevas capabilities ni cambios de consumidores.

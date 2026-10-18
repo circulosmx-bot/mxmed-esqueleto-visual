@@ -92,3 +92,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## ASE-INT03B-IMP01 — sucesor backend
 
 [Fundación implementada](../identity/ASE-INT03B-IMP01-master-security-foundation.md): seis comandos Director-only, caso exacto, contraseña/MFA y consumo/writer/audit en un PDO. Conserva clase, gestión, delegación y uso independientes; democión conserva grants operativos y estados. Promoción producto bloqueada por reader de revisión interna ausente; QA positiva sólo con adapter CLI sintético. Gate default off y UI Master inactiva.
+
+## ASE-INT03B-IMP02 — conexión UI aislada
+
+[UI privilegiada IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta controles existentes a casos/contraseña/MFA/comandos exactos y reconciliación canónica. Clase, management, delegación y uso siguen separados. Appointment producto bloqueado por review interna ausente; democión preserva estado/historia/grants. Sin operación real.
