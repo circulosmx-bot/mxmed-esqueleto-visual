@@ -248,3 +248,7 @@ Ninguna fase implementada aquí. Primero aprobar el alcance técnico sintético 
 | CONTEXT_SYNC_STATUS | PASS_UPDATED para contrato documental; no prueba implementación o seguridad operacional. |
 | DOCUMENTATION_COMMIT | Hash que contiene este documento informado en entrega Git; no autoinsertar hash futuro. |
 | REMAINING_CONTEXT_GAPS | Ratificaciones de tabla anterior, adaptadores/capabilities/guardas y pruebas futuras, D01–D08 preservados, autorización operacional separada. |
+
+## Sucesor aislado ADM-IMP01
+
+[Fundación caso/perfil](ASE-ADM02-IMP01-staff-case-foundation.md) implementa únicamente preparación Director, snapshots/procedencia, confirmación exacta de cuenta vinculada y recibos idempotentes con auditoría canónica. Binding positivo sólo fixture CLI; producto no vincula cuentas y permanece default off. Principios y detalles pendientes de este contrato preservados; no review/approval/grants/MFA/activación ni UI.

@@ -183,3 +183,7 @@ J01/J02/J09 mantienen flujos y autoridades. [COMPAT01](../identity/ACT03-CHECK-C
 [Contrato vigente](../identity/ASE-ADM02-POL01-staff-admission-policy.md): asistida y remota preautorizada → un caso → matching Identity legítimo → confirmación/aceptación personal → evidencia versionada → revisión humana independiente → decisión de admisión → configuración y handoff canónico → readiness por función. Siete principios aprobados; detalles e implementación pendientes. No upload=aprobación ni ACTIVE=identidad revisada.
 
 A–H definen cuenta existente/nueva/pendiente, duplicados, revocación/expiración, staff legacy, fallo parcial y ACK perdido. Ninguna transacción global o retry ciego; futura precondición dentro del writer y orden grants/MFA deben impedir acceso prematuro. Master exige snapshot autoritativo exacto y sigue bloqueado con reader indisponible. J08 conserva comisiones/D01–D08; no mensajes, cuentas o journeys reales ejecutados.
+
+## J09 — fundación parcial ADM-IMP01
+
+[Conexión aislada](../identity/ASE-ADM02-IMP01-staff-case-foundation.md): Director → preparar/actualizar caso → versiones/procedencia/audit → lectura de recibo por actor tras ACK perdido. Confirm/correct sólo persona vinculada; binding producto aún ausente, positivo CLI sintético. Casos ASSISTED/REMOTE_PREAUTHORIZED comparten estructura; no envío, review, aprobación ni register. Tres carreras SQL verifican versión y autoridad actuales; J08/D01–D08 sin cambios.

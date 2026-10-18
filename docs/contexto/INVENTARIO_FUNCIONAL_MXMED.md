@@ -316,3 +316,7 @@ ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-chec
 ## ID-07 / COM-10 — política ASE-ADM02-POL01
 
 [Contrato documental](../identity/ASE-ADM02-POL01-staff-admission-policy.md): P=siete principios staff aprobados, detalles pendientes; S=Identity/gobierno/port existentes sin cambios; C=admisión/perfil/evidencia/revisión/activación sin conectar; V=inspección y validación documental, sin QA producto; O=inactivo. Reutiliza ID-01/02/03, preserva frontera ID-04/05 y J08; no nuevas capabilities ejecutables, censos ni grants. Master review/admisión necesitan autoridad específica; management y acreditación médica no la conceden.
+
+## ID-07 / COM-10 — ADM-IMP01 aislado
+
+[Fundación](../identity/ASE-ADM02-IMP01-staff-case-foundation.md): P=alcance Director/preparación/confirmación exacta autorizado; S=caso/versiones/recibos y dos eventos audit; C=API acotada default off, binding producto pendiente; V=101 checks sintéticos y tres escenarios concurrentes; O=inactivo. Reutiliza ID-01/02/03, sin nuevo motor de permisos, perfiles médicos o catálogo ejecutable.

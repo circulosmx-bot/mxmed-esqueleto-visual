@@ -122,6 +122,8 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
 
+- **Fundación aislada staff:** [ASE-ADM02-IMP01](identity/ASE-ADM02-IMP01-staff-case-foundation.md), caso/versiones/procedencia, API exacta y recibos/audit. Director prepara; cuenta ligada confirma, binding producto pendiente. 101 checks sintéticos; UI-0/default off, sin review/admisión aprobada/activación.
+
 - **Política staff vigente, UI-0:** [ASE-ADM02-POL01](identity/ASE-ADM02-POL01-staff-admission-policy.md): siete principios aprobados por el Director; un caso asistido/remoto, diccionario, custodia, autoridad, legacy y handoff canónico. Detalles legales/retención/delegación e implementación pendientes; no intake real ni activación. Sucede sólo los principios ADM pendientes de contratos históricos.
 
 - Preparación documental histórica: [ASE-INT03B-PREP01 — autorización privilegiada Master](identity/ASE-INT03B-PREP01-master-privileged-authorization.md), gaps MFA/casos, transacción, elegibilidad y ficha UI-2 pendiente. No implementa ni habilita comandos Master.

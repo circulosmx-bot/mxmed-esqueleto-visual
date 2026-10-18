@@ -59,6 +59,12 @@
 - Fuente y conexión sin cambios: `execute(..., 'register', ...)` crea Advisor ACTIVE y necesita futura guarda de admisión transaccional; snapshot Master sólo cuenta/credencial/reviewVersion, reader producto indisponible. Appointment real sigue bloqueado. Legacy ACTIVE sin revisión no se etiqueta verificado ni se suspende masivamente.
 - Sólo inspección y verificación documental; sin QA de producto, SQL, archivos personales, grants/MFA/cuentas/envíos reales o activación. Fases ADM-IMP01..05 propuestas, cada una requiere autorización; intake real cerrado mientras custodia/retención esenciales sigan pendientes.
 
+## Sucesor aislado ASE-ADM02-IMP01 — UI-0
+
+- Padre f58e227da39eca2ae6a7d8b6e6a48615737d3ab5; feature `feature/ase-adm02-staff-case-foundation`. [Caso/perfil canónicos](identity/ASE-ADM02-IMP01-staff-case-foundation.md): preparación Director, versiones personales/procedencia, readers exactos y recibos idempotentes con audit atómico; tres tablas/cuatro triggers, sin registro staff.
+- Confirmación sólo cuenta legítimamente vinculada; producto no implementa binding y casos preparados no se pueden confirmar hasta ADM-IMP02. Master sin nueva autoridad; cero review/aprobación/grants/activación. Gate default off y autorización de despliegue/custodia/retención requeridos; principios aprobados no resuelven detalles legales.
+- 101 checks HTTP/SQL sintéticos PASS, tres escenarios concurrentes, dos regresiones audit. MySQL/Valkey/TLS nuevos retirados; once worktrees/listeners/pointer preservados. UI original y composición Master/port indisponible intactos. Sin DB/datos reales, merge o deploy.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

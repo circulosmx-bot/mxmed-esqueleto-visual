@@ -100,3 +100,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## Sucesor de política staff ASE-ADM02-POL01
 
 [Contrato de admisión e identidad](../identity/ASE-ADM02-POL01-staff-admission-policy.md) registra siete principios aprobados por el Director; detalles legales/retención/delegación e implementación pendientes. No altera IW01 ni register: la operación string de execute sigue creando ADVISOR ACTIVE para cuenta activa, sin revisión documental. El futuro canal de admisión requiere guarda transaccional en el mismo writer y resolver orden grants/MFA antes de live; no invocación prematura ni segundo writer. Legacy conserva estado/audit sin etiqueta de identidad verificada. Authority de revisión staff y lectura ID no proviene de management o grants médicos; Master appointment sigue bloqueado sin snapshot autoritativo.
+
+## ADM-IMP01 — caso separado del registro staff
+
+[Fundación de admisión](../identity/ASE-ADM02-IMP01-staff-case-foundation.md) no invoca ni modifica execute/register. Preparar, corregir y confirmar datos nunca crean relación ACTIVE ni grants. Director prepara; management Master no concede autoridad de admisión. Snapshot/review Master indisponibles conservados; handoff operativo pertenece a IMP05.

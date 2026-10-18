@@ -1,0 +1,33 @@
+{
+  "result": "PASS",
+  "baseline": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+  "qa_checks": 101,
+  "concurrency_scenarios": 3,
+  "source_hashes_match_executed_qa": true,
+  "php_lint_files": 21,
+  "references_checked": 34,
+  "ctx_fields": 10,
+  "protected_worktrees": 11,
+  "original_listeners_unchanged": true,
+  "preview_pointer_unchanged": true,
+  "ui_changed": false,
+  "operational_activation": false,
+  "audit_policy_tests": {
+    "StaffAdmissionAuditPolicyTest.php": "STAFF_ADMISSION_AUDIT_POLICY=PASS; HISTORICAL_57_UNCHANGED=true; PERSONAL_METADATA_DENIED=true",
+    "PhysicianCredentialAuditPolicyTest.php": "PHYSICIAN_CREDENTIAL_PROVISIONED_ACCEPTED=true\nPHYSICIAN_CREDENTIAL_VERIFIED_ACCEPTED=true\nPHYSICIAN_CREDENTIAL_REJECTED_ACCEPTED=true\nPHYSICIAN_CREDENTIAL_INACTIVATED_ACCEPTED=true\nPHYSICIAN_CREDENTIAL_REVOKED_ACCEPTED=true\nAUDIT_TARGET_AND_ROUTINE_DRIFT_REJECTIONS=5_PASS\nAUDCRD01_POLICY_AND_WRITER=PASS\nQA02B_AUTHORIZED_OWNERSHIP_POLICIES_ENRICHED=3\nJOINED_PDO_TRANSACTION_PROTOCOL=PASS\nPHYSICAL_DATABASE_TEST=NOT_RUN\nDB_WRITES=0"
+  },
+  "additional_test_sha256": "2e770e13a5d67bc2641e59f908e40257f997ac28eacae54c4c8edaecc549a200",
+  "failed_resource_cleanup": {
+    "failed_owned_directories_disposed": [
+      "mxmed-ase-adm02imp01-at4kpnd3",
+      "mxmed-ase-adm02imp01-qzyl37do"
+    ]
+  },
+  "limitations": [
+    "No real data or DB connections",
+    "No UI/browser QA: UI-0",
+    "No product account binding",
+    "No invitation, documents, review, MFA or activation",
+    "Fresh schema only; no real upgrade apply"
+  ]
+}

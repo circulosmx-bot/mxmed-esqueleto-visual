@@ -132,14 +132,14 @@ $metadata=[
 ];
 $rows=CanonicalAuditPolicyRegistry::canonicalRows();
 $laterEvents=['PHYSICIAN_EVIDENCE_CHANGED','PHYSICIAN_AUTHORITY_CHANGED',
-    'PUBLIC_PROFILE_CORRECTION_RECEIVED','PUBLIC_PROFILE_CORRECTION_REVIEWED','PUBLIC_PROFILE_CORRECTION_APPLICATION'];
-check(count($rows)===57 && count(CanonicalAuditEventType::all())===57,'57 reviewed events/policies through PUB-COR02');
+    'PUBLIC_PROFILE_CORRECTION_RECEIVED','PUBLIC_PROFILE_CORRECTION_REVIEWED','PUBLIC_PROFILE_CORRECTION_APPLICATION','STAFF_ADMISSION_CASE_CHANGED','STAFF_ADMISSION_CASE_READ'];
+check(count($rows)===59 && count(CanonicalAuditEventType::all())===59,'59 reviewed events/policies through ASE-ADM02-IMP01');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
 // The reviewed OP-IMP07 catalog at d195328b had 52 rows. Later C4 and
 // public-correction events are append-only, not changes to credential policy.
 check(hash('sha256',json_encode(array_slice($rows,0,52),JSON_UNESCAPED_SLASHES))
     ==='2444b5ba944db0bc0a29390a073699e1b85efe4e061376bf6375c781df6db581','published 52-policy prefix unchanged');
-check(array_slice(CanonicalAuditEventType::all(),52)===$laterEvents,'exact reviewed C4 and correction extensions');
+check(array_slice(CanonicalAuditEventType::all(),52)===$laterEvents,'exact reviewed C4, correction and admission extensions');
 check(array_slice(CanonicalAuditEventType::all(),38,5)===array_keys($metadata),'exactly five new events');
 // OP-IMP01 and OP-IMP07 extend only invitation metadata in these historical
 // rows. Keep the published a18cc367 digest after removing those exact additions.

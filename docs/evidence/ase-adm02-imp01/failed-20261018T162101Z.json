@@ -1,0 +1,295 @@
+{
+  "result": "FAIL",
+  "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+  "source_baseline": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Private no-store csrf",
+      "pass": true
+    },
+    {
+      "name": "Private no-store prepare",
+      "pass": true
+    },
+    {
+      "name": "A Director prepares exact case",
+      "pass": true
+    },
+    {
+      "name": "Private no-store read",
+      "pass": true
+    },
+    {
+      "name": "E Director provenance, no personal confirmation",
+      "pass": true
+    },
+    {
+      "name": "Unbound case cannot be confirmed by Director",
+      "pass": true
+    },
+    {
+      "name": "H/I no preparation authority master",
+      "pass": true
+    },
+    {
+      "name": "Exact case read denied master",
+      "pass": true
+    },
+    {
+      "name": "H/I no preparation authority advisor",
+      "pass": true
+    },
+    {
+      "name": "Exact case read denied advisor",
+      "pass": true
+    },
+    {
+      "name": "H/I no preparation authority outsider",
+      "pass": true
+    },
+    {
+      "name": "Exact case read denied outsider",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session None",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session expired",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session revoked",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session changed",
+      "pass": true
+    },
+    {
+      "name": "J/K/L invalid canonical session disabled",
+      "pass": true
+    },
+    {
+      "name": "M CSRF required",
+      "pass": true
+    },
+    {
+      "name": "M cross origin denied",
+      "pass": true
+    },
+    {
+      "name": "M foreign Fetch-Site denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP method denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP unknown query denied",
+      "pass": true
+    },
+    {
+      "name": "HTTP duplicate keys denied",
+      "pass": true
+    }
+  ],
+  "check_count": 24,
+  "concurrency": [],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseadm02imp01_b41974e88e",
+    "new_datadir": "/tmp/mxmed-ase-adm02imp01-at4kpnd3/mysql",
+    "mysql_port": 53529,
+    "valkey_port": 53530,
+    "php_port": 53531,
+    "tls_origin": "https://127.0.0.1:53532",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": false,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_changed": false,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "ed3469b891ccfb84421a218d0394d34d30a0bf701adaaf2c79c7ebf77a4f1957",
+    "modules/identity/Team/MutationHttp.php": "0e0ef1e18bbe3165f795da6264e9dba682228219038e1e900b61a99bbb7fdaf1",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "9261c3cd0e6a41441183b93b62001f81dd1de7820c76bfc1f83f43badd34eb8a",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "24acd071dffe0f2dbf6855efc2ccbf79b0c7a06a20681923f86c855e7256711d",
+    "modules/identity/services/InternalCapabilityCatalog.php": "c376c84e5371fa445bf6bfd235651d0b5a6b062b6f0aa391ae26691398662a71",
+    "modules/identity/http/CanonicalHttpSessionResolver.php": "633051263883e5be65253a514669c41cc8e4da03457284b302c6d62ffe63b0c6",
+    "modules/identity/http/IdentityHttpComposition.php": "f89f04948b37963dd2ca4d5beb166e44ca6a526e3afa01ae5499c12478e0c2ec",
+    "modules/identity/http/CsrfTokenService.php": "011137a07c9412f0210fabef34a378855c9d8ba8c055c3e773d94651a66b82ec",
+    "modules/identity/http/GovernanceTransport.php": "74daa4265765fe32e6294f8803f0f4bf192a0c3f80a3105d482e68d1d97a9459",
+    "modules/identity/Team/ReadService.php": "64ef2eaad19f25037b82b56f35d3b16d870822eccef407bc867219729a89101e",
+    "modules/identity/StaffAdmission/Service.php": "5bca42477a5cf8b6a61d477e7baf4d7d882c7245412eb3e6efac9dd9b6982473",
+    "modules/identity/StaffAdmission/Audit.php": "c6876c7ddffa74adbd35028f316c209d1e0a82fc584ada1a7c80f370ccc4bef3",
+    "modules/identity/StaffAdmission/Http.php": "decf6532dcd006c83f2a0f308ef10641f228e2afbdc9f57ba7e3d0d6e4045fe4",
+    "modules/identity/StaffAdmission/Composition.php": "4993d122d0aad2f453ca7bc0463653bff2367bce4f1638780c1bc7f248ca1a55",
+    "modules/identity/StaffAdmission/Input.php": "dd2d08dd67f2d6750c271b2c7669c31b30abb685593621a6f17081dce2cc486b",
+    "api/internal/staff-admission/correct.php": "28367f5661fbc1d164136155b6015fd7fc2bd5787dfb81723a131a5e8a2145f5",
+    "api/internal/staff-admission/update.php": "b839b0dfcce2b6a0c44e7dbf62bf97312b824d3a5905ef41bf23a0ebd2b8a458",
+    "api/internal/staff-admission/result.php": "33edd6e29ddd06d408ed2d7268bb571f2623f02db62671c5f5496b2788c74821",
+    "api/internal/staff-admission/prepare.php": "6112c77a04ae019591947ec8aa8a5d0f34db852b5cdeb8ce3643be409f6befb1",
+    "api/internal/staff-admission/revoke.php": "f59e45f661d2c780b863f6f9995d9090866d98f135707ab535713a977a8956ee",
+    "api/internal/staff-admission/csrf.php": "c0aa2fd34dd4384d0dc9f14013a4be7bda515b65bce3738f48de61e021399699",
+    "api/internal/staff-admission/confirm.php": "6d6a8ad2715d22c5c50827cf40ecfcaf9409448ade511216eb63ca63119f1a20",
+    "api/internal/staff-admission/read.php": "2db8fae5f030964e76336f088d3e7ef940dd02dcee6825cdf541b1097961ebda",
+    "modules/identity/db/migrations/2026_10_18_04_staff_admission_foundation.sql": "83a30af05b7aefb91c116809351b73a5b2a979269c0b4b73cb8d775879809d26",
+    "modules/identity/tests/StaffAdmissionFixture.php": "30bd481318237a4e6eab4c776330b1aeb7d7a1fa75de425f6728b86baaa622cf",
+    "scripts/ase-adm02-foundation-qa.py": "0125c530a77b1abb23dbf76a29b2009b444d91c96da9eb4398dde1d90b9061b3",
+    "scripts/ase-adm02-foundation-checks.py": "b8e11cda3c1988368c40fed90a86aaeb56eb6a596acf5956d7a6811b0a55e2d8",
+    "scripts/ase-adm02-router.php": "63d02db07f07b8a99518f50b92b4e01981e23cc43ed84433ab0c411f105330e1",
+    "modules/platform/services/CanonicalAuditPolicyRegistry.php": "a2a7184f731a4671b41d9ffd987302e7808c06bc43df27219a7563b83748ba76",
+    "modules/platform/contracts/CanonicalAuditEventType.php": "46c5827ece210973c36ad62d388c0b0000b10c67cdb76a25cd5fac4b5d56ff8d",
+    "modules/platform/services/SourceModuleCatalog.php": "8d32632b8b1e3c6d19e84f585f06f5630502fc13cba37b77f82fedbd91c1295a",
+    "modules/platform/services/CorrelatableOperationCatalog.php": "81af9f7cdbba24ecd7725cc6450fd4d728506ddf8b58324ec2ab2a0e9002372e"
+  }
+}

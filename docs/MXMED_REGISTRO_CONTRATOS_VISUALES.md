@@ -140,3 +140,7 @@ El Director aprobó selección → consecuencias → confirmación → contrase�
 ## ASE-ADM02-POL01 — política UI-0, sin modificación visual
 
 [Contrato vigente](identity/ASE-ADM02-POL01-staff-admission-policy.md): siete principios de admisión/identidad aprobados por respuesta explícita “apruebo”; no una nueva aprobación visual ni implementación. Conserva baseline312ee388 y aprobaciones R2/COM/ADM; propone semántica de estados/legacy y reutiliza + AGREGAR INTEGRANTE sin habilitarlo. Retrato/datos principales sólo para directorio autorizado, ID scans fuera; fuente personal/documental aún desconectada. Legal, retención, catálogo extranjero, autoridad exacta y futuras fases pendientes; sin QA visual nueva, Safari físico ni activación.
+
+## ASE-ADM02-IMP01 — UI-0
+
+[Backend aislado](identity/ASE-ADM02-IMP01-staff-case-foundation.md): sin layout, copy, CSS, imágenes o interacción nuevos. + AGREGAR INTEGRANTE, invitación/documentos/review/admisión/activación no se habilitan. Baseline R2/COM/ADM conservado; no QA visual nueva ni autorización operacional.
