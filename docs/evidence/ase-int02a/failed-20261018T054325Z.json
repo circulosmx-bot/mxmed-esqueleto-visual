@@ -1,0 +1,557 @@
+{
+  "result": "FAIL",
+  "error": "AssertionError: IW01 backward compatibility register qa_legacy",
+  "source_baseline": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Canonical strict writer native transaction",
+      "pass": true
+    },
+    {
+      "name": "director authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap director",
+      "pass": true
+    },
+    {
+      "name": "master authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap master",
+      "pass": true
+    },
+    {
+      "name": "A Director individual grant",
+      "pass": true
+    },
+    {
+      "name": "R Active grant replay returns 409",
+      "pass": true
+    },
+    {
+      "name": "B Director individual revoke",
+      "pass": true
+    },
+    {
+      "name": "R Repeated revoke returns 409",
+      "pass": true
+    },
+    {
+      "name": "C U unrelated grant retained and next read observes revocation",
+      "pass": true
+    },
+    {
+      "name": "D Master exact delegated grant",
+      "pass": true
+    },
+    {
+      "name": "E Master outside delegation denied",
+      "pass": true
+    },
+    {
+      "name": "F Master lost management denied",
+      "pass": true
+    },
+    {
+      "name": "F Bootstrap denied after management revoked",
+      "pass": true
+    },
+    {
+      "name": "G Protected target director qa_master",
+      "pass": true
+    },
+    {
+      "name": "G Protected target director qa_director",
+      "pass": true
+    },
+    {
+      "name": "G Protected target director qa_master2",
+      "pass": true
+    },
+    {
+      "name": "G Protected target master qa_master",
+      "pass": true
+    },
+    {
+      "name": "G Protected target master qa_director",
+      "pass": true
+    },
+    {
+      "name": "G Protected target master qa_master2",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied None",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to None",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied advisor",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to advisor",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied target",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to target",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied outsider",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to outsider",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied expired",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to expired",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied revoked",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to revoked",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied suspended",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to suspended",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied disabled",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to disabled",
+      "pass": true
+    },
+    {
+      "name": "H I J K Actor denied changed",
+      "pass": true
+    },
+    {
+      "name": "No CSRF exposed to changed",
+      "pass": true
+    },
+    {
+      "name": "L Ineligible target qa_suspended_target",
+      "pass": true
+    },
+    {
+      "name": "L Ineligible target qa_disabled_target",
+      "pass": true
+    },
+    {
+      "name": "L Ineligible target qa_outsider",
+      "pass": true
+    },
+    {
+      "name": "L Ineligible target qa_nonexistent",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability all",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability *",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability admin.everything",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability support.all",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability media_review",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability internal_advisors_manage",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability profile_initial_ownership_approve",
+      "pass": true
+    },
+    {
+      "name": "Q V W Ineligible capability clinical_sign",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation register",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation appoint_master",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation remove_master",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation suspend",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation reactivate",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation delegate",
+      "pass": true
+    },
+    {
+      "name": "Excluded operation revoke_delegation",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 58",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 59",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 60",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 61",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 62",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 63",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 64",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 65",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 66",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 67",
+      "pass": true
+    },
+    {
+      "name": "M Strict fields 68",
+      "pass": true
+    },
+    {
+      "name": "M Malformed or duplicate JSON 69",
+      "pass": true
+    },
+    {
+      "name": "M Malformed or duplicate JSON 70",
+      "pass": true
+    },
+    {
+      "name": "M Malformed or duplicate JSON 71",
+      "pass": true
+    },
+    {
+      "name": "M Malformed or duplicate JSON 72",
+      "pass": true
+    },
+    {
+      "name": "N CSRF denied 73",
+      "pass": true
+    },
+    {
+      "name": "N CSRF denied 74",
+      "pass": true
+    },
+    {
+      "name": "N CSRF denied 75",
+      "pass": true
+    },
+    {
+      "name": "O Cross-origin/site denied 76",
+      "pass": true
+    },
+    {
+      "name": "O Cross-origin/site denied 77",
+      "pass": true
+    },
+    {
+      "name": "O Cross-origin/site denied 78",
+      "pass": true
+    },
+    {
+      "name": "O Cross-origin/site denied 79",
+      "pass": true
+    },
+    {
+      "name": "O Cross-origin/site denied 80",
+      "pass": true
+    },
+    {
+      "name": "P Non POST GET",
+      "pass": true
+    },
+    {
+      "name": "P Non POST HEAD",
+      "pass": true
+    },
+    {
+      "name": "P Non POST PUT",
+      "pass": true
+    },
+    {
+      "name": "P Non POST PATCH",
+      "pass": true
+    },
+    {
+      "name": "P Non POST DELETE",
+      "pass": true
+    },
+    {
+      "name": "P Non POST OPTIONS",
+      "pass": true
+    },
+    {
+      "name": "Explicit JSON type",
+      "pass": true
+    },
+    {
+      "name": "Bounded payload",
+      "pass": true
+    },
+    {
+      "name": "Query authority rejected",
+      "pass": true
+    },
+    {
+      "name": "S Audit failure returns unavailable",
+      "pass": true
+    },
+    {
+      "name": "S Audit failure rolls back grant and head",
+      "pass": true
+    },
+    {
+      "name": "T target promoted while request waits",
+      "pass": true
+    },
+    {
+      "name": "T target suspended while request waits",
+      "pass": true
+    },
+    {
+      "name": "T target account disabled while request waits",
+      "pass": true
+    },
+    {
+      "name": "T actor suspended while request waits",
+      "pass": true
+    },
+    {
+      "name": "T management revoked while request waits",
+      "pass": true
+    },
+    {
+      "name": "T delegation revoked while request waits",
+      "pass": true
+    },
+    {
+      "name": "T credential changes while request waits",
+      "pass": true
+    },
+    {
+      "name": "IW01 backward compatibility register qa_legacy",
+      "pass": false
+    }
+  ],
+  "check_count": 100,
+  "concurrency": [
+    {
+      "name": "target promoted while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "target suspended while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "target account disabled while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "actor suspended while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "management revoked while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "delegation revoked while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    },
+    {
+      "name": "credential changes while request waits",
+      "connections": "independent fixture SQL transaction + HTTP canonical writer",
+      "observed_data_lock_waits": 1,
+      "http_status": 403,
+      "result": "PASS"
+    }
+  ],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseint02a_eca2a2b38a",
+    "new_datadir": "/tmp/mxmed-ase-int02a-t3w4bo1e/mysql",
+    "mysql_port": 54180,
+    "valkey_port": 54181,
+    "php_port": 54182,
+    "tls_origin": "https://127.0.0.1:54183",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": false,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_still_read_only": true,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "1d98e55784a1d985601e11b7f794d21357559b0cab79b00b5f1f1a1c5aee5417",
+    "modules/identity/Team/MutationHttp.php": "31c2ae8cbfcffe5fe6ea2b7e6201b7fc8b003a68fcb14cd54ba96a15ceb76535",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "6d4d85408b5623a256b4b7136301c3cfe787010a6d0a11df903bcde3d5d5a6c3",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "e48eb9d4e5c06d2d903720e41838f815c24024ee11787ec4efcc4a69fcf5446f"
+  }
+}

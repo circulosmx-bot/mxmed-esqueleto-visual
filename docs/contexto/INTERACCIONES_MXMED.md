@@ -149,3 +149,7 @@ Firma registrada, QR clínico, captura móvil e Identity verification/recovery t
 ## Mantenimiento y evidencia
 
 Registrar cambios de conexión en el journey afectado y en su capability, sin duplicar contratos. Anclar nuevo entorno/commit/fecha sólo cuando se verifiquen. Ver [cobertura y preguntas de recuperación](COBERTURA_Y_PENDIENTES_MXMED.md) para distinguir análisis disponible de estado externo no observable. Próxima acción de producto/piloto: `NONE_PENDING_DIRECTOR_REVIEW`.
+
+### J09 — sucesor backend ASE-INT02A
+
+[Comando individual Advisor](../identity/ASE-INT02A-governed-advisor-grants.md): sesión/CSRF/origen → POST exacto → locks actor/target y autoridad actual → writer/auditoría → commit o rollback → refresh autoritativo futuro. La UI aún no realiza esta cadena; deuda `ASE-INT02A-UI-CONNECTION` exige confirmación y resultados parciales, nunca bulk-save atómico/retry ciego. J08 no cambia; sin admisión, Master o pagos.

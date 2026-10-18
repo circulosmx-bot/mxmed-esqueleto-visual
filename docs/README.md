@@ -122,6 +122,8 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
 
+- Sucesor backend aislado: [ASE-INT02A — grants individuales Advisor](identity/ASE-INT02A-governed-advisor-grants.md), POST + CSRF canónico, target bajo locks y auditoría existente. UI sigue sólo consulta; sin activación.
+
 - Integración aislada vigente: [ASE-INT01 R2 — Equipo y permisos, sólo consulta](identity/ASE-INT01-R2-internal-team-readonly.md), sección `equipo`, reader GET/HEAD, autoridad independiente de Media; sin admisión/mutaciones ni activación.
 
 - UI/API: [workspace staff original](../internal/media-review/index.php), [servicios Identity](../modules/identity/services/).

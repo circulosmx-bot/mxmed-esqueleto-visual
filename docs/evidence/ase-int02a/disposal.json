@@ -1,0 +1,31 @@
+{
+  "timestamp_utc": "2026-10-18T05:45:47.129271+00:00",
+  "scope": "Only four private directories created by this ASE-INT02A QA; original failed evidence retained unmodified",
+  "failed_attempts": [
+    {
+      "failed_evidence": "docs/evidence/ase-int02a/failed-20261018T054229Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int02a-rprs6v19",
+      "no_matching_process_before_disposal": true,
+      "removed": true
+    },
+    {
+      "failed_evidence": "docs/evidence/ase-int02a/failed-20261018T054249Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int02a-yr_kgo1y",
+      "no_matching_process_before_disposal": true,
+      "removed": true
+    },
+    {
+      "failed_evidence": "docs/evidence/ase-int02a/failed-20261018T054305Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int02a-6ezjsrgb",
+      "no_matching_process_before_disposal": true,
+      "removed": true
+    },
+    {
+      "failed_evidence": "docs/evidence/ase-int02a/failed-20261018T054325Z.json",
+      "owned_directory": "/tmp/mxmed-ase-int02a-t3w4bo1e",
+      "no_matching_process_before_disposal": true,
+      "removed": true
+    }
+  ],
+  "other_worktrees_or_preview_resources_touched": false
+}

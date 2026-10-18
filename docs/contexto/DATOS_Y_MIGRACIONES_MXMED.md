@@ -107,3 +107,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT01 R2 — proyección mínima, sin nuevo objeto
 
 [Contrato/read model](../identity/ASE-INT01-R2-internal-team-readonly.md): SELECT de auth_accounts, internal_staff, internal_operator_grants e internal_capability_delegations; credencial únicamente mediante validador Identity actual. Sin perfil personal/evidencia staff/comercial nuevo, DDL real, backfill o copia de datos. QA usa instancia/datadir MySQL nuevos, cinco DDL fuente y principal HTTP SELECT-only; no consulta metadata/filas de instancias existentes. Metadata/censos físicos históricos anteriores no se revalidan ni alteran.
+
+## ASE-INT02A — writer reutilizado, sin nuevo esquema
+
+[Contrato](../identity/ASE-INT02A-governed-advisor-grants.md): mismo `internal_operator_grants`, auditoría `platform_audit_events`/`platform_audit_stream_heads` y lecturas cuenta/credencial/staff/delegaciones, con target ADVISOR/ACTIVE bajo locks y una transacción por comando. No DDL de producto ni nuevo store; fuente/privilegios/fixtures sólo en MySQL nuevo de QA, sin consultar instancias existentes. Metadatos y censos históricos no se revalidan ni regeneran.

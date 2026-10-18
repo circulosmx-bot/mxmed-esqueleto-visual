@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "checks": {
+    "final_qa_checks": 122,
+    "two_connection_races": 7,
+    "source_hashes_matching": 13,
+    "php_files_linted": 6,
+    "python_ast_valid": true,
+    "local_document_links_checked": 787,
+    "missing_paths": [],
+    "prior_evidence_ui_and_catalog_unchanged": true,
+    "official_parent_prototype_head_and_clean_status_preserved": true
+  },
+  "context_files": [
+    "docs/ESTADO_ACTUAL_MXMED.md",
+    "docs/README.md",
+    "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+    "docs/contexto/INTERACCIONES_MXMED.md",
+    "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+    "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+    "docs/identity/ASE-INT01-R2-internal-team-readonly.md",
+    "docs/product-completion/iw01-internal-governance-foundation.md",
+    "docs/identity/ASE-INT02A-governed-advisor-grants.md"
+  ],
+  "scope": "Source/evidence binding, diff and local path review; no new runtime or product test execution"
+}

@@ -284,3 +284,7 @@ La ausencia de evidencia específica deja `VERIFICATION=source-inspected` aun cu
 ## Mantenimiento
 
 Actualizar sólo IDs afectados por una operación posterior autorizada, con rutas/writer/datos/decisión/evidencia y cinco ejes separados. Conservar las decisiones y cierres originales; no convertir un bloqueo técnico en nueva política comercial ni cargar este mapa entero para una tarea pequeña.
+
+### ID-07 — sucesor backend ASE-INT02A
+
+[API Advisor individual](../identity/ASE-INT02A-governed-advisor-grants.md): `api/internal/team/capability.php` → `Team\MutationHttp` → `InternalGovernanceService::execute` con target ADVISOR/ACTIVE bajo locks. Bootstrap CSRF protegido en `api/internal/team/csrf.php`. P=grant/revoke acotado; S=writer canónico extendido de forma opcional; C=HTTP aislado, GUI sin handler; V=122 checks/siete carreras; O=sin activación. ID-02/03 sólo reuso canónico; sin nuevos IDs ni regeneración del censo.

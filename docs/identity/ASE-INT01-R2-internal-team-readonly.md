@@ -132,3 +132,7 @@ Con autorización específica del Director se inspeccionaron el test y las funci
 | REMAINING_CONTEXT_GAPS | Siete políticas ADM, D01–D08, readers personales/evidencia/comercial/history, writers seguros, Safari físico/móvil final y autorización operacional. |
 
 NEXT_AUTHORIZATION_REQUIRED: revisión de diferencias de esta integración y fase explícita separada para cualquier reader sensible, política pendiente, writer, admisión, Master, finanzas, merge/despliegue o activación. Esta entrega sólo queda lista para revisión read-only.
+
+## Sucesor backend aislado ASE-INT02A
+
+[ASE-INT02A](ASE-INT02A-governed-advisor-grants.md), derivado del cierre `09d3aefc`, añade exclusivamente el adapter grant/revoke individual para ADVISOR activo, con precondición transaccional y CSRF canónicos. Sucede la ausencia de adapter de commands sólo en la nueva feature; esta UI y toda evidencia ASE-INT01 permanecen intactas. No habilita guardado, grupos, Master, admisión ni operación real.

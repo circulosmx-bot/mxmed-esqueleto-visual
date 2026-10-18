@@ -8,6 +8,13 @@
 - Aplicación original `https://localhost:8443/private-app.php` sin cambios. [ASE-INT01 R2](identity/ASE-INT01-R2-internal-team-readonly.md): sección Equipo del staff original con Identity canónica, sólo lecturas autorizadas, preview aislado8141, sin merge/promoción.
 - Aprobación visual R2/COM/ADM registrada con la respuesta real “apruebo”; no autoriza admisión, grants, documentos, finanzas ni operación real. El ancla no pretende ser el hash futuro del cierre.
 
+## Sucesor aislado ASE-INT02A
+
+- Feature `feature/ase-int02a-governed-advisor-grants`, worktree `mxmed-ase-int02a-governed-grants`, padre `09d3aefcf20266641d81aa128cec05f4a9e4ca03`. Oficial, padre y prototipo conservados.
+- [ASE-INT02A](identity/ASE-INT02A-governed-advisor-grants.md): POST individual grant/revoke a ADVISOR activo, Identity/CSRF canónicos, mismo writer con precondición opcional bajo locks y auditoría atómica por request. Master exige management y delegación exacta. Gate de mutación deshabilitado por defecto.
+- UI original del equipo sigue **sólo consulta**, sin guardado grupal ni cambio visual; la ausencia histórica de adapter de commands queda sucedida únicamente para esta API aislada. 122 checks sintéticos PASS, siete carreras reales, evidencia/descarte propios; no prueba ni activa datos/runtimes reales.
+- Siguiente fase: autorización de conexión UI con confirmación y reconciliación de resultados parciales. ADM/D01–D08, readers pendientes, Master, finanzas y activación mantienen gates separados.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

@@ -1,0 +1,131 @@
+{
+  "result": "FAIL",
+  "error": "AssertionError: A Director individual grant",
+  "source_baseline": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "director authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap director",
+      "pass": true
+    },
+    {
+      "name": "master authenticated CSRF bootstrap",
+      "pass": true
+    },
+    {
+      "name": "Private no-store bootstrap master",
+      "pass": true
+    },
+    {
+      "name": "A Director individual grant",
+      "pass": false
+    }
+  ],
+  "check_count": 6,
+  "concurrency": [],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseint02a_b2c1514f6f",
+    "new_datadir": "/tmp/mxmed-ase-int02a-rprs6v19/mysql",
+    "mysql_port": 53954,
+    "valkey_port": 53955,
+    "php_port": 53956,
+    "tls_origin": "https://127.0.0.1:53957",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": false,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_still_read_only": true,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "1d98e55784a1d985601e11b7f794d21357559b0cab79b00b5f1f1a1c5aee5417",
+    "modules/identity/Team/MutationHttp.php": "31c2ae8cbfcffe5fe6ea2b7e6201b7fc8b003a68fcb14cd54ba96a15ceb76535",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "0c81655b75fc4a359473bd516cc2e075d8604912a9bd226cd7d6c97ee535f1af",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "49aac0b6673cfb63fcb2675e0787c662f6646228395dc3fe69ab08bb56f81871"
+  }
+}

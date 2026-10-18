@@ -1,0 +1,111 @@
+{
+  "result": "FAIL",
+  "error": "RuntimeError: native_writer_failed: PDOException: SQLSTATE[42000]: Syntax error or access violation: 1142 SELECT with locking clause command denied to user 'ase_writer'@'127.0.0.1' for table 'auth_accounts'",
+  "source_baseline": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    }
+  ],
+  "check_count": 1,
+  "concurrency": [],
+  "environment": {
+    "database": "mxmed_gate4d_preview_aseint02a_99eaad7970",
+    "new_datadir": "/tmp/mxmed-ase-int02a-yr_kgo1y/mysql",
+    "mysql_port": 54045,
+    "valkey_port": 54046,
+    "php_port": 54047,
+    "tls_origin": "https://127.0.0.1:54048",
+    "http_principal": "ase_writer",
+    "native_audit_routines": true,
+    "real_database_connections": 0,
+    "real_staff_operations": 0
+  },
+  "rollback": {
+    "owned_processes_stopped": true,
+    "owned_directory_deleted": false,
+    "protected_unchanged": true
+  },
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "ui_still_read_only": true,
+  "operational_activation": false,
+  "source_sha256": {
+    "modules/identity/services/InternalGovernanceService.php": "1d98e55784a1d985601e11b7f794d21357559b0cab79b00b5f1f1a1c5aee5417",
+    "modules/identity/Team/MutationHttp.php": "31c2ae8cbfcffe5fe6ea2b7e6201b7fc8b003a68fcb14cd54ba96a15ceb76535",
+    "api/internal/team/capability.php": "438661262369e9f22f5cf54fd08ea817ed7594fa7c35fcae98462a40c1480009",
+    "api/internal/team/csrf.php": "2c602a49d61ae7c69120f125f5d3a051cc8d3759941ba974467bdd84f0ae9b32",
+    "modules/identity/tests/AdvisorMutationFixture.php": "6d4d85408b5623a256b4b7136301c3cfe787010a6d0a11df903bcde3d5d5a6c3",
+    "scripts/ase-int02a-router.php": "d6b37e76f6bcab83ad64a7f6149bbb5b387238df21c8412e5f8233e14203fb04",
+    "scripts/ase-int02a-qa.py": "5b8b1e470971db6d396e6497e7f30572be1248df7587a2d8552883bd8c3b5514"
+  }
+}
