@@ -131,3 +131,7 @@ Una modificación autorizada debe actualizar las filas de objetos/artefactos afe
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) no añade SQL/tablas/enums. ReadService proyecta operaciones exactas disponibles y csrf proyecta factor listo; UI consume casos/proofs/audit existentes. Appointment reader indisponible. La ruta D permanece BLOCKED_HISTORICAL_ACT03_CHECK; no reparación, borrado histórico ni DDL persistente.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+[Ruta versionada COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-check.md): diez etapas ACT02 intactas → CHECK compatible 18_02 → objetos ACT03 18_03, cuyo cuerpo coincide con el histórico 17_07. CHECK 11 antes de Master y 17 después de su migración explícita. D conserva correcciones; H exige recuperación de preestado verificado en target nuevo, nunca rollback DDL supuesto. Metadata/receipts reales no inspeccionados.

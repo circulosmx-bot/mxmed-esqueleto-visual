@@ -138,6 +138,8 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 - Límite: documentos previos pueden describir emisores luego implementados; no inferir staff, grants, MFA o firma desde roles/planes.
 
 ### Infraestructura y despliegue — PENDING_AUTHORIZATION
+
+- [ACT03-CHECK-COMPAT01](identity/ACT03-CHECK-COMPAT01-historical-case-check.md): sucesor SQL previo al CHECK histórico incompatible, rutas por metadata/evidencia, preservación de correcciones y Master; ensayo desechable, sin activación.
 - Entradas/tooling: [Identity normal-local](../scripts/normal-local-identity.py), [proxy HTTPS](../scripts/normal-local-https-proxy.py), [AWS](../infra/aws/README.md).
 - Composición/lectura: [OperationalRuntime](../modules/identity/Operational/OperationalRuntime.php), [WorkflowFactory](../modules/identity/Operational/WorkflowFactory.php), [ActivationGuard](../modules/identity/Operational/ActivationGuard.php), [DeploymentPackage](../modules/identity/Operational/DeploymentPackage.php).
 - Contratos: [composición local](product-completion/identity-normal-local-composition.md), [HTTPS](product-completion/identity-normal-local-ui-https.md), [ACT02](identity/ACT02-integrated-public-workflows.md), [ACT03](identity/ACT03-governed-professional-sources.md). QA: [Act02IntegrationTest](../modules/identity/tests/Act02IntegrationTest.php).

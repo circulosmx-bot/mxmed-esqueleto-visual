@@ -190,3 +190,7 @@ La preparación sigue **PARTIAL** respecto al alcance completo ACT02 por el writ
 - `scripts/act02-rehearsal.py`
 - `scripts/gov03b-disposable-qa.py`
 - `scripts/pub-enr03-browser-qa.py`
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+Las diez etapas ACT02 se conservan. [COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) revisa únicamente la continuación ACT03: CHECK acumulativo antes de los mismos objetos, con preflight físico/evidencia y sin replay ciego. No certifica targets reales ni modifica aprobaciones.

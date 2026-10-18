@@ -40,7 +40,9 @@ final class DeploymentPackage
         foreach(['audit_mp01c_lock_stream_head_v1','audit_mp01c_advance_stream_head_cas_v1'] as $r)$target->routine($pdo,$r);
     }
     public static function professionalSourceMigrations():array
-    {return [...self::migrations(),'modules/identity/db/migrations/2026_10_17_07_professional_source_provisioning.sql'];}
+    // Fresh-install order only. Installed/partial targets require the COMPAT01 runbook preflight; never replay this list.
+    {return [...self::migrations(),'modules/identity/db/migrations/2026_10_18_02_professional_source_check_compat01.sql',
+        'modules/identity/db/migrations/2026_10_18_03_professional_source_objects_compat01.sql'];}
     public static function assertProfessionalSources(PDO $p):void
     {
         foreach(['auth_professional_source_requests','auth_professional_source_files','auth_professional_source_reads','auth_professional_source_operations','auth_professional_source_journal'] as $table)$p->query('SELECT 1 FROM `'.$table.'` LIMIT 0');

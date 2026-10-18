@@ -142,3 +142,7 @@ La contención clínica y la política de contactos profesionales ordinarios no 
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 [Conexión IMP02](ASE-INT03B-IMP02-master-ui-integration.md): GET csrf proyecta disponibilidad del factor desde contexto de enrollment; GET browser acepta sólo Referer exact-origin cuando falta Origin, con Fetch-Site same-origin. POST y seguridad transaccional IMP01 intactos. No enrolamiento nuevo HTTP, proof compartido o segundo writer. Route D sigue bloqueada y gate apagado fuera de QA.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+[COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) conserva operaciones históricas y Master bajo el CHECK acumulativo versionado. No cambia autoridad, MFA, sesión o writers. La fuente/schema nueva requiere futuras autorizaciones vigentes separadas; no se regeneran aprobaciones reales.

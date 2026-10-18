@@ -1,0 +1,425 @@
+{
+  "result": "FAIL",
+  "error": "A all historical column values preserved",
+  "baseline": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+  "source_sha256": {
+    "modules/identity/db/migrations/2026_07_19_01_create_auth_accounts.sql": "cbd40dfff2137ba33cce00b9a8792e462f851c4698376ce511cb19e8951bf699",
+    "modules/identity/db/migrations/2026_07_20_04_create_auth_account_credentials.sql": "3b896a2c429fc0c14c1803ca6830d6b743f2f589eeb08150f957f7849e1f0ee4",
+    "modules/identity/db/migrations/2026_07_20_06_create_auth_rate_limit_buckets.sql": "e70cedebbfc1cfff8310df473324d0c7a70d6a4f324d76205cf2cd9b426604a4",
+    "modules/identity/db/migrations/2026_09_08_07_create_internal_operator_grants.sql": "9f707470c21405f886182663625b07d364cc5883ea7a36ecb46da5be0f5e8f3f",
+    "modules/identity/db/migrations/2026_09_10_01_internal_governance.sql": "e811e4d766f401cf1df23e987dd20ffdfb9de1e0a96f3a97745f0efe341944b7",
+    "modules/platform/db/migrations/2026_07_20_01_create_platform_audit_events.sql": "90b412e53c6a68677217ab94e152453553152528281e1b9b182c303a6e881273",
+    "modules/profiles/db/profiles_doctors_schema.sql": "a2686195d0c23cdd2ea632f168db87cf10e8f2ec267a9c4f38edb0f23d4bc4b2",
+    "modules/agenda/db/medical_groups_schema.sql": "5d8639cd85994cac67fde2d417cb221c093d5f5c9d87e54ef0eb0a46c335d49d",
+    "modules/identity/db/migrations/2026_07_19_03_create_auth_account_memberships.sql": "322f01bbbc903ca52f3f549ec09ef30c61b465c87473bb4cd5470ab7a9ad3e21",
+    "modules/identity/db/migrations/2026_10_14_01_create_profile_ownership_governance.sql": "4d2ef1ad96bb5f9bec426b887f8e5883d590d55023dd069846be057c341b8822",
+    "modules/identity/db/migrations/2026_10_14_02_profile_ownership_r3_endorsements.sql": "c78ae9f4223f5be951e525c93737d82944266ce01b9e71e57d432b11f972ddfc",
+    "modules/identity/db/migrations/2026_10_15_01_identity_governance_r3_runtime.sql": "dc32ca1742e8d0679bb2ac993a6f7016ad602607c0376ed0fbcdbc0fcbc50502",
+    "modules/profiles/db/2026_09_11_create_profiles_verified_identities.sql": "d6c57ed269652fff92e6a915880b10feadbaa4df800c90c14e410541c4335431",
+    "modules/profiles/db/2026_09_12_create_profiles_doctor_credentials.sql": "2906bf1f4a168cea0613aef1a5bfba68d25ae1dc6b29cfbf9eee8b56f43746f5",
+    "modules/profiles/db/doctor_contact_points_schema.sql": "79e6a190cf85d9ffac57a7a7f387ece7c50d46faf7684af38c88ebe4c247cb19",
+    "modules/identity/db/migrations/2026_10_16_01_governance_security_bindings.sql": "037cd1177994c1c1cc6d9e474c7425ef818d30811db9f80c8410a25cfe6af3c3",
+    "modules/identity/db/migrations/2026_10_16_02_physician_account_binding.sql": "317f5ec8e1dd4e987ad6c4b1119ab3214e9e33b9e8997815b7a38969f62047fe",
+    "modules/identity/db/migrations/2026_10_16_03_physician_evidence_foundation.sql": "ede00dfd4fd64444c852510566b3288fd7ce1bbe144d30efd443120bea2d03bf",
+    "modules/identity/db/migrations/2026_10_16_04_physician_authority_issuer.sql": "35276ac95a46e697afa22adf3ba83a034c90bc2e16036d4a8a79eafdceb35744",
+    "modules/identity/db/migrations/2026_10_16_05_public_physician_enrollment.sql": "d0c36d925f9244e41b87e7e78b68f576a3922a8241b9f506e1321cbdfe735ae3",
+    "modules/identity/db/migrations/2026_10_16_06_reviewed_physician_enrollment.sql": "fd109ea502ebf07afe33f3cc5b26eaeb934ee806298ef6897a2892cfc69704c9",
+    "modules/profiles/db/2026_10_16_01_public_correction_reports.sql": "cfa8041e897751c2b40178d611338319e4cbbb5561f1f17efede014d87cfb447",
+    "modules/profiles/db/2026_10_16_02_correction_applications.sql": "0e30262d4e4023ab7e7372f06706c43f57bb8b910003cf8b6615e2b25575ef84",
+    "modules/subscriptions/db/2026_10_16_01_preloaded_public_free_source.sql": "5f162e3e3ac7ffd7edc3a550656412278b4a25742071fc4fdf205beb631fb67b",
+    "modules/identity/deployment/act02/metadata.sql": "cb9dbcf0808bc83f89982ed4d9666462a3543129a0fb661a068b045e1afa405d",
+    "modules/identity/db/migrations/2026_10_17_07_professional_source_provisioning.sql": "bf0532fea2d7d00898c468259062f83a93ddc689bb288436e78745107ddf8b2a",
+    "modules/identity/db/migrations/2026_10_18_02_professional_source_check_compat01.sql": "e0a2934b23eea63f24bc82f451129669d21d48476cde7438ea3b827347058e0e",
+    "modules/identity/db/migrations/2026_10_18_03_professional_source_objects_compat01.sql": "96d3c3e0dbfe3e38ba9bc54fab4a01bd8e0371893f21e876d98eff8d5d7bfbc4",
+    "modules/identity/db/migrations/2026_10_18_01_internal_master_governance_operations.sql": "62510c1e36eec8327f3e97c94918df9a862bc6a0197d324d5929a61b3a37def1",
+    "modules/identity/Operational/DeploymentPackage.php": "c661fe2b0f730ee5b28c54f11f1c7655075f781d06ad2c88c7f55121594832dc",
+    "scripts/act03-check-compat01-qa.py": "c112e25355df7eb092551abce77df9df083df654d2c6b2f0583dcadde8e4a4b8"
+  },
+  "checks": [
+    {
+      "name": "Package successor order",
+      "pass": true
+    },
+    {
+      "name": "Historical object DDL preserved byte-for-byte",
+      "pass": true
+    },
+    {
+      "name": "Compatible CHECK is exact source-derived cumulative union",
+      "pass": true
+    },
+    {
+      "name": "Master adds exactly six separately versioned operations",
+      "pass": true
+    },
+    {
+      "name": "Historical migration untouched",
+      "pass": true
+    },
+    {
+      "name": "reference own datadir before DDL",
+      "pass": true
+    },
+    {
+      "name": "A own datadir before DDL",
+      "pass": true
+    },
+    {
+      "name": "A complete physical compatible schema",
+      "pass": true
+    },
+    {
+      "name": "A migration preserved all original rows",
+      "pass": true
+    },
+    {
+      "name": "A exact effective operation set",
+      "pass": true
+    },
+    {
+      "name": "A FK session enforced",
+      "pass": true
+    },
+    {
+      "name": "A all CHECKs enforced",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion FIRST_DIRECTOR_BOOTSTRAP",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INITIAL_OWNER",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INTERNAL_ADVISOR_MANAGEMENT_GRANT",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INTERNAL_ADVISOR_MANAGEMENT_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INTERNAL_CAPABILITY_DELEGATE",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INTERNAL_CAPABILITY_DELEGATION_REVOKE",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INTERNAL_MASTER_APPOINT",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion INTERNAL_MASTER_REMOVE",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion MFA_RECOVERY",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion OWNER_REMOVAL",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion OWNER_REPLACEMENT",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion PHYSICIAN_AUTHORITY_CHANGE",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion PHYSICIAN_ENROLLMENT_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion PHYSICIAN_EVIDENCE_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion PROFESSIONAL_SOURCE_PROVISION",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion PUBLIC_PROFILE_CORRECTION_APPLY",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion PUBLIC_PROFILE_CORRECTION_REVIEW",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK UNKNOWN_OPERATION",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion UNKNOWN_OPERATION",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK all",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion all",
+      "pass": true
+    },
+    {
+      "name": "A operation rejection uses CHECK admin.everything",
+      "pass": true
+    },
+    {
+      "name": "A allowlist insertion admin.everything",
+      "pass": true
+    },
+    {
+      "name": "A FK rejects missing requester",
+      "pass": true
+    },
+    {
+      "name": "A operation UUID uniqueness",
+      "pass": true
+    },
+    {
+      "name": "A active-target uniqueness",
+      "pass": true
+    },
+    {
+      "name": "A invalid consumed lifecycle rejected",
+      "pass": true
+    },
+    {
+      "name": "A lifecycle releases active target",
+      "pass": true
+    },
+    {
+      "name": "A audit update guard",
+      "pass": true
+    },
+    {
+      "name": "A audit delete guard",
+      "pass": true
+    },
+    {
+      "name": "A no staff grant delegation MFA seeding",
+      "pass": true
+    },
+    {
+      "name": "A auth_professional_source_files immutable update",
+      "pass": true
+    },
+    {
+      "name": "A auth_professional_source_files immutable delete",
+      "pass": true
+    },
+    {
+      "name": "A auth_professional_source_journal immutable update",
+      "pass": true
+    },
+    {
+      "name": "A auth_professional_source_journal immutable delete",
+      "pass": true
+    },
+    {
+      "name": "A source binding guard",
+      "pass": true
+    },
+    {
+      "name": "A all seven source guards structurally identical",
+      "pass": true
+    },
+    {
+      "name": "A all historical column values preserved",
+      "pass": false
+    }
+  ],
+  "check_count": 56,
+  "variants": [],
+  "resources": [
+    {
+      "label": "reference",
+      "owned_directory": "/tmp/mxmed-act03compat-rg03bp2f",
+      "database": "compat_011abba05a",
+      "socket_only": true,
+      "stopped": true,
+      "disposed": true
+    },
+    {
+      "label": "A",
+      "owned_directory": "/tmp/mxmed-act03compat-0z7gaen3",
+      "database": "compat_27d032d722",
+      "socket_only": true,
+      "stopped": true,
+      "disposed": true
+    }
+  ],
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "listeners": {
+      "6385": [
+        "1590"
+      ],
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ],
+      "8443": [
+        "93582"
+      ]
+    },
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "listeners": {
+      "6385": [
+        "1590"
+      ],
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ],
+      "8443": [
+        "93582"
+      ]
+    },
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_unchanged": true,
+  "real_database_connections": 0,
+  "real_ddl_executed": false,
+  "operational_activation": false,
+  "scope": "SQL_ONLY_NO_MASTER_UI_SUITE_OR_AUTHORITY_CHANGES"
+}

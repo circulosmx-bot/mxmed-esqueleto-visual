@@ -101,3 +101,7 @@ Revisión staged detectó un espacio final en el harness nuevo: se retiró despu
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 [IMP02](ASE-INT03B-IMP02-master-ui-integration.md) sucede la desconexión UI: mismo writer/caso/proof, proyección de disponibilidad y flujo individual con reconciliación. Contrato de seguridad, review producto ausente, límite SQL/Valkey y ruta D bloqueada se preservan. Los controles sólo se habilitan en QA nueva con autoridad canónica; no operación real.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+[COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) atiende el bloqueo histórico de ruta D mediante sucesor previo al ALTER incompatible. Conserva este rehearsal y la migración Master de 17 operaciones; no habilita identity-review ni appointment. Ver evidencia nueva sin reinterpretar el resultado histórico.

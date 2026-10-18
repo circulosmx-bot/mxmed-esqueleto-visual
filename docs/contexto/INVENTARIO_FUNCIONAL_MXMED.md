@@ -308,3 +308,7 @@ Actualizar sólo IDs afectados por una operación posterior autorizada, con ruta
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md), ID-07/COM-10: P=UI-2 autorizada; S=proyección Master y controlador de caso, reutiliza ID-02/03; C=controles existentes conectados a ocho endpoints, appointment no disponible; V=812 checks sintéticos PASS, nueve carreras y Chromium/WebKit en cuatro viewports, ver evidencia del contrato; O=inactivo. No nuevas capabilities ni cambios de consumidores.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-check.md) corrige una dependencia de persistencia, sin capacidades, autoridad o UI nuevas. P=preservación histórica autorizada; S=sucesor SQL; C=manifiesto y preflight; V=ensayo SQL aislado; O=inactivo.

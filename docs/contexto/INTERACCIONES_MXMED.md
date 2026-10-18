@@ -173,3 +173,7 @@ Registrar cambios de conexión en el journey afectado y en su capability, sin du
 ## ASE-INT03B-IMP02 — conexión UI aislada
 
 J09: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta selección/ack → open → intención servidor/contraseña → TOTP → ejecución única → read caso/UUID/audit → refresh. Borradores protegidos, bloqueo de contexto y secretos efímeros; ACK incierto no reintenta. J08 y decisiones comerciales no cambian.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+J01/J02/J09 mantienen flujos y autoridades. [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-check.md) conserva compatibilidad de casos de corrección/fuentes/Master al instalar schema; no cambia HTTP, sesión, UI o comandos. No-op exige metadata más evidencia, y parciales se detienen antes de cualquier replay.

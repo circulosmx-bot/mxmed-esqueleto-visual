@@ -1,0 +1,96 @@
+{
+  "result": "PASS",
+  "baseline": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+  "protected_before_after_identical": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "branch": "ux/consultation-step2-vitals-r1",
+      "upstream": "origin/ux/consultation-step2-vitals-r1",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "branch": "prototype/ase-vis01-advisor-capability-matrix",
+      "upstream": "origin/prototype/ase-vis01-advisor-capability-matrix",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "branch": "feature/ase-int01-internal-team-readonly",
+      "upstream": "origin/feature/ase-int01-internal-team-readonly",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "branch": "feature/ase-int02a-governed-advisor-grants",
+      "upstream": "origin/feature/ase-int02a-governed-advisor-grants",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "branch": "feature/ase-int02b-team-permission-ui",
+      "upstream": "origin/feature/ase-int02b-team-permission-ui",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "branch": "feature/ase-int03a-advisor-lifecycle",
+      "upstream": "origin/feature/ase-int03a-advisor-lifecycle",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "branch": "feature/ase-int03b-master-governance-prep",
+      "upstream": "origin/feature/ase-int03b-master-governance-prep",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "branch": "feature/ase-int03b-master-privileged-backend",
+      "upstream": "origin/feature/ase-int03b-master-privileged-backend",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "branch": "feature/ase-int03b-master-ui",
+      "upstream": "origin/feature/ase-int03b-master-ui",
+      "status": ""
+    },
+    "listeners": "COMMAND     PID           USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nvalkey-se  1590 circulodigital    6u  IPv4 0x9552e2f28672ed55      0t0  TCP 127.0.0.1:6385 (LISTEN)\nphp        1727 circulodigital    5u  IPv4 0x96d75ebffea20551      0t0  TCP 127.0.0.1:8092 (LISTEN)\nPython    76748 circulodigital    4u  IPv4 0x5328e04404947631      0t0  TCP 127.0.0.1:8140 (LISTEN)\nPython    83715 circulodigital    4u  IPv4 0x1ba4c3916d172acf      0t0  TCP 127.0.0.1:8141 (LISTEN)\nphp       90106 circulodigital    5u  IPv4 0x21faabd412b2e6b1      0t0  TCP 127.0.0.1:8091 (LISTEN)\nPython    93582 circulodigital    4u  IPv4 0xa7fe1378e9529dcf      0t0  TCP 127.0.0.1:8443 (LISTEN)\n",
+    "pointer": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "qa_check_count": 408,
+  "qa_source_hashes_match": true,
+  "pre_existing_product_files_preserved_except_manifest": 2181,
+  "local_links_and_anchors_checked": 778,
+  "syntax_whitespace_secret_scan": "PASS",
+  "all_owned_datadirs_disposed": true,
+  "deployment_package_source_hash": {
+    "parent": "4b7467d247308b4c627fa41df7a43562c534d77e72222abe3f01ac3e642f2eb2",
+    "feature": "c0ae8dec985ead7310412372e66102472d8853d3cca9f31afa28bf3f0a9fcd1c"
+  },
+  "real_authorizations_regenerated": false,
+  "context_sync_status": "PASS_UPDATED",
+  "files_changed": [
+    "docs/ESTADO_ACTUAL_MXMED.md",
+    "docs/README.md",
+    "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+    "docs/contexto/INTERACCIONES_MXMED.md",
+    "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+    "docs/evidence/act03-check-compat01/failed-20261018T154615Z.json",
+    "docs/evidence/act03-check-compat01/final-verification.json",
+    "docs/evidence/act03-check-compat01/qa.json",
+    "docs/evidence/act03-check-compat01/schema-reference.json",
+    "docs/identity/ACT02-integrated-public-workflows.md",
+    "docs/identity/ACT03-CHECK-COMPAT01-historical-case-check.md",
+    "docs/identity/ACT03-governed-professional-sources.md",
+    "docs/identity/ASE-INT03B-IMP01-master-security-foundation.md",
+    "docs/identity/ASE-INT03B-IMP02-master-ui-integration.md",
+    "docs/identity/IDENTITY-GOV03A-governance-runtime.md",
+    "modules/identity/Operational/DeploymentPackage.php",
+    "modules/identity/db/migrations/2026_10_18_02_professional_source_check_compat01.sql",
+    "modules/identity/db/migrations/2026_10_18_03_professional_source_objects_compat01.sql",
+    "scripts/act03-check-compat01-qa.py"
+  ],
+  "operational_activation": false
+}

@@ -274,3 +274,7 @@ Pendiente: integración del editor privado de teléfono global, incidencias de
 Maps y tests históricos. Una ejecución real de este workflow requiere otra
 autorización para DDL, políticas, cohort, personal/capacidades, MFA, llaves de
 custodia y proveedores. No se solicitó ni se produjo esa activación en ACT03.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+[COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) sucede la ruta del primer CHECK para instalaciones nuevas: 2026_10_18_02 conserva correcciones y 2026_10_18_03 mantiene idéntico el cuerpo de objetos/guards. ACT03 histórico y su resultado PARTIAL se preservan. Instalaciones completas/partiales requieren rutas verificadas distintas; no se habilita operación real.

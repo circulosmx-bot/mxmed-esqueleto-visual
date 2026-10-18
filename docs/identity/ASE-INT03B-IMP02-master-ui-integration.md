@@ -78,3 +78,7 @@ PRODUCT_POLICY: conexión UI-2 expresamente aprobada. SOURCE_IMPLEMENTATION: con
 - [Verificación final, fuentes y archivos cambiados](../evidence/ase-int03b-imp02/final-verification.json): ocho worktrees/branches/HEADs limpios, listeners protegidos y pointer INT01 iguales al inicio. Fuentes producto/QA sin cambios respecto a la ejecución exitosa; CSS/catalog preservados por comparación con el padre.
 
 Revisión visual directa de contraseña desktop Chromium/WebKit, contraseña móvil y resultado desconocido confirma continuidad de la composición aprobada y mensajes legibles, sin overflow horizontal. Las capturas son de página completa; el backdrop corresponde al viewport desplazado. No representan aceptación física Safari ni aceptación móvil final. No se dejaron servidores de esta fase activos.
+
+## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
+
+[COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) sucede sólo el bloqueo de migración D en ensayo SQL separado. Las 812 comprobaciones y la integración UI de este hito permanecen como evidencia histórica; no se repiten ni modifican controles/writers/MFA. Appointment real y activación siguen bloqueados.
