@@ -10,6 +10,7 @@ PHASE='ase-adm02imp01'
 EXPECTED_BRANCH='feature/ase-adm02-functional-consolidation'
 ROUTER='scripts/ase-adm02-workflow-router.php'
 HOOK=None
+SEED_STAFF_ACTORS=None
 REVIEW_SECONDS=3600
 EXTRA_PROTECTED=['mxmed-ase-int02a-governed-grants','mxmed-ase-int02b-team-permission-ui','mxmed-ase-int03a-advisor-lifecycle','mxmed-ase-int03b-master-governance-prep','mxmed-ase-int03b-master-privileged-backend','mxmed-ase-int03b-master-ui','mxmed-act03-governance-check-compat01','mxmed-ase-adm02-staff-admission-policy','mxmed-ase-adm02-staff-case-foundation','mxmed-ase-adm02-staff-invitation-binding','mxmed-ase-adm02-private-staff-media']
 EXTRA_SOURCES=[]
@@ -114,11 +115,12 @@ def main():
             aid='qa_'+actor
             sql("INSERT INTO auth_accounts(account_id,email_address,email_normalized,status,email_verified_at) VALUES(%s,%s,%s,'active',CURRENT_TIMESTAMP)",(aid,aid+'@example.test',aid+'@example.test'))
             sql('INSERT INTO auth_account_credentials(account_id,password_hash,password_changed_at) VALUES(%s,%s,CURRENT_TIMESTAMP)',(aid,hashed))
-            if actor not in ['outsider','legacy']:
+            if actor not in ['outsider','legacy'] and (SEED_STAFF_ACTORS is None or actor in SEED_STAFF_ACTORS):
                 category='DIRECTOR' if actor=='director' else 'MASTER_ADMIN' if actor in ['master','master2'] else 'ADVISOR'
                 sql("INSERT INTO internal_staff(account_id,governance_class,status) VALUES(%s,%s,'ACTIVE')",(aid,category))
         def grant(actor,cap):sql("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),%s,%s,'ACTIVE')",('qa_'+actor,cap))
-        grant('master','internal_advisors_manage');grant('target','media_review_read')
+        grant('master','internal_advisors_manage')
+        if SEED_STAFF_ACTORS is None or 'target' in SEED_STAFF_ACTORS:grant('target','media_review_read')
         sql("INSERT INTO internal_capability_delegations(delegation_id,master_account_id,capability,authorized_by_account_id,status) VALUES(UUID(),'qa_master','media_review_approve','qa_director','ACTIVE')")
         spawn('valkey',[valkey,'--bind','127.0.0.1','--port',str(valkey_port),'--protected-mode','yes','--save','','--appendonly','no','--dir',str(owned)])
         def port_ready(p):

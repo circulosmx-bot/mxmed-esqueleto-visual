@@ -35,6 +35,12 @@ try{
   $ceremony=new \Identity\Services\GovernanceStaffMfaCeremony($p,$mfa,$security,new \Identity\Adapters\CanonicalGovernanceAuditAdapter($p),$clock,['qa_master']);
   $r=$ceremony->begin($actor,$registrar,'qa_director@example.test',$password,'qa_master@example.test',$password);
   $ceremony->activate($actor,$r['factor_id'],\Identity\Services\StaffMfaService::totp($secret,intdiv(time(),30)));$result=['enrolled'=>true];
+ }elseif($action==='consumer'){
+  require_once dirname(__DIR__,2).'/media/services/MediaReviewAuthority.php';
+  $authority=new \Identity\Services\InternalOperatorAuthority($resolver,new \Identity\Repositories\InternalOperatorGrantRepository($p));
+  $context=$authority->resolve(['__Host-mxmed_session'=>$tokens[$b['actor']]],'read','media_review_submission',\Platform\Contracts\RiskLevel::R0);
+  $allowed=false;try{\Media\Services\MediaReviewAuthority::requireRead($context);$allowed=true;}catch(\RuntimeException){}
+  $result=['allowed'=>$allowed];
  }elseif($action==='admit'){
   $cookies=['__Host-mxmed_session'=>$tokens[$b['actor']??'director']];
   $result=$writer->completeAdmission($cookies,$b['target'],$flow,$b['input']);

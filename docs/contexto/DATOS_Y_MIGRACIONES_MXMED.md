@@ -161,3 +161,7 @@ Migración18_07: conjuntos documentales, intenciones, revisiones y recibos del m
 ## UXFUNC01 — baja definitiva staff, SQL preparado
 
 [Contrato](../identity/ASE-ADM02-UXFUNC01.md): migración2026_10_18_08 amplía internal_staff.status con REMOVED, limitado a ADVISOR y terminal por trigger. La baja revoca grants/delegaciones con auditoría en la misma transacción. Conserva cuenta, casos e historia. Sólo instalada en infraestructura nueva sintética; no DDL operacional.
+
+## Proyección UXFUNC02
+
+No añade migraciones: filtra internal_staff.status antes de paginar y distingue solicitudes admitidas mediante auth_staff_admission_completions. No DELETE ni reactivación REMOVED. Esquema UXFUNC01 intacto. Véase [UXFUNC02](../identity/ASE-ADM02-UXFUNC02.md).

@@ -106,7 +106,7 @@ final class Service
     {
         return $this->unit->run($cookies,function($a){
             $staff=$this->query("SELECT 1 FROM internal_staff WHERE account_id=? AND governance_class='DIRECTOR' AND status='ACTIVE'",[$a->accountId()])->fetchColumn();
-            $rows=$this->query('SELECT case_id,state,version FROM auth_staff_admission_cases WHERE '.($staff?'creator_account_id=?':'bound_account_id=?').' ORDER BY updated_at DESC LIMIT 50',[$a->accountId()])->fetchAll(PDO::FETCH_ASSOC);
+            $rows=$this->query('SELECT case_id,state,version,EXISTS(SELECT 1 FROM auth_staff_admission_completions x WHERE x.case_id=auth_staff_admission_cases.case_id) AS admitted FROM auth_staff_admission_cases WHERE '.($staff?'creator_account_id=?':'bound_account_id=?').' ORDER BY updated_at DESC LIMIT 50',[$a->accountId()])->fetchAll(PDO::FETCH_ASSOC);
             foreach($rows as $c)$this->audit($a,$c,'read',$this->uuid());return ['items'=>$rows];
         });
     }

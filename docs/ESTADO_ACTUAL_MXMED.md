@@ -172,3 +172,7 @@ Cierre ASE-ADM02-FUNCTIONAL-CONSOLIDATION: 41 checks integrados PASS, revisión 
 ## Corrección dirigida ASE-ADM02-UXFUNC01
 
 [UXFUNC01](identity/ASE-ADM02-UXFUNC01.md), base66056af7: alta visible y formulario limpio; confirmaciones con nombre autorizado; restricciones de permisos explícitas; baja definitiva de Advisor exclusiva del Director, distinta de suspensión, por writer/auditoría canónicos. Estado terminal REMOVED, sin borrar Identity/historia ni permitir reactivación. Migración sólo preparada/aplicada al ensayo desechable. Master mantiene su autorización independiente. Verificación dirigida PASS: 35 checks, ocho pruebas de seguridad y Chromium/WebKit a 1366/820/390; CTX-SYNC01 PASS_UPDATED. 8091 y consolidación anterior preservados.
+
+## ASE-ADM02-UXFUNC02
+
+Directorio Activos por defecto, estados históricos separados y solicitudes pendientes mediante flujo existente; writer y autoridad sin cambios. 27 checks integrados y 11 smoke checks PASS, sin activación. Véase [UXFUNC02](identity/ASE-ADM02-UXFUNC02.md).

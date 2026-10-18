@@ -47,3 +47,5 @@ La configuración de revisión conserva un máximo de 24 horas; no prolonga toke
 | CONTEXT_SYNC_STATUS | PASS_UPDATED. |
 | DOCUMENTATION_COMMIT | Commit de corrección, informado al entregar. |
 | REMAINING_CONTEXT_GAPS | Activación/legales/custodia/retención/canal productivos y gobierno Master independiente, sin ampliación. |
+
+Sucesor acotado: [UXFUNC02](ASE-ADM02-UXFUNC02.md) separa el listado activo del histórico y verifica controles con perfiles ACTIVE admitidos. La evidencia anterior permanece histórica.

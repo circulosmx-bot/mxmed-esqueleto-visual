@@ -1,0 +1,56 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Invalid status rejected",
+      "pass": true
+    },
+    {
+      "name": "Master category cannot be bypassed through status",
+      "pass": true
+    },
+    {
+      "name": "Explicit historical target survives default ACTIVE list filter",
+      "pass": true
+    },
+    {
+      "name": "Explicit ACTIVE filter excludes historical target",
+      "pass": true
+    },
+    {
+      "name": "One removal command and canonical audit event; no duplicate mutation",
+      "pass": true
+    },
+    {
+      "name": "Removed personal profile versions retained",
+      "pass": true
+    },
+    {
+      "name": "Existing partial grant group is indeterminate",
+      "pass": true
+    },
+    {
+      "name": "Group deselect clears every editable child draft",
+      "pass": true
+    },
+    {
+      "name": "Revert preserves persisted subset",
+      "pass": true
+    },
+    {
+      "name": "Cancelled filter navigation preserves draft and selected status",
+      "pass": true
+    },
+    {
+      "name": "Narrow viewport permits directory selection and editing",
+      "pass": true
+    }
+  ],
+  "check_count": 11,
+  "source_sha256": {
+    "assets/js/internal-team.js": "58701498a670d48ed16214bcc1d6d75e2efa9138acb004ada5e873fbe0ba016e",
+    "assets/js/staff-workflow.js": "12a7f0e0f71d4dece1270fc21e981c398fce73abaa8194446f7b4440c8f132aa",
+    "modules/identity/Team/ReadService.php": "ba7f44ee6b895234f8d121d1d3ad1cedd58de85a78c54a4c8d262f57b3d33c5c"
+  },
+  "production_activation": false
+}

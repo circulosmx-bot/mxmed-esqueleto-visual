@@ -203,3 +203,7 @@ J09: preparación → invitación/Identity → confirmación → documentos agru
 ## J09 — UXFUNC01
 
 [UXFUNC01](../identity/ASE-ADM02-UXFUNC01.md): abrir alta limpia → preparar caso existente; grupo → borrador → confirmación → comandos individuales → reconsulta. Baja definitiva: Director/Advisor elegible → confirmación explícita → locks/revocación/audit atómicos → REMOVED sin reactivación. Suspensión conserva su flujo distinto; Master no usa baja directa.
+
+## J09 — UXFUNC02
+
+Listado activo → detalle ACTIVE → borrador de permisos → confirmación → writer → lectura canónica. Baja → REMOVED → salida del listado activo → histórico. Solicitud pendiente → formulario existente, nunca relación staff implícita. Véase [UXFUNC02](../identity/ASE-ADM02-UXFUNC02.md).

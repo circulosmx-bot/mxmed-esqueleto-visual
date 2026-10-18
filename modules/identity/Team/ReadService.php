@@ -31,7 +31,7 @@ final class ReadService
         $authority=$this->authority($cookies);
         $viewer=$this->sessions->resolve($cookies)?->accountId();
         if($viewer===null)throw new ReadFailure(401,'authentication_required');
-        foreach($input as $key=>$value)if(!in_array($key,['category','page','page_size','q','target'],true)||!is_string($value))throw new ReadFailure(400,'invalid_query');
+        foreach($input as $key=>$value)if(!in_array($key,['category','page','page_size','q','target','status'],true)||!is_string($value))throw new ReadFailure(400,'invalid_query');
         $category=$input['category']??'ADVISOR';
         if(!in_array($category,['ADVISOR','MASTER_ADMIN'],true))throw new ReadFailure(400,'invalid_category');
         if(!$authority['can_read_masters']&&$category!=='ADVISOR')throw new ReadFailure(403,'team_read_denied');
@@ -40,9 +40,13 @@ final class ReadService
         $page=$this->integer($input['page']??'1',1,1000);$size=$this->integer($input['page_size']??'20',1,50);
         $target=$input['target']??null;
         if($target!==null&&!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$target))throw new ReadFailure(400,'invalid_target');
+        // Lists default to current membership; exact target reads retain historical access.
+        $status=$input['status']??($category==='ADVISOR'&&$target===null?'ACTIVE':'ALL');
+        if(!in_array($status,['ACTIVE','SUSPENDED','REMOVED','ALL'],true))throw new ReadFailure(400,'invalid_status');
         $where='s.governance_class=?';$params=[$category];
         if($target!==null){$where.=' AND s.account_id=?';$params[]=$target;}
         elseif($query!==''){$where.=' AND LOCATE(?,s.account_id)>0';$params[]=$query;}
+        if($status!=='ALL'){$where.=' AND s.status=?';$params[]=$status;}
         // Category predicate is mandatory also for target reads: a Master cannot probe peers/Director.
         $select=$this->pdo->prepare('SELECT s.account_id,s.governance_class,s.status,a.status AS account_status FROM internal_staff s JOIN auth_accounts a ON a.account_id=s.account_id WHERE '.$where.' ORDER BY s.account_id LIMIT '.($target!==null?1:$size+1).' OFFSET '.($target!==null?0:($page-1)*$size));
         $select->execute($params);$rows=$select->fetchAll(PDO::FETCH_ASSOC);
@@ -61,7 +65,7 @@ final class ReadService
                 'master_actions'=>$this->masterActions($row,$authority,$viewer,$grants),
                 'personal_profile'=>null,'identity_review'=>null,'commercial_activity'=>null,'history'=>null];
         }
-        return ['authority'=>$authority,'catalog'=>InternalCapabilityCatalog::all(),'items'=>$items,'page'=>$page,'page_size'=>$size,'has_more'=>$hasMore,'category'=>$category,'grant_semantics'=>'stored_active; use_requires_current_consumer_authority','personal_profile_source'=>'NOT_CONNECTED','identity_review_source'=>'NOT_CONNECTED','commercial_source'=>'NOT_CONNECTED'];
+        return ['authority'=>$authority,'catalog'=>InternalCapabilityCatalog::all(),'items'=>$items,'page'=>$page,'page_size'=>$size,'has_more'=>$hasMore,'category'=>$category,'status'=>$status,'grant_semantics'=>'stored_active; use_requires_current_consumer_authority','personal_profile_source'=>'NOT_CONNECTED','identity_review_source'=>'NOT_CONNECTED','commercial_source'=>'NOT_CONNECTED'];
     }
 
     /** Availability only; the privileged composition and locked writer authorize each action. */

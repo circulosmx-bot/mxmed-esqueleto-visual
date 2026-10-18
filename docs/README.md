@@ -177,4 +177,5 @@ Los enlaces son candidatos de selección, no una lista obligatoria de ejecución
 - **CTX-SYNC01:** cada cambio autorizado incluye la [revisión/sincronización obligatoria](../AGENTS.md#sincronización-obligatoria-de-contexto--ctx-sync01) y los [campos/gate de entrega](MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md#context-sync). Actualizar el estado ante cambios materiales y este router sólo si cambia el enrutamiento; conservar historia e inicio acotado. La condición documental anterior queda sucedida por esa regla; no existe actualizador automático.
 - Para ChatGPT compartir commit/enlaces GitHub o estos archivos cuando haya acceso. Git ofrece referencias comunes; no memoria automática entre asistentes. La evidencia privada permanece fuera de Git.
 
+- **Listado por estado y revisión de permisos ACTIVE:** [ASE-ADM02-UXFUNC02](identity/ASE-ADM02-UXFUNC02.md), sucesor acotado de UXFUNC01.
 - **Corrección funcional de administración staff:** [ASE-ADM02-UXFUNC01](identity/ASE-ADM02-UXFUNC01.md), alta visible, permisos interactivos y baja definitiva de Advisor; autoridad Master independiente preservada.

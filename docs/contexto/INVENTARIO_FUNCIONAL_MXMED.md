@@ -336,3 +336,7 @@ ID-07 / COM-10: flujo sintético integrado de admisión, revisión y alta Adviso
 ## ID-07 / COM-10 — UXFUNC01
 
 [Corrección dirigida](../identity/ASE-ADM02-UXFUNC01.md): UI-2 autorizada; baja definitiva del equipo confirmada por Director. Writer canónico y estado terminal REMOVED, grupos editables según autoridad, alta visible y nombres sólo de fuente personal autorizada. Exclusivamente sintético; ninguna capacidad/rol ni activación productiva nueva.
+
+## ID-07 / COM-10 — UXFUNC02
+
+P=corrección solicitada; S=filtro SQL de estado y navegación de solicitudes; C=UI existente con escritor canónico intacto; V=27 checks integrados y 11 smoke checks PASS; O=sintético aislado. Véase [UXFUNC02](../identity/ASE-ADM02-UXFUNC02.md).

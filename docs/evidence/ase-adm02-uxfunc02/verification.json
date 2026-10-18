@@ -1,0 +1,51 @@
+{
+  "result": "PASS",
+  "start_head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+  "functional_checks": 27,
+  "focused_smoke_checks": 11,
+  "source_sha256": {
+    "assets/js/internal-team.js": "58701498a670d48ed16214bcc1d6d75e2efa9138acb004ada5e873fbe0ba016e",
+    "assets/js/staff-workflow.js": "12a7f0e0f71d4dece1270fc21e981c398fce73abaa8194446f7b4440c8f132aa",
+    "modules/identity/StaffWorkflow/Service.php": "3da79d0b11a5048c6d2255f4ba33242d14640bced72d0e43af0995610492ce4f",
+    "modules/identity/Team/ReadService.php": "ba7f44ee6b895234f8d121d1d3ad1cedd58de85a78c54a4c8d262f57b3d33c5c",
+    "modules/identity/tests/StaffWorkflowFixture.php": "a8b16f3a109fabe89c3609c8e00f6c5dc29225e3bb3a154ceed905c495bc592a",
+    "partials/identity/internal-team.php": "9441ceb8cf132a3d75a8ee9b80eb4137a7519552bf431c3fab2a847835f0e699",
+    "scripts/ase-adm02-uxfunc02-checks.py": "33470c37127596baa6319752a9d6a39bfd94ff572f09427ec916134b784dd763",
+    "scripts/ase-adm02-uxfunc02-qa.py": "e5da86ee9ff153229e181e21ddf80f076cc63087e4a116093e8f4d5b7cce7789",
+    "scripts/ase-adm02-uxfunc02-smoke.py": "d9eb6dd6c90bfc0e51763f35e07aa1454a53ae9e029e0b9eda3089d7fe3eac13",
+    "scripts/ase-adm02-workflow-qa.py": "6a4c11d9cf11df79bbeb06e79a321ea3a7cbce416eae704be6f57ca48a0ee134"
+  },
+  "tested_runtime_hashes_match": true,
+  "protected_worktrees_and_listeners_unchanged": true,
+  "ui_verification": [
+    "Chromium 1440x900",
+    "Chromium 1366x768",
+    "Chromium 390x844 with editable controls"
+  ],
+  "local_links_checked": 763,
+  "syntax": "PASS",
+  "context_sync_status": "PASS_UPDATED",
+  "preview": {
+    "url": "https://127.0.0.1:56213/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792447513.815567,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-dk6xyvl4",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "browser": {
+    "chromium_opened": true,
+    "director_session_ready": true,
+    "applicant_session_ready": true,
+    "guide_local_only": true,
+    "expiry_unix": 1792447513.815567
+  },
+  "production_activation": false,
+  "real_personal_data_used": false,
+  "limits": [
+    "Only synthetic isolated verification",
+    "Media enforcement tested at actual shared MediaReviewAuthority boundary, not full media workflows",
+    "Owned router masks read errors as closed 503",
+    "Pending listing inherits 50 recent-case limit",
+    "Master governance remains independently closed",
+    "No physical Safari or final mobile approval"
+  ]
+}

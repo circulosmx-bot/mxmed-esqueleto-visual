@@ -1,0 +1,340 @@
+{
+  "result": "PASS",
+  "source_baseline": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Fresh schema installed; historical governance operations preserved plus staff review",
+      "pass": true
+    },
+    {
+      "name": "Canonical bound profile + reviewed admission alma",
+      "pass": true
+    },
+    {
+      "name": "Canonical bound profile + reviewed admission bruno",
+      "pass": true
+    },
+    {
+      "name": "Canonical bound profile + reviewed admission celia",
+      "pass": true
+    },
+    {
+      "name": "Canonical bound profile + reviewed admission diego",
+      "pass": true
+    },
+    {
+      "name": "Suspended staff denied with pre-existing session",
+      "pass": true
+    },
+    {
+      "name": "Advisor self-grant denied",
+      "pass": true
+    },
+    {
+      "name": "Undelegated Master cannot override grant authority",
+      "pass": true
+    },
+    {
+      "name": "Removed state not inferred; default canonical directory has three active profiles",
+      "pass": true
+    },
+    {
+      "name": "Add CTA opens existing empty admission workflow",
+      "pass": true
+    },
+    {
+      "name": "Individual edit is draft until save",
+      "pass": true
+    },
+    {
+      "name": "Group selects children and individual off yields mixed state",
+      "pass": true
+    },
+    {
+      "name": "Canonical SQL saves supported group subset",
+      "pass": true
+    },
+    {
+      "name": "Reload matches persisted grants and consumer authorizes read",
+      "pass": true
+    },
+    {
+      "name": "Revocation enforced by real MediaReviewAuthority consumer gate",
+      "pass": true
+    },
+    {
+      "name": "Concurrent grant change produces conflict without silent overwrite",
+      "pass": true
+    },
+    {
+      "name": "Removal updates canonical status and drops from active list",
+      "pass": true
+    },
+    {
+      "name": "Removed grant denied",
+      "pass": true
+    },
+    {
+      "name": "Historical Identity, admission and audit preserved",
+      "pass": true
+    },
+    {
+      "name": "Reload defaults to exactly two active; removed available in history",
+      "pass": true
+    },
+    {
+      "name": "Pending case opens existing workflow, not staff relationship",
+      "pass": true
+    },
+    {
+      "name": "Viewport 1440 no overflow",
+      "pass": true
+    },
+    {
+      "name": "Viewport 1366 no overflow",
+      "pass": true
+    },
+    {
+      "name": "Viewport 390 no overflow",
+      "pass": true
+    },
+    {
+      "name": "Zero-grant and partial-grant ACTIVE fixtures preserved",
+      "pass": true
+    },
+    {
+      "name": "No browser exceptions",
+      "pass": true
+    }
+  ],
+  "check_count": 27,
+  "concurrency": [],
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_unchanged": true,
+  "preview": {
+    "url": "https://127.0.0.1:56213/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792447513.815567,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-dk6xyvl4",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "source_sha256": {
+    "modules/identity/StaffWorkflow/Service.php": "3da79d0b11a5048c6d2255f4ba33242d14640bced72d0e43af0995610492ce4f",
+    "modules/identity/StaffWorkflow/Http.php": "bd7e90227bce7c07de6b9746b998da37a85f0406f40ab01cda2ec661416633bd",
+    "modules/identity/StaffMedia/Policy.php": "94e5c974fd7da284cf8ae2833befb83b296ed90f8e93e93801a14717aa5d34e0",
+    "modules/identity/StaffMedia/Service.php": "f57c6755bf4c68a07ed5fcbcaad30c4c9d2f29e268293005d347dfbbeb96ad2c",
+    "modules/identity/StaffMedia/Authority.php": "320c86520329fea40bc7f81ad9a9a983154beb02a9d6219d7c42df314e8acaf7",
+    "modules/identity/StaffMedia/Audit.php": "c368194d650ce39c641ed701efd9df27fd301b050a057d2164c0d1e3e0483d85",
+    "modules/identity/StaffMedia/Cipher.php": "6e9897e528cc45bf5a2e47b6173f9d7faa952ca64cc8ee1fa0de8d807ac2d1a7",
+    "modules/identity/StaffMedia/Storage.php": "f72278762ea072a6d5a72f00ac1937da449f0ed82ac2f84862ab9912b34f4dd7",
+    "modules/identity/StaffMedia/Composition.php": "467cf1d7fd8522dc73da8179be8b14cd883179ccd5a1742428e3e34c1f5c65f8",
+    "modules/identity/StaffMedia/Input.php": "c838f8a884e7ae22547f055f48aa9441f56a658b10e757a5e71f10d5ca519471",
+    "modules/identity/StaffMedia/Images.php": "9e166f61a815dbc3f2571f8292e4941eb00c5e80bf91782b7aeced6efb0ec8de",
+    "modules/identity/StaffAdmission/UnitOfWork.php": "fe6b985405fbaf833cf51ad27b35e8cd955d10a905bb1cb9ecc80e52ef877acf",
+    "modules/identity/StaffAdmission/Service.php": "7f0e31883f73652e28628f5e931dea13f61988e4ae7c01a5d5c6e53fdda475b6",
+    "modules/identity/StaffAdmission/Audit.php": "22802c385c7e118d361bcb8b29199365c29d663dd1797246e00ca3be947aa105",
+    "modules/identity/StaffAdmission/InvitationInput.php": "a576a7fffa4732d95ca8031282faedde44621225bc14bc0d6d245a22cc622d75",
+    "modules/identity/StaffAdmission/InvitationHttp.php": "7ddec85f3aa492421cd25061db9aeb4fe2203427c31fad315188a499e9e381a6",
+    "modules/identity/StaffAdmission/Http.php": "decf6532dcd006c83f2a0f308ef10641f228e2afbdc9f57ba7e3d0d6e4045fe4",
+    "modules/identity/StaffAdmission/InvitationPolicy.php": "f06f34d042c40ce77567c5c811b9264a353f43051b22139d5b80deb0c0f37256",
+    "modules/identity/StaffAdmission/InvitationComposition.php": "019c6f023e9bea1f4928f90947cd7916bd2d8fc744590fc10c189763bfecd642",
+    "modules/identity/StaffAdmission/Composition.php": "2782a00e0b02eb95d2214e20741f33cbb47491844350b5a5125a5b8d66b278d9",
+    "modules/identity/StaffAdmission/Input.php": "dd2d08dd67f2d6750c271b2c7669c31b30abb685593621a6f17081dce2cc486b",
+    "modules/identity/StaffAdmission/InvitationService.php": "0d89b4607eebe3400a9c9fdc26d3e8081e99b820b4876fcf1d5f73f633f23773",
+    "modules/identity/StaffAdmission/InvitationDeliveryPort.php": "595aaca362c70abc9d724a261beb81bc7830c7276a8d8cebff81ab9627303146",
+    "scripts/ase-adm02-workflow-router.php": "f05d86e1d520fda560df223b4b715556b7bf13c7cd4acffb3649257db41df0ce",
+    "scripts/ase-adm02-workflow-qa.py": "6a4c11d9cf11df79bbeb06e79a321ea3a7cbce416eae704be6f57ca48a0ee134",
+    "scripts/ase-adm02-workflow-review.py": "41ea1a828a93345593e7c6feee3d0e0030bd7c4e6016319153df69d8e0f18a03",
+    "scripts/ase-adm02-workflow-runtime.php": "e19f2429af41738f4bd55ebd846f86a4d150bbf3440b1e2cac53794622660a16",
+    "scripts/ase-adm02-workflow-checks.py": "4e14d5a51f53c73c4b33aa0e605e3eefacde0769aa54724b520ee600fffbb17e",
+    "scripts/ase-adm02-workflow-ui.py": "3dd585c68cf15c5e8bffafb58fd11a590cdb1eceb912fb7e01f29b6f19a184eb",
+    "modules/identity/services/InternalGovernanceService.php": "0f997ee8b384752932a57e078f6656989b112ae3c693d737170f12248fac5b09",
+    "modules/identity/services/StaffMfaService.php": "5df2993cc755d565b8a75686316fd38a05dc58d4a1244900cb8120a55e921bcc",
+    "modules/identity/MasterGovernance/Composition.php": "511bf11e4a51680f983640fde6c602f2435474573df773ab56eb6d8af8c0048b",
+    "modules/identity/db/migrations/2026_10_18_07_staff_workflow.sql": "ae616ed5c3f751716224a2207154cf4095eabd71efa96d774b0574c6a125e0b5",
+    "modules/identity/tests/StaffWorkflowFixture.php": "a8b16f3a109fabe89c3609c8e00f6c5dc29225e3bb3a154ceed905c495bc592a",
+    "assets/js/staff-workflow.js": "12a7f0e0f71d4dece1270fc21e981c398fce73abaa8194446f7b4440c8f132aa",
+    "assets/js/internal-team.js": "58701498a670d48ed16214bcc1d6d75e2efa9138acb004ada5e873fbe0ba016e",
+    "partials/identity/internal-team.php": "9441ceb8cf132a3d75a8ee9b80eb4137a7519552bf431c3fab2a847835f0e699",
+    "partials/identity/staff-workflow.php": "9b5cf9c490cb28cd8d2be8840c045bcfb9f9e50a6365ec5e444b5d90db77a0b2"
+  },
+  "ui_changed": true,
+  "real_personal_data_used": false,
+  "operational_activation": false
+}
