@@ -61,7 +61,7 @@ final class StaffMfaService
     {
         if($this->security===null)throw new \RuntimeException('staff_mfa_canonical_security_required');
         foreach([$actor,$target,$beneficiary] as $id)$this->assertId($id);$this->assertReference($caseId);
-        if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY'],true)&&!MasterPolicy::known($operation))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
+        if(!in_array($operation,['INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY','STAFF_ADMISSION_REVIEW'],true)&&!MasterPolicy::known($operation))throw new \InvalidArgumentException('staff_mfa_invalid_operation');
         $masterContext=null;
         if(MasterPolicy::known($operation)){
             $masterContext=MasterPolicy::mfaCase($this->pdo,['actor_account_id'=>$actor,'operation'=>$operation,'case_id'=>$caseId,'target_account_id'=>$target,'beneficiary_account_id'=>$beneficiary,'profile_doctor_id'=>$profile],$this->clock->now(),$reauthentication??[]);
@@ -172,7 +172,7 @@ final class StaffMfaService
     }
     private function operationAllowed(string $staffClass,string $actor,string $operation):bool
     {
-        if(MasterPolicy::known($operation))return $staffClass==='DIRECTOR';
+        if(MasterPolicy::known($operation)||$operation==='STAFF_ADMISSION_REVIEW')return $staffClass==='DIRECTOR';
         return in_array($staffClass,['DIRECTOR','MASTER_ADMIN'],true)
             ||($staffClass==='ADVISOR'&&StaffRoutineOperationPolicy::allowAdvisor($this->pdo,$actor,$operation));
     }

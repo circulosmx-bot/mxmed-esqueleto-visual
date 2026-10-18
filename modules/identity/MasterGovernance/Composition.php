@@ -26,7 +26,7 @@ final readonly class Composition
         if((int)$p->query('SELECT @@SESSION.foreign_key_checks')->fetchColumn()!==1)throw new \RuntimeException('master_schema_required');
         $q=$p->query("SELECT c.CHECK_CLAUSE,t.ENFORCED FROM information_schema.CHECK_CONSTRAINTS c JOIN information_schema.TABLE_CONSTRAINTS t USING(CONSTRAINT_SCHEMA,CONSTRAINT_NAME) WHERE c.CONSTRAINT_SCHEMA=DATABASE() AND c.CONSTRAINT_NAME='ck_auth_governance_case_operation'");$row=$q->fetch(PDO::FETCH_ASSOC);
         $expected=array_keys(Policy::OPERATIONS);
-        $expected=[...$expected,'INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY'];sort($expected);
+        $expected=[...$expected,'INITIAL_OWNER','OWNER_REPLACEMENT','OWNER_REMOVAL','FIRST_DIRECTOR_BOOTSTRAP','MFA_RECOVERY','PHYSICIAN_EVIDENCE_REVIEW','PHYSICIAN_AUTHORITY_CHANGE','PHYSICIAN_ENROLLMENT_REVIEW','PROFESSIONAL_SOURCE_PROVISION','PUBLIC_PROFILE_CORRECTION_REVIEW','PUBLIC_PROFILE_CORRECTION_APPLY','STAFF_ADMISSION_REVIEW'];sort($expected);
         $clause=str_replace(chr(92),'',$row['CHECK_CLAUSE']??'');
         $shape=preg_replace('/\s+|_(?:utf8mb4|ascii)/','',$clause);
         if(!preg_match("~^\(`operation`in\('[A-Z_]+'(?:,'[A-Z_]+')*\)\)$~D",$shape))throw new \RuntimeException('master_schema_required');

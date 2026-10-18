@@ -260,3 +260,7 @@ Ninguna fase implementada aquí. Primero aprobar el alcance técnico sintético 
 ## Sucesor aislado ADM-IMP03
 
 [Media staff privada](ASE-ADM02-IMP03-private-staff-media.md) añade retrato/evidencia con propósitos separados, cifrado staff, versiones inmutables y reconciliación SQL/archivos. Reutiliza el vínculo canónico y no modifica casos/perfiles/invitaciones. Sólo solicitante propio en CLI sintético; sin upload/download HTTP, reviewer, aprobación, staff/grants o activación. Custodia/retención/límites/PDF y readers operativos siguen pendientes.
+
+## Sucesor funcional aislado
+
+La solicitud del Director ratifica P01–P10 y autoriza la [consolidación funcional](ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md): documentos con caras/versiones propias, revisión Director con MFA, correcciones y alta Advisor mediante el writer canónico, sin grants automáticos. UI existente conectada sólo en infraestructura sintética. Legal, retención/eliminación, custodia, límites y entrega productiva siguen como gates independientes.

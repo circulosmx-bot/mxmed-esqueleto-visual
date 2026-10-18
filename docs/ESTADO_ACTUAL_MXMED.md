@@ -76,6 +76,12 @@
 - Padre27e0da02a4daf15d3c1a32ab5590e2527e835b52; feature `feature/ase-adm02-private-staff-media`. [Media staff privada](identity/ASE-ADM02-IMP03-private-staff-media.md): retrato WebP privado y evidencia JPEG/PNG validada, propósitos/AAD distintos, versiones inmutables, solicitante exacto, audit y reconciliación de huérfanos/ACK/ausencias. Sin writer público ni modificación de casos/invitaciones.
 - 312 checks PASS, nueve escenarios concurrentes y tres tests audit; recursos propios dispuestos. Producto sin endpoints de upload/download; composición indisponible por políticas pendientes. PDF no implementado; no reviewer/identidad aprobada, Master readiness, UI, datos reales ni activación. Trece worktrees anteriores y runtimes protegidos; pruebas sólo en infraestructura nueva propia.
 
+## Consolidación funcional ASE-ADM02 — UI-2 autorizada
+
+- Base58f3fcf5, rama `feature/ase-adm02-functional-consolidation`. El Director ratifica P01–P10 y autoriza cerrar el flujo funcional existente; [contrato y evidencia](identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).
+- Solicitud/invitación/vínculo/confirmación canónicos, media privada con documentos y caras versionadas, revisión Director con contraseña/MFA, correcciones, admisión mediante InternalGovernanceService y proyección en equipo. Cero grants automáticos; matriz individual existente. Master conserva gates propios y fuente de revisión indisponible en composición operacional.
+- Conexión UI sólo en router de instancia nueva propia; endpoint normal cerrado. No datos reales, delivery externo, DDL persistente, merge, despliegue ni cambio del runtime original. Pendientes únicamente gates de producción y formatos/catálogo expresamente diferidos.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.
@@ -160,3 +166,5 @@
 - Mantenimiento **manual y obligatorio como parte de cada cambio autorizado**: revisar contexto, actualizar sólo IDs/journeys/objetos y documentos impactados y este resumen ante cambios materiales. Registrar los diez campos de entrega; `BLOCKED_INCOMPLETE` impide COMPLETE y `NO_IMPACT` requiere razón precisa. Validar coherencia, evidencia y enlaces, conservando historia en Git/contratos.
 - ChatGPT puede consultar los mismos archivos publicados cuando tenga acceso o se adjunten; no hay memoria automática compartida con Codex.
 - [Historia y decisiones](README.md#historia-decisiones-y-continuidad) se recuperan bajo demanda; el contenido histórico se conserva con avisos de sucesor donde corresponde.
+
+Cierre ASE-ADM02-FUNCTIONAL-CONSOLIDATION: 41 checks integrados PASS, revisión visual automatizada Chromium/WebKit y CTX-SYNC01 PASS_UPDATED; fuentes/14 worktrees/listeners protegidos. Evidencia final en el contrato enlazado. Activación productiva permanece cerrada.

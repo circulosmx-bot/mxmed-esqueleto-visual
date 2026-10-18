@@ -153,3 +153,7 @@ El snapshot Master real sólo contiene account_id, credential_version, review_ve
 ## ASE-ADM02-IMP03 — versiones de media privadas
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): Migración18_06 añade auth_staff_media_assets/operations, cuatro triggers, FK a perfil capturado/cuenta/versión anterior y unique caso+purpose+asset_version. Current derivado, sin sobrescribir historia. Cipher staff/key-id/hash ciphertext, refs custodia/retención, actor/tiempo y recibo/audit; sin plain bytes en SQL. Catálogo audit61 conserva políticas59 previas. IMP01/02, schema COMPAT01 y DeploymentPackage intactos; ningún DDL real.
+
+## Consolidación staff aislada
+
+Migración18_07: conjuntos documentales, intenciones, revisiones y recibos del mismo caso. CHECK gobierno conserva17 propósitos y añade STAFF_ADMISSION_REVIEW; factores/challenges/proofs canónicos. INSERT staff sigue exclusivamente en InternalGovernanceService; sin instalación real. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).

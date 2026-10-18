@@ -122,3 +122,7 @@ Limitaciones: no lector de directorio/reviewer, política live de límites/custo
 | REMAINING_CONTEXT_GAPS | Legal/retención/borrado/custodia/rotación/backups/límites/PDF/catálogo extranjero/readers/delegación; revisión IMP04 y handoff IMP05 separados. |
 
 Siguiente autorización: ratificar parámetros pendientes y definir la fase de revisión/reader posterior. No autoriza recibir documentos reales, conectar UI, merge ni desplegar.
+
+## Sucesor funcional aislado
+
+La solicitud del Director ratifica P01–P10 y autoriza la [consolidación funcional](ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md): documentos con caras/versiones propias, revisión Director con MFA, correcciones y alta Advisor mediante el writer canónico, sin grants automáticos. UI existente conectada sólo en infraestructura sintética. Legal, retención/eliminación, custodia, límites y entrega productiva siguen como gates independientes.

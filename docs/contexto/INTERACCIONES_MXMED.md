@@ -195,3 +195,7 @@ A–H definen cuenta existente/nueva/pendiente, duplicados, revocación/expiraci
 ## J09 — media privada parcial IMP03
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): Cuenta vinculada legítimamente → sesión/caso exactos → validar raster → retrato derivado o evidencia original del subset → cifrar/escribir inmutable → SQL metadata/recibo/audit → lectura propia/reconciliación. Fallo SQL conserva ciphertext; ACK consulta resultado sin retry; ausencias/integridad/key fallan cerradas. No transacción distribuida ni borrado compensatorio. Sin revisión/activación/HTTP/UI; J08/D01–D08 conservados.
+
+## Consolidación staff aislada
+
+J09: preparación → invitación/Identity → confirmación → documentos agrupados → revisión Director/MFA → admisión canónica → grants individuales. Separación de identidad/admisión/relación/permisos/Master/envíos. J08 y D01–D08 preservados. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).

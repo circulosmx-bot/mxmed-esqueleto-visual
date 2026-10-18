@@ -112,3 +112,7 @@ Límite clínico preservado: `AUTH02A` sin modificar falla la assertion 29 en el
 ## ADM-IMP03 — media privada sin autoridad de gobierno
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): Retrato no acredita identidad y evidencia almacenada no equivale a revisión humana. Sólo solicitante de caso exacto lee/escribe en fundación callable; Director no adquiere reader raw por directorio, Master/Advisor pares y grants ajenos denegados. Reader/reviewer/custodia futuros pendientes; UnavailableStaffIdentityReview y appointment fail-closed intactos.
+
+## Consolidación staff aislada
+
+La entrada completeAdmission del writer canónico valida el caso/revisión/aceptación/binding/proof y registra Advisor dentro de su transacción. No reinterpreta register histórico, no grants automáticos ni delegación Master; MFA de cada consumidor y seguridad Master permanecen independientes. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).

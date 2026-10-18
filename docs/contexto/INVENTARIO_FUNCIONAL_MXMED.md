@@ -328,3 +328,7 @@ ID-04/05/06/07: [COMPAT01](../identity/ACT03-CHECK-COMPAT01-historical-case-chec
 ## ID-07 / COM-10 — media staff IMP03
 
 [Contrato y evidencia](../identity/ASE-ADM02-IMP03-private-staff-media.md): P=propósitos privados separados, own-applicant; S=StaffMedia y dos tablas/eventos, reuso Identity/UnitOfWork/GD/puerto privado; C=callable, sin endpoints ni readers directorio/reviewer; V=QA sintética/carreras/audit; O=inactivo. Sin nuevas capabilities ni datos reales.
+
+## Consolidación staff aislada
+
+ID-07 / COM-10: flujo sintético integrado de admisión, revisión y alta Advisor; reusa ID-01/02/03, sin permisos implícitos. UI del equipo existente conectada sólo en ensayo propietario. Véase [contrato funcional](../identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md).

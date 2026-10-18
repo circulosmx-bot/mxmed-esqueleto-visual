@@ -122,6 +122,8 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
 
+- **Consolidación funcional staff aislada:** [ASE-ADM02](identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md), solicitudes, vínculo Identity, documentos agrupados, revisión Director con MFA y alta Advisor canónica; UI aprobada y grants individuales, sólo ensayo sintético.
+
 - **Media staff privada aislada:** [ASE-ADM02-IMP03](identity/ASE-ADM02-IMP03-private-staff-media.md), retrato/evidencia separados, cipher staff, versiones privadas, auditoría y reconciliación SQL/archivos. Sólo QA sintética callable; sin HTTP, PDF, reviewer ni operación real.
 
 - **Invitación/binding staff aislados:** [ASE-ADM02-IMP02](identity/ASE-ADM02-IMP02-staff-invitation-binding.md), destinatario protegido, Identity canónica, consumo/vínculo/audit atómicos y recuperación. Positivo sintético CLI; HTTP invitación cerrado por políticas productivas pendientes. UI-0, sin staff/activación.

@@ -1,0 +1,13 @@
+{
+  "result": "PASS",
+  "reason": "Applicant entry reuses existing base stylesheet; no backend change",
+  "checks": [
+    "chromium applicant 1366: base typography, no overflow, Director controls hidden",
+    "chromium applicant 390: base typography, no overflow, Director controls hidden",
+    "webkit applicant 1366: base typography, no overflow, Director controls hidden",
+    "webkit applicant 390: base typography, no overflow, Director controls hidden"
+  ],
+  "source_sha256": {
+    "partials/identity/staff-workflow.php": "7f59f583f23408deff482844b87496beaa4d10a7c3bdbe42e52f9c0b59573be7"
+  }
+}

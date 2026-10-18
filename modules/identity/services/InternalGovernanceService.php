@@ -22,7 +22,12 @@ final class InternalGovernanceService
         [$operation,$target,$capability]=$this->masterCases->command($caseId);
         return $this->perform($cookies,$operation,$target,$capability,null,[$caseId,$proofId,$rawProof]);
     }
-    private function perform(array $cookies,string $operation,string $target,?string $capability,?string $targetPrecondition,?array $privileged=null):array
+    public function completeAdmission(array $cookies,string $target,\Identity\StaffWorkflow\Service $workflow,array $input):array
+    {
+        if(!$workflow->usesConnection($this->pdo))throw new RuntimeException('governance_connection_mismatch');
+        return $this->perform($cookies,'register',$target,null,null,null,[$workflow,$input]);
+    }
+    private function perform(array $cookies,string $operation,string $target,?string $capability,?string $targetPrecondition,?array $privileged=null,?array $admission=null):array
     {
         if(!in_array($operation,['register','appoint_master','remove_master','suspend','reactivate','grant','revoke','delegate','revoke_delegation'],true))throw new RuntimeException('governance_invalid_operation');
         $hasCapability=in_array($operation,['grant','revoke','delegate','revoke_delegation'],true);
@@ -63,6 +68,12 @@ final class InternalGovernanceService
             if($t&&$t['governance_class']==='DIRECTOR'&&!in_array($operation,['grant','revoke'],true))throw new RuntimeException('governance_director_protected');
             if($lifecycleOnly&&$t['status']!==($operation==='suspend'?'ACTIVE':'SUSPENDED'))throw new RuntimeException('governance_conflict');
             $masterCase=$privileged===null?null:$this->masterCases->consume($this->pdo,$session,...[...$privileged,$operation,$target,$capability]);
+            $admissionGate=null;
+            if($admission!==null){
+                if(!$director||$actor===$target)throw new RuntimeException('governance_denied');
+                $admissionGate=$admission[0]->admissionGate($this->pdo,$session,$admission[1],$target);
+                if(isset($admissionGate['replay'])){$live=$this->sessions->resolve($cookies,true);if(!$live||$live->accountId()!==$actor||(string)$live->session()->sessionId()!==(string)$session->session()->sessionId())throw new RuntimeException('governance_denied');$this->pdo->commit();return ['account_id'=>$target,'committed'=>true,'replayed'=>true];}
+            }
             if($operation==='register'){
                 if($t||$accounts[$target]!=='active')throw new RuntimeException('governance_conflict');
                 $this->pdo->prepare("INSERT INTO internal_staff(account_id,governance_class,status) VALUES(?,'ADVISOR','ACTIVE')")->execute([$target]);
@@ -96,6 +107,11 @@ final class InternalGovernanceService
             $context=TrustedAuditContext::fromServer($actor,'account',$a['governance_class'],'internal_governance',$this->uuid(),$masterCase['operation_id']??$this->uuid(),(string)$session->session()->sessionId(),null,null,'ADMIN','internal-governance/'.$operation);
             $auditEvent=$writer->append(new CanonicalAuditEventInput('INTERNAL_GOVERNANCE_CHANGED','SUCCESS','ADMIN_DECISION','account',$actor,'internal_staff',$target,['operation'=>$operation,'target_account_id'=>$target,'capability'=>$capability,'before'=>$t,'after'=>$after]),$context);
             $result=$masterCase===null?['account_id'=>$target,...$after]:$this->masterCases->finish($this->pdo,$masterCase,$after,(string)$auditEvent->value('event_id'));
+            if($admission!==null){
+                $admission[0]->finishAdmission($this->pdo,$session,$admissionGate,(string)$auditEvent->value('event_id'));
+                $live=$this->sessions->resolve($cookies,true);
+                if(!$live||$live->accountId()!==$actor||(string)$live->session()->sessionId()!==(string)$session->session()->sessionId())throw new RuntimeException('governance_denied');
+            }
             if(!$this->pdo->commit())throw new RuntimeException('governance_commit_failed');return $result;
         }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
