@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "context_files": [
+    "docs/ESTADO_ACTUAL_MXMED.md",
+    "docs/README.md",
+    "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+    "docs/contexto/INTERACCIONES_MXMED.md",
+    "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+    "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+    "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+    "docs/identity/ASE-ADVISOR-WORKSPACE03.md"
+  ],
+  "relevant_links": 17,
+  "missing": [],
+  "fields": [
+    "CONTEXT_BASELINE",
+    "AFFECTED_CAPABILITY_IDS",
+    "AFFECTED_JOURNEY_IDS",
+    "AFFECTED_DATA_OBJECTS",
+    "AFFECTED_CONTEXT_FILES",
+    "CONTEXT_CHANGES_IMPLEMENTED",
+    "CONTEXT_VERIFICATION",
+    "CONTEXT_SYNC_STATUS",
+    "DOCUMENTATION_COMMIT",
+    "REMAINING_CONTEXT_GAPS"
+  ],
+  "context_sync_status": "PASS_UPDATED"
+}

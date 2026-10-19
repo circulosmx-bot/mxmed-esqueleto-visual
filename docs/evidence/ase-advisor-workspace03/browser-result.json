@@ -1,0 +1,231 @@
+{
+  "checks": [
+    {
+      "name": "Director delegates summary and operational grants through canonical UI",
+      "pass": true
+    },
+    {
+      "name": "Canonical physician grouping joins media and claim exactly once",
+      "pass": true
+    },
+    {
+      "name": "Unmaterialized applications retain separate canonical identities",
+      "pass": true
+    },
+    {
+      "name": "Global badge counts actionable work items, not physician cards",
+      "pass": true
+    },
+    {
+      "name": "Selection collapses inbox and preserves exact profile identity",
+      "pass": true
+    },
+    {
+      "name": "All eleven top tabs exist in one nonwrapping row",
+      "pass": true
+    },
+    {
+      "name": "Unsupported tab is informational and grants no operation",
+      "pass": true
+    },
+    {
+      "name": "Committed Media approval decreases global, header and tab counts once",
+      "pass": true
+    },
+    {
+      "name": "Committed counts are rendered in header, tab and red global badge",
+      "pass": true
+    },
+    {
+      "name": "Four pending actions render one physician card with four visible items",
+      "pass": true
+    },
+    {
+      "name": "Completed Media action remains in canonical history",
+      "pass": true
+    },
+    {
+      "name": "Navigation does not decrement pending counters",
+      "pass": true
+    },
+    {
+      "name": "Summary-only request count stays bounded to existing Media follow-up profiles",
+      "pass": true
+    },
+    {
+      "name": "Summary discloses no applicant, request IDs, evidence, reasons or new applications",
+      "pass": true
+    },
+    {
+      "name": "Restricted tab displays authorized aggregate without protected panel",
+      "pass": true
+    },
+    {
+      "name": "Summary permission does not authorize request detail or evidence",
+      "pass": true
+    },
+    {
+      "name": "Summary rejects unrelated physician and mismatched application context",
+      "pass": true
+    },
+    {
+      "name": "Summary revocation immediately removes restricted counts server-side",
+      "pass": true
+    },
+    {
+      "name": "Unauthorized UI has no restricted request badge or count",
+      "pass": true
+    },
+    {
+      "name": "Summary grant alone supplies no global physician visibility",
+      "pass": true
+    },
+    {
+      "name": "Request follow-up permits scoped Media summary without Media read",
+      "pass": true
+    },
+    {
+      "name": "Summary cannot fetch protected Media or Director administration",
+      "pass": true
+    },
+    {
+      "name": "Independent Advisor without summary cannot infer restricted Media counts",
+      "pass": true
+    },
+    {
+      "name": "Claim regression preserves original canonical free profile",
+      "pass": true
+    },
+    {
+      "name": "New-profile regression materializes exactly one hidden free profile",
+      "pass": true
+    },
+    {
+      "name": "Materialized application maintains exact association without duplicate pending group",
+      "pass": true
+    },
+    {
+      "name": "Application history survives materialization with canonical actor and reference",
+      "pass": true
+    },
+    {
+      "name": "Information request is unresolved but leaves Advisor actionable inbox",
+      "pass": true
+    },
+    {
+      "name": "Applicant response restores actionability without duplicate item",
+      "pass": true
+    },
+    {
+      "name": "Cross-physician protected Media binding remains denied",
+      "pass": true
+    },
+    {
+      "name": "Selected request cannot claim another physician context",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440x900: complete overflow navigation, keyboard and counters",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366x768: complete overflow navigation, keyboard and counters",
+      "pass": true
+    },
+    {
+      "name": "chromium 390x844: complete overflow navigation, keyboard and counters",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440x900: complete overflow navigation, keyboard and counters",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366x768: complete overflow navigation, keyboard and counters",
+      "pass": true
+    },
+    {
+      "name": "webkit 390x844: complete overflow navigation, keyboard and counters",
+      "pass": true
+    },
+    {
+      "name": "Native delivered viewport remains within physical screen",
+      "pass": true
+    },
+    {
+      "name": "No browser JavaScript errors",
+      "pass": true
+    }
+  ],
+  "responsive": [
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "height": 900,
+      "geometry": {
+        "width": 1440,
+        "scroll": 1440,
+        "tabRows": 1
+      }
+    },
+    {
+      "engine": "chromium",
+      "width": 1366,
+      "height": 768,
+      "geometry": {
+        "width": 1366,
+        "scroll": 1366,
+        "tabRows": 1
+      }
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 844,
+      "geometry": {
+        "width": 390,
+        "scroll": 390,
+        "tabRows": 1
+      }
+    },
+    {
+      "engine": "webkit",
+      "width": 1440,
+      "height": 900,
+      "geometry": {
+        "width": 1440,
+        "scroll": 1440,
+        "tabRows": 1
+      }
+    },
+    {
+      "engine": "webkit",
+      "width": 1366,
+      "height": 768,
+      "geometry": {
+        "width": 1366,
+        "scroll": 1366,
+        "tabRows": 1
+      }
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "height": 844,
+      "geometry": {
+        "width": 390,
+        "scroll": 390,
+        "tabRows": 1
+      }
+    }
+  ],
+  "page_errors": [],
+  "native": {
+    "width": 1366,
+    "height": 783,
+    "outerHeight": 870,
+    "availableHeight": 870,
+    "scroll": 1366
+  },
+  "result": "PASS"
+}

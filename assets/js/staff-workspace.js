@@ -11,7 +11,7 @@
   let requestState = {requests:[],pending_count:0}, selectedRequestId = null, requestDetail = null, decision = null;
   let requestEpoch = 0, historyEpoch = 0, evidenceEpoch = 0;
   let requestController = null, historyController = null, evidenceController = null, evidenceUrl = null, requestCsrf = null;
-  let ownershipState = null, ownershipEpoch = 0;
+  let ownershipState = null, ownershipEpoch = 0, pendingState = null, pendingContext = null;
   const uncertainDecisions = new Map(), confirmedRequestUpdates = new Set(), directoryPositions = {pending:0,search:0};
   const requestStates = {SUBMITTED:'Enviada',PENDING_REVIEW:'Pendiente de revisión',UNDER_REVIEW:'En revisión',APPROVED:'Aprobada',REJECTED:'Rechazada',NEEDS_INFORMATION:'Información solicitada',DRAFT:'Borrador',WITHDRAWN:'Retirada',CANCELLED:'Cancelada',OWNERSHIP_PENDING:'Asignación de titular pendiente',COMPLETED:'Completada'};
   const valueLabels = {ready:'Disponible',NEEDS_WORK:'Requiere ajustes',CLAIM_EXISTING_PROFILE:'Reclamo de perfil existente',REQUEST_NEW_PROFILE:'Solicitud de perfil nuevo',collaborator:'Colaborador',administrator:'Administrador',owner:'Titular',internal_operator:'Operador interno',authenticated_account:'Persona solicitante',CONFIRMED:'Confirmada',UNLINKED:'Sin vincular',LINKED:'Vinculada',NOT_LINKED:'Sin vincular',ABSENT:'Sin perfil',HIDDEN_FREE:'Perfil no publicado y gratuito',RESPONSE_RECEIVED:'Respuesta recibida',NOT_APPROVED:'Sin aprobación',free:'Gratuito'};
@@ -31,7 +31,7 @@
   function resetDraft() {$('replacement-form').reset();$('replacement-form').hidden=true;$('replacement-count').textContent='0 / 400 caracteres';$('corrected-file').value='';$('save-corrected').hidden=true;resetDecision();}
   function releaseImages() {for(const url of [reviewUrl,proposalUrl])if(url)URL.revokeObjectURL(url);reviewUrl=null;proposalUrl=null;reviewLoaded=false;proposalLoaded=false;if(!$('review-image'))return;$('review-image').removeAttribute('src');$('review-image').hidden=true;$('proposal-image').removeAttribute('src');$('proposal-panel').hidden=true;$('accept-improvement').hidden=true;$('discard-improvement').hidden=true;}
   function clearItem() {itemEpoch++;itemController?.abort();item=null;options={};releaseImages();resetDraft();$('media-detail').hidden=true;$('media-items').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));}
-  function clearContext() {contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
+  function clearContext() {contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
   function sessionFailure(status) {
     expired=true;directoryEpoch++;directoryController?.abort();clearContext();state=null;$('discovery-list').replaceChildren();$('discovery').hidden=true;$('utilities').hidden=true;$('no-selection').hidden=true;$('pending-count').textContent='0';$('session-recovery').hidden=false;
     $('session-message').textContent=status===401?'Tu sesión terminó. Inicia sesión nuevamente para continuar.':'Tu acceso al equipo interno cambió. Vuelve a iniciar sesión o consulta al Director.';
@@ -46,17 +46,17 @@
   function actor(data) {
     $('staff-name').textContent=data.actor.display_name||data.actor.email||'Cuenta del equipo interno';
     $('staff-role').textContent=({DIRECTOR:'Director',MASTER_ADMIN:'Administrador Master',ADVISOR:'Asesor'}[data.actor.access_level]||data.actor.access_level);
-    const count=Math.max(0,Number(data.count)||0)+Math.max(0,Number(requestState.pending_count)||0);$('pending-count').textContent=String(count);$('pending-count').setAttribute('aria-label',`${count} pendientes`);
+    const count=pendingState?.actionable_count;$('pending-count').textContent=count===undefined?'—':String(count);$('pending-count').setAttribute('aria-label',count===undefined?'Conteo no disponible':`${count} tareas pendientes en tu ámbito de actuación`);
   }
   function updateContext(data) {
     const p=data.physician;
-    if(!doctor&&selectedRequestId){$('context-type').textContent='SOLICITUD DE PERFIL NUEVO';$('physician-name').textContent='Solicitud de perfil nuevo';$('physician-description').textContent=requestDetail?.proposed_profile?.display_name||requestDetail?.label||'Revisión de la solicitud seleccionada';$('physician-statuses').replaceChildren(node('span','badge review-badge',requestStates[requestDetail?.state]||requestDetail?.state||'Solicitud seleccionada'));return;}
+    if(!doctor&&selectedRequestId){$('context-type').textContent='SOLICITUD DE PERFIL NUEVO';$('physician-name').textContent='Solicitud de perfil nuevo';$('physician-description').textContent=requestDetail?.proposed_profile?.display_name||requestDetail?.label||'Revisión de la solicitud seleccionada';$('physician-statuses').replaceChildren(node('span','badge review-badge',requestStates[requestDetail?.state]||requestDetail?.state||'Solicitud seleccionada'));const n=contextPendingCount();if(n!==null)$('physician-statuses').append(node('span','badge review-badge',`${n} pendientes visibles`));return;}
     if(!p||p.doctor_id!==doctor)return;
     $('context-type').textContent='PERFIL MÉDICO';
     $('physician-name').textContent=p.name;$('physician-description').textContent=describe(p)||'Información profesional disponible en el perfil';
     const badges=$('physician-statuses');badges.replaceChildren();
     if(p.status)badges.append(node('span','badge publication-badge','Perfil: '+(statuses[p.status]||p.status)));
-    const pending=contextPendingCount(data);if(pending>0)badges.append(node('span','badge review-badge',`${pending} ${pending===1?'pendiente':'pendientes'} de revisión`));
+    const pending=contextPendingCount(data);if(pending!==null)badges.append(node('span','badge review-badge',`${pending} ${pending===1?'pendiente visible':'pendientes visibles'}`));
     if(p.plan?.label)badges.append(node('span','badge','Plan: '+p.plan.label));
   }
   function discovery(data) {
@@ -67,24 +67,56 @@
       const query=lastQuery.toLocaleLowerCase('es-MX');const profiles=new Map((data.physicians||[]).map(p=>[p.doctor_id,p]));const applications=[];
       for(const entry of accessible){const name=entry.label||entry.physician_name||entry.proposed_profile?.display_name||'Solicitud de perfil nuevo';if(query&&!name.toLocaleLowerCase('es-MX').includes(query))continue;if(entry.doctor_id){if(!profiles.has(entry.doctor_id))profiles.set(entry.doctor_id,{...entry,name});}else applications.push({...entry,name});}
       entries=[...profiles.values(),...applications];
-    }else entries=[...(data.pending||[]),...accessible.filter(r=>r.actionable)];
-    for(const entry of entries||[]) {
-      const button=node('button','discovery-card');button.type='button';if(entry.doctor_id)button.dataset.doctorId=entry.doctor_id;if(entry.submission_id)button.dataset.submissionId=entry.submission_id;if(entry.request_id)button.dataset.requestId=entry.request_id;
-      const copy=node('span');copy.append(node('strong','',entry.name||entry.physician_name||entry.label||'Perfil médico'));
-      copy.append(node('span','card-meta',entry.request_id?`${requestType(entry.type)} · ${requestStates[entry.state]||entry.state}`:directoryMode==='search'?(describe(entry)||`${entry.pending_count||0} pendientes`):(entry.label||labels[entry.purpose]||'Imagen pendiente')));
-      button.append(copy,node('span','card-action',directoryMode==='search'?'Abrir perfil →':'Revisar →'));
-      button.addEventListener('click',()=>{directoryPositions[directoryMode]=list.scrollTop;entry.request_id?selectRequest(entry.request_id):selectPhysician(entry.doctor_id,entry.submission_id||null);});list.append(button);
+    }else entries=pendingState?.groups||[];
+    const appendCard=(entry,awareness=false)=>{
+      const button=node('button','discovery-card');button.type='button';if(entry.doctor_id)button.dataset.doctorId=entry.doctor_id;
+      const application=entry.application_id||entry.request_id;if(application&&!entry.doctor_id)button.dataset.requestId=application;
+      if(entry.key)button.dataset.groupKey=entry.key;
+      const copy=node('span');copy.append(node('strong','',entry.doctor_id?(entry.name||entry.physician_name||entry.label||'Perfil médico'):'Solicitud de perfil nuevo'));
+      if(!entry.doctor_id)copy.append(node('span','card-meta',entry.name||entry.label));
+      const meta=entry.doctor_id?describe(entry):(requestStates[entry.state]||'');if(meta)copy.append(node('span','card-meta',meta));
+      if(entry.sections){
+        copy.append(node('span','card-count',`${entry.visible_count} pendientes visibles · ${entry.actionable_count} para atender`));
+        const categories=Object.entries(entry.sections).filter(([,v])=>v.visible_count>0).map(([key,v])=>`${key==='images'?'Imágenes':'Solicitudes'}: ${v.visible_count}${v.summary_only?' · acceso restringido':''}`);
+        copy.append(node('span','card-meta',categories.join(' / ')));
+      }else if(entry.state)copy.append(node('span','card-meta',requestStates[entry.state]||entry.state));
+      if(awareness)copy.append(node('span','card-meta','Seguimiento: requiere otra intervención o respuesta.'));
+      button.append(copy,node('span','card-action',entry.doctor_id?'Abrir perfil →':'Abrir solicitud →'));
+      button.onclick=()=>{directoryPositions[directoryMode]=list.scrollTop;entry.doctor_id?selectPhysician(entry.doctor_id):selectRequest(application);};list.append(button);
+    };
+    for(const entry of entries||[])appendCard(entry);
+    if(directoryMode==='pending'&&pendingState?.awareness_groups?.length){
+      list.append(node('h3','awareness-heading','Otros pendientes visibles para seguimiento'));
+      for(const entry of pendingState.awareness_groups)appendCard(entry,true);
     }
-    $('discovery-message').textContent=entries?.length?(directoryMode==='search'?`${entries.length} ${entries.length===1?'resultado disponible':'resultados disponibles'}`:(data.pending_has_more?'Se muestran los primeros pendientes accesibles. Busca por nombre para abrir otro médico.':'Sólo se muestra el trabajo accesible para tu cuenta.')):(data.sections?.length||requestState.capabilities?.length?(directoryMode==='search'?'No se encontraron médicos o solicitudes con ese nombre en tu ámbito autorizado.':'No hay trabajo pendiente para tu cuenta.'):'Tu cuenta no tiene funciones disponibles en este espacio. Consulta al Director para revisar tus permisos.');
+    $('discovery-message').textContent=directoryMode==='search'?`${entries.length} resultados disponibles`:pendingState?`${pendingState.actionable_count} tareas por atender en ${pendingState.group_count} perfiles o solicitudes. El círculo rojo cuenta tareas que puedes atender.${pendingState.has_more?' Se muestran los primeros 100 grupos; utiliza la búsqueda para los demás.':''}`:'No fue posible verificar los conteos. Las secciones autorizadas siguen disponibles mediante la búsqueda.';
     list.setAttribute('aria-busy','false');list.scrollTop=directoryPositions[directoryMode];
   }
   async function loadRequestDirectory(signal) {
     try {const result=await json(requestsPath(),signal?{signal}:{});requestCsrf=result.csrf_token||result.data.csrf_token||null;return result.data;}
     catch(error){if(error.name==='AbortError'||error.status===401)throw error;if(error.status===403)return {requests:[],pending_count:0};return {requests:[],pending_count:0,unavailable:true};}
   }
+  async function loadPending(d=null,id=null,signal) {
+    try {return (await json(requestsPath('pending',{doctor_id:d,request_id:d?null:id}),signal?{signal}:{})).data;}
+    catch(error){if(error.name==='AbortError'||error.status===401)throw error;return null;}
+  }
+  function acceptPending(value,d=doctor,id=selectedRequestId){
+    pendingState=value;const c=value?.context;
+    if(selectedRequestId&&!(requestState.capabilities||[]).includes('physician_request_read'))clearRequest();
+    pendingContext=c&&((d&&c.doctor_id===d)||(!d&&id&&c.application_id===id))?c:null;
+  }
+  function contextProfile(data) {
+    if(!data.physician&&pendingContext?.doctor_id)data.physician={doctor_id:pendingContext.doctor_id,name:pendingContext.name,specialty:pendingContext.specialty,city:pendingContext.city,state:pendingContext.state,status:pendingContext.status};
+    return data;
+  }
   async function loadDirectory(query=lastQuery) {
     const epoch=++directoryEpoch;directoryController?.abort();directoryController=new AbortController();$('discovery-list').setAttribute('aria-busy','true');
-    try {const [{data},requests]=await Promise.all([json(readPath(null,query),{signal:directoryController.signal}),loadRequestDirectory(directoryController.signal)]);if(epoch!==directoryEpoch||expired)return;requestState=requests;actor(data);if(!data.sections.length&&!requests.requests?.length&&contextSelected()){clearContext();state=data;say('Tus permisos cambiaron. Ya no hay trabajo accesible en este espacio.');}if(requests.unavailable)say(data.sections.length?'No fue posible consultar solicitudes. Puedes continuar con las imágenes disponibles para tu cuenta.':'No fue posible consultar solicitudes. Intenta actualizar en unos momentos.');discovery(data);if(!state)state=data;}
+    try {const selectedEpoch=contextEpoch;const [{data},requests,counts,current]=await Promise.all([json(readPath(null,query),{signal:directoryController.signal}),loadRequestDirectory(directoryController.signal),loadPending(doctor,selectedRequestId,directoryController.signal),contextSelected()?mediaContext(doctor,directoryController.signal):Promise.resolve(null)]);if(epoch!==directoryEpoch||selectedEpoch!==contextEpoch||expired)return;requestState=requests;acceptPending(counts);actor(data);if(!data.sections.length&&!requests.requests?.length&&contextSelected()){clearContext();state=data;say('Tus permisos cambiaron. Ya no hay trabajo accesible en este espacio.');}if(requests.unavailable)say(data.sections.length?'No fue posible consultar solicitudes. Puedes continuar con las imágenes disponibles para tu cuenta.':'No fue posible consultar solicitudes. Intenta actualizar en unos momentos.');discovery(data);if(!state)state=data;else if(contextSelected()&&current){
+        contextProfile(current);
+        if(doctor&&!current.physician&&contextRequests().length)current.physician=state.physician;
+        if(doctor&&!current.physician){clearContext();state=data;say('Tu acceso al contexto cambió. Selecciona un perfil disponible.');return;}
+        state=current;if(item&&!state.pending_items.some(v=>v.submission_id===item.submission_id))clearItem();renderPanels();renderTabs();
+      }}
     catch(error){if(error.name==='AbortError'||epoch!==directoryEpoch)return;if(error.status===403){sessionFailure(403);return;}$('discovery-message').textContent='No fue posible actualizar la lista. Intenta nuevamente.';$('discovery-list').setAttribute('aria-busy','false');}
   }
   function collapseDiscovery() {directoryPositions[directoryMode]=$('discovery-list').scrollTop;$('discovery').hidden=true;$('pending-toggle').setAttribute('aria-expanded','false');$('search-toggle').setAttribute('aria-expanded','false');$('search-toggle').hidden=!contextSelected();$('physician-search-form').hidden=contextSelected();$('utilities').classList.toggle('has-selection',contextSelected());}
@@ -92,7 +124,7 @@
   async function selectPhysician(id, submission=null) {
     if(busy||!leaveDraft())return;clearContext();doctor=id;const epoch=++contextEpoch;contextController=new AbortController();$('no-selection').hidden=true;say('Cargando perfil…');
     try {
-      const {data}=await json(readPath(id),{signal:contextController.signal});if(epoch!==contextEpoch||doctor!==id||expired)return;actor(data);
+      const [data,counts,requests]=await Promise.all([mediaContext(id,contextController.signal),loadPending(id,null,contextController.signal),loadRequestDirectory(contextController.signal)]);if(epoch!==contextEpoch||doctor!==id||expired)return;requestState=requests;acceptPending(counts,id,null);contextProfile(data);actor(data);
       if(!data.physician||data.physician.doctor_id!==id){clearContext();say('Este perfil ya no está disponible para tu cuenta.');showDiscovery('pending');return;}
       state=data;section=submission?'images':'summary';$('physician-workspace').hidden=false;collapseDiscovery();$('close-discovery').hidden=false;updateContext(data);renderPanels();renderTabs();say('');
       if(submission){const selected=data.pending_items.find(v=>v.submission_id===submission);if(selected)await selectItem(selected,false);else say('El pendiente cambió o ya fue atendido. Se actualizó el perfil.');}
@@ -102,7 +134,7 @@
   function pendingButton(record) {const button=node('button','task-row');button.type='button';button.dataset.submissionId=record.submission_id;button.dataset.doctorId=doctor;button.append(node('span','',labels[record.purpose]||record.label||'Imagen pendiente'),node('span','','Revisar imagen →'));button.onclick=async()=>{if(busy||!leaveDraft())return;resetDraft();section='images';renderTabs();showSection();await selectItem(record,false);};return button;}
   function renderPanels() {
     updateContext(state);const p=state.physician,facts=$('summary-facts');facts.replaceChildren();const requests=contextRequests();
-    for(const [label,value] of [['Estado del perfil',p?(statuses[p.status]||p.status||'Sin estado registrado'):'Sin perfil operativo'],['Pendientes de revisión',String(contextPendingCount(state))]]){const fact=node('div','fact');fact.append(node('span','',label),node('strong','',value));facts.append(fact);}
+    for(const [label,value] of [['Estado del perfil',p?(statuses[p.status]||p.status||'Sin estado registrado'):'Sin perfil operativo'],['Pendientes visibles',contextPendingCount()===null?'Sin verificar':String(contextPendingCount())]]){const fact=node('div','fact');fact.append(node('span','',label),node('strong','',value));facts.append(fact);}
     const tasks=$('summary-pending');tasks.replaceChildren();for(const record of state.pending_items)tasks.append(pendingButton(record));for(const record of requests.filter(r=>r.actionable))tasks.append(requestButton(record));if(!tasks.childElementCount)tasks.append(node('p','muted','No hay pendientes de revisión para este contexto.'));
     const activity=$('activity-list');activity.replaceChildren();$('recorded-activity').hidden=!state.activity?.length;for(const record of state.activity||[])activity.append(node('p','',`${record.label||labels[record.purpose]||'Imagen'} · ${({APPROVED:'Aprobada',NEEDS_WORK:'Otra imagen solicitada',REJECTED:'Rechazada',WITHDRAWN:'Retirada'}[record.status]||record.status)} · ${dateLabel(record.recorded_at)}`));
     const media=$('media-items');media.replaceChildren();$('images-empty').hidden=state.pending_items.length>0;
@@ -111,22 +143,40 @@
     for(const record of state.published_assets||[]){const card=node('div','published-item');if(typeof record.public_url==='string'&&record.public_url){try{const url=new URL(record.public_url,location.origin);if(url.origin===location.origin){const image=node('img');image.src=url.href;image.alt=record.alt_text||labels[record.purpose]||'Imagen publicada';image.loading='lazy';card.append(image);}}catch{/* Invalid public projections are not requested. */}}card.append(node('span','',labels[record.purpose]||'Imagen publicada'));published.append(card);}
     renderRequestList();showSection();
   }
-  function showSection() {for(const id of ['summary','requests','images','history'])$(id+'-panel').hidden=section!==id;$('work-panel').setAttribute('aria-labelledby','tab-'+section);$('work-panel').dataset.doctorId=doctor||'';$('work-panel').dataset.requestId=selectedRequestId||'';$('work-panel').dataset.section=section;}
-  function workspaceSections() {if(!contextSelected())return [];const available=[{id:'summary',label:'Resumen'}];if(contextRequests().length||selectedRequestId)available.push({id:'requests',label:'Solicitudes'});if(doctor&&state?.sections?.some(t=>t.id==='images'))available.push({id:'images',label:'Imágenes'});if(available.length>1)available.push({id:'history',label:'Historial'});return available;}
+  function showSection() {
+    const entry=workspaceSections().find(v=>v.id===section),restricted=entry?.restricted;
+    for(const id of ['summary','requests','images','history'])$(id+'-panel').hidden=restricted||section!==id;
+    $('restricted-panel').hidden=!restricted;
+    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent='Esta sección requiere autorización para realizar operaciones.';
+      const n=sectionCount(section);$('restricted-summary').textContent=n>0?`${n} ${n===1?'pendiente visible':'pendientes visibles'} bajo tu permiso de resumen. Solicita atención a una persona autorizada mediante los canales habituales.`:'No hay un resumen de pendientes disponible para tu cuenta en esta sección.';
+    }
+    $('work-panel').setAttribute('aria-labelledby','tab-'+section);$('work-panel').dataset.doctorId=doctor||'';$('work-panel').dataset.requestId=selectedRequestId||'';$('work-panel').dataset.section=section;
+  }
+  const tabCatalog=[['summary','Resumen'],['requests','Solicitudes'],['profile','Perfil'],['accreditation','Acreditación'],['offices','Consultorios'],['services','Servicios y atención'],['images','Imágenes'],['plan','Plan'],['reviews','Opiniones'],['seo','SEO'],['history','Historial']];
+  function workspaceSections() {
+    if(!contextSelected())return [];
+    return tabCatalog.map(([id,label])=>({id,label,restricted:id!=='summary'&&!(pendingContext?.permissions?.[id]??(id==='images'?doctor&&state?.sections?.some(t=>t.id==='images'):id==='requests'?contextRequests().length||selectedRequestId:id==='history'?contextRequests().length||state?.sections?.some(t=>t.id==='images'):false))}));
+  }
+  function sectionCount(id){return pendingContext?.sections?.[id]?.visible_count||0;}
+
   function closeMore() {$('more-menu').hidden=true;$('more-toggle').setAttribute('aria-expanded','false');}
   function renderTabs() {
-    if(!state?.sections)return;const tabs=$('section-tabs'),menu=$('more-menu');tabs.replaceChildren();menu.replaceChildren();closeMore();
-    const available=workspaceSections();if(!available.some(t=>t.id===section))section=available[0]?.id||'summary';
-    for(const entry of available){const button=node('button','section-tab',entry.label);button.type='button';button.id='tab-'+entry.id;button.dataset.section=entry.id;button.setAttribute('role','tab');button.setAttribute('aria-selected',String(entry.id===section));button.setAttribute('aria-controls','work-panel');button.tabIndex=entry.id===section?0:-1;button.onclick=()=>switchSection(entry.id);tabs.append(button);}
-    const compact=matchMedia('(max-width:520px)').matches;const width=$('section-navigation').clientWidth,buttons=[...tabs.children];let used=0;const total=buttons.reduce((sum,b)=>sum+b.getBoundingClientRect().width,0);const overflow=compact&&buttons.length>1||total>width;
-    const hidden=[];for(const button of buttons){const w=button.getBoundingClientRect().width;const hide=compact?button.dataset.section!==section:overflow&&used+w>width-90;if(hide)hidden.push(button);else used+=w;}
-    for(const button of hidden){button.hidden=true;const option=node('button','',button.textContent);option.type='button';option.dataset.section=button.dataset.section;option.setAttribute('role','menuitemradio');option.setAttribute('aria-checked',String(button.dataset.section===section));option.onclick=()=>switchSection(button.dataset.section);menu.append(option);}
-    $('more-sections').hidden=hidden.length===0;showSection();
+    if(!state?.sections)return;const tabs=$('section-tabs'),menu=$('more-menu'),scroll=tabs.scrollLeft;tabs.replaceChildren();menu.replaceChildren();closeMore();
+    for(const entry of workspaceSections()){
+      const button=node('button','section-tab');button.append(node('span','',entry.label));button.type='button';button.id='tab-'+entry.id;button.dataset.section=entry.id;
+      const n=sectionCount(entry.id);if(n)button.append(node('span','tab-count',String(n)));
+      if(entry.restricted){button.append(node('span','tab-lock','◇'));button.classList.add('restricted-tab');button.title='Acceso restringido';}
+      const label=entry.label+(n?`, ${n} pendientes`:'')+(entry.restricted?', acceso restringido':'');button.setAttribute('aria-label',label);
+      button.setAttribute('role','tab');button.setAttribute('aria-selected',String(entry.id===section));button.setAttribute('aria-controls','work-panel');button.tabIndex=entry.id===section?0:-1;button.onclick=()=>switchSection(entry.id);tabs.append(button);
+      const option=node('button','',label);option.type='button';option.dataset.section=entry.id;option.setAttribute('role','menuitemradio');option.setAttribute('aria-checked',String(entry.id===section));option.onclick=()=>switchSection(entry.id);menu.append(option);
+    }
+    tabs.scrollLeft=scroll;$('more-sections').hidden=false;showSection();
   }
-  function switchSection(id) {if(busy||id===section){closeMore();return;}if(!leaveDraft())return;resetDraft();section=id;renderTabs();showSection();if(id==='history')loadHistory();if(id==='requests'&&selectedRequestId)refreshRequest();const tab=$('tab-'+id);(tab&&!tab.hidden?tab:$('more-toggle')).focus({preventScroll:true});}
+
+  function switchSection(id) {if(busy||id===section){closeMore();return;}if(!leaveDraft())return;resetDraft();section=id;renderTabs();showSection();if(!workspaceSections().find(v=>v.id===id)?.restricted){if(id==='history')loadHistory();if(id==='requests'&&selectedRequestId)refreshRequest();}const tab=$('tab-'+id);(tab&&!tab.hidden?tab:$('more-toggle')).focus({preventScroll:true});if(tab){const tabs=$('section-tabs');if(tab.offsetLeft<tabs.scrollLeft)tabs.scrollLeft=tab.offsetLeft;else if(tab.offsetLeft+tab.offsetWidth>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=tab.offsetLeft+tab.offsetWidth-tabs.clientWidth;}}
   function requestType(type) {return /CLAIM/.test(type||'')?'Reclamo de perfil existente':'Solicitud de perfil nuevo';}
   function contextRequests() {return (requestState.requests||[]).filter(r=>doctor?r.doctor_id===doctor:r.request_id===selectedRequestId);}
-  function contextPendingCount(data) {return Math.max(0,Number(data?.physician?.pending_count??data?.pending_items?.length)||0)+new Set(contextRequests().filter(r=>r.actionable&&r.request_id).map(r=>r.request_id)).size;}
+  function contextPendingCount() {return pendingContext?.visible_count??null;}
   function requestButton(record) {
     const button=node('button','task-row');button.type='button';button.dataset.requestId=record.request_id;
     button.append(node('span','',`${requestType(record.type)} · ${requestStates[record.state]||record.state}`),node('span','','Revisar solicitud →'));
@@ -155,8 +205,8 @@
     contextController=new AbortController();$('no-selection').hidden=true;say('Cargando solicitud…');
     try {
       const detail=await requestSnapshot(id,contextController.signal);if(epoch!==contextEpoch||revision!==requestEpoch||expired)return;
-      const data=await mediaContext(detail.doctor_id||null,contextController.signal);if(epoch!==contextEpoch||selectedRequestId!==id||expired)return;
-      requestDetail=detail;doctor=detail.doctor_id||null;state=data;if(doctor&&!state.physician)state.physician=requestPhysician(detail);
+      const [data,counts]=await Promise.all([mediaContext(detail.doctor_id||null,contextController.signal),loadPending(detail.doctor_id||null,id,contextController.signal)]);if(epoch!==contextEpoch||selectedRequestId!==id||expired)return;
+      requestDetail=detail;doctor=detail.doctor_id||null;acceptPending(counts,doctor,id);state=data;if(doctor&&!state.physician)state.physician=requestPhysician(detail);
       section='requests';actor(state);$('physician-workspace').hidden=false;collapseDiscovery();$('close-discovery').hidden=false;
       renderPanels();renderTabs();renderRequest();if(detail.state==='APPROVED')await loadOwnership();if(epoch!==contextEpoch||id!==selectedRequestId)return;say('');$('physician-name').focus({preventScroll:true});$('physician-workspace').scrollIntoView({block:'start',behavior:'instant'});
     }catch(error){if(error.name==='AbortError'||epoch!==contextEpoch)return;clearContext();say(error.status===403?'Tu cuenta ya no puede consultar esta solicitud.':'La solicitud no está disponible. Actualiza la lista antes de continuar.');showDiscovery('pending');}
@@ -362,7 +412,7 @@
   async function refresh() {
     if(expired||busy||pollBusy)return;pollBusy=true;const epoch=contextEpoch,d=doctor;
     try {
-      const [data,requests]=await Promise.all([mediaContext(d),loadRequestDirectory()]);if(epoch!==contextEpoch||d!==doctor||expired)return;requestState=requests;actor(data);
+      const [data,requests,counts]=await Promise.all([mediaContext(d),loadRequestDirectory(),loadPending(d,selectedRequestId)]);if(epoch!==contextEpoch||d!==doctor||expired)return;requestState=requests;acceptPending(counts,d,selectedRequestId);contextProfile(data);actor(data);
       if(d&&!data.physician&&selectedRequestId&&requestDetail&&contextRequests().length)data.physician=requestPhysician(requestDetail);
       if(d&&!data.physician){clearContext();state=data;say('Tu acceso o el perfil disponible cambió. La vista se actualizó.');showDiscovery('pending');return;}
       state=data;if(!$('discovery').hidden)discovery(data);if(contextSelected()){$('physician-workspace').hidden=false;renderPanels();renderTabs();if(item){const current=data.pending_items.find(v=>v.submission_id===item.submission_id);if(!current){clearItem();say('El pendiente ya fue atendido o dejó de estar disponible.');}else{const selectedEpoch=itemEpoch;const next=await freshOptions(d);if(epoch!==contextEpoch||doctor!==d||selectedEpoch!==itemEpoch)return;const lostDraft=dirty()&&((options.can_request_replacement&&!next.can_request_replacement)||(options.can_upload_corrected&&!next.can_upload_corrected));options=next;if(lostDraft){resetDraft();mediaSay('Tus permisos cambiaron. Se descartaron los cambios que ya no puedes guardar.');}controls();}}if(selectedRequestId)await refreshRequest();if(section==='history')await loadHistory();}

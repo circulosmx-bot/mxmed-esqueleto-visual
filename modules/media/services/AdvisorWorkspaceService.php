@@ -41,7 +41,7 @@ final class AdvisorWorkspaceService
     }
 
     /** Same submitted-state contract used by the original Media inbox. */
-    private static function scope(string $alias='s'):string
+    public static function scope(string $alias='s'):string
     {
         return "$alias.owner_type='PHYSICIAN' AND $alias.purpose IN ".self::PURPOSES." AND $alias.technical_status='READY' AND $alias.review_status IN ('PENDING_REVIEW','APPROVED','NEEDS_WORK') AND ($alias.review_status<>'PENDING_REVIEW' OR EXISTS(SELECT 1 FROM media_review_files ready_file WHERE ready_file.submission_id=$alias.submission_id AND ready_file.role='REVIEW')) AND ".MediaSubmissionState::sql($alias);
     }

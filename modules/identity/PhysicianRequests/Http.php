@@ -24,6 +24,7 @@ final class Http
                     self::keys($_GET,['mode','request_id','file_id']);$r=$s->readEvidence($actor,$_GET['request_id'],$_GET['file_id']);header('Content-Type: '.$r['mime']);header('Content-Security-Policy: sandbox');header('Content-Disposition: inline; filename="documento-solicitud"');echo $r['bytes'];return;
                 }
                 $result=match($mode){
+                    'pending'=>(new PendingSummary($s->a,$services['enrollment']))->read($actor,$_GET['doctor_id']??null,$_GET['request_id']??null),
                     'read'=>$s->read($actor,$_GET['request_id']??null,$_GET['doctor_id']??null,$_GET['query']??''),
                     'applicant'=>$s->applicantRead($actor,$_GET['request_id']??''),
                     'result'=>$s->result($actor,$_GET['case_id']??''),

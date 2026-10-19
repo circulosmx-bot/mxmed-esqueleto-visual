@@ -242,3 +242,7 @@ COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta g
 ## COM-10 / J01 / J02 — WORKSPACE02
 
 [Solicitud médica e historial](../identity/ASE-ADVISOR-WORKSPACE02.md) añade delegación operativa explícita para revisar y resolver CLAIM FREE/nueva por tipo. El revisor real queda atribuido en la auditoría canónica, compartida con la vista Director; esto no lo convierte en vendedor, captador, owner, colaborador médico ni titular de comisión/cartera. El solicitante conserva su Identity y la aceptación propia del owner. Plan/publicación/C4 son etapas distintas; no se infiere pago. D01–D08 y COM-01..09 intactos. [Ownership 23 PASS](../evidence/ase-advisor-workspace02/ownership-browser.json) acredita actor solicitante y autorización exacta del Advisor en el mismo evento físico, sin membresía del revisor; [Media 10 PASS](../evidence/ase-advisor-workspace02/ui-supplement.json) mantiene el historial compartido. Seguridad final 20 PASS; sin activación real.
+
+## WORKSPACE03 — seguimiento operativo acotado
+
+[WORKSPACE03](../identity/ASE-ADVISOR-WORKSPACE03.md) distingue ámbito de trabajo Media/solicitudes de cartera comercial. El permiso de resumen sólo añade agregados de la otra sección para esos mismos médicos, no enumera perfiles públicamente buscables ni descubre solicitantes. No crea relación asesor–cliente, propiedad comercial, asignación, venta, comisión o escalamiento; COM-01..09 y D01–D08 intactos.

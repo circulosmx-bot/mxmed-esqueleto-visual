@@ -1,0 +1,46 @@
+{
+  "checks": [
+    {
+      "name": "Final source renders four visible physician items, section counts and seven actionable items",
+      "pass": true
+    },
+    {
+      "name": "Failed canonical mutation does not decrement counts",
+      "pass": true
+    },
+    {
+      "name": "Repeated authoritative reads do not duplicate or decrement work",
+      "pass": true
+    },
+    {
+      "name": "Late physician A count response cannot populate physician B",
+      "pass": true
+    },
+    {
+      "name": "Unavailable aggregate is not represented as zero and does not block Media",
+      "pass": true
+    },
+    {
+      "name": "Authoritative count recovery restores exact current values",
+      "pass": true
+    },
+    {
+      "name": "Live Media read revocation removes old protected rows and blob without reload",
+      "pass": true
+    },
+    {
+      "name": "Retained request scope exposes only authorized Media summary after revocation",
+      "pass": true
+    },
+    {
+      "name": "Regrant restores current operational data and exact seven-item queue",
+      "pass": true
+    },
+    {
+      "name": "No JavaScript errors during denial, late response and unavailable-reader recovery",
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "result": "PASS"
+}

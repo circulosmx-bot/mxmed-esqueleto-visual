@@ -1,0 +1,42 @@
+{
+  "result": "PASS",
+  "scope": "OWNED_ISOLATED_SYNTHETIC",
+  "source_baseline": "40b8691f94636909bfb448655939e91387f59fe5",
+  "branch": "feature/ase-advisor-workspace03-physician-pending-groups",
+  "at_utc": "2026-10-19T06:03:00.537651+00:00",
+  "source_sha256": {
+    "assets/css/staff-workspace.css": "9dfec39e460cef62548164b81d246a0dfa337d652b592c7c9eb20bc960505f14",
+    "assets/js/staff-workspace.js": "bfc19f1c42e572a6d80a439d3fcc9b600924e527e10cca7acd9f779903754968",
+    "internal/staff-workspace/index.php": "2975d3b5b5607f9fb09c70881c7fa9185f2be852a278f605b2a66137da1340e5",
+    "modules/identity/PhysicianRequests/Http.php": "d51facabc30ea32ba627f0389d7e17acf459724adf49f420f8d88325ad7432fc",
+    "modules/identity/PhysicianRequests/PendingSummary.php": "fc159a5ca8e28b7ce6d09400d69307a204abf8d7ddea5c18072cd5aa96df05ae",
+    "modules/identity/PhysicianRequests/RequestService.php": "aa07a49b9449124ded2013f7d94a48a481894bdbca04cd835baf70cf4d3f07b9",
+    "modules/identity/services/InternalCapabilityCatalog.php": "d2c6a0c2a7b7115c6ce322dd38206df4d68997e79aff1cf9a8280ef5530028ed",
+    "modules/media/services/AdvisorWorkspaceService.php": "339c140cb502c28acf66e3187b536d9110da8a39e95cd1c44a57049b4f60ce68",
+    "scripts/ase-adm02-workflow-router.php": "5c2be75e61994122f73826ac46ad8456a0b702a90c87c74099c389b82883d03d",
+    "scripts/ase-advisor-workspace03-browser.py": "1905d1818b8a8b6c6b42bcb5d7975aa959e4de80e11ef6060272766a18cca00e",
+    "scripts/ase-advisor-workspace03-checks.py": "0194597f1c1cb463fd00811c22c6a09299055ec7356b4f9841d9fd91af678c8b",
+    "scripts/ase-advisor-workspace03-qa.py": "01864017a65611461617d13e2bbcba386fa72ea40b05b08a31bc61bf680ceef5",
+    "scripts/ase-advisor-workspace03-review.py": "a2738666b1a42045e2c2551ce75068681ec66a08a4d1714dfd0a9a0b02fe975f",
+    "scripts/ase-advisor-workspace03-supplement.py": "a73ccade272f31829f3f4550268ebe8bddac492d8f07ba164a0440a85f97a616"
+  },
+  "syntax_pass": {
+    ".js": 1,
+    ".php": 7,
+    ".py": 5
+  },
+  "main_checks": 53,
+  "browser_checks_included": 39,
+  "supplement_checks": 10,
+  "responsive_combinations": 6,
+  "protected_worktrees": 26,
+  "original_runtime_and_listeners_unchanged": true,
+  "new_database_migration": false,
+  "real_personal_data_used": false,
+  "production_activation": false,
+  "director_visual_acceptance": "PENDING",
+  "physical_safari": "NOT_RUN",
+  "coverage_note": "Final supplement covers source after directory-context revalidation, stable zero categories and singular restricted-state copy. No unrelated historical suites.",
+  "preview_delivery": "preview-delivery.json",
+  "chromium_director_and_advisor_opened": true
+}

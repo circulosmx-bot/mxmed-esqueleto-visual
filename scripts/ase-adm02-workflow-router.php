@@ -10,7 +10,8 @@ try{
  if($path==='/public/identity/acceso.php'){
   $workspace=getenv('MXMED_ADVISOR_WORKSPACE_REVIEW')==='1';
   $workspace02=getenv('MXMED_ADVISOR_WORKSPACE02_REVIEW')==='1';
-  $control=$workspace02?'/ase-advisor-workspace02-review.py':($workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py'));
+  $workspace03=$workspace02&&is_file(__DIR__.'/ase-advisor-workspace03-review.py');
+  $control=$workspace03?'/ase-advisor-workspace03-review.py':($workspace02?'/ase-advisor-workspace02-review.py':($workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py')));
   $owned=realpath(getenv('ASE_INT02A_OWNED'));$command='python3 '.realpath(__DIR__.$control).' '.$owned;
   $staffSyntheticLoginGuide=['credentials'=>$command.($workspace02?' credentials-director':' credentials'),'mfa'=>$command.($workspace02?' mfa-director':' mfa')];
   if($workspace&&($_GET['next']??'')==='/internal/staff-workspace/index.php'){

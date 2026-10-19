@@ -115,12 +115,14 @@ final class RequestService
             $response=null;foreach($responses as $v)if($v['resolution_id']===$r['resolution_id'])$response=['date'=>$v['created_at'],'text'=>$this->cipher->open($v['response_ciphertext'],'profile-request-response:'.$v['response_id'],$v['key_id'])];
             $history[]=['state'=>$r['state'],'date'=>$r['created_at'],'reason'=>$reason,'response'=>$response];
         }
-        $actionable=!in_array($state,['APPROVED','REJECTED'],true);$canResolve=in_array(self::capability($o),$caps,true);
-        $actions=$actionable&&$canResolve?['NEEDS_INFORMATION','REJECTED']:[];
-        if($actionable&&$canResolve&&$hasEvidence&&$f['eligible'])array_unshift($actions,'APPROVED');
+        $unresolved=!in_array($state,['APPROVED','REJECTED'],true);$canResolve=in_array(self::capability($o),$caps,true);
+        $waiting=$state==='NEEDS_INFORMATION'&&!array_filter($responses,fn($v)=>$v['resolution_id']===$f['h']['resolution_id']);
+        $actionable=$unresolved&&$canResolve&&!$waiting;
+        $actions=$unresolved&&$canResolve?['NEEDS_INFORMATION','REJECTED']:[];
+        if($unresolved&&$canResolve&&$hasEvidence&&$f['eligible'])array_unshift($actions,'APPROVED');
         return ['request_id'=>$id,'application_id'=>$id,'type'=>$o['initial_origin'],'state'=>$state,'submitted_at'=>$this->a->query('SELECT created_at FROM auth_physician_enrollment_intake_revisions WHERE origin_id=? AND intake_version=?',[$id,$o['intake_version']])->fetchColumn(),
             'intake_version'=>(int)$o['intake_version'],'review_version'=>(int)($f['h']['resolution_version']??0),'doctor_id'=>$f['profile'],'label'=>$f['p']['display_name']??trim($d['given_names'].' '.$d['first_surname'].' '.$d['second_surname']),
-            'context_label'=>$f['profile']===null?'Solicitud de perfil nuevo':($f['p']['display_name']??'Perfil médico'),'actionable'=>$actionable,
+            'context_label'=>$f['profile']===null?'Solicitud de perfil nuevo':($f['p']['display_name']??'Perfil médico'),'actionable'=>$actionable,'unresolved'=>$unresolved,'waiting_applicant'=>$waiting,
             'applicant'=>['account_id'=>$o['account_id'],'label'=>'Cuenta solicitante '.$o['account_id'],'email_verified'=>true],
             'proposed_profile'=>['display_name'=>trim($d['given_names'].' '.$d['first_surname'].' '.$d['second_surname']),'specialty'=>$d['specialty'],'professional_license'=>$d['professional_license'],'location'=>$d['city'].', '.$d['state']],
             'existing_profile'=>$this->publicProfile($f['p']),'evidence_status'=>$f['e']['status']??'NOT_LINKED','evidence_ready'=>$f['evidenceReady'],'has_evidence_access'=>$hasEvidence,

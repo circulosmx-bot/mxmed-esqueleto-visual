@@ -22,6 +22,7 @@ final class InternalCapabilityCatalog
         ];$result=[];
         foreach($media as $key=>[$label,$description])$result[$key]=['key'=>$key,'domain'=>'media_review','label'=>$label,'description'=>$description,'delegable'=>true,'kind'=>'operational'];
         foreach([
+            'physician_pending_summary_read'=>['Consultar resumen de pendientes médicos','Ver sólo conteos por sección de médicos con trabajo de seguimiento ya autorizado; no concede acceso a solicitudes, documentos ni decisiones.'],
             'physician_request_read'=>['Consultar solicitudes de perfiles','Consultar reclamos y solicitudes de perfil nuevo en su contexto exacto; no permite abrir evidencia protegida ni resolver.'],
             'physician_request_evidence_read'=>['Consultar evidencia de solicitudes','Abrir evidencia protegida de una solicitud autorizada; requiere también acceso vigente a solicitudes.'],
             'physician_claim_resolve'=>['Resolver reclamos de perfiles gratuitos','Resolver el reclamo exacto de un perfil gratuito sin propietario, con revisión y MFA; no permite transferencias ni acreditación profesional.'],
