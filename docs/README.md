@@ -66,6 +66,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 - Servicio/writer: [PublicEnrollmentService](../modules/identity/Accreditation/PublicEnrollmentService.php), [ReviewedEnrollmentService](../modules/identity/Accreditation/ReviewedEnrollmentService.php); lectura/autoridad [EnrollmentResolutionAuthority](../modules/identity/Accreditation/EnrollmentResolutionAuthority.php).
 - Contratos: [PUB-ENR02](identity/PUB-ENR02-pending-enrollment.md), [PUB-ENR03](identity/PUB-ENR03-reviewed-resolution-handoff.md). QA: [browser PUB-ENR03](../scripts/pub-enr03-browser-qa.py).
 - Límite: preservar origen CLAIM/FORMAR PARTE; una resolución no fabrica fuentes, membresía ni aprobación C4.
+- Sucesor acotado: [WORKSPACE02](identity/ASE-ADVISOR-WORKSPACE02.md) integra resolución de solicitud en el workspace, draft nuevo ligado y continuación de ownership/C4 separada; principal 51 PASS, ownership 23 PASS y UI adicional 10 PASS, seguridad final 20 PASS; sin activación normal-local.
 
 ### Informes de corrección pública — IMPLEMENTED_BUT_INACTIVE
 - UI: [perfil público](../profiles/doctor.php), [staff original](../internal/media-review/index.php) (`section=correcciones`).
@@ -123,6 +124,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 ### Gobierno, seguridad y auditoría — CURRENT / APPROVED_DECISION
 
 - **Workspace staff centrado en médico, integración R2:** [ASE-ADVISOR-WORKSPACE01-R2](identity/ASE-ADVISOR-WORKSPACE01-R2.md), contexto/pestañas superiores, búsqueda y pendientes por ámbito Media; matrices de nueve dominios y dieciséis capacidades, autoridad Director/Advisor separada. Resumen e Imágenes conectados; 57 checks, seis smoke suplementarios, 13 retorno-login y seis combinaciones Chromium/WebKit PASS; dos ventanas nativas entregadas, aceptación visual PENDING, sin producción.
+- **Solicitudes de perfil e historial, WORKSPACE02:** [Contrato](identity/ASE-ADVISOR-WORKSPACE02.md), cuatro grants exactos, aplicación/perfil/solicitante separados y efecto owner mediante R3/aceptación canónica; principal/ownership/UI verificados y preview owned conservado; seguridad final 20 PASS, sin producción.
 - **Baseline Advisor funcional y ventana nativa aislada:** [ASE-ADM02-OPER09](identity/ASE-ADM02-OPER09.md): formulario completo en área real macOS, alta canónica, grant/revoke y consumer Media original con sesión independiente; no implementó el workspace que ahora entrega R2.
 
 - **Consolidación funcional staff aislada:** [ASE-ADM02](identity/ASE-ADM02-FUNCTIONAL-CONSOLIDATION.md), solicitudes, vínculo Identity, documentos agrupados, revisión Director con MFA y alta Advisor canónica; UI aprobada y grants individuales, sólo ensayo sintético.

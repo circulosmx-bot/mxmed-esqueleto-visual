@@ -4,7 +4,7 @@
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const personName=m=>m.personal_profile?[m.personal_profile.given_names,m.personal_profile.first_surname,m.personal_profile.second_surname].filter(Boolean).join(' '):'Datos personales no disponibles';
   const staffStatus=m=>({ACTIVE:'Activo',SUSPENDED:'Suspendido',REMOVED:'Baja definitiva'}[m.staff_status]||'Estado no disponible');
-  const groups=[['accreditation','Acreditación profesional',['physician_accreditation','professional_sources']],['media','Revisión de medios',['media_review']],['corrections','Correcciones de perfiles',['public_profile_corrections','public_profile_correction_application']],['profiles','Administración de perfiles',['profile_administration']],['providers','Organizaciones y proveedores',['provider_claim','provider_commercial']]];
+  const groups=[['requests','Solicitudes de perfiles médicos',['physician_requests']],['accreditation','Acreditación profesional',['physician_accreditation','professional_sources']],['media','Revisión de medios',['media_review']],['corrections','Correcciones de perfiles',['public_profile_corrections','public_profile_correction_application']],['profiles','Administración de perfiles',['profile_administration']],['providers','Organizaciones y proveedores',['provider_claim','provider_commercial']]];
   const future=new Set(['profile_create','profile_curate','profile_publication_manage','profile_support_assist']);
   let category='ADVISOR',status='ACTIVE',page=1,q='',authority=null,catalog={},selected=null,listEpoch=0,detailEpoch=0,searchTimer;
   const say=message=>{$('feedback').textContent=message;};
@@ -71,7 +71,7 @@
   function history(m){
     const h=m.history;if(!h||h.state==='UNAVAILABLE')return '<p>El historial no está disponible en este momento.</p>';
     if(!h.items.length)return '<p>No hay acciones registradas en el historial disponible.</p>';
-    return '<p class="history-note">'+(h.has_more?'Últimas 100 acciones. ':'')+'Admisión, administración del equipo y actividad autorizada registrada.</p><ol class="team-history">'+h.items.map(e=>`<li data-event="${esc(e.id)}"><time datetime="${esc(e.at)}">${esc(new Date(e.at).toLocaleString('es-MX'))}</time><p><strong>${esc(e.description)}</strong> · ${e.direction==='BY_MEMBER'?'Realizada por el integrante':'Acción administrativa sobre el integrante'}</p><p>${esc(e.resource)} · ${esc(e.outcome==='SUCCESS'?'Confirmada':e.outcome==='FAILURE'?'Fallida':e.outcome)}</p></li>`).join('')+'</ol>';
+    return '<p class="history-note">'+(h.has_more?'Últimas 100 acciones. ':'')+'Admisión, administración del equipo y actividad autorizada registrada.</p><ol class="team-history">'+h.items.map(e=>`<li data-event="${esc(e.id)}"><time datetime="${esc(e.at)}">${esc(new Date(e.at).toLocaleString('es-MX'))}</time><p><strong>${esc(e.description)}</strong> · ${e.direction==='BY_MEMBER'?'Realizada por el integrante':e.direction==='AUTHORIZED_BY_MEMBER'?'Activación del solicitante autorizada por el integrante':'Acción administrativa sobre el integrante'}</p><p>${esc(e.resource)} · ${esc(e.outcome==='SUCCESS'?'Confirmada':e.outcome==='FAILURE'?'Fallida':e.outcome)}</p></li>`).join('')+'</ol>';
   }
   function renderDetail(){
     const m=selected,master=m.governance_class==='MASTER_ADMIN';

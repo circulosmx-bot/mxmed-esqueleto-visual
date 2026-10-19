@@ -45,7 +45,7 @@ final class ReviewedEnrollmentService
             require_once dirname(__DIR__,2).'/profiles/controllers/PublicProfileController.php';
             $dto=(new \Profiles\Controllers\PublicProfileController(new \Profiles\Repositories\PublicProfileRepository($this->a->pdo)))->showByDoctorId($target);
             $profileHash=self::hash([$dto['data']['profile']??null,$dto['data']['plan']??null,$dto['data']['claim']??null]);
-            $blocked=($dto['ok']??false)!==true||($dto['data']['profile']['doctor_id']??null)!==$target||($dto['data']['claim']['claim_allowed']??false)!==true;
+            $blocked=($dto['ok']??false)!==true||($dto['data']['profile']['doctor_id']??null)!==$target||(($dto['data']['claim']['claim_allowed']??false)!==true&&!\Identity\PhysicianRequests\MaterializedApplication::allows($this->a->pdo,$o,$target));
             // Known canonical conflict sources must exist; query failures deny the operation.
             $owner=$this->a->query("SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active' FOR UPDATE",[$target])->fetchColumn();
             $binding=$this->a->query('SELECT binding_id FROM auth_account_professional_bindings WHERE profile_doctor_id=? FOR UPDATE',[$target])->fetchColumn();

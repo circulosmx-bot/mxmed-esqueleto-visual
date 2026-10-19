@@ -86,6 +86,7 @@ a:hover { color: var(--mx-deep); }
 .auth-card__intro { margin: .7rem 0 1.45rem; color: var(--mx-muted); font-size: 1rem; }
 
 .auth-form { display: grid; gap: 1rem; }
+[data-request-id] [hidden] { display: none !important; }
 .field { display: grid; gap: .4rem; }
 .field label { color: var(--mx-ink); font-size: .93rem; font-weight: 700; }
 .field input {

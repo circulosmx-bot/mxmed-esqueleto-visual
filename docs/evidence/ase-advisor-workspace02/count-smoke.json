@@ -1,0 +1,23 @@
+{
+  "checks": [
+    {
+      "name": "Context header and Resumen count three canonical Media items plus one claim as four",
+      "pass": true
+    },
+    {
+      "name": "A duplicated authorized read projection counts its canonical request ID once",
+      "pass": true
+    },
+    {
+      "name": "Completed materialized new profile has no phantom pending request or Media count",
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "synthetic_only": true,
+  "business_mutations": 0,
+  "media_pending": 3,
+  "request_pending": 1,
+  "context_pending": 4,
+  "completed_new_profile_pending": 0
+}

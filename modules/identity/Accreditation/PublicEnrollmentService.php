@@ -154,6 +154,16 @@ final class PublicEnrollmentService
         $this->a->applicant($r['account_id']);
         return ['origin'=>$r,'intake'=>$this->projection($r,true)['intake']];
     }
+    /** WORKSPACE02: exact request-review read, independent from C4/professional grants. */
+    public function requestIntakeInTransaction(AuthenticatedAccessContext $reviewer,string $id,int $version):array
+    {
+        if(!$this->a->pdo->inTransaction())throw new \RuntimeException('enrollment_review_transaction_required');
+        $r=$this->row($id);
+        if($r['account_id']===null||$r['intake_state']!=='SUBMITTED'||(int)$r['intake_version']!==$version)throw new \RuntimeException('enrollment_version_conflict');
+        (new \Identity\PhysicianRequests\RequestAuthority($this->a->pdo))->assert($reviewer,'physician_request_read',$r['account_id'],true);
+        $this->a->applicant($r['account_id']);
+        return ['origin'=>$r,'intake'=>$this->projection($r,true)['intake']];
+    }
     /** Exact source-verification read, independent from the accreditation-review grant. */
     public function sourceIntakeInTransaction(AuthenticatedAccessContext $reviewer,string $id,int $version):array
     {

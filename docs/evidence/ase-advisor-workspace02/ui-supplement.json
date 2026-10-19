@@ -1,0 +1,59 @@
+{
+  "checks": [
+    {
+      "name": "Ready claim enters exact original Aurora context",
+      "pass": true
+    },
+    {
+      "name": "Actual canonical Media replacement changes only its pending item and preserves useful work",
+      "pass": true
+    },
+    {
+      "name": "Media operation retains the selected claim and physician",
+      "pass": true
+    },
+    {
+      "name": "Media mutation and canonical audit persist once with the actual Advisor",
+      "pass": true
+    },
+    {
+      "name": "Same physician/request Historial projects canonical Media event",
+      "pass": true
+    },
+    {
+      "name": "Director Advisor-history and physician history project the identical immutable event and label",
+      "pass": true
+    },
+    {
+      "name": "Injected request503 leaves real authorized Media directory and review operable",
+      "pass": true
+    },
+    {
+      "name": "Request service recovers without resetting physician or application records",
+      "pass": true
+    },
+    {
+      "name": "Final native viewport and compact selected context remain within physical bounds",
+      "pass": true
+    },
+    {
+      "name": "No JavaScript errors in supplemental real browser journeys",
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "synthetic_only": true,
+  "expires": 1792472465.0,
+  "event_id": "3ea1be956d7b2b8dea3c2e6ad33ce94e75bb16a6d98ff7e232f90b9db363866d",
+  "submission_id": "b9024d5e-c279-4379-bed1-07f962502de3",
+  "native": {
+    "width": 1366,
+    "height": 783,
+    "outerHeight": 870,
+    "availableHeight": 870,
+    "scrollWidth": 1366
+  },
+  "ready_claim": "f4f3d6c6-e706-491c-8cac-fe6e5f8cc27e",
+  "ready_application": "3a6d7153-f14a-44f4-b810-4580ae6a5380",
+  "remaining_media_pending_for_physician": 3
+}

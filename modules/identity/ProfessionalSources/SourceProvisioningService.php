@@ -51,7 +51,7 @@ final class SourceProvisioningService
         if($target===null)throw new \RuntimeException('source_pending_new_profile');
         $this->a->scope?->profile($target);
         $this->a->query('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE',[$target]);
-        $this->enrollment->claim($target);
+        if(!\Identity\PhysicianRequests\MaterializedApplication::allows($this->a->pdo,$o,$target))$this->enrollment->claim($target);
         if($this->a->query("SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND role_code='owner' AND status='active' FOR UPDATE",[$target])->fetchColumn()!==false
             ||$this->a->query('SELECT binding_id FROM auth_account_professional_bindings WHERE profile_doctor_id=? FOR UPDATE',[$target])->fetchColumn()!==false)throw new \RuntimeException('source_profile_owned_conflict');
         return ['origin'=>$o,'intake'=>$d,'profile'=>$target,'grant'=>$grant];

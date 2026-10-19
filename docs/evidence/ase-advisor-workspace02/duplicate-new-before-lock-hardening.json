@@ -1,0 +1,39 @@
+{
+  "scope": "OWNED_SYNTHETIC_ONLY",
+  "status": "COMPLETE",
+  "database_isolation": "REPEATABLE-READ",
+  "request_service_sha256": "77f72c9c280b67a8ecf12449e94ac6f20d7d21058fde377d4374320b71315faa",
+  "only_new_race": true,
+  "new_race_attempt": 1,
+  "secondary_reviewer_deferred": false,
+  "completed_at": "2026-10-19T05:11:01.522542+00:00",
+  "checks": [
+    {
+      "name": "Dedicated synthetic reviewer has canonical exact grants and legitimate MFA enrollment",
+      "pass": true
+    },
+    {
+      "name": "Duplicate-new race uses separate applications, accounts and authenticated reviewers",
+      "pass": true
+    },
+    {
+      "name": "Two independent reviewer transactions reach the materialization mutex before either commits",
+      "pass": true
+    },
+    {
+      "name": "Two applications with one declared professional license materialize exactly one profile and approval",
+      "pass": true
+    },
+    {
+      "name": "Competing new-application loser receives conflict and no duplicate approval event",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "diagnostic_loser": "MYSQL_DEADLOCK_ROLLBACK",
+  "diagnostic_lock_objects": [
+    "auth_physician_profile_request_decisions.case_id",
+    "auth_physician_profile_request_locks.PRIMARY"
+  ],
+  "observed_duplicate_profiles": false
+}

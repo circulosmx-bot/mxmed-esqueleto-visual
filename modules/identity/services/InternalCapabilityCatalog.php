@@ -22,6 +22,12 @@ final class InternalCapabilityCatalog
         ];$result=[];
         foreach($media as $key=>[$label,$description])$result[$key]=['key'=>$key,'domain'=>'media_review','label'=>$label,'description'=>$description,'delegable'=>true,'kind'=>'operational'];
         foreach([
+            'physician_request_read'=>['Consultar solicitudes de perfiles','Consultar reclamos y solicitudes de perfil nuevo en su contexto exacto; no permite abrir evidencia protegida ni resolver.'],
+            'physician_request_evidence_read'=>['Consultar evidencia de solicitudes','Abrir evidencia protegida de una solicitud autorizada; requiere también acceso vigente a solicitudes.'],
+            'physician_claim_resolve'=>['Resolver reclamos de perfiles gratuitos','Resolver el reclamo exacto de un perfil gratuito sin propietario, con revisión y MFA; no permite transferencias ni acreditación profesional.'],
+            'physician_new_profile_resolve'=>['Resolver solicitudes de perfil nuevo','Resolver la solicitud exacta y su creación canónica con MFA; no permite crear perfiles libremente, publicar ni activar planes.'],
+        ] as $key=>[$label,$description])$result[$key]=['key'=>$key,'domain'=>'physician_requests','label'=>$label,'description'=>$description,'delegable'=>true,'kind'=>'operational'];
+        foreach([
             self::CREATE_PHYSICIAN_PROFILE=>['Crear perfiles médicos','Crear un perfil médico bajo un caso autorizado; no concede ownership.'],
             self::CURATE_PHYSICIAN_PROFILE=>['Curar perfiles médicos','Corregir información profesional bajo un caso y un perfil exactos.'],
             self::MANAGE_PROFILE_PUBLICATION=>['Gestionar publicación','Administrar el estado público sin cambiar ownership, plan o autoridad clínica.'],

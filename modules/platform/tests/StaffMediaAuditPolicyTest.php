@@ -5,7 +5,7 @@ require_once __DIR__.'/../../identity/http/IdentityHttpComposition.php';
 use Platform\Services\{CanonicalAuditPolicyRegistry,CanonicalAuditMetadataSanitizer,SourceModuleCatalog,CorrelatableOperationCatalog};
 $r=CanonicalAuditPolicyRegistry::canonical();$rows=CanonicalAuditPolicyRegistry::canonicalRows();
 if(hash('sha256',json_encode(array_slice($rows,0,59),JSON_UNESCAPED_SLASHES))!=='ddbaf575ecbb95ec0ac3671ddfd36a3d7abf870164feec1930f1496c99ae2f1e')throw new RuntimeException('historical_59_drift');
-if(array_column(array_slice($rows,59),'event_type')!==['STAFF_MEDIA_CHANGED','STAFF_MEDIA_READ'])throw new RuntimeException('media_event_drift');
+if(array_column(array_slice($rows,59,2),'event_type')!==['STAFF_MEDIA_CHANGED','STAFF_MEDIA_READ'])throw new RuntimeException('media_event_drift');
 foreach(['STAFF_MEDIA_CHANGED','STAFF_MEDIA_READ'] as $event){
  $p=$r->policyFor($event);
  if((new SourceModuleCatalog())->moduleForEvent($event)!=='ADMIN'||(new CorrelatableOperationCatalog())->operationForEvent($event)!=='SENSITIVE_ADMIN_OPERATION')throw new RuntimeException('media_catalog_drift');

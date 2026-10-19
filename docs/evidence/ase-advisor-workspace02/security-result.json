@@ -1,0 +1,95 @@
+{
+  "scope": "OWNED_SYNTHETIC_ONLY",
+  "status": "COMPLETE",
+  "database_isolation": "REPEATABLE-READ",
+  "request_service_sha256": "ea125a3d3e7ea8f3eb8be7777783f3e97080dc786bfe9c25a73884368b5b119d",
+  "only_new_race": false,
+  "new_race_attempt": 2,
+  "secondary_reviewer_deferred": false,
+  "completed_at": "2026-10-19T05:15:31.578275+00:00",
+  "checks": [
+    {
+      "name": "Dedicated synthetic reviewer has canonical exact grants and legitimate MFA enrollment",
+      "pass": true
+    },
+    {
+      "name": "Unprivileged staff cannot resolve a physician request",
+      "pass": true
+    },
+    {
+      "name": "Request capability does not authorize the general initial-owner gate",
+      "pass": true
+    },
+    {
+      "name": "An already-owned profile cannot be approved or transferred by the request workflow",
+      "pass": true
+    },
+    {
+      "name": "Two independent workers consume one proof as one canonical decision and one replay receipt",
+      "pass": true
+    },
+    {
+      "name": "Double submission creates one hidden profile link and one approval event",
+      "pass": true
+    },
+    {
+      "name": "Grant revoked after verified MFA denies effect and leaves no decision or profile",
+      "pass": true
+    },
+    {
+      "name": "Canonical source revocation after MFA invalidates request facts and prevents approval",
+      "pass": true
+    },
+    {
+      "name": "Canonical audit insertion failure rolls back decision, materialized profile, link, proof and case",
+      "pass": true
+    },
+    {
+      "name": "After failed audit the authoritative result confirms NOT_COMMITTED without retrying mutation",
+      "pass": true
+    },
+    {
+      "name": "Competing claims from independent workers produce exactly one approval",
+      "pass": true
+    },
+    {
+      "name": "Competing claim loser keeps an unconsumed proof and produces no approval event",
+      "pass": true
+    },
+    {
+      "name": "Competing claim winner preserves the existing profile and does not activate ownership",
+      "pass": true
+    },
+    {
+      "name": "A different reviewer cannot open a competing active request case",
+      "pass": true
+    },
+    {
+      "name": "Original reviewer commits one decision after competing reviewer denial",
+      "pass": true
+    },
+    {
+      "name": "A canonical C4 evidence decision changes version and invalidates an already-verified request proof",
+      "pass": true
+    },
+    {
+      "name": "Duplicate-new race uses separate applications, accounts and authenticated reviewers",
+      "pass": true
+    },
+    {
+      "name": "Two independent reviewer transactions reach the materialization mutex before either commits",
+      "pass": true
+    },
+    {
+      "name": "Two applications with one declared professional license materialize exactly one profile and approval",
+      "pass": true
+    },
+    {
+      "name": "Competing new-application loser receives conflict and no duplicate approval event",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "deterministic_loser": "physician_request_revision_conflict",
+  "deterministic_loser_is_explicit_conflict": true
+}

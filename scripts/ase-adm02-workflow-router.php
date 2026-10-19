@@ -9,12 +9,13 @@ try{
  if(in_array($path,['/api/identity/index.php/logout','/api/identity/index.php/login','/api/identity/index.php/current-session'],true)){require __DIR__.'/../api/identity/index.php';return true;}
  if($path==='/public/identity/acceso.php'){
   $workspace=getenv('MXMED_ADVISOR_WORKSPACE_REVIEW')==='1';
-  $control=$workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py');
+  $workspace02=getenv('MXMED_ADVISOR_WORKSPACE02_REVIEW')==='1';
+  $control=$workspace02?'/ase-advisor-workspace02-review.py':($workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py'));
   $owned=realpath(getenv('ASE_INT02A_OWNED'));$command='python3 '.realpath(__DIR__.$control).' '.$owned;
-  $staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];
+  $staffSyntheticLoginGuide=['credentials'=>$command.($workspace02?' credentials-director':' credentials'),'mfa'=>$command.($workspace02?' mfa-director':' mfa')];
   if($workspace&&($_GET['next']??'')==='/internal/staff-workspace/index.php'){
    $record=json_decode(file_get_contents($owned.'/oper09-advisor.json'),true,512,JSON_THROW_ON_ERROR);
-   $staffSyntheticLoginGuide=['email'=>$record['email'],'destination'=>'Gestión de perfiles médicos','credentials'=>$command.' credentials-advisor','mfa'=>null];
+   $staffSyntheticLoginGuide=['email'=>$record['email'],'destination'=>'Gestión de perfiles médicos','credentials'=>$command.' credentials-advisor','mfa'=>$workspace02?$command.' mfa-advisor':null];
   }
   require __DIR__.'/../public/identity/acceso.php';return true;
  }

@@ -1,0 +1,92 @@
+{
+  "checks": [
+    "Director grants exact narrow request capabilities through existing canonical UI",
+    "Read capability does not imply evidence access or decision authority",
+    "Director grants exact narrow request capabilities through existing canonical UI",
+    "Canonical persisted request decision: claim_approve",
+    "Claim review preserves original free profile content and ID",
+    "Approval UI separates approval and remaining canonical ownership stages",
+    "Canonical request history identifies actual Advisor and request",
+    "Canonical persisted request decision: claim_reject",
+    "Claim rejection preserves profile and applicant account",
+    "Canonical persisted request decision: information",
+    "Information request remains unresolved without a materialized profile",
+    "Lost committed decision response never triggers a blind mutation retry",
+    "Authorized result lookup recovers actual committed outcome",
+    "Canonical persisted request decision: new_approve",
+    "New approval materializes exactly one hidden free canonical profile",
+    "Application history remains linked after canonical profile materialization",
+    "Canonical persisted request decision: new_reject",
+    "Rejected new application creates no profile",
+    "Canceling navigation preserves exact request draft",
+    "Request to Images retains same physician and discards confirmed draft",
+    "Existing real Media review remains functional in unified physician context",
+    "History retains same physician context",
+    "Director grants exact narrow request capabilities through existing canonical UI",
+    "Revoked decision capability clears stale draft and action in existing Advisor session",
+    "Revoked decision is denied server-side",
+    "Director grants exact narrow request capabilities through existing canonical UI",
+    "Late request A cannot replace selected new application B",
+    "Selected application collapses competing search and pending blocks",
+    "Native delivered viewport fits actual physical browser work area",
+    "Responsive requests/history/evidence and reachable confirmation: chromium 1440x900",
+    "Responsive requests/history/evidence and reachable confirmation: chromium 1366x768",
+    "Responsive requests/history/evidence and reachable confirmation: chromium 390x844",
+    "Responsive requests/history/evidence and reachable confirmation: webkit 1440x900",
+    "Responsive requests/history/evidence and reachable confirmation: webkit 1366x768",
+    "Responsive requests/history/evidence and reachable confirmation: webkit 390x844",
+    "No browser JavaScript exceptions during focused journeys",
+    "Ready claim and new application preserved for Director review"
+  ],
+  "responsive": [
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "height": 900,
+      "passed": true
+    },
+    {
+      "engine": "chromium",
+      "width": 1366,
+      "height": 768,
+      "passed": true
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 844,
+      "passed": true
+    },
+    {
+      "engine": "webkit",
+      "width": 1440,
+      "height": 900,
+      "passed": true
+    },
+    {
+      "engine": "webkit",
+      "width": 1366,
+      "height": 768,
+      "passed": true
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "height": 844,
+      "passed": true
+    }
+  ],
+  "page_errors": [],
+  "native": {
+    "width": 1366,
+    "height": 783,
+    "outerHeight": 870,
+    "availableHeight": 870,
+    "scrollWidth": 1366
+  },
+  "ready": {
+    "claim": "f4f3d6c6-e706-491c-8cac-fe6e5f8cc27e",
+    "new": "3a6d7153-f14a-44f4-b810-4580ae6a5380",
+    "completed": "eb19ea10-c812-4cf0-a8fa-d67a6e0f3cc8"
+  }
+}

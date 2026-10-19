@@ -2,15 +2,14 @@
 declare(strict_types=1);
 namespace Identity\Services;
 
-use Identity\Adapters\PdoProfileOwnershipApproverAuthorityAdapter;
-use Identity\Contracts\{AuthenticatedAccessContext,Clock,SessionState,SystemClock};
+use Identity\Contracts\{AuthenticatedAccessContext,CaseScopedProfileOwnershipAuthorityPort,Clock,ProfileOwnershipApproverAuthorityPort,SessionState,SystemClock};
 use PDO;
 
 /** Case creation, independent endorsement and bounded owner recovery. No runtime is enabled by constructing this service. */
 final class R3ProfileGovernanceService
 {
     public function __construct(private PDO $pdo,private StaffMfaService $mfa,
-        private PdoProfileOwnershipApproverAuthorityAdapter $authority,private Clock $clock=new SystemClock(),
+        private ProfileOwnershipApproverAuthorityPort $authority,private Clock $clock=new SystemClock(),
         private ?\Identity\Contracts\ProfileOperatorOwnershipBoundary $operators=null,
         private ?GovernanceCaseSecurity $security=null){if($security===null||!$security->usesConnection($pdo))throw new \RuntimeException('governance_v2_security_required');}
 
@@ -23,11 +22,13 @@ final class R3ProfileGovernanceService
             if($this->security===null)throw new \RuntimeException('governance_v2_security_required');
             $context=$this->security->capture($requester,$m);
             $context['ownership_policy']=PhysicianOwnershipPolicy::ROUTINE;
+            if($this->authority instanceof CaseScopedProfileOwnershipAuthorityPort)$context['physician_request']=$this->authority->binding();
             $o=$this->pdo->prepare("SELECT membership_id FROM auth_account_memberships WHERE profile_doctor_id=? AND scope_code IN ('profile','profile_doctor') AND role_code='owner' AND status='active' FOR UPDATE");$o->execute([$m['profile_doctor_id']]);if($o->fetchColumn()!==false)throw new \RuntimeException('governance_case_owner_exists');
             $case='govcase_'.bin2hex(random_bytes(16));$operation=$this->uuid();$expires=$now->modify('+30 minutes');
             $i=$this->pdo->prepare("INSERT INTO auth_governance_cases(case_id,operation_id,operation,requester_account_id,beneficiary_account_id,target_membership_id,profile_doctor_id,reason,status,expires_at) VALUES(?,?,'INITIAL_OWNER',?,?,?,?,?,'OPEN',?)");
             $i->execute([$case,$operation,$requester->accountId(),$m['account_id'],$membershipId,$m['profile_doctor_id'],$reason,$this->sql($expires)]);
             $this->storeContext($case,$context);
+            if($this->authority instanceof CaseScopedProfileOwnershipAuthorityPort)$this->authority->bindCase(['case_id'=>$case,'operation'=>'INITIAL_OWNER','requester_account_id'=>$requester->accountId(),'beneficiary_account_id'=>$m['account_id'],'target_membership_id'=>$membershipId,'profile_doctor_id'=>$m['profile_doctor_id'],'security_context'=>json_encode($context,JSON_THROW_ON_ERROR)]);
             $this->event($case,'CASE_OPENED',$requester->accountId(),$m['account_id'],$m['profile_doctor_id'],'USER_REQUEST',$operation);
             return ['case_id'=>$case,'operation_id'=>$operation,'operation'=>'INITIAL_OWNER','membership'=>$m,'expires_at'=>$expires];
         });
@@ -69,7 +70,8 @@ final class R3ProfileGovernanceService
             if(!is_array($c)||$c['status']!=='OPEN'||new \DateTimeImmutable($c['expires_at'],new \DateTimeZone('UTC'))<=$now||$approver->accountId()===$c['beneficiary_account_id']||(!PhysicianOwnershipPolicy::routine($c)&&$approver->accountId()===$c['requester_account_id']))throw new \RuntimeException('governance_endorsement_denied');
             $this->security?->assertIndependentApprover($c,$approver->accountId());$this->security?->assertCase($c);
             $this->authority->assertAuthorized($this->pdo,$approver->accountId(),$c['beneficiary_account_id'],$c['profile_doctor_id']??'staff-bootstrap',$approver->principal()->credentialVersion());
-            $proof=$this->mfa->consumeProof($this->pdo,$proofId,$rawProof,$approver->accountId(),(string)$approver->session()->sessionId(),$approver->principal()->credentialVersion(),$c['operation'],$caseId,$c['beneficiary_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],$caseId);
+            $mfaOperation=$this->authority instanceof CaseScopedProfileOwnershipAuthorityPort?$this->authority->mfaOperation():$c['operation'];
+            $proof=$this->mfa->consumeProof($this->pdo,$proofId,$rawProof,$approver->accountId(),(string)$approver->session()->sessionId(),$approver->principal()->credentialVersion(),$mfaOperation,$caseId,$c['beneficiary_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],$caseId);
             $count=$this->pdo->prepare('SELECT COUNT(*) FROM auth_governance_case_endorsements WHERE case_id=? FOR UPDATE');$count->execute([$caseId]);$slot=(int)$count->fetchColumn()+1;$required=PhysicianOwnershipPolicy::requiredApprovals($c);if($slot>$required)throw new \RuntimeException('governance_endorsement_complete');
             $id='endorsement_'.bin2hex(random_bytes(16));$i=$this->pdo->prepare("INSERT INTO auth_governance_case_endorsements(endorsement_id,case_id,endorsement_slot,approver_account_id,staff_session_id,credential_version,mfa_proof_id,status,approved_at,expires_at) VALUES(?,?,?,?,?,?,?,'APPROVED',?,?)");
             $i->execute([$id,$caseId,$slot,$approver->accountId(),(string)$approver->session()->sessionId(),$approver->principal()->credentialVersion(),$proofId,$this->sql($now),$c['expires_at']]);
@@ -85,7 +87,8 @@ final class R3ProfileGovernanceService
         if(!is_array($c)||$c['status']!=='OPEN'||new \DateTimeImmutable($c['expires_at'],new \DateTimeZone('UTC'))<=$this->clock->now()||in_array($approver->accountId(),[PhysicianOwnershipPolicy::routine($c)?null:$c['requester_account_id'],$c['beneficiary_account_id']],true))throw new \RuntimeException('governance_endorsement_denied');
         $this->transaction(function()use($approver,$c):void{$this->security?->assertIndependentApprover($c,$approver->accountId());$this->security?->assertCase($c);$this->activeApprover($approver->accountId(),$approver->principal()->credentialVersion(),$c['beneficiary_account_id'],$c['profile_doctor_id']??'staff-bootstrap');$u=$this->pdo->prepare("UPDATE auth_staff_mfa_challenges SET status='EXPIRED' WHERE case_id=? AND actor_account_id=? AND status='PENDING' AND expires_at<=?");$u->execute([$c['case_id'],$approver->accountId(),$this->sql($this->clock->now())]);if($u->rowCount()>0)$this->security?->audit->append($approver,'MFA_CHALLENGE_EXPIRED',$c['beneficiary_account_id'],$c['case_id']);});
         $reauth=$this->security?->sessions->reauthenticate($approver,$email,$password,$dimensions);
-        return $this->mfa->issueChallenge($approver->accountId(),$c['operation'],$caseId,$c['beneficiary_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],$reauth);
+        $mfaOperation=$this->authority instanceof CaseScopedProfileOwnershipAuthorityPort?$this->transaction(fn()=>$this->authority->mfaOperation()):$c['operation'];
+        return $this->mfa->issueChallenge($approver->accountId(),$mfaOperation,$caseId,$c['beneficiary_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],$reauth);
     }
 
     public function executeOwnerRecovery(AuthenticatedAccessContext $requester,string $caseId):array
@@ -159,7 +162,8 @@ final class R3ProfileGovernanceService
         $approval='approval_'.bin2hex(random_bytes(16));$decision='decision_'.bin2hex(random_bytes(16));$expires=$now->modify('+10 minutes');$caseExpiry=new \DateTimeImmutable($c['expires_at'],new \DateTimeZone('UTC'));if($caseExpiry<$expires)$expires=$caseExpiry;
         $a=$this->pdo->prepare("INSERT INTO auth_profile_ownership_approvals(approval_reference,operation_id,case_reference,decision_reference,approver_account_id,executor_account_id,target_account_id,membership_id,profile_doctor_id,expected_role,expected_scope,new_role,status,approved_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'owner','APPROVED',?,?)");
         $a->execute([$approval,$c['operation_id'],$c['case_id'],$decision,$endorsements[0]['approver_account_id'],$c['beneficiary_account_id'],$c['beneficiary_account_id'],$c['target_membership_id'],$c['profile_doctor_id'],$m['role_code'],$m['scope_code'],$this->sql($now),$this->sql($expires)]);
-        foreach($endorsements as $row){$i=$this->pdo->prepare("INSERT INTO auth_profile_ownership_approval_endorsements(endorsement_id,approval_reference,endorsement_slot,operation_id,case_reference,approver_account_id,target_account_id,membership_id,profile_doctor_id,capability,staff_session_id,credential_version,mfa_evidence_reference,status,approved_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,'profile_initial_ownership_approve',?,?,?,'APPROVED',?,?)");$i->execute(['final_'.$row['endorsement_id'],$approval,$row['endorsement_slot'],$c['operation_id'],$c['case_id'],$row['approver_account_id'],$c['beneficiary_account_id'],$c['target_membership_id'],$c['profile_doctor_id'],$row['staff_session_id'],$row['credential_version'],$row['mfa_proof_id'],$row['approved_at'],$this->sql($expires)]);}
+        $capability=$this->authority instanceof CaseScopedProfileOwnershipAuthorityPort?$this->authority->approvalCapability():InternalCapabilityCatalog::APPROVE_INITIAL_PROFILE_OWNERSHIP;
+        foreach($endorsements as $row){$i=$this->pdo->prepare("INSERT INTO auth_profile_ownership_approval_endorsements(endorsement_id,approval_reference,endorsement_slot,operation_id,case_reference,approver_account_id,target_account_id,membership_id,profile_doctor_id,capability,staff_session_id,credential_version,mfa_evidence_reference,status,approved_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'APPROVED',?,?)");$i->execute(['final_'.$row['endorsement_id'],$approval,$row['endorsement_slot'],$c['operation_id'],$c['case_id'],$row['approver_account_id'],$c['beneficiary_account_id'],$c['target_membership_id'],$c['profile_doctor_id'],$capability,$row['staff_session_id'],$row['credential_version'],$row['mfa_proof_id'],$row['approved_at'],$this->sql($expires)]);}
         $this->event($c['case_id'],'CASE_APPROVED',$endorsements[count($endorsements)-1]['approver_account_id'],$c['beneficiary_account_id'],$c['profile_doctor_id'],PhysicianOwnershipPolicy::routine($c)?'STAFF_APPROVAL':'DUAL_APPROVAL',$approval);
     }
 

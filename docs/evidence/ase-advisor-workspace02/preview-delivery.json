@@ -1,0 +1,39 @@
+{
+  "result": "PASS",
+  "scope": "OWNED_ISOLATED_SYNTHETIC",
+  "production_activation": false,
+  "director_visual_acceptance": "PENDING",
+  "expiry": "2026-10-19T23:01:05.487591-06:00",
+  "browsers": {
+    "director": {
+      "opened_at": 1792387180.7105181,
+      "url": "https://127.0.0.1:55846/internal/media-review/index.php?section=equipo",
+      "canonical_login": true,
+      "synthetic_account": "qa_director@example.test",
+      "viewport": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "screenshot": "screens/delivered-director.png"
+    },
+    "advisor": {
+      "opened_at": 1792387180.4250329,
+      "url": "https://127.0.0.1:55846/internal/staff-workspace/index.php",
+      "canonical_login": true,
+      "synthetic_account": "oper09_advisor@example.test",
+      "viewport": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "screenshot": "screens/delivered-advisor.png"
+    }
+  }
+}

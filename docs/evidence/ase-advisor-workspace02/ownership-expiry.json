@@ -1,0 +1,9 @@
+{
+  "result": "PASS",
+  "clock": "injected plus 31 minutes for expiry observation only; replacement writer and system clock use real time",
+  "prior_case_retained": true,
+  "prior_case_revoked": true,
+  "links": 2,
+  "fresh_case_ttl_seconds": 1800,
+  "owner_written": false
+}

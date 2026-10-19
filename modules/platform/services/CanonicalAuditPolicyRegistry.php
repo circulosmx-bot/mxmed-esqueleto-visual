@@ -4,7 +4,7 @@ namespace Platform\Services;
 final class CanonicalAuditPolicyRegistry
 {
     private array $rows=[];
-    private function __construct(array $rows){foreach($rows as $row){$event=$row['event_type']??null;if(!is_string($event)||isset($this->rows[$event]))throw new \InvalidArgumentException('invalid_canonical_policy_rows');$this->rows[$event]=$row;}if(count($this->rows)!==61)throw new \InvalidArgumentException('canonical_policy_row_count');}
+    private function __construct(array $rows){foreach($rows as $row){$event=$row['event_type']??null;if(!is_string($event)||isset($this->rows[$event]))throw new \InvalidArgumentException('invalid_canonical_policy_rows');$this->rows[$event]=$row;}if(count($this->rows)!==62)throw new \InvalidArgumentException('canonical_policy_row_count');}
     public static function canonical(): self{return new self(self::canonicalRows());}
     public static function canonicalRows(): array{return [
             [
@@ -1770,6 +1770,14 @@ final class CanonicalAuditPolicyRegistry
                 'allowed_result_reason_pairs'=>[['reason_code'=>'USER_REQUEST','result'=>'SUCCESS'],['reason_code'=>'POLICY_DENIED','result'=>'DENIED'],['reason_code'=>'INTERNAL_ERROR','result'=>'FAILURE']],
                 'allowed_results'=>['SUCCESS','DENIED','FAILURE'],'allowed_writer_internal_metadata'=>[],
                 'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'STAFF_MEDIA_READ','producer'=>'Roles',
+                'reason_required'=>true,'retention_class'=>'ROLE_ADMIN','self_timeline'=>false,'session_required'=>true,'severity'=>'HIGH','target_required'=>true,
+            ],
+            [
+                'actor_required'=>true,'allowed_producer_metadata'=>['operation','version','previous_status','new_status','case_id','review_reason','capability','profile_doctor_id','application_id','request_type'],
+                'allowed_reason_codes'=>['USER_REQUEST','ADMIN_DECISION'],
+                'allowed_result_reason_pairs'=>[['reason_code'=>'USER_REQUEST','result'=>'SUCCESS'],['reason_code'=>'ADMIN_DECISION','result'=>'SUCCESS']],
+                'allowed_results'=>['SUCCESS'],'allowed_writer_internal_metadata'=>[],
+                'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'PHYSICIAN_PROFILE_REQUEST_CHANGED','producer'=>'Identity',
                 'reason_required'=>true,'retention_class'=>'ROLE_ADMIN','self_timeline'=>false,'session_required'=>true,'severity'=>'HIGH','target_required'=>true,
             ],
         ];}

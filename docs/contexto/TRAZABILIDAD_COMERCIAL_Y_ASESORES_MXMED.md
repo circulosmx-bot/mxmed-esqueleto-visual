@@ -237,3 +237,8 @@ COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta g
 ## PANEL04 — inspección de la conexión comercial
 
 [PANEL04](../identity/ASE-ADM02-PANEL04.md) confirma en f9fe6950 ausencia de clasificación comercial vendedor y vínculo canónico asesor–cliente. Readers financieros existen, pero falta ese vínculo autorizado; no se conectan por creator/reviewer/aceptante/email. No writer huérfano de porcentaje ni fixtures de cartera inventada. Se preservan D01–D08 y la distinción descuento/comisión/devengado/liquidado. La administración staff restante sí se integra con fuentes existentes.
+
+
+## COM-10 / J01 / J02 — WORKSPACE02
+
+[Solicitud médica e historial](../identity/ASE-ADVISOR-WORKSPACE02.md) añade delegación operativa explícita para revisar y resolver CLAIM FREE/nueva por tipo. El revisor real queda atribuido en la auditoría canónica, compartida con la vista Director; esto no lo convierte en vendedor, captador, owner, colaborador médico ni titular de comisión/cartera. El solicitante conserva su Identity y la aceptación propia del owner. Plan/publicación/C4 son etapas distintas; no se infiere pago. D01–D08 y COM-01..09 intactos. [Ownership 23 PASS](../evidence/ase-advisor-workspace02/ownership-browser.json) acredita actor solicitante y autorización exacta del Advisor en el mismo evento físico, sin membresía del revisor; [Media 10 PASS](../evidence/ase-advisor-workspace02/ui-supplement.json) mantiene el historial compartido. Seguridad final 20 PASS; sin activación real.

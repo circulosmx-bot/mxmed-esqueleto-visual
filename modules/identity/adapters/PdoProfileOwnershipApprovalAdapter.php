@@ -29,6 +29,11 @@ final class PdoProfileOwnershipApprovalAdapter implements ProfileOwnershipApprov
             FROM auth_profile_ownership_approvals WHERE approval_reference=:reference FOR UPDATE');
         $stmt->execute(['reference'=>$request->approvalReference]);
         $row=$stmt->fetch(PDO::FETCH_ASSOC);
+        $capability=\Identity\Services\InternalCapabilityCatalog::APPROVE_INITIAL_PROFILE_OWNERSHIP;
+        if($this->authority instanceof \Identity\Contracts\CaseScopedProfileOwnershipAuthorityPort){
+            $case=$this->pdo->prepare('SELECT * FROM auth_governance_cases WHERE case_id=? FOR UPDATE');$case->execute([$row['case_reference']??'']);
+            $this->authority->assertCase($case->fetch(PDO::FETCH_ASSOC)?:[]);$capability=$this->authority->approvalCapability();
+        }
         $now=$this->clock->now();
         if(!is_array($row)||$row['status']!=='APPROVED'||$row['consumed_at']!==null||$row['consumed_operation_id']!==null
             ||self::date((string)$row['expires_at'])<=$now)throw new \RuntimeException('profile_ownership_approval_unavailable');
@@ -44,7 +49,7 @@ final class PdoProfileOwnershipApprovalAdapter implements ProfileOwnershipApprov
             if($endorsement['operation_id']!==$row['operation_id']||$endorsement['case_reference']!==$row['case_reference']
                 ||$endorsement['target_account_id']!==$row['target_account_id']||$endorsement['membership_id']!==$row['membership_id']
                 ||$endorsement['profile_doctor_id']!==$row['profile_doctor_id']
-                ||$endorsement['capability']!==\Identity\Services\InternalCapabilityCatalog::APPROVE_INITIAL_PROFILE_OWNERSHIP
+                ||$endorsement['capability']!==$capability
                 ||$endorsement['status']!=='APPROVED'||$endorsement['consumed_at']!==null||$endorsement['consumed_operation_id']!==null
                 ||self::date((string)$endorsement['expires_at'])<=$now)
                 throw new \RuntimeException('profile_ownership_dual_approval_unavailable');

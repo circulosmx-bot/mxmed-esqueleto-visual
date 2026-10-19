@@ -1,0 +1,43 @@
+{
+  "result": "PASS",
+  "context_files": [
+    "docs/ESTADO_ACTUAL_MXMED.md",
+    "docs/README.md",
+    "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+    "docs/contexto/INTERACCIONES_MXMED.md",
+    "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+    "docs/contexto/TRAZABILIDAD_COMERCIAL_Y_ASESORES_MXMED.md",
+    "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+    "docs/identity/ASE-ADVISOR-WORKSPACE02.md"
+  ],
+  "relevant_links_and_anchors": 50,
+  "missing": [],
+  "context_fields": [
+    "CONTEXT_BASELINE",
+    "AFFECTED_CAPABILITY_IDS",
+    "AFFECTED_JOURNEY_IDS",
+    "AFFECTED_DATA_OBJECTS",
+    "AFFECTED_CONTEXT_FILES",
+    "CONTEXT_CHANGES_IMPLEMENTED",
+    "CONTEXT_VERIFICATION",
+    "CONTEXT_SYNC_STATUS",
+    "DOCUMENTATION_COMMIT",
+    "REMAINING_CONTEXT_GAPS"
+  ],
+  "context_sync_status": "PASS_UPDATED",
+  "source_baseline": "0dbccc946476f7f5e8e4de000e7f186913069a80",
+  "request_service_sha256": "ea125a3d3e7ea8f3eb8be7777783f3e97080dc786bfe9c25a73884368b5b119d",
+  "verification": {
+    "main_checks": 51,
+    "browser_checks_included_in_main": 37,
+    "responsive_combinations": 6,
+    "ownership_checks": 23,
+    "security_checks": 20,
+    "ui_supplement_checks": 10,
+    "context_count_smoke_checks": 3
+  },
+  "physical_safari": "NOT_RUN",
+  "director_visual_acceptance": "PENDING",
+  "production_activation": false,
+  "final_integrity_manifest": "docs/evidence/ase-advisor-workspace02/final-verification.json"
+}

@@ -27,8 +27,10 @@ final class CanonicalGovernanceAuditAdapter
         $advisorActivation=$class==='ADVISOR'&&($state['status']??null)==='ACTIVE'
             &&$operation==='MFA_ENROLLMENT_ACTIVATED'&&$target===$actor->accountId()
             &&$this->advisorFactorActivation($actor,$reference);
+        $requestExpiration=$class==='ADVISOR'&&($state['status']??null)==='ACTIVE'&&in_array($operation,['MFA_CHALLENGE_EXPIRED','CASE_REVOKED','CASE_EXPIRED'],true)
+            &&$this->requestCaseExpiration($actor,$target,$reference);
         if(!is_string($class)||($operation!=='MFA_ENROLLMENT_CANCELLED'&&(($state['status']??null)!=='ACTIVE'
-            ||(!in_array($class,['DIRECTOR','MASTER_ADMIN'],true)&&!$advisorActivation))))throw new \RuntimeException('governance_audit_staff_required');
+            ||(!in_array($class,['DIRECTOR','MASTER_ADMIN'],true)&&!$advisorActivation&&!$requestExpiration))))throw new \RuntimeException('governance_audit_staff_required');
         $uuid=new RandomAuditUuidProvider();
         $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$class,'internal_governance',
             $uuid->generateCanonicalUuid(),$uuid->generateCanonicalUuid(),(string)$actor->session()->sessionId(),null,null,'IDENTITY','governance/'.$operation);
@@ -38,7 +40,7 @@ final class CanonicalGovernanceAuditAdapter
     }
     private function advisorFactorActivation(AuthenticatedAccessContext $actor,string $factor):bool
     {
-        if(!StaffRoutineOperationPolicy::eligibleAdvisorSubject($this->pdo,$actor->accountId()))return false;
+        if(!StaffRoutineOperationPolicy::eligibleAdvisorSubject($this->pdo,$actor->accountId())&&!\Identity\PhysicianRequests\RequestAuthority::eligibleMfaSubject($this->pdo,$actor->accountId()))return false;
         $q=$this->pdo->prepare("SELECT enrollment_context FROM auth_staff_mfa_factors WHERE factor_id=? AND account_id=? AND status='ACTIVE' AND verified_at IS NOT NULL FOR UPDATE");
         $q->execute([$factor,$actor->accountId()]);$raw=$q->fetchColumn();if(!is_string($raw))return false;
         $c=json_decode($raw,true,32,JSON_THROW_ON_ERROR);
@@ -48,5 +50,13 @@ final class CanonicalGovernanceAuditAdapter
             ||!is_string($c['registrar']['account_id']??null)||$c['registrar']['account_id']===$actor->accountId())return false;
         $q=$this->pdo->prepare("SELECT 1 FROM internal_staff s JOIN auth_accounts a ON a.account_id=s.account_id JOIN auth_account_credentials c ON c.account_id=a.account_id WHERE s.account_id=? AND s.status='ACTIVE' AND s.governance_class IN ('DIRECTOR','MASTER_ADMIN') AND a.status='active' AND a.email_verified_at IS NOT NULL AND c.credential_version=? FOR UPDATE");
         $q->execute([$c['registrar']['account_id'],$c['registrar']['credential_version']??null]);return $q->fetchColumn()!==false;
+    }
+    private function requestCaseExpiration(AuthenticatedAccessContext $actor,string $target,string $caseId):bool
+    {
+        $q=$this->pdo->prepare('SELECT * FROM auth_governance_cases WHERE case_id=? FOR UPDATE');$q->execute([$caseId]);$case=$q->fetch(PDO::FETCH_ASSOC);
+        $context=is_array($case)?json_decode((string)$case['security_context'],true):null;$id=$context['physician_request']['origin_id']??null;
+        if(!is_string($id)||$case['beneficiary_account_id']!==$target)return false;
+        $authority=new \Identity\PhysicianRequests\RequestOwnershipApproverAuthority($this->pdo,$id);
+        $authority->assertCase($case);$authority->assertAuthorized($this->pdo,$actor->accountId(),$target,$case['profile_doctor_id'],$actor->principal()->credentialVersion());return true;
     }
 }

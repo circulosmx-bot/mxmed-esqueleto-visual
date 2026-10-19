@@ -1,0 +1,113 @@
+{
+  "status": "COMPLETE",
+  "checks": [
+    {
+      "name": "Submitted information response is shown while duplicate response form is hidden",
+      "result": "PASS"
+    },
+    {
+      "name": "Applicant responds in the existing Identity continuation; request remains unresolved",
+      "result": "PASS"
+    },
+    {
+      "name": "Advisor sees exact information reason and applicant response in the same request",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: actual canonical C4 admission and professional binding are active for the applicant",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: applicant prepares its own canonical membership",
+      "result": "PASS"
+    },
+    {
+      "name": "Expired owner case safely recovers with retained immutable link and real-clock fresh TTL",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: Advisor authorizes exact request through canonical MFA UI",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: completed applicant screen hides irrelevant response and acceptance forms",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: applicant is the sole actual owner and Advisor has no membership",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: ownership preserves profile ID/content/free/publication state",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: physician and Director Advisor history project same canonical owner event",
+      "result": "PASS"
+    },
+    {
+      "name": "claim_approve: no decision proof can activate another applicant profile",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: actual canonical C4 admission and professional binding are active for the applicant",
+      "result": "PASS"
+    },
+    {
+      "name": "New profile uses a distinct canonical C4 evidence request after its own PUB-ENR03 resolution",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: applicant prepares its own canonical membership",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: Advisor authorizes exact request through canonical MFA UI",
+      "result": "PASS"
+    },
+    {
+      "name": "Lost committed owner response reconciles through authorized lookup without retry",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: completed applicant screen hides irrelevant response and acceptance forms",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: applicant is the sole actual owner and Advisor has no membership",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: ownership preserves profile ID/content/free/publication state",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: physician and Director Advisor history project same canonical owner event",
+      "result": "PASS"
+    },
+    {
+      "name": "new_approve: no decision proof can activate another applicant profile",
+      "result": "PASS"
+    },
+    {
+      "name": "Ownership browser journeys have no page exceptions",
+      "result": "PASS"
+    }
+  ],
+  "cases": [
+    {
+      "type": "claim_approve",
+      "profile_id": "workspace02_claim_approve",
+      "ownership_active": true,
+      "event_id": "29025000ff546a707f6884cc780006f27c3fde85b378e3b9f3376fd1d7503804"
+    },
+    {
+      "type": "new_approve",
+      "profile_id": "pr_b5d9b8a686e448a49029fe3d9c626514",
+      "ownership_active": true,
+      "event_id": "a76b823693194b3453e4c66965b11351ab4e65b98abb8a528e0d591574ada6f2"
+    }
+  ],
+  "browser": "Chromium",
+  "page_errors": []
+}
