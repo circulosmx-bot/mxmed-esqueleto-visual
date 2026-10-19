@@ -1,0 +1,6 @@
+{
+  "result": "FAIL",
+  "checks": [],
+  "error": "TypeError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel07-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel07-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel07/scripts/ase-adm02-panel07-browser.py\", line 18, in run\n    check('Owned database contains only synthetic login identifiers',sql(\"SELECT COUNT(*) FROM auth_accounts WHERE email_normalized NOT LIKE '%@example.test'\")[0][0]==0)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel07/scripts/ase-adm02-workflow-qa.py\", line 78, in sql\n    with admin.cursor() as cur:cur.execute(statement,args);return cur.fetchall()\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/pymysql/cursors.py\", line 151, in execute\n    query = self.mogrify(query, args)\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/pymysql/cursors.py\", line 129, in mogrify\n    query = query % self._escape_args(args, conn)\nTypeError: not enough arguments for format string\n"
+}

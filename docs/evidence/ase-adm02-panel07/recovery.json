@@ -1,0 +1,78 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "chromium expired initial CSRF refreshed before opening authorized profile",
+      "pass": true
+    },
+    {
+      "name": "chromium identity consultation works after initial CSRF expiry without mutation replay",
+      "pass": true
+    },
+    {
+      "name": "chromium popup flips upward at modal bottom",
+      "pass": true
+    },
+    {
+      "name": "chromium expanded last option scrolls into view",
+      "pass": true
+    },
+    {
+      "name": "chromium outside click closes popup without double dismissal",
+      "pass": true
+    },
+    {
+      "name": "chromium private portrait upload and presentation survive profile refresh",
+      "pass": true
+    },
+    {
+      "name": "chromium unavailable portrait reader does not block authorized changed fields or persistence",
+      "pass": true
+    },
+    {
+      "name": "chromium no unhandled errors in recovery",
+      "pass": true
+    },
+    {
+      "name": "webkit expired initial CSRF refreshed before opening authorized profile",
+      "pass": true
+    },
+    {
+      "name": "webkit identity consultation works after initial CSRF expiry without mutation replay",
+      "pass": true
+    },
+    {
+      "name": "webkit popup flips upward at modal bottom",
+      "pass": true
+    },
+    {
+      "name": "webkit expanded last option scrolls into view",
+      "pass": true
+    },
+    {
+      "name": "webkit outside click closes popup without double dismissal",
+      "pass": true
+    },
+    {
+      "name": "webkit private portrait upload and presentation survive profile refresh",
+      "pass": true
+    },
+    {
+      "name": "webkit unavailable portrait reader does not block authorized changed fields or persistence",
+      "pass": true
+    },
+    {
+      "name": "webkit no unhandled errors in recovery",
+      "pass": true
+    },
+    {
+      "name": "Existing correction consumers and MFA contract deny Advisor even with canonical stored grants",
+      "pass": true
+    },
+    {
+      "name": "Synthetic negative-test grants revoked canonically",
+      "pass": true
+    }
+  ],
+  "check_count": 18
+}

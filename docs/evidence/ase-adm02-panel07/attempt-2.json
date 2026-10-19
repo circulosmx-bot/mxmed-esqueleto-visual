@@ -1,0 +1,251 @@
+{
+  "result": "FAIL",
+  "checks": [
+    {
+      "name": "Owned database contains only synthetic login identifiers",
+      "pass_": true
+    },
+    {
+      "name": "Cross-staff personal read/write denied for Master and another applicant",
+      "pass_": true
+    },
+    {
+      "name": "Verified email cannot be changed through personal writer",
+      "pass_": true
+    },
+    {
+      "name": "Personal writer still requires CSRF",
+      "pass_": true
+    },
+    {
+      "name": "Six reported capabilities remain outside eligible Advisor edit contract",
+      "pass_": true
+    },
+    {
+      "name": "Suspended Advisor cannot receive grant",
+      "pass_": true
+    },
+    {
+      "name": "chromium personal editing uses versioned writer and persists after reload",
+      "pass_": true
+    },
+    {
+      "name": "chromium stale optimistic version rejected without overwrite",
+      "pass_": true
+    },
+    {
+      "name": "chromium identity consultation reads real protected evidence without approval/admission",
+      "pass_": true
+    },
+    {
+      "name": "chromium stale review displays its case/history and precise evidence restriction",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-status expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-status compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-channel expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-channel compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900 staff category remains correctly unavailable",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-gender expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-gender compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-avatar expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-avatar compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-presentation expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900-presentation compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440-900 no horizontal viewport overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-status expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-status compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-channel expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-channel compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768 staff category remains correctly unavailable",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-gender expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-gender compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-avatar expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-avatar compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-presentation expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768-presentation compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366-768 no horizontal viewport overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-status expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-status compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-channel expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-channel compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844 staff category remains correctly unavailable",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-gender expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-gender compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-avatar expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-avatar compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-presentation expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844-presentation compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390-844 no horizontal viewport overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-status expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-status compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-channel expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-channel compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400 staff category remains correctly unavailable",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-gender expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-gender compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-avatar expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-avatar compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-presentation expanded popup contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400-presentation compact option text",
+      "pass_": true
+    },
+    {
+      "name": "chromium-900-400 no horizontal viewport overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium corrections exact unavailable controls",
+      "pass_": true
+    },
+    {
+      "name": "chromium profiles exact unavailable controls",
+      "pass_": true
+    },
+    {
+      "name": "chromium applicable consumer follows persisted grant change",
+      "pass_": true
+    }
+  ],
+  "error": "TimeoutError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel07-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel07-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel07/scripts/ase-adm02-panel07-browser.py\", line 75, in run\n    old=ctx.cookies();p.locator('#team-logout').click();p.wait_for_url('**/public/identity/acceso.php?next=*');expect(p.locator('#login-password')).to_have_value('');p.goto(url);p.wait_for_url('**/public/identity/acceso.php?next=*');p.locator('#login-email').fill('qa_director@example.test');p.locator('#login-password').fill('WrongSyntheticPassword_123');p.locator('[data-submit]').click();expect(p.locator('[data-state-title]')).not_to_be_empty();check(engine+' protected route denied and incorrect password fails', '/acceso.php' in p.url)\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/sync_api/_generated.py\", line 9505, in wait_for_url\n    self._sync(\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_page.py\", line 580, in wait_for_url\n    return await self._main_frame.wait_for_url(**locals_to_params(locals()))\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_frame.py\", line 266, in wait_for_url\n    pass\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_event_context_manager.py\", line 33, in __aexit__\n    await self._future\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_frame.py\", line 239, in continuation\n    event = await waiter.result()\nplaywright._impl._errors.TimeoutError: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"**/public/identity/acceso.php?next=*\" until 'load'\n============================================================\n"
+}

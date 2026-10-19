@@ -356,3 +356,7 @@ P=seis correcciones explícitas; S=modal/filtros/búsqueda y recibos canónicos;
 ## ID-02 / ID-03 / ID-07 / COM-10 — PANEL06
 
 P=corrección explícita de diálogos/perfil/login, sin ampliar roles; S=perfil versionado con género/contacto no verificado/avatar, retrato StaffMedia privado Director con relación completada y propósito separado, cierre consistente; C=writers/recibos existentes y login/logout Identity originales conectados al router aislado; V=ver [PANEL06](../identity/ASE-ADM02-PANEL06.md); O=ensayo propio loopback, sin migración/activación real. Diez capacidades ya conectadas conservan edición/enforcement; dos de correcciones excluyen Advisor y cuatro de perfiles carecen de consumidor. No se elimina ninguna de estas restricciones.
+
+## ID-02 / ID-03 / ID-07 / COM-10 — PANEL07
+
+[PANEL07](../identity/ASE-ADM02-PANEL07.md): P=correcciones explícitas de cinco hallazgos, sin ampliar autoridades; S=renovación CSRF antes de acción sin replay, 401 diferenciado, errores en diálogo y menú compacto con popover; C=writers/lectores existentes, evidencia con MFA y login Identity con guía sólo en ensayo; V=134 checks funcionales, 42 de zoom nativo, 18 de recuperación y 58 de layout final dirigidos; O=loopback sintético, aceptación visual pendiente. Los consumidores de correcciones rechazan Advisor aun con grant y su contrato MFA lo excluye; las cuatro claves profile_* siguen sin consumidor. Sin modificación de owner/colaborador/publicación, schema o roles.

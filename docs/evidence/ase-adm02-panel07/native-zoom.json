@@ -1,0 +1,174 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "chromium genuine 125% browser zoom changes CSS viewport and DPR; CSS zoom remains 1",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 status-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 status-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 status-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 new-channel-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 new-channel-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 new-channel-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 new-channel-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-gender-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-gender-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-gender-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-gender-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-avatar-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-avatar-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-avatar-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-avatar-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-presentation-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-presentation-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-presentation-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal-presentation-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 long modal footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit genuine 125% browser zoom changes CSS viewport and DPR; CSS zoom remains 1",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 status-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 status-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 status-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 new-channel-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 new-channel-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 new-channel-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 new-channel-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-gender-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-gender-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-gender-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-gender-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-avatar-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-avatar-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-avatar-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-avatar-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-presentation-trigger expanded within viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-presentation-trigger last option reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-presentation-trigger Escape returns focus",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal-presentation-trigger parent remains open",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 long modal footer reachable",
+      "pass": true
+    }
+  ],
+  "check_count": 42
+}

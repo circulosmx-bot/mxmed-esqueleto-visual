@@ -1,0 +1,11 @@
+{
+  "baseline": "419fe1fc",
+  "reproduction": "Canonical CSRF issued with -901s test clock; actual owned server rejects it; baseline JS served verbatim from Git",
+  "authenticated_session": true,
+  "edit_opens": false,
+  "review_opens": false,
+  "unhandled_errors": [
+    "Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta operaci\u00f3n."
+  ],
+  "review_error": "Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta operaci\u00f3n."
+}

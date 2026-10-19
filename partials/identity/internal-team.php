@@ -4,6 +4,7 @@
 <title>Equipo interno y permisos · México Médico</title>
 <link rel="stylesheet" href="/assets/css/media-review-inbox.css"><link rel="stylesheet" href="/assets/css/internal-team.css">
 <link rel="stylesheet" href="/assets/css/internal-team-commercial.css"><link rel="stylesheet" href="/assets/css/internal-team-admission.css"><link rel="stylesheet" href="/assets/css/internal-team-readonly.css">
+<script src="/assets/js/team-selects.js" defer></script>
 <script src="/assets/js/team-dialogs.js" defer></script>
 <?php if(!empty($staffWorkflowReady)): ?><script src="/assets/js/staff-workflow.js" defer></script><script src="/assets/js/staff-personal.js" defer></script><?php endif; ?>
 <script src="/assets/js/internal-team-editor.js" defer></script><script src="/assets/js/internal-team-master.js" defer></script><script src="/assets/js/internal-team.js" defer></script></head><body>
@@ -17,7 +18,7 @@
 <div class="workspace-columns" id="workspace-columns" data-mobile-view="directory">
 <aside class="directory panel" id="team-directory" aria-labelledby="directory-heading"><div class="panel-heading"><h2 id="directory-heading">Equipo interno</h2><button id="refresh-team" type="button">Actualizar</button></div>
 <div class="category-filter" role="group" aria-label="Categoría del equipo"><button id="filter-masters" type="button" aria-pressed="false" disabled>Administradores maestros</button><button id="filter-advisors" type="button" aria-pressed="true" disabled>Asesores</button></div>
-<div id="staff-status-filter"><label for="status-trigger" class="search-label">Estado del equipo</label><select id="staff-status" hidden tabindex="-1" aria-hidden="true"><option value="ACTIVE">Activos</option><option value="SUSPENDED">Suspendidos</option><option value="PENDING">Pendientes</option><option value="REMOVED">Dados de baja</option></select><button id="status-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="status-options">Activos ▾</button><div id="status-options" role="listbox" aria-label="Estado del equipo" hidden></div></div>
+<div id="staff-status-filter"><label for="staff-status" class="search-label">Estado del equipo</label><select id="staff-status" data-trigger-id="status-trigger" data-label="Estado del equipo"><option value="ACTIVE">Activos</option><option value="SUSPENDED">Suspendidos</option><option value="PENDING">Pendientes</option><option value="REMOVED">Dados de baja</option></select></div>
 <p class="directory-note" id="authority-note" hidden></p><label for="advisor-search" class="search-label">Buscar integrante</label><input id="advisor-search" type="search" autocomplete="off" minlength="1" maxlength="64" placeholder="Nombre del integrante">
 <button id="clear-staff-search" type="button" hidden>Limpiar búsqueda</button>
 <div id="directory-content" aria-live="polite" aria-busy="true"></div>

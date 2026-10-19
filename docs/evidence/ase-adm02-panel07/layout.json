@@ -1,0 +1,238 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "chromium login fields visible with compact expandable credential guide",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 directory and selected detail preserve approved side-by-side layout",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440-900 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 directory and selected detail preserve approved side-by-side layout",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366-768 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 mobile selected detail reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium-390-844 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 directory and selected detail preserve approved side-by-side layout",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium-900-400 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit login fields visible with compact expandable credential guide",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 directory and selected detail preserve approved side-by-side layout",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440-900 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 directory and selected detail preserve approved side-by-side layout",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366-768 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 mobile selected detail reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-390-844 new-channel-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 directory and selected detail preserve approved side-by-side layout",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 exact approved heading and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 personal-gender-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 personal-avatar-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 personal-presentation-trigger expanded bounds",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 profile footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-900-400 new-channel-trigger expanded bounds",
+      "pass": true
+    }
+  ],
+  "check_count": 58
+}

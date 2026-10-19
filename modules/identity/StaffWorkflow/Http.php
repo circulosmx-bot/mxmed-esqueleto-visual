@@ -14,7 +14,7 @@ final class Http
             if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||($_SERVER['QUERY_STRING']??'')!=='')throw new \RuntimeException('workflow_invalid');
             $raw=file_get_contents('php://input',false,null,0,200001);if(!is_string($raw)||strlen($raw)>200000)throw new \RuntimeException('workflow_invalid');
             if(!GovernanceTransport::secure($_SERVER,$raw,(string)getenv('MXMED_GOVERNANCE_PROXY_KEY'))||($_SERVER['HTTP_ORIGIN']??'')!==$i->allowedOrigin()||($_SERVER['HTTP_SEC_FETCH_SITE']??'')!=='same-origin')throw new \RuntimeException('workflow_denied');
-            $a=(new CanonicalHttpSessionResolver($i->sessions()))->resolve($_COOKIE,true);if(!$a)throw new \RuntimeException('workflow_denied');
+            $a=(new CanonicalHttpSessionResolver($i->sessions()))->resolve($_COOKIE,true);if(!$a)throw new \RuntimeException('workflow_authentication_required');
             if(!preg_match('~^application/json(?:;.*)?$~',$_SERVER['CONTENT_TYPE']??''))throw new \RuntimeException('workflow_invalid');
             $b=json_decode($raw,true,12,JSON_THROW_ON_ERROR);if(!is_array($b)||!is_string($b['action']??null)||!is_array($b['input']??null)||array_keys($b)!==['action','input'])throw new \RuntimeException('workflow_invalid');
             // Reject duplicate object keys, including nested objects, before authority/writes.
@@ -60,9 +60,9 @@ final class Http
             }
             echo json_encode($r,JSON_THROW_ON_ERROR|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);
         }catch(\Throwable $e){
-            $m=$e->getMessage();$status=str_contains($m,'invalid')?400:(str_contains($m,'conflict')||str_contains($m,'stale')?409:(str_contains($m,'denied')||str_contains($m,'required')?403:503));
+            $m=$e->getMessage();$status=$m==='workflow_authentication_required'?401:(str_contains($m,'invalid')?400:(str_contains($m,'conflict')||str_contains($m,'stale')?409:(str_contains($m,'denied')||str_contains($m,'required')?403:503)));
             if($status===403&&isset($flow,$input)&&is_array($input)){try{$flow->denial($_COOKIE,$input);}catch(\Throwable){$status=503;}}
-            http_response_code($status);echo json_encode(['error'=>$status===409?'conflict_refresh_required':($status===400?'invalid_request':($status===403?'access_denied':'unavailable_reconcile_required')),'retry'=>false]);
+            http_response_code($status);echo json_encode(['error'=>$status===401?'authentication_required':($status===409?'conflict_refresh_required':($status===400?'invalid_request':($status===403?'access_denied':'unavailable_reconcile_required'))),'retry'=>false]);
         }
     }
     private static function portrait($media,array $b):array

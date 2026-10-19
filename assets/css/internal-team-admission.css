@@ -85,3 +85,13 @@ dialog button { white-space:normal; overflow-wrap:anywhere; }
 @media(max-width:600px) { dialog { padding:16px; } dialog > h2 { top:-16px; } dialog .dialog-actions { display:flex; flex-direction:row; } dialog .dialog-actions button { flex:1 1 40%; } .personal-values { grid-template-columns:1fr; } }
 
 dialog { max-height:min(calc(100dvh - 24px),calc(var(--team-visible-height,100dvh) - 24px)); max-width:calc(var(--team-visible-width,100vw) - 24px); }
+
+/* Existing compact status listbox, shared with wizard/profile selectors. */
+.team-select-trigger { display:block; width:100%; max-width:100%; min-width:0; font:inherit; font-size:.875rem; line-height:1.4; padding:9px 10px; text-align:left; white-space:normal; overflow-wrap:anywhere; }
+#staff-status-filter .team-select-trigger { width:auto; min-width:150px; font-size:.8rem; }
+.team-select-options[popover] { position:fixed; inset:auto; margin:0; box-sizing:border-box; padding:4px; border:1px solid var(--line,#bacdd2); border-radius:6px; background:white; color:var(--ink,#173f50); box-shadow:0 4px 12px #0002; overflow:auto; overscroll-behavior:contain; font-size:.875rem; line-height:1.4; }
+.team-select-options button { display:block; box-sizing:border-box; width:100%; border:0; border-radius:3px; padding:8px 10px; font:inherit; text-align:left; white-space:normal; overflow-wrap:anywhere; }
+.team-select-options button[aria-selected=true] { background:var(--soft,#edf4f4); font-weight:700; }
+.team-select-options button:focus-visible { outline:2px solid var(--teal,#007a89); outline-offset:-2px; }
+.team-select-options button:disabled { opacity:.55; }
+select[aria-hidden=true][hidden] { display:none; }

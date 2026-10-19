@@ -1,0 +1,61 @@
+{
+  "result": "REPRODUCED_BASELINE",
+  "observations": [
+    {
+      "fresh_session_edit_opens": true
+    },
+    {
+      "fresh_session_identity_opens": true,
+      "read_enabled": true
+    },
+    {
+      "invalid_session_edit_visible": false,
+      "visible_error": ""
+    },
+    {
+      "invalid_session_review_visible": false,
+      "visible_error": "Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta operaci\u00f3n."
+    }
+  ],
+  "pageerrors": [
+    "Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta operaci\u00f3n."
+  ],
+  "workflow_responses": [
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 200
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 403
+    },
+    {
+      "path": "/api/internal/staff-admission/workflow.php",
+      "status": 403
+    }
+  ]
+}

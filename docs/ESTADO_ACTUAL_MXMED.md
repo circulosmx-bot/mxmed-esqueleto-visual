@@ -192,3 +192,7 @@ Preparación en asistente aprobado de cuatro pasos, revisión contextual separad
 ## ASE-ADM02-PANEL06
 
 [Corrección focalizada](identity/ASE-ADM02-PANEL06.md), base PANEL05 e4f4fb04: diálogos acotados a viewport y cierre/foco consistente; edición parcial del mismo perfil versionado con género/contacto no verificado, fotografía privada StaffMedia y avatar independiente; login/logout Identity originales conectados al ensayo. Diez capacidades editables existentes y seis restricciones justificadas, sin ampliar autoridad. Migración sólo en infraestructura propia sintética, sin tocar 8091. 816 comprobaciones dirigidas + 14 smoke finales PASS; Chromium/WebKit y límites exactos en el contrato. Aceptación visual del Director pendiente.
+
+## ASE-ADM02-PANEL07
+
+[Corrección funcional](identity/ASE-ADM02-PANEL07.md), base PANEL06 419fe1fc: CSRF canónico fresco por acción, errores contextuales y recuperación de sesión; revisión existente con caso/estado/versiones y MFA preservado; listbox compacto compartido, contención y zoom nativo 125 % Chromium/WebKit; guía de login exclusivamente sintética. Mismos writers/permisos: dos correcciones reservadas a Director/Master y cuatro funciones de perfiles sin consumidor. QA dirigida y límites en contrato; fuente oficial/8091 preservados, sin nueva migración ni producción. Aceptación visual pendiente.

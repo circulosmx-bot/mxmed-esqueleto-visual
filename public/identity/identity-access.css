@@ -197,3 +197,8 @@ a:hover { color: var(--mx-deep); }
   .prototype-badge { font-size: .68rem; }
   .auth-card h1 { font-size: 1.62rem; }
 }
+
+/* Only the owned synthetic staff review supplies this guide. */
+#staff-synthetic-login-guide { display:block; margin:1rem 0; }
+#staff-synthetic-login-guide code { display:block; white-space:normal; overflow-wrap:anywhere; font-size:.8rem; }
+#staff-synthetic-login-guide p { margin:.65rem 0; }

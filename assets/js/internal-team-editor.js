@@ -47,6 +47,7 @@
       if(discard){draft=new Set(row(base)?.grants||[]);known=true;mount();}return discard;
     }
     function mount(){
+      for(const id of ['member-edit','member-evidence','team-logout'])if($(id))$(id).disabled=busy||dialogOpen;
       if(!base||!$('save-permissions'))return;
       const keys=editable(),enabled=!!token&&known&&!busy;
       document.querySelectorAll('#operational-matrix [data-capability]').forEach(input=>{

@@ -1,0 +1,111 @@
+{
+  "result": "PASS",
+  "syntax": [
+    {
+      "file": "assets/js/internal-team-editor.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/internal-team.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-personal.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-workflow.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/team-dialogs.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/team-selects.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffWorkflow/Http.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "partials/identity/internal-team.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "public/identity/acceso.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-browser.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-checks.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-layout.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-native-zoom.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-qa.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-recovery.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-review.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-security.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel07-verify.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-workflow-router.php",
+      "syntax": "PASS"
+    }
+  ],
+  "relative_document_links": 497,
+  "diff_check": "PASS",
+  "source_sha256": {
+    "assets/css/internal-team-admission.css": "44ad16b731ead9ca148bfe5b1042e9a94eb9fd102b1e888bbfe2564123cb0980",
+    "assets/js/internal-team-editor.js": "8fd94f36d7905c6fdaa0928f63d053a0d035a4727c04f6c66bd55288cc83324e",
+    "assets/js/internal-team.js": "ecc153b00c6df2fbca1941c97b8f2e77f3493ccbfd155233d9f899791f3b88f6",
+    "assets/js/staff-personal.js": "bedae1622cf3fa691e70da9cd573954d3df2fcdb6df63553aa89271c7179be05",
+    "assets/js/staff-workflow.js": "ff431fd91c584c8e0b99bbe8a864495eb3d36cf465531a50af57d907f1205f7c",
+    "assets/js/team-dialogs.js": "6590ad8065a9996441a7bca7c0efc22a276cb0ab96c02d564147435ac6194334",
+    "assets/js/team-selects.js": "0c456dd456e3670d2ad7ec5352fa5250d67ad28e64c784b107c1118684dca9f0",
+    "modules/identity/StaffWorkflow/Http.php": "59e630b256a7ffeb13b6fb4e0b5cd73294eba94f27e7f6b03a345734dd0e1117",
+    "partials/identity/internal-team.php": "88e7732a47038d93df2ea1b52562eee2c3200db6bcd501128bd595e640c880bd",
+    "public/identity/acceso.php": "0dd9527536449667ec425c514d396e19b9fd18b4c08ba082f4dc7ff1c8731153",
+    "public/identity/identity-access.css": "8425f0a234f577f9549e30da32cfc93148981fbe562792885dadd8268f4b7b77",
+    "scripts/ase-adm02-panel07-browser.py": "f08d15acf6e8682bc75b5494dc97a07a7b00e173ec6a2c93fa6f526a5ee41811",
+    "scripts/ase-adm02-panel07-checks.py": "d20af24273eb816424c6b0bbcd6fc4be83f07acfd7d124f5ed20d5cf5329df47",
+    "scripts/ase-adm02-panel07-layout.py": "3f37db4be18ac00b0fc1c1c23a54c20ea5195cb6cdc16e431516864afd102731",
+    "scripts/ase-adm02-panel07-native-zoom.js": "49c62e46501b0fac8d574730fd034a7fa23d83785e7f49a9d75218f549148001",
+    "scripts/ase-adm02-panel07-qa.py": "c4025764f1f9ec4ede82026a6b75c414168fd5d537134607ff84530e75b5c869",
+    "scripts/ase-adm02-panel07-recovery.py": "6c251ce787d3d6b0a676af41f62feb090c7201fc437e900a670223edfb22e274",
+    "scripts/ase-adm02-panel07-review.py": "a3b787f9c9f253147d0adb5d31fce6574228963f67833fba945fce51cd63b9b5",
+    "scripts/ase-adm02-panel07-security.php": "801e3529b6a37bcfe7fa6aa6607028751aa4f8ebea2193fdb3ce16c653cf678f",
+    "scripts/ase-adm02-panel07-verify.py": "d95827ec78cec8a8b251769e3de658263bdba7fff6f30fb3de48afe43274bc25",
+    "scripts/ase-adm02-workflow-router.php": "36f46aacf30707b94e72d3e872b4b1d06e62312cd0a81a4ac2ac97831cdc8d2a"
+  },
+  "no_database_connections": true,
+  "protected_unchanged": true,
+  "protected_worktrees": 21,
+  "owned_php_source_pins_verified": 33,
+  "synthetic_secrets_absent_from_changes": true
+}

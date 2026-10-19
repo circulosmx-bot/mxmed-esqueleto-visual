@@ -22,7 +22,7 @@
     else if(card){const status=card.querySelector('.status');status.textContent=staffStatus(selected);status.classList.toggle('suspended',selected.staff_status!=='ACTIVE');card.querySelector('.advisor-meta span:last-child').textContent=`Asesor · ${selected.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}`;}
   }});
   const masterFlow=window.createTeamMasterFlow({editor,read,refresh:async(target,nextCategory)=>{category=nextCategory;page=1;await load();await select(target,true);}});
-  async function navigate(action){clearTimeout(searchTimer);if(masterFlow.active){$('advisor-search').value=q;$('staff-status').value=status;return;}if(await editor.canLeave())await action();else $('advisor-search').value=q;if($('staff-status')){$('staff-status').value=status;syncStatus();}}
+  async function navigate(action){clearTimeout(searchTimer);if(masterFlow.active){say('Finaliza o consulta el resultado de la operación de gobierno antes de continuar.');$('advisor-search').value=q;$('staff-status').value=status;return;}if(await editor.canLeave())await action();else $('advisor-search').value=q;if($('staff-status')){$('staff-status').value=status;syncStatus();}}
   function failure(error){
     editor.reset();
     authority=null;selected=null;detailEpoch++;$('directory-content').innerHTML='';empty('Consulta no disponible');$('filter-masters').disabled=true;$('filter-advisors').disabled=true;$('previous-team').disabled=true;$('next-team').disabled=true;
@@ -95,18 +95,7 @@
     if($('return-active'))$('return-active').onclick=()=>navigate(()=>{status='ACTIVE';page=1;q='';$('advisor-search').value='';return load();});
     editor.mount();masterFlow.mount();
   }
-  // Same button/listbox pattern already used by the classification selector; no library.
-  function syncStatus(){
-    const native=$('staff-status'),trigger=$('status-trigger');if(!native||!trigger)return;
-    trigger.textContent=native.selectedOptions[0].textContent+' ▾';
-    $('status-options').replaceChildren(...[...native.options].map(o=>{const b=document.createElement('button');b.type='button';b.role='option';b.dataset.value=o.value;b.textContent=o.textContent;b.disabled=o.disabled;b.setAttribute('aria-selected',String(o.value===status));b.onclick=()=>{hideStatus();native.value=o.value;native.dispatchEvent(new Event('change'));};return b;}));
-  }
-  function hideStatus(focus=true){$('status-options').hidden=true;$('status-trigger').setAttribute('aria-expanded','false');if(focus)$('status-trigger').focus();}
-  function openStatus(){syncStatus();$('status-options').hidden=false;$('status-trigger').setAttribute('aria-expanded','true');$('status-options').querySelector('[aria-selected="true"]:not(:disabled)')?.focus();}
-  $('status-trigger').onclick=()=>{$('status-options').hidden?openStatus():hideStatus();};
-  $('status-trigger').onkeydown=e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();openStatus();}};
-  $('status-options').onkeydown=e=>{const options=[...$('status-options').querySelectorAll('button:not(:disabled)')],index=options.indexOf(document.activeElement);if(e.key==='Escape'){e.preventDefault();hideStatus();}else if(e.key==='Tab'){hideStatus(false);}else if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();options[e.key==='Home'?0:e.key==='End'?options.length-1:(index+(e.key==='ArrowDown'?1:-1)+options.length)%options.length]?.focus();}};
-  document.addEventListener('pointerdown',e=>{if(!$('staff-status-filter')?.contains(e.target)&&$('status-options'))hideStatus(false);});
+  function syncStatus(){window.teamSelects?.sync($('staff-status'));}
   $('staff-status').onchange=e=>{const next=e.target.value;navigate(()=>{status=next;page=1;return load();});};
   $('filter-advisors').onclick=()=>navigate(()=>{category='ADVISOR';status='ACTIVE';page=1;q='';$('advisor-search').value='';return load();});
   $('filter-masters').onclick=()=>{if(authority?.can_read_masters)navigate(()=>{category='MASTER_ADMIN';status='ACTIVE';page=1;q='';$('advisor-search').value='';return load();});};

@@ -16,6 +16,7 @@ for(const d of dialogs){let down=false,returnTo=null;const outside=e=>{const b=d
 }
 // BFCache must revalidate the canonical session before revealing retained staff contents.
 const login='/public/identity/acceso.php?next='+encodeURIComponent('/internal/media-review/index.php?section=equipo');
+window.teamSessionExpired=()=>{document.body.style.visibility='hidden';location.replace(login+'&reason=session_expired');};
 async function validate(){document.body.style.visibility='hidden';try{const r=await fetch('/api/identity/index.php/current-session',{credentials:'same-origin',cache:'no-store'}),b=await r.json();if(!r.ok||!b.authenticated){location.replace(login);return;}document.body.style.visibility='';}catch(_){location.replace(login);}}
 window.addEventListener('pagehide',()=>{document.body.style.visibility='hidden';});window.addEventListener('pageshow',e=>{if(e.persisted)validate();else document.body.style.visibility='';});
 window.addEventListener('storage',e=>{if(e.key==='mxmed.session.signal')validate();});

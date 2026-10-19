@@ -223,3 +223,7 @@ Staff → categoría/estado → integrante → datos/documentación/funciones/re
 ## J09 — PANEL06
 
 [PANEL06](../identity/ASE-ADM02-PANEL06.md): selección autorizada → Datos personales → edición de campos cambiados/nueva versión → confirmación personal. Correo Identity sólo consulta; teléfono explícitamente no verificado. Foto privada y avatar tienen selección reversible, independiente del género. Diálogos conservan foco/scroll/anidamiento, cierre y recuperación de operaciones en curso por referencia exacta. Logout revoca sesión → login existente en blanco → autenticación normal → ruta del rol autorizado; Back no restituye acceso. MFA documental y límites Master permanecen independientes.
+
+## J09 — PANEL07
+
+[PANEL07](../identity/ASE-ADM02-PANEL07.md): acción explícita → bootstrap CSRF vigente → lectura/escritura canónica, sin reintentar mutaciones. Sesión ausente → login Identity → nueva autenticación → Equipo; guía sintética local disponible tras logout. Edición y consulta muestran carga/denegación en el diálogo; revisión histórica/versiones no equivalen a evidencia vigente ni aprobación automática. Popup en top layer → Escape/backdrop cierra primero la lista y conserva el modal. No cambia TTL/MFA ni autorización de documentos; foto indisponible no bloquea los demás campos personales autorizados.

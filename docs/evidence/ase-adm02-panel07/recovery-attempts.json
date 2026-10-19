@@ -1,0 +1,19 @@
+{
+  "attempts": [
+    {
+      "result": "FAIL",
+      "scope": "test setup",
+      "cause": "Normal-height viewport did not place gender trigger at the bottom; switched to requested limited-height viewport."
+    },
+    {
+      "result": "FAIL",
+      "scope": "product",
+      "cause": "One backdrop click dismissed both popup and parent dialog; consume backdrop pointer/click at the active popup layer."
+    },
+    {
+      "result": "FAIL",
+      "scope": "test expectation",
+      "cause": "Second engine already used PORTRAIT, so no profile delta was correctly reported; add a real permitted field change before expecting a new personal version."
+    }
+  ]
+}
