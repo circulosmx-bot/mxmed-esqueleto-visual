@@ -1,0 +1,5 @@
+{
+  "provider_subscription_without_grant": "DENIED_BY_CANONICAL_AUTHORITY",
+  "master_delegation": "DENIED_BY_CANONICAL_AUTHORITY",
+  "only_explicit_media_read_grant": true
+}

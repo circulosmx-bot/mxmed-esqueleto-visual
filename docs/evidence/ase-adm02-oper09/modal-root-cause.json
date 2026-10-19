@@ -1,0 +1,104 @@
+{
+  "label": "historical-emulated-900",
+  "wheel": {
+    "dialog": {
+      "top": 12,
+      "bottom": 888,
+      "left": 323,
+      "right": 1043,
+      "height": 876,
+      "width": 720
+    },
+    "footer": {
+      "top": 814,
+      "bottom": 871,
+      "left": 340,
+      "right": 1026,
+      "height": 57,
+      "width": 686
+    },
+    "body": {
+      "top": 64,
+      "bottom": 814,
+      "left": 340,
+      "right": 1026,
+      "height": 750,
+      "width": 686
+    },
+    "viewport": {
+      "width": 1366,
+      "height": 900,
+      "visualHeight": 900,
+      "visualTop": 0,
+      "visualBottom": 900,
+      "outerHeight": 870,
+      "outerWidth": 1368,
+      "screenX": 22,
+      "screenY": 30,
+      "screenAvailableHeight": 900,
+      "screenAvailableTop": 0,
+      "dpr": 1,
+      "cssZoom": "1"
+    },
+    "clientHeight": 750,
+    "scrollHeight": 1132,
+    "scrollTop": 382.5,
+    "remaining": -0.5,
+    "ancestors": [
+      {
+        "tag": "DIALOG",
+        "overflow": "hidden",
+        "position": "fixed"
+      },
+      {
+        "tag": "MAIN",
+        "overflow": "visible",
+        "position": "static"
+      },
+      {
+        "tag": "HTML",
+        "overflow": "visible",
+        "position": "static"
+      }
+    ],
+    "actions": [
+      {
+        "id": "cancel-staff-profile",
+        "rect": {
+          "top": 827,
+          "bottom": 871,
+          "left": 733.21875,
+          "right": 835.3984375,
+          "height": 44,
+          "width": 102.1796875
+        },
+        "hit": true
+      },
+      {
+        "id": "save-staff-profile",
+        "rect": {
+          "top": 827,
+          "bottom": 871,
+          "left": 843.3984375,
+          "right": 1026,
+          "height": 44,
+          "width": 182.6015625
+        },
+        "hit": true
+      }
+    ]
+  },
+  "keyboard_end": true,
+  "tab_footer": true,
+  "native_window": {
+    "windowId": 1227427723,
+    "bounds": {
+      "left": 22,
+      "top": 30,
+      "width": 1368,
+      "height": 870,
+      "windowState": "normal"
+    }
+  },
+  "physical_overflow": 0
+}

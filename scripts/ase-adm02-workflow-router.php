@@ -7,7 +7,7 @@ try{
  $services=staffWorkflowOwnedServices();
  if($path==='/api/internal/staff-admission/workflow.php'){\Identity\StaffWorkflow\Http::handle($services);return true;}
  if(in_array($path,['/api/identity/index.php/logout','/api/identity/index.php/login','/api/identity/index.php/current-session'],true)){require __DIR__.'/../api/identity/index.php';return true;}
- if($path==='/public/identity/acceso.php'){$command='python3 '.realpath(__DIR__.'/ase-adm02-panel08-review.py').' '.realpath(getenv('ASE_INT02A_OWNED'));$staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];require __DIR__.'/../public/identity/acceso.php';return true;}
+ if($path==='/public/identity/acceso.php'){$command='python3 '.realpath(__DIR__.(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py')).' '.realpath(getenv('ASE_INT02A_OWNED'));$staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];require __DIR__.'/../public/identity/acceso.php';return true;}
  if(in_array($path,['/public/identity/identity-access.js','/public/identity/identity-access.css','/assets/mexico-medico.svg'],true))return false;
  if(preg_match('~^/assets/(css|js)/[a-z0-9-]+\.(css|js)$~D',$path))return false;
  if($path==='/api/internal/team/read.php'){
@@ -15,6 +15,11 @@ try{
   echo json_encode($services[1]->team($_COOKIE,$_GET),JSON_THROW_ON_ERROR|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);return true;
  }
  if(preg_match('~^/api/internal/team/(read|csrf|capability|lifecycle)\.php$~D',$path))return false;
+ // Existing consumer, opt-in only in the owned OPER09 composition. Its own Identity/grant
+ // boundary runs unchanged; Equipo retains its independent authority.
+ if(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1' && (($path==='/internal/media-review/index.php' && !isset($_GET['section'])) || preg_match('~^/api/internal/media-review/(pending|batches|batch|submission|review-image|source-download|approval-options)\.php$~D',$path))){
+  require __DIR__.'/..'.$path;return true;
+ }
  if($path==='/internal/media-review/index.php'){
   try{$teamAuthority=\Identity\Team\Http::service()->authority($_COOKIE);}catch(\Identity\Team\ReadFailure $e){header('Cache-Control: no-store');if($e->status===401){header('Location: /public/identity/acceso.php?next=%2Finternal%2Fmedia-review%2Findex.php%3Fsection%3Dequipo',true,303);}else{http_response_code($e->status);echo 'Esta cuenta no tiene acceso al equipo interno.';}return true;}\Identity\Team\Http::headers();header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'");$teamAuthorized=true;$staffWorkflowReady=true;
   require __DIR__.'/../partials/identity/internal-team.php';return true;
@@ -26,5 +31,8 @@ try{
   echo '<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi incorporación · México Médico</title><link rel="stylesheet" href="/assets/css/internal-team.css"><link rel="stylesheet" href="/assets/css/internal-team-admission.css"><script src="/assets/js/staff-applicant.js" defer></script></head><body><main class="advisor-workspace"><h1>Mi incorporación</h1>';
   require __DIR__.'/../partials/identity/staff-workflow.php';echo '</main></body></html>';return true;
  }
+}catch(\Identity\Team\ReadFailure $e){
+ \Identity\Team\Http::headers(true);http_response_code($e->status);
+ if(($_SERVER['REQUEST_METHOD']??'')!=='HEAD')echo json_encode(['error'=>match($e->status){401=>'authentication_required',403=>'access_denied',400=>'invalid_request',404=>'member_not_available',default=>'service_unavailable'}]);return true;
 }catch(Throwable $e){http_response_code(503);header('Cache-Control: no-store');echo '{"error":"isolated_service_unavailable"}';return true;}
 http_response_code(404);header('Cache-Control: no-store');echo '{}';

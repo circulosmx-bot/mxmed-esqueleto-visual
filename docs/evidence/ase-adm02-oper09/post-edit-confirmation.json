@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Advisor personally confirms edited version; original admission remains historical",
+    "pass": true
+  },
+  {
+    "name": "Existing post-admission resubmission boundary preserved without bypass",
+    "pass": true
+  },
+  {
+    "name": "Pending-only canonical case supplies protected evidence modal; no second Advisor",
+    "pass": true
+  }
+]

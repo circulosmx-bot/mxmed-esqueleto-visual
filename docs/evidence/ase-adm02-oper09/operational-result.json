@@ -1,0 +1,14 @@
+{
+  "account": "acct_1ce759f0e50d5e28afe94106",
+  "case": "adm_e3374a945dace1354281c49ae7516124",
+  "capability": "media_review_read",
+  "consumer": "/api/internal/media-review/review-image.php",
+  "allow": 200,
+  "ungranted_source_download": 403,
+  "revoked_grant": 403,
+  "suspended": 403,
+  "revoked_session": 403,
+  "final_staff_status": "ACTIVE",
+  "audit_event_count": 105,
+  "synthetic": true
+}

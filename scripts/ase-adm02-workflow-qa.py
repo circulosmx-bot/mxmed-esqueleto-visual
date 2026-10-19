@@ -10,6 +10,7 @@ PHASE='ase-adm02imp01'
 EXPECTED_BRANCH='feature/ase-adm02-functional-consolidation'
 ROUTER='scripts/ase-adm02-workflow-router.php'
 HOOK=None
+SETUP_HOOK=None
 SEED_STAFF_ACTORS=None
 REVIEW_SECONDS=3600
 EXTRA_PROTECTED=['mxmed-ase-int02a-governed-grants','mxmed-ase-int02b-team-permission-ui','mxmed-ase-int03a-advisor-lifecycle','mxmed-ase-int03b-master-governance-prep','mxmed-ase-int03b-master-privileged-backend','mxmed-ase-int03b-master-ui','mxmed-act03-governance-check-compat01','mxmed-ase-adm02-staff-admission-policy','mxmed-ase-adm02-staff-case-foundation','mxmed-ase-adm02-staff-invitation-binding','mxmed-ase-adm02-private-staff-media']
@@ -138,6 +139,7 @@ def main():
         spec_setup=__import__('importlib.util',fromlist=['spec_from_file_location'])
         spec=spec_setup.spec_from_file_location('wf_setup',ROOT/'scripts/ase-adm02-workflow-checks.py');wf=spec_setup.module_from_spec(spec);spec.loader.exec_module(wf)
         wf.setup({**locals(),'ROOT':ROOT},check)
+        if SETUP_HOOK:SETUP_HOOK({**locals(),'ROOT':ROOT},check)
         assert 3600<=REVIEW_SECONDS<=86400
         review_deadline=time.time()+REVIEW_SECONDS
         if REVIEW_SECONDS>3600:

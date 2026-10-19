@@ -1,0 +1,516 @@
+{
+  "result": "PASS",
+  "source_baseline": "f486c42bd5272246a4a6b110d18affba641b29ff",
+  "checks": [
+    {
+      "name": "Owned new datadir verified before fixture DDL",
+      "pass": true
+    },
+    {
+      "name": "Fresh schema installed; historical governance operations preserved plus staff review",
+      "pass": true
+    },
+    {
+      "name": "Real media consumer uses only owned schema and private roots",
+      "pass": true
+    },
+    {
+      "name": "Director canonical login and four-step UI create exact invitation",
+      "pass": true
+    },
+    {
+      "name": "New canonical Identity registration and verified synthetic email",
+      "pass": true
+    },
+    {
+      "name": "Independent applicant login binds intended invitation in UI",
+      "pass": true
+    },
+    {
+      "name": "Applicant correction and confirmation use canonical version writer",
+      "pass": true
+    },
+    {
+      "name": "Applicant submits synthetic two-sided identity evidence through UI",
+      "pass": true
+    },
+    {
+      "name": "Director actually reads protected evidence with password and MFA",
+      "pass": true
+    },
+    {
+      "name": "Director accepts current identity evidence with independent MFA proof",
+      "pass": true
+    },
+    {
+      "name": "Canonical admission creates exactly one active Advisor relationship",
+      "pass": true
+    },
+    {
+      "name": "Canonical admission audit retained",
+      "pass": true
+    },
+    {
+      "name": "Director UI persists grant",
+      "pass": true
+    },
+    {
+      "name": "Incorrect Advisor credentials denied by Identity HTTP",
+      "pass": true
+    },
+    {
+      "name": "Independent Advisor operates existing Media UI and receives real REVIEW image",
+      "pass": true
+    },
+    {
+      "name": "Real authorized image consumer ALLOW",
+      "pass": true
+    },
+    {
+      "name": "Ungranted original download consumer DENY",
+      "pass": true
+    },
+    {
+      "name": "Advisor has no Director directory or cross-staff private read",
+      "pass": true
+    },
+    {
+      "name": "Advisor cannot open Director identity review challenge",
+      "pass": true
+    },
+    {
+      "name": "Advisor has no Master governance or financial entry in isolated composition",
+      "pass": true
+    },
+    {
+      "name": "Advisor self-grant denied by canonical mutation boundary",
+      "pass": true
+    },
+    {
+      "name": "Director UI persists revoke",
+      "pass": true
+    },
+    {
+      "name": "Grant revocation enforced on unchanged existing Advisor session",
+      "pass": true
+    },
+    {
+      "name": "Director UI persists grant",
+      "pass": true
+    },
+    {
+      "name": "Explicit UI regrant restores the real consumer",
+      "pass": true
+    },
+    {
+      "name": "Canonical suspension denies existing Advisor session",
+      "pass": true
+    },
+    {
+      "name": "Suspension preserves admission and prior audit",
+      "pass": true
+    },
+    {
+      "name": "Explicit canonical UI reactivation leaves useful ACTIVE demonstration",
+      "pass": true
+    },
+    {
+      "name": "Advisor independent canonical logout succeeds",
+      "pass": true
+    },
+    {
+      "name": "Replaying revoked Advisor session is server denied",
+      "pass": true
+    },
+    {
+      "name": "Advisor logout preserves independent Director session",
+      "pass": true
+    },
+    {
+      "name": "Historical fixed viewport reproduces physical content overflow despite DOM-visible footer",
+      "pass": true
+    },
+    {
+      "name": "Actual fitted native Chromium window reaches footer with wheel keyboard and hit-test",
+      "pass": true
+    },
+    {
+      "name": "Closing full modal restores prior background position and overflow",
+      "pass": true
+    },
+    {
+      "name": "Background wheel scrolling works again after dismissal",
+      "pass": true
+    },
+    {
+      "name": "Actual headed Chromium bottom Save persists after reload",
+      "pass": true
+    },
+    {
+      "name": "Advisor personally confirms edited version; original admission remains historical",
+      "pass": true
+    },
+    {
+      "name": "Existing post-admission resubmission boundary preserved without bypass",
+      "pass": true
+    },
+    {
+      "name": "Pending-only canonical case supplies protected evidence modal; no second Advisor",
+      "pass": true
+    },
+    {
+      "name": "chromium-1440x900 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "chromium-1366x768 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "chromium-1280x720 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "chromium-390x844 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "chromium-390x600 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "chromium-1280x720-identity password/MFA/evidence footer reachable",
+      "pass": true
+    },
+    {
+      "name": "chromium-390x600-identity password/MFA/evidence footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-1440x900 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "webkit-1366x768 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "webkit-1280x720 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "webkit-390x844 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "webkit-390x600 personal/portrait and wizard wheel PageDown End Tab footer cancel/reopen",
+      "pass": true
+    },
+    {
+      "name": "webkit-1280x720-identity password/MFA/evidence footer reachable",
+      "pass": true
+    },
+    {
+      "name": "webkit-390x600-identity password/MFA/evidence footer reachable",
+      "pass": true
+    },
+    {
+      "name": "Exact served asset assets/js/team-dialogs.js",
+      "pass": true
+    },
+    {
+      "name": "Exact served asset assets/js/staff-personal.js",
+      "pass": true
+    },
+    {
+      "name": "Exact served asset assets/js/staff-workflow.js",
+      "pass": true
+    },
+    {
+      "name": "Exact served asset assets/css/internal-team-admission.css",
+      "pass": true
+    }
+  ],
+  "check_count": 57,
+  "concurrency": [],
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc02": {
+      "head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxflow03": {
+      "head": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel04": {
+      "head": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel05": {
+      "head": "e4f4fb046acba6a75f20682d772cc2d4a197e8a8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel06": {
+      "head": "419fe1fc6d79b545aae3502a3f6991699fc4c685",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel07": {
+      "head": "ec8024dfd4c16237877f92a25f4351e2ec0bdc16",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel08": {
+      "head": "f486c42bd5272246a4a6b110d18affba641b29ff",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc02": {
+      "head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxflow03": {
+      "head": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel04": {
+      "head": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel05": {
+      "head": "e4f4fb046acba6a75f20682d772cc2d4a197e8a8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel06": {
+      "head": "419fe1fc6d79b545aae3502a3f6991699fc4c685",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel07": {
+      "head": "ec8024dfd4c16237877f92a25f4351e2ec0bdc16",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel08": {
+      "head": "f486c42bd5272246a4a6b110d18affba641b29ff",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_unchanged": true,
+  "preview": {
+    "url": "https://127.0.0.1:59919/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792465265.388275,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-4ta1d2ac",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "source_sha256": {
+    "modules/identity/StaffWorkflow/Service.php": "3d989731f5501eb361cd7070733589ff6a950c417970e74275f37f32fa38279a",
+    "modules/identity/StaffWorkflow/Http.php": "59e630b256a7ffeb13b6fb4e0b5cd73294eba94f27e7f6b03a345734dd0e1117",
+    "modules/identity/StaffMedia/Policy.php": "94e5c974fd7da284cf8ae2833befb83b296ed90f8e93e93801a14717aa5d34e0",
+    "modules/identity/StaffMedia/Service.php": "b7e6a40ae22ddf354ef138501e87e1af34133f17c7325976c71b20f211207c20",
+    "modules/identity/StaffMedia/Authority.php": "d60bff7eeb517bc32460ed1054693bb49e8252b98db9972ab2d130a40eace598",
+    "modules/identity/StaffMedia/Audit.php": "c368194d650ce39c641ed701efd9df27fd301b050a057d2164c0d1e3e0483d85",
+    "modules/identity/StaffMedia/Cipher.php": "6e9897e528cc45bf5a2e47b6173f9d7faa952ca64cc8ee1fa0de8d807ac2d1a7",
+    "modules/identity/StaffMedia/Storage.php": "f72278762ea072a6d5a72f00ac1937da449f0ed82ac2f84862ab9912b34f4dd7",
+    "modules/identity/StaffMedia/Composition.php": "467cf1d7fd8522dc73da8179be8b14cd883179ccd5a1742428e3e34c1f5c65f8",
+    "modules/identity/StaffMedia/Input.php": "c838f8a884e7ae22547f055f48aa9441f56a658b10e757a5e71f10d5ca519471",
+    "modules/identity/StaffMedia/Images.php": "9e166f61a815dbc3f2571f8292e4941eb00c5e80bf91782b7aeced6efb0ec8de",
+    "modules/identity/StaffAdmission/UnitOfWork.php": "fe6b985405fbaf833cf51ad27b35e8cd955d10a905bb1cb9ecc80e52ef877acf",
+    "modules/identity/StaffAdmission/Service.php": "1caff8855f166bb0db242ab680fba5daa24e82d5f488ddb41f9d5f8a396238cb",
+    "modules/identity/StaffAdmission/Audit.php": "22802c385c7e118d361bcb8b29199365c29d663dd1797246e00ca3be947aa105",
+    "modules/identity/StaffAdmission/InvitationInput.php": "bda4b6642046268d388230456aa13e12b0a82f83b1c5cab01e34409437651f77",
+    "modules/identity/StaffAdmission/InvitationHttp.php": "7ddec85f3aa492421cd25061db9aeb4fe2203427c31fad315188a499e9e381a6",
+    "modules/identity/StaffAdmission/Http.php": "decf6532dcd006c83f2a0f308ef10641f228e2afbdc9f57ba7e3d0d6e4045fe4",
+    "modules/identity/StaffAdmission/InvitationPolicy.php": "f06f34d042c40ce77567c5c811b9264a353f43051b22139d5b80deb0c0f37256",
+    "modules/identity/StaffAdmission/InvitationComposition.php": "019c6f023e9bea1f4928f90947cd7916bd2d8fc744590fc10c189763bfecd642",
+    "modules/identity/StaffAdmission/Composition.php": "2782a00e0b02eb95d2214e20741f33cbb47491844350b5a5125a5b8d66b278d9",
+    "modules/identity/StaffAdmission/Input.php": "9dfbe4dfe137b830f3d157914e4386a2a1185162034f3ed624d8917a0021a0d7",
+    "modules/identity/StaffAdmission/InvitationService.php": "a9ae54c330435abf801cfa9155ad3b1f39f226ad102394759a54ad616a5877ef",
+    "modules/identity/StaffAdmission/InvitationDeliveryPort.php": "595aaca362c70abc9d724a261beb81bc7830c7276a8d8cebff81ab9627303146",
+    "scripts/ase-adm02-workflow-router.php": "65176fd5cb6004cc8f9e28b715fbff8b83eec87ef8a772b7d784f2701db07eeb",
+    "scripts/ase-adm02-workflow-qa.py": "eb372ae6cd56bdff655795ea6af141493660be55b446b9c6e1ac6d8cc7c0a40e",
+    "scripts/ase-adm02-workflow-review.py": "41ea1a828a93345593e7c6feee3d0e0030bd7c4e6016319153df69d8e0f18a03",
+    "scripts/ase-adm02-workflow-runtime.php": "aaacf15d6ec16b2aca04e4c49eea7ad1427b15445fe33e7000e7456aeb2082bc",
+    "scripts/ase-adm02-workflow-checks.py": "2737f77b81efebe698ad69afe0e142591185fef8d64df85bfe4bc0a704bca8b0",
+    "scripts/ase-adm02-workflow-ui.py": "3dd585c68cf15c5e8bffafb58fd11a590cdb1eceb912fb7e01f29b6f19a184eb",
+    "modules/identity/services/InternalGovernanceService.php": "0f997ee8b384752932a57e078f6656989b112ae3c693d737170f12248fac5b09",
+    "modules/identity/services/StaffMfaService.php": "5df2993cc755d565b8a75686316fd38a05dc58d4a1244900cb8120a55e921bcc",
+    "modules/identity/MasterGovernance/Composition.php": "511bf11e4a51680f983640fde6c602f2435474573df773ab56eb6d8af8c0048b",
+    "modules/identity/db/migrations/2026_10_18_07_staff_workflow.sql": "ae616ed5c3f751716224a2207154cf4095eabd71efa96d774b0574c6a125e0b5",
+    "modules/identity/tests/StaffWorkflowFixture.php": "c1887e74cb2725e893262306cb4eee014822c0cf227b17ea299da77c2b155385",
+    "assets/js/staff-workflow.js": "4157b89430278dc9489c9025b98287775627873d69fdee5a01512492b73f046f",
+    "assets/js/internal-team.js": "ecc153b00c6df2fbca1941c97b8f2e77f3493ccbfd155233d9f899791f3b88f6",
+    "partials/identity/internal-team.php": "88e7732a47038d93df2ea1b52562eee2c3200db6bcd501128bd595e640c880bd",
+    "partials/identity/staff-workflow.php": "4c6f029fa407dcddb70e5724f1be85682d59e9735639104d7c5fcbbc99e9f3d3"
+  },
+  "ui_changed": true,
+  "real_personal_data_used": false,
+  "operational_activation": false
+}

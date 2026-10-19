@@ -231,3 +231,7 @@ Staff → categoría/estado → integrante → datos/documentación/funciones/re
 ## J09 — PANEL08
 
 [PANEL08](../identity/ASE-ADM02-PANEL08.md): selección local de avatar/retrato → caso canónico → StaffMedia privado → nueva versión personal → invitación sintética. Upload incierto → media_result exacto, sin duplicar al cerrar/reabrir. Retrato anterior al binding mantiene procedencia account_id NULL inmutable; el caso lleva el vínculo posterior. Director creador deja de tener autoridad preparatoria al binding; solicitante confirma por Identity. Modal: encabezado y pie fuera del cuerpo desplazable, foco posterior a habilitar campos y cierre sujeto al controlador de dominio.
+
+## J09 — OPER09
+
+[OPER09](../identity/ASE-ADM02-OPER09.md): wizard Director → invitación exacta → registro/verificación Identity con entrega inerte → login solicitante independiente → binding/confirmación/documentos → READ/ACCEPT/ADMIT con contraseña y MFA → grant UI/recarga → consumer Media original. Misma sesión pierde autorización tras revoke o suspensión; logout revoca sólo su sesión. Reactivación/regrant explícitos conservan la demostración. Ventana nativa sin emulación de viewport evita que la altura virtual exceda el área física; prueba de rueda/teclado/hit-test no equivale a aceptación del Director. Caso pendiente separado sirve para inspeccionar evidencia/MFA; la admisión del único Advisor nuevo conserva auditoría. No se abre un flujo de reverificación posterior a admisión.

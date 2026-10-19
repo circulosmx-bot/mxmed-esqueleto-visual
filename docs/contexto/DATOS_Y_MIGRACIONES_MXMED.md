@@ -185,3 +185,7 @@ Sin objetos nuevos. Reutiliza versiones/procedencia personal, invitaciones y cas
 ## PANEL08 — retrato privado previo al binding
 
 [PANEL08](../identity/ASE-ADM02-PANEL08.md) y [migración2026_10_19_02](../../modules/identity/db/migrations/2026_10_19_02_staff_preparation_portrait.sql): auth_staff_media_assets.account_id nullable sólo para INTERNAL_PRESENTATION_PORTRAIT, CHECK impide evidencia sin cuenta. Mantiene FK a caso/versión, fuente actor, cifrado/AAD, recibos y triggers inmutables. NULL es procedencia de captura; no se actualiza al binding. Lectura requiere autorización sobre el mismo caso y propósito. Sin tablas nuevas ni backfill; DDL instalado sólo en datadir nuevo sintético.
+
+## OPER09 — conexión Media sólo en datadir nuevo
+
+[OPER09](../identity/ASE-ADM02-OPER09.md) reutiliza migrations existentes de `media_review_submissions/files/batches/ready_events` y `profiles_doctors` únicamente en infraestructura desechable propia. HTTP recibe SELECT sobre esos objetos; raíces públicas/privadas apuntan al mismo directorio temporal propietario. No SQL nuevo productivo, mutación de bases oficiales ni datos reales. Advisor/caso/invitación/documentos/admisión/grant/lifecycle usan sus writers canónicos; ninguna actualización directa para saltar gates. La nueva versión personal no reescribe la revisión histórica: nuevos envíos tras admisión permanecen bloqueados por `StaffWorkflow\Service::submit`. Tokens, contraseñas y TOTP quedan fuera de Git, en archivos locales privados; TTL Identity/MFA sin cambios.

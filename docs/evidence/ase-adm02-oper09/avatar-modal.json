@@ -1,0 +1,200 @@
+{
+  "checks": [
+    {
+      "name": "chromium avatar selector and footer cancel preserve unsaved-change confirmation",
+      "pass": true
+    },
+    {
+      "name": "webkit avatar selector and footer cancel preserve unsaved-change confirmation",
+      "pass": true
+    }
+  ],
+  "bounds": [
+    {
+      "label": "chromium-avatar-unsaved",
+      "wheel": {
+        "dialog": {
+          "top": 12,
+          "bottom": 588,
+          "left": 16,
+          "right": 374,
+          "height": 576,
+          "width": 358
+        },
+        "footer": {
+          "top": 508,
+          "bottom": 571,
+          "left": 33,
+          "right": 357,
+          "height": 63,
+          "width": 324
+        },
+        "body": {
+          "top": 64,
+          "bottom": 508,
+          "left": 33,
+          "right": 357,
+          "height": 444,
+          "width": 324
+        },
+        "viewport": {
+          "width": 390,
+          "height": 600,
+          "visualHeight": 600,
+          "visualTop": 0,
+          "visualBottom": 600,
+          "outerHeight": 600,
+          "outerWidth": 390,
+          "screenX": 0,
+          "screenY": 0,
+          "screenAvailableHeight": 600,
+          "screenAvailableTop": 0,
+          "dpr": 1,
+          "cssZoom": "1"
+        },
+        "clientHeight": 444,
+        "scrollHeight": 1566,
+        "scrollTop": 1122,
+        "remaining": 0,
+        "ancestors": [
+          {
+            "tag": "DIALOG",
+            "overflow": "hidden",
+            "position": "fixed"
+          },
+          {
+            "tag": "MAIN",
+            "overflow": "visible",
+            "position": "static"
+          },
+          {
+            "tag": "HTML",
+            "overflow": "visible",
+            "position": "static"
+          }
+        ],
+        "actions": [
+          {
+            "id": "cancel-staff-profile",
+            "rect": {
+              "top": 521,
+              "bottom": 571,
+              "left": 33,
+              "right": 191,
+              "height": 50,
+              "width": 158
+            },
+            "hit": true
+          },
+          {
+            "id": "save-staff-profile",
+            "rect": {
+              "top": 521,
+              "bottom": 571,
+              "left": 199,
+              "right": 357,
+              "height": 50,
+              "width": 158
+            },
+            "hit": true
+          }
+        ]
+      },
+      "keyboard_end": true,
+      "tab_footer": true
+    },
+    {
+      "label": "webkit-avatar-unsaved",
+      "wheel": {
+        "dialog": {
+          "top": 12,
+          "bottom": 588,
+          "left": 16,
+          "right": 374,
+          "height": 576,
+          "width": 358
+        },
+        "footer": {
+          "top": 508,
+          "bottom": 571,
+          "left": 33,
+          "right": 357,
+          "height": 63,
+          "width": 324
+        },
+        "body": {
+          "top": 64,
+          "bottom": 508,
+          "left": 33,
+          "right": 357,
+          "height": 444,
+          "width": 324
+        },
+        "viewport": {
+          "width": 390,
+          "height": 600,
+          "visualHeight": 600,
+          "visualTop": 0,
+          "visualBottom": 600,
+          "outerHeight": 600,
+          "outerWidth": 390,
+          "screenX": -10000,
+          "screenY": -9880,
+          "screenAvailableHeight": 600,
+          "screenAvailableTop": 0,
+          "dpr": 1,
+          "cssZoom": "1"
+        },
+        "clientHeight": 444,
+        "scrollHeight": 1566,
+        "scrollTop": 1122,
+        "remaining": 0,
+        "ancestors": [
+          {
+            "tag": "DIALOG",
+            "overflow": "hidden",
+            "position": "fixed"
+          },
+          {
+            "tag": "MAIN",
+            "overflow": "visible",
+            "position": "static"
+          },
+          {
+            "tag": "HTML",
+            "overflow": "visible",
+            "position": "static"
+          }
+        ],
+        "actions": [
+          {
+            "id": "cancel-staff-profile",
+            "rect": {
+              "top": 521,
+              "bottom": 571,
+              "left": 33,
+              "right": 191,
+              "height": 50,
+              "width": 158
+            },
+            "hit": true
+          },
+          {
+            "id": "save-staff-profile",
+            "rect": {
+              "top": 521,
+              "bottom": 571,
+              "left": 199,
+              "right": 357,
+              "height": 50,
+              "width": 158
+            },
+            "hit": true
+          }
+        ]
+      },
+      "keyboard_end": true,
+      "tab_footer": true
+    }
+  ]
+}

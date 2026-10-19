@@ -1,0 +1,4081 @@
+[
+  {
+    "label": "delivered-native",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 771,
+        "left": 323,
+        "right": 1043,
+        "height": 759,
+        "width": 720
+      },
+      "footer": {
+        "top": 697,
+        "bottom": 754,
+        "left": 340,
+        "right": 1026,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 697,
+        "left": 340,
+        "right": 1026,
+        "height": 633,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 783,
+        "visualHeight": 783,
+        "visualTop": 0,
+        "visualBottom": 783,
+        "outerHeight": 870,
+        "outerWidth": 1366,
+        "screenX": 0,
+        "screenY": 30,
+        "screenAvailableHeight": 870,
+        "screenAvailableTop": 30,
+        "dpr": 2,
+        "cssZoom": "1"
+      },
+      "clientHeight": 633,
+      "scrollHeight": 1132,
+      "scrollTop": 499.5,
+      "remaining": -0.5,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 710,
+            "bottom": 754,
+            "left": 733.21875,
+            "right": 835.3984375,
+            "height": 44,
+            "width": 102.1796875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 710,
+            "bottom": 754,
+            "left": 843.3984375,
+            "right": 1026,
+            "height": 44,
+            "width": 182.6015625
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true,
+    "native_window": {
+      "windowId": 1049710379,
+      "bounds": {
+        "left": 0,
+        "top": 30,
+        "width": 1366,
+        "height": 870,
+        "windowState": "normal"
+      }
+    },
+    "cancel_and_reopen": true
+  },
+  {
+    "label": "native-save",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 771,
+        "left": 323,
+        "right": 1043,
+        "height": 759,
+        "width": 720
+      },
+      "footer": {
+        "top": 697,
+        "bottom": 754,
+        "left": 340,
+        "right": 1026,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 697,
+        "left": 340,
+        "right": 1026,
+        "height": 633,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 783,
+        "visualHeight": 783,
+        "visualTop": 0,
+        "visualBottom": 783,
+        "outerHeight": 870,
+        "outerWidth": 1366,
+        "screenX": 0,
+        "screenY": 30,
+        "screenAvailableHeight": 870,
+        "screenAvailableTop": 30,
+        "dpr": 2,
+        "cssZoom": "1"
+      },
+      "clientHeight": 633,
+      "scrollHeight": 1132,
+      "scrollTop": 499.5,
+      "remaining": -0.5,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 710,
+            "bottom": 754,
+            "left": 733.21875,
+            "right": 835.3984375,
+            "height": 44,
+            "width": 102.1796875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 710,
+            "bottom": 754,
+            "left": 843.3984375,
+            "right": 1026,
+            "height": 44,
+            "width": 182.6015625
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1440x900-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 888,
+        "left": 360,
+        "right": 1080,
+        "height": 876,
+        "width": 720
+      },
+      "footer": {
+        "top": 814,
+        "bottom": 871,
+        "left": 377,
+        "right": 1063,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 814,
+        "left": 377,
+        "right": 1063,
+        "height": 750,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "visualHeight": 900,
+        "visualTop": 0,
+        "visualBottom": 900,
+        "outerHeight": 900,
+        "outerWidth": 1440,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 900,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 750,
+      "scrollHeight": 1132,
+      "scrollTop": 382,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 770.203125,
+            "right": 872.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 880.390625,
+            "right": 1063,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1440x900-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 888,
+        "left": 360,
+        "right": 1080,
+        "height": 876,
+        "width": 720
+      },
+      "footer": {
+        "top": 814,
+        "bottom": 871,
+        "left": 377,
+        "right": 1063,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 814,
+        "left": 377,
+        "right": 1063,
+        "height": 750,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "visualHeight": 900,
+        "visualTop": 0,
+        "visualBottom": 900,
+        "outerHeight": 900,
+        "outerWidth": 1440,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 900,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 750,
+      "scrollHeight": 1132,
+      "scrollTop": 382,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 770.203125,
+            "right": 872.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 880.390625,
+            "right": 1063,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1440x900-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 888,
+        "left": 360,
+        "right": 1080,
+        "height": 876,
+        "width": 720
+      },
+      "footer": {
+        "top": 810,
+        "bottom": 871,
+        "left": 377,
+        "right": 1063,
+        "height": 61,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 810,
+        "left": 377,
+        "right": 1063,
+        "height": 746,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "visualHeight": 900,
+        "visualTop": 0,
+        "visualBottom": 900,
+        "outerHeight": 900,
+        "outerWidth": 1440,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 900,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 746,
+      "scrollHeight": 891,
+      "scrollTop": 145,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 697.359375,
+            "right": 781.34375,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 789.34375,
+            "right": 953.390625,
+            "height": 44,
+            "width": 164.046875
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 961.390625,
+            "right": 1063,
+            "height": 44,
+            "width": 101.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1366x768-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 756,
+        "left": 323,
+        "right": 1043,
+        "height": 744,
+        "width": 720
+      },
+      "footer": {
+        "top": 682,
+        "bottom": 739,
+        "left": 340,
+        "right": 1026,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 682,
+        "left": 340,
+        "right": 1026,
+        "height": 618,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 768,
+        "visualHeight": 768,
+        "visualTop": 0,
+        "visualBottom": 768,
+        "outerHeight": 768,
+        "outerWidth": 1366,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 768,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 618,
+      "scrollHeight": 1132,
+      "scrollTop": 514,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 733.203125,
+            "right": 835.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 843.390625,
+            "right": 1026,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1366x768-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 756,
+        "left": 323,
+        "right": 1043,
+        "height": 744,
+        "width": 720
+      },
+      "footer": {
+        "top": 682,
+        "bottom": 739,
+        "left": 340,
+        "right": 1026,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 682,
+        "left": 340,
+        "right": 1026,
+        "height": 618,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 768,
+        "visualHeight": 768,
+        "visualTop": 0,
+        "visualBottom": 768,
+        "outerHeight": 768,
+        "outerWidth": 1366,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 768,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 618,
+      "scrollHeight": 1132,
+      "scrollTop": 514,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 733.203125,
+            "right": 835.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 843.390625,
+            "right": 1026,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1366x768-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 756,
+        "left": 323,
+        "right": 1043,
+        "height": 744,
+        "width": 720
+      },
+      "footer": {
+        "top": 678,
+        "bottom": 739,
+        "left": 340,
+        "right": 1026,
+        "height": 61,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 678,
+        "left": 340,
+        "right": 1026,
+        "height": 614,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 768,
+        "visualHeight": 768,
+        "visualTop": 0,
+        "visualBottom": 768,
+        "outerHeight": 768,
+        "outerWidth": 1366,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 768,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 614,
+      "scrollHeight": 891,
+      "scrollTop": 277,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 660.359375,
+            "right": 744.34375,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 752.34375,
+            "right": 916.390625,
+            "height": 44,
+            "width": 164.046875
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 924.390625,
+            "right": 1026,
+            "height": 44,
+            "width": 101.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1280x720-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 634,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 634,
+        "left": 297,
+        "right": 983,
+        "height": 570,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 570,
+      "scrollHeight": 1132,
+      "scrollTop": 562,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 690.203125,
+            "right": 792.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 800.390625,
+            "right": 983,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1280x720-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 634,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 634,
+        "left": 297,
+        "right": 983,
+        "height": 570,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 570,
+      "scrollHeight": 1132,
+      "scrollTop": 562,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 690.203125,
+            "right": 792.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 800.390625,
+            "right": 983,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1280x720-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 630,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 61,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 630,
+        "left": 297,
+        "right": 983,
+        "height": 566,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 566,
+      "scrollHeight": 891,
+      "scrollTop": 325,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 617.359375,
+            "right": 701.34375,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 709.34375,
+            "right": 873.390625,
+            "height": 44,
+            "width": 164.046875
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 881.390625,
+            "right": 983,
+            "height": 44,
+            "width": 101.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x844-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 832,
+        "left": 16,
+        "right": 374,
+        "height": 820,
+        "width": 358
+      },
+      "footer": {
+        "top": 752,
+        "bottom": 815,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 752,
+        "left": 33,
+        "right": 357,
+        "height": 688,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "visualHeight": 844,
+        "visualTop": 0,
+        "visualBottom": 844,
+        "outerHeight": 844,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 844,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 688,
+      "scrollHeight": 1566,
+      "scrollTop": 878,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 765,
+            "bottom": 815,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 765,
+            "bottom": 815,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x844-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 832,
+        "left": 16,
+        "right": 374,
+        "height": 820,
+        "width": 358
+      },
+      "footer": {
+        "top": 752,
+        "bottom": 815,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 752,
+        "left": 33,
+        "right": 357,
+        "height": 688,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "visualHeight": 844,
+        "visualTop": 0,
+        "visualBottom": 844,
+        "outerHeight": 844,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 844,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 688,
+      "scrollHeight": 1566,
+      "scrollTop": 878,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 765,
+            "bottom": 815,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 765,
+            "bottom": 815,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x844-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 832,
+        "left": 16,
+        "right": 374,
+        "height": 820,
+        "width": 358
+      },
+      "footer": {
+        "top": 686,
+        "bottom": 815,
+        "left": 33,
+        "right": 357,
+        "height": 129,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 686,
+        "left": 33,
+        "right": 357,
+        "height": 622,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "visualHeight": 844,
+        "visualTop": 0,
+        "visualBottom": 844,
+        "outerHeight": 844,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 844,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 622,
+      "scrollHeight": 1203,
+      "scrollTop": 581,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 703,
+            "bottom": 747,
+            "left": 33,
+            "right": 191,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 703,
+            "bottom": 747,
+            "left": 199,
+            "right": 357,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 755,
+            "bottom": 799,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 508,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 508,
+        "left": 33,
+        "right": 357,
+        "height": 444,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 444,
+      "scrollHeight": 1566,
+      "scrollTop": 1122,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 508,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 508,
+        "left": 33,
+        "right": 357,
+        "height": 444,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 444,
+      "scrollHeight": 1566,
+      "scrollTop": 1122,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 442,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 129,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 442,
+        "left": 33,
+        "right": 357,
+        "height": 378,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 378,
+      "scrollHeight": 1203,
+      "scrollTop": 825,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 459,
+            "bottom": 503,
+            "left": 33,
+            "right": 191,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 459,
+            "bottom": 503,
+            "left": 199,
+            "right": 357,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 511,
+            "bottom": 555,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1280x720-identity",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 634,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 634,
+        "left": 297,
+        "right": 983,
+        "height": 570,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 570,
+      "scrollHeight": 930,
+      "scrollTop": 360,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "close-staff-case",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 899.015625,
+            "right": 983,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-1280x720-identity-password",
+    "wheel": {
+      "dialog": {
+        "top": 177.140625,
+        "bottom": 542.84375,
+        "left": 280,
+        "right": 1000,
+        "height": 365.703125,
+        "width": 720
+      },
+      "footer": {
+        "top": 468.84375,
+        "bottom": 525.84375,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 229.140625,
+        "bottom": 468.84375,
+        "left": 297,
+        "right": 983,
+        "height": 239.703125,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 240,
+      "scrollHeight": 240,
+      "scrollTop": 0,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-stepup",
+          "rect": {
+            "top": 481.84375,
+            "bottom": 525.84375,
+            "left": 880.8125,
+            "right": 983,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-identity",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 514,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 514,
+        "left": 33,
+        "right": 357,
+        "height": 450,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 450,
+      "scrollHeight": 1467,
+      "scrollTop": 1017,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "close-staff-case",
+          "rect": {
+            "top": 527,
+            "bottom": 571,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-identity-password",
+    "wheel": {
+      "dialog": {
+        "top": 118.953125,
+        "bottom": 481.046875,
+        "left": 16,
+        "right": 374,
+        "height": 362.09375,
+        "width": 358
+      },
+      "footer": {
+        "top": 407.046875,
+        "bottom": 464.046875,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 170.953125,
+        "bottom": 407.046875,
+        "left": 33,
+        "right": 357,
+        "height": 236.09375,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 236,
+      "scrollHeight": 236,
+      "scrollTop": 0,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-stepup",
+          "rect": {
+            "top": 420.046875,
+            "bottom": 464.046875,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-identity-mfa",
+    "wheel": {
+      "dialog": {
+        "top": 118.953125,
+        "bottom": 481.046875,
+        "left": 16,
+        "right": 374,
+        "height": 362.09375,
+        "width": 358
+      },
+      "footer": {
+        "top": 407.046875,
+        "bottom": 464.046875,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 170.953125,
+        "bottom": 407.046875,
+        "left": 33,
+        "right": 357,
+        "height": 236.09375,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 236,
+      "scrollHeight": 236,
+      "scrollTop": 0,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-stepup",
+          "rect": {
+            "top": 420.046875,
+            "bottom": 464.046875,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "chromium-390x600-identity-protected-pages",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 514,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 514,
+        "left": 33,
+        "right": 357,
+        "height": 450,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": 0,
+        "screenY": 0,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 450,
+      "scrollHeight": 1880,
+      "scrollTop": 1430,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "close-staff-case",
+          "rect": {
+            "top": 527,
+            "bottom": 571,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1440x900-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 888,
+        "left": 360,
+        "right": 1080,
+        "height": 876,
+        "width": 720
+      },
+      "footer": {
+        "top": 814,
+        "bottom": 871,
+        "left": 377,
+        "right": 1063,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 814,
+        "left": 377,
+        "right": 1063,
+        "height": 750,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "visualHeight": 900,
+        "visualTop": 0,
+        "visualBottom": 900,
+        "outerHeight": 900,
+        "outerWidth": 1440,
+        "screenX": -10000,
+        "screenY": -10180,
+        "screenAvailableHeight": 900,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 750,
+      "scrollHeight": 1132,
+      "scrollTop": 382,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 770.203125,
+            "right": 872.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 880.390625,
+            "right": 1063,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1440x900-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 888,
+        "left": 360,
+        "right": 1080,
+        "height": 876,
+        "width": 720
+      },
+      "footer": {
+        "top": 814,
+        "bottom": 871,
+        "left": 377,
+        "right": 1063,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 814,
+        "left": 377,
+        "right": 1063,
+        "height": 750,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "visualHeight": 900,
+        "visualTop": 0,
+        "visualBottom": 900,
+        "outerHeight": 900,
+        "outerWidth": 1440,
+        "screenX": -10000,
+        "screenY": -10180,
+        "screenAvailableHeight": 900,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 750,
+      "scrollHeight": 1132,
+      "scrollTop": 382,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 770.203125,
+            "right": 872.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 880.390625,
+            "right": 1063,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1440x900-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 888,
+        "left": 360,
+        "right": 1080,
+        "height": 876,
+        "width": 720
+      },
+      "footer": {
+        "top": 810,
+        "bottom": 871,
+        "left": 377,
+        "right": 1063,
+        "height": 61,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 810,
+        "left": 377,
+        "right": 1063,
+        "height": 746,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "visualHeight": 900,
+        "visualTop": 0,
+        "visualBottom": 900,
+        "outerHeight": 900,
+        "outerWidth": 1440,
+        "screenX": -10000,
+        "screenY": -10180,
+        "screenAvailableHeight": 900,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 746,
+      "scrollHeight": 890,
+      "scrollTop": 144,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 697.34375,
+            "right": 781.328125,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 789.328125,
+            "right": 953.375,
+            "height": 44,
+            "width": 164.046875
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 827,
+            "bottom": 871,
+            "left": 961.375,
+            "right": 1063,
+            "height": 44,
+            "width": 101.625
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1366x768-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 756,
+        "left": 323,
+        "right": 1043,
+        "height": 744,
+        "width": 720
+      },
+      "footer": {
+        "top": 682,
+        "bottom": 739,
+        "left": 340,
+        "right": 1026,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 682,
+        "left": 340,
+        "right": 1026,
+        "height": 618,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 768,
+        "visualHeight": 768,
+        "visualTop": 0,
+        "visualBottom": 768,
+        "outerHeight": 768,
+        "outerWidth": 1366,
+        "screenX": -10000,
+        "screenY": -10048,
+        "screenAvailableHeight": 768,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 618,
+      "scrollHeight": 1132,
+      "scrollTop": 514,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 733.203125,
+            "right": 835.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 843.390625,
+            "right": 1026,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1366x768-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 756,
+        "left": 323,
+        "right": 1043,
+        "height": 744,
+        "width": 720
+      },
+      "footer": {
+        "top": 682,
+        "bottom": 739,
+        "left": 340,
+        "right": 1026,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 682,
+        "left": 340,
+        "right": 1026,
+        "height": 618,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 768,
+        "visualHeight": 768,
+        "visualTop": 0,
+        "visualBottom": 768,
+        "outerHeight": 768,
+        "outerWidth": 1366,
+        "screenX": -10000,
+        "screenY": -10048,
+        "screenAvailableHeight": 768,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 618,
+      "scrollHeight": 1132,
+      "scrollTop": 514,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 733.203125,
+            "right": 835.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 843.390625,
+            "right": 1026,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1366x768-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 756,
+        "left": 323,
+        "right": 1043,
+        "height": 744,
+        "width": 720
+      },
+      "footer": {
+        "top": 678,
+        "bottom": 739,
+        "left": 340,
+        "right": 1026,
+        "height": 61,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 678,
+        "left": 340,
+        "right": 1026,
+        "height": 614,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1366,
+        "height": 768,
+        "visualHeight": 768,
+        "visualTop": 0,
+        "visualBottom": 768,
+        "outerHeight": 768,
+        "outerWidth": 1366,
+        "screenX": -10000,
+        "screenY": -10048,
+        "screenAvailableHeight": 768,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 614,
+      "scrollHeight": 890,
+      "scrollTop": 276,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 660.34375,
+            "right": 744.328125,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 752.328125,
+            "right": 916.375,
+            "height": 44,
+            "width": 164.046875
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 695,
+            "bottom": 739,
+            "left": 924.375,
+            "right": 1026,
+            "height": 44,
+            "width": 101.625
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1280x720-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 634,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 634,
+        "left": 297,
+        "right": 983,
+        "height": 570,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": -10000,
+        "screenY": -10000,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 570,
+      "scrollHeight": 1132,
+      "scrollTop": 562,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 690.203125,
+            "right": 792.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 800.390625,
+            "right": 983,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1280x720-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 634,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 634,
+        "left": 297,
+        "right": 983,
+        "height": 570,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": -10000,
+        "screenY": -10000,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 570,
+      "scrollHeight": 1132,
+      "scrollTop": 562,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 690.203125,
+            "right": 792.390625,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 800.390625,
+            "right": 983,
+            "height": 44,
+            "width": 182.609375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1280x720-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 630,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 61,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 630,
+        "left": 297,
+        "right": 983,
+        "height": 566,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": -10000,
+        "screenY": -10000,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 566,
+      "scrollHeight": 890,
+      "scrollTop": 324,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 617.34375,
+            "right": 701.328125,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 709.328125,
+            "right": 873.375,
+            "height": 44,
+            "width": 164.046875
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 881.375,
+            "right": 983,
+            "height": 44,
+            "width": 101.625
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x844-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 831.984375,
+        "left": 16,
+        "right": 374,
+        "height": 819.984375,
+        "width": 358
+      },
+      "footer": {
+        "top": 751.984375,
+        "bottom": 814.984375,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 751.984375,
+        "left": 33,
+        "right": 357,
+        "height": 687.984375,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "visualHeight": 844,
+        "visualTop": 0,
+        "visualBottom": 844,
+        "outerHeight": 844,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -10124,
+        "screenAvailableHeight": 844,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 688,
+      "scrollHeight": 1566,
+      "scrollTop": 878,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 764.984375,
+            "bottom": 814.984375,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 764.984375,
+            "bottom": 814.984375,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x844-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 831.984375,
+        "left": 16,
+        "right": 374,
+        "height": 819.984375,
+        "width": 358
+      },
+      "footer": {
+        "top": 751.984375,
+        "bottom": 814.984375,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 751.984375,
+        "left": 33,
+        "right": 357,
+        "height": 687.984375,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "visualHeight": 844,
+        "visualTop": 0,
+        "visualBottom": 844,
+        "outerHeight": 844,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -10124,
+        "screenAvailableHeight": 844,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 688,
+      "scrollHeight": 1566,
+      "scrollTop": 878,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 764.984375,
+            "bottom": 814.984375,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 764.984375,
+            "bottom": 814.984375,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x844-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 831.984375,
+        "left": 16,
+        "right": 374,
+        "height": 819.984375,
+        "width": 358
+      },
+      "footer": {
+        "top": 685.984375,
+        "bottom": 814.984375,
+        "left": 33,
+        "right": 357,
+        "height": 129,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 685.984375,
+        "left": 33,
+        "right": 357,
+        "height": 621.984375,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "visualHeight": 844,
+        "visualTop": 0,
+        "visualBottom": 844,
+        "outerHeight": 844,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -10124,
+        "screenAvailableHeight": 844,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 622,
+      "scrollHeight": 1203,
+      "scrollTop": 581,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 702.984375,
+            "bottom": 746.984375,
+            "left": 33,
+            "right": 191,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 702.984375,
+            "bottom": 746.984375,
+            "left": 199,
+            "right": 357,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 754.984375,
+            "bottom": 798.984375,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-personal",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 508,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 508,
+        "left": 33,
+        "right": 357,
+        "height": 444,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 444,
+      "scrollHeight": 1566,
+      "scrollTop": 1122,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-reopen",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 508,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 63,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 508,
+        "left": 33,
+        "right": 357,
+        "height": 444,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 444,
+      "scrollHeight": 1566,
+      "scrollTop": 1122,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 33,
+            "right": 191,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-staff-profile",
+          "rect": {
+            "top": 521,
+            "bottom": 571,
+            "left": 199,
+            "right": 357,
+            "height": 50,
+            "width": 158
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-wizard",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 442,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 129,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 442,
+        "left": 33,
+        "right": 357,
+        "height": 378,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 378,
+      "scrollHeight": 1203,
+      "scrollTop": 825,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-onboarding",
+          "rect": {
+            "top": 459,
+            "bottom": 503,
+            "left": 33,
+            "right": 191,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "save-onboarding",
+          "rect": {
+            "top": 459,
+            "bottom": 503,
+            "left": 199,
+            "right": 357,
+            "height": 44,
+            "width": 158
+          },
+          "hit": true
+        },
+        {
+          "id": "next-onboarding",
+          "rect": {
+            "top": 511,
+            "bottom": 555,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1280x720-identity",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 708,
+        "left": 280,
+        "right": 1000,
+        "height": 696,
+        "width": 720
+      },
+      "footer": {
+        "top": 634,
+        "bottom": 691,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 64,
+        "bottom": 634,
+        "left": 297,
+        "right": 983,
+        "height": 570,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": -10000,
+        "screenY": -10000,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 570,
+      "scrollHeight": 929,
+      "scrollTop": 359,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "close-staff-case",
+          "rect": {
+            "top": 647,
+            "bottom": 691,
+            "left": 899.015625,
+            "right": 983,
+            "height": 44,
+            "width": 83.984375
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-1280x720-identity-password",
+    "wheel": {
+      "dialog": {
+        "top": 177.171875,
+        "bottom": 542.8125,
+        "left": 280,
+        "right": 1000,
+        "height": 365.640625,
+        "width": 720
+      },
+      "footer": {
+        "top": 468.8125,
+        "bottom": 525.8125,
+        "left": 297,
+        "right": 983,
+        "height": 57,
+        "width": 686
+      },
+      "body": {
+        "top": 229.171875,
+        "bottom": 468.8125,
+        "left": 297,
+        "right": 983,
+        "height": 239.640625,
+        "width": 686
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720,
+        "visualHeight": 720,
+        "visualTop": 0,
+        "visualBottom": 720,
+        "outerHeight": 720,
+        "outerWidth": 1280,
+        "screenX": -10000,
+        "screenY": -10000,
+        "screenAvailableHeight": 720,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 240,
+      "scrollHeight": 240,
+      "scrollTop": 0,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-stepup",
+          "rect": {
+            "top": 481.8125,
+            "bottom": 525.8125,
+            "left": 880.8125,
+            "right": 983,
+            "height": 44,
+            "width": 102.1875
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-identity",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 514,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 514,
+        "left": 33,
+        "right": 357,
+        "height": 450,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 450,
+      "scrollHeight": 1466,
+      "scrollTop": 1016,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "close-staff-case",
+          "rect": {
+            "top": 527,
+            "bottom": 571,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-identity-password",
+    "wheel": {
+      "dialog": {
+        "top": 118.984375,
+        "bottom": 481.015625,
+        "left": 16,
+        "right": 374,
+        "height": 362.03125,
+        "width": 358
+      },
+      "footer": {
+        "top": 407.015625,
+        "bottom": 464.015625,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 170.984375,
+        "bottom": 407.015625,
+        "left": 33,
+        "right": 357,
+        "height": 236.03125,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 236,
+      "scrollHeight": 236,
+      "scrollTop": 0,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-stepup",
+          "rect": {
+            "top": 420.015625,
+            "bottom": 464.015625,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-identity-mfa",
+    "wheel": {
+      "dialog": {
+        "top": 118.984375,
+        "bottom": 481.015625,
+        "left": 16,
+        "right": 374,
+        "height": 362.03125,
+        "width": 358
+      },
+      "footer": {
+        "top": 407.015625,
+        "bottom": 464.015625,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 170.984375,
+        "bottom": 407.015625,
+        "left": 33,
+        "right": 357,
+        "height": 236.03125,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 236,
+      "scrollHeight": 236,
+      "scrollTop": 0,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel-staff-stepup",
+          "rect": {
+            "top": 420.015625,
+            "bottom": 464.015625,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  },
+  {
+    "label": "webkit-390x600-identity-protected-pages",
+    "wheel": {
+      "dialog": {
+        "top": 12,
+        "bottom": 588,
+        "left": 16,
+        "right": 374,
+        "height": 576,
+        "width": 358
+      },
+      "footer": {
+        "top": 514,
+        "bottom": 571,
+        "left": 33,
+        "right": 357,
+        "height": 57,
+        "width": 324
+      },
+      "body": {
+        "top": 64,
+        "bottom": 514,
+        "left": 33,
+        "right": 357,
+        "height": 450,
+        "width": 324
+      },
+      "viewport": {
+        "width": 390,
+        "height": 600,
+        "visualHeight": 600,
+        "visualTop": 0,
+        "visualBottom": 600,
+        "outerHeight": 600,
+        "outerWidth": 390,
+        "screenX": -10000,
+        "screenY": -9880,
+        "screenAvailableHeight": 600,
+        "screenAvailableTop": 0,
+        "dpr": 1,
+        "cssZoom": "1"
+      },
+      "clientHeight": 450,
+      "scrollHeight": 1879,
+      "scrollTop": 1429,
+      "remaining": 0,
+      "ancestors": [
+        {
+          "tag": "DIALOG",
+          "overflow": "hidden",
+          "position": "fixed"
+        },
+        {
+          "tag": "MAIN",
+          "overflow": "visible",
+          "position": "static"
+        },
+        {
+          "tag": "HTML",
+          "overflow": "visible",
+          "position": "static"
+        }
+      ],
+      "actions": [
+        {
+          "id": "close-staff-case",
+          "rect": {
+            "top": 527,
+            "bottom": 571,
+            "left": 33,
+            "right": 357,
+            "height": 44,
+            "width": 324
+          },
+          "hit": true
+        }
+      ]
+    },
+    "keyboard_end": true,
+    "tab_footer": true
+  }
+]

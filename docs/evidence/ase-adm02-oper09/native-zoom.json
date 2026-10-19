@@ -1,0 +1,94 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "chromium genuine 125% browser zoom changes CSS viewport and DPR; CSS zoom remains 1",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 onboarding real wheel reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 onboarding last content visible",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 onboarding footer visible and hit-test accessible",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 onboarding keyboard End reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 wizard reopen",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 staff-profile real wheel reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 staff-profile last content visible",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 staff-profile footer visible and hit-test accessible",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 staff-profile keyboard End reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "chromium native125 personal reopen focus",
+      "pass": true
+    },
+    {
+      "name": "webkit genuine 125% browser zoom changes CSS viewport and DPR; CSS zoom remains 1",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 onboarding real wheel reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 onboarding last content visible",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 onboarding footer visible and hit-test accessible",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 onboarding keyboard End reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 wizard reopen",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 staff-profile real wheel reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 staff-profile last content visible",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 staff-profile footer visible and hit-test accessible",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 staff-profile keyboard End reaches bottom",
+      "pass": true
+    },
+    {
+      "name": "webkit native125 personal reopen focus",
+      "pass": true
+    }
+  ],
+  "check_count": 22
+}

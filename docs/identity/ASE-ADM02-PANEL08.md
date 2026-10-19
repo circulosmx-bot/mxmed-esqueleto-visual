@@ -55,3 +55,7 @@ Resultado `COMPLETE_ISOLATED_SYNTHETIC`, con seis capacidades **UNAVAILABLE** in
 - Preview: `https://127.0.0.1:64960/internal/media-review/index.php?section=equipo`, expira2026-10-19 20:32:27 UTC−06:00 (America/Mexico_City). Infraestructura24h desde su arranque, sin extender sesión Identity.
 - Control explícito: `python3 scripts/ase-adm02-panel08-review.py /tmp/mxmed-ase-adm02imp01-uz6hovn5 open`; detener con el mismo comando y `stop` en vez de `open`. `credentials` copia únicamente la contraseña sintética al portapapeles por acción explícita; `mfa` muestra el código sintético vigente. No secretos en producto/Git.
 - 22 worktrees, listeners originales y pointer INT01 conservados; sólo nueva base propia. Sin merge/deploy/producción. Aceptación física/visual del Director PENDING.
+
+## Sucesor de accesibilidad física
+
+[OPER09](ASE-ADM02-OPER09.md) documenta que el viewport emulado de 900 px del lanzador podía exceder la ventana real macOS. Las mediciones PANEL08 anteriores acreditan su viewport automatizado, no la accesibilidad física ni aceptación del Director. El sucesor corrige el lanzamiento nativo y aporta una cuenta Advisor canónica con consumidor real, sin cambiar los seis límites de capacidad aquí definidos.

@@ -200,3 +200,9 @@ Preparación en asistente aprobado de cuatro pasos, revisión contextual separad
 ## PANEL08 — revisión dirigida de interacciones
 
 [PANEL08](identity/ASE-ADM02-PANEL08.md), baseline ec8024df: rama aislada con shell modal de encabezado/cuerpo/pie, imagen opcional en los cuatro pasos y retrato privado de preparación limitado al Director creador. Los seis permisos de correcciones/perfiles se documentan individualmente sin ampliar contratos ni inventar consumidores. Verificación dirigida:111 checks funcionales/seguridad y18 zoom nativo PASS,38 recorridos con fondo/pie medidos,22 worktrees/listeners protegidos. Sin activación real ni aceptación visual del Director.
+
+## Sucesor aislado ASE-ADM02-OPER09
+
+- Baseline PANEL08 `f486c42bd5272246a4a6b110d18affba641b29ff`; rama `feature/ase-adm02-oper09-first-functional-advisor`. [OPER09](identity/ASE-ADM02-OPER09.md): la emulación de 900 px excedía la ventana macOS de 870 px; el lanzador usa ahora el viewport nativo y limita la ventana completa al área disponible. Formulario completo y siete secciones conservados.
+- Un Advisor ficticio nuevo completa Identity/invitación/confirmación/evidencia/READ/ACCEPT/ADMIT canónicos. Director concede/revoca `media_review_read` desde UI; Advisor independiente consume el inbox y REVIEW existentes. SOURCE sin grant, revocación, suspensión y sesión cerrada denegados por servidor. Cuenta reactivada y permiso explícito conservados para inspección.
+- Preview propio loopback/TLS, sin workspace Advisor nuevo, sin runtime original/8091/DB oficiales ni producción. No TTL de sesión/MFA extendido. La edición posterior a admisión conserva la aceptación histórica pero no habilita nuevos envíos de identidad; ese límite no se modifica. Director visual PENDING; seis capacidades no disponibles de PANEL08 siguen sin habilitar.
