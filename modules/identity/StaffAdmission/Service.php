@@ -46,7 +46,8 @@ final class Service
                 $this->authorize($actor,null,true);return ['ready'=>true];
             }
             if($action==='result'){
-                $r=$this->row('SELECT * FROM auth_staff_admission_operations WHERE actor_account_id=? AND operation_id=?',[$actor->accountId(),$b['operation_id']]);
+                $r=$this->query('SELECT * FROM auth_staff_admission_operations WHERE actor_account_id=? AND operation_id=?',[$actor->accountId(),$b['operation_id']])->fetch(PDO::FETCH_ASSOC);
+                if(!$r){$this->authorize($actor,null,true);return ['operation_id'=>$b['operation_id'],'committed'=>false,'outcome'=>'NOT_RECORDED'];} // Actor lock serializes with commands; retry must retain this operation ID.
                 $case=$this->case($r['case_id']);$this->authorize($actor,$case);
                 Audit::append($this->pdo,$actor,$case['case_id'],'result',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),(int)$r['resulting_version'],'OPERATION_RESULT');return $this->outcome($r);
             }

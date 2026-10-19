@@ -45,10 +45,18 @@ final class InvitationService
     public function read(array $cookies,string $action,array $input):array
     {
         $b=InvitationInput::validate($action,$input);
-        if(!in_array($action,['csrf','result'],true))throw new \InvalidArgumentException('admission_invalid');
+        if(!in_array($action,['csrf','result','case_status'],true))throw new \InvalidArgumentException('admission_invalid');
         return $this->unit->run($cookies,function($actor)use($action,$b){
             if($action==='csrf')return ['ready'=>true]; // Authenticated bootstrap only; no case discovery.
-            $r=$this->row('SELECT * FROM auth_staff_admission_invitation_operations WHERE actor_account_id=? AND operation_id=?',[$actor->accountId(),$b['operation_id']]);
+            if($action==='case_status'){
+                $this->director($actor);
+                $case=$this->row('SELECT * FROM auth_staff_admission_cases WHERE case_id=? FOR UPDATE',[$b['case_id']]);
+                $inv=$this->query('SELECT invitation_id,state,delivery_state,expires_at FROM auth_staff_admission_invitations WHERE case_id=? ORDER BY issued_at DESC,invitation_id DESC LIMIT 1',[$case['case_id']])->fetch(PDO::FETCH_ASSOC);
+                Audit::append($this->pdo,$actor,$case['case_id'],'result',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),(int)$case['version'],'INVITATION_STATUS');
+                return ['case_id'=>$case['case_id'],'version'=>(int)$case['version'],'case_state'=>$case['state'],'account_bound'=>$case['bound_account_id']!==null,'invitation'=>$inv?:null];
+            }
+            $r=$this->query('SELECT * FROM auth_staff_admission_invitation_operations WHERE actor_account_id=? AND operation_id=?',[$actor->accountId(),$b['operation_id']])->fetch(PDO::FETCH_ASSOC);
+            if(!$r){$this->director($actor);return ['operation_id'=>$b['operation_id'],'committed'=>false,'outcome'=>'NOT_RECORDED'];}
             $case=$this->row('SELECT * FROM auth_staff_admission_cases WHERE case_id=? FOR UPDATE',[$r['case_id']]);
             $this->receiptAuthority($actor,$r,$case);
             Audit::append($this->pdo,$actor,$case['case_id'],'result',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),(int)$r['case_version'],'INVITATION_RESULT');

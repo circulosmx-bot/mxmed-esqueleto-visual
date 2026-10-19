@@ -10,7 +10,7 @@ use PDO;
 /** Minimized governance projection. No account enumeration, personal-data reader or commands. */
 final class ReadService
 {
-    public function __construct(private PDO $pdo, private CanonicalHttpSessionResolver $sessions) {}
+    public function __construct(private PDO $pdo, private CanonicalHttpSessionResolver $sessions, private bool $admissionNames=false) {}
 
     public function authority(array $cookies): array
     {
@@ -36,7 +36,7 @@ final class ReadService
         if(!in_array($category,['ADVISOR','MASTER_ADMIN'],true))throw new ReadFailure(400,'invalid_category');
         if(!$authority['can_read_masters']&&$category!=='ADVISOR')throw new ReadFailure(403,'team_read_denied');
         $query=$input['q']??'';
-        if($query!==''&&(!preg_match('/^[A-Za-z0-9_.:-]{2,64}$/D',$query)))throw new ReadFailure(400,'invalid_search');
+        if($query!==''&&(!preg_match('/^[\p{L}\p{N} ._:\x{0027}-]{1,64}$/uD',$query)))throw new ReadFailure(400,'invalid_search');
         $page=$this->integer($input['page']??'1',1,1000);$size=$this->integer($input['page_size']??'20',1,50);
         $target=$input['target']??null;
         if($target!==null&&!preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D',$target))throw new ReadFailure(400,'invalid_target');
@@ -45,7 +45,16 @@ final class ReadService
         if(!in_array($status,['ACTIVE','SUSPENDED','REMOVED','ALL'],true))throw new ReadFailure(400,'invalid_status');
         $where='s.governance_class=?';$params=[$category];
         if($target!==null){$where.=' AND s.account_id=?';$params[]=$target;}
-        elseif($query!==''){$where.=' AND LOCATE(?,s.account_id)>0';$params[]=$query;}
+        elseif($query!==''){
+            $where.=' AND (LOCATE(?,s.account_id)>0';$params[]=$query;
+            // Only the connected admission reader enables names, and only for Director.
+            // Same completed, current, non-self, non-revoked profiles as its authorized projection.
+            if($this->admissionNames&&$authority['can_read_masters']){
+                $where.=' OR EXISTS (SELECT 1 FROM auth_staff_admission_completions d JOIN auth_staff_admission_cases c ON c.case_id=d.case_id JOIN auth_staff_admission_versions v ON v.case_id=c.case_id AND v.version=c.version WHERE d.account_id=s.account_id AND c.bound_account_id<>? AND c.state<>? AND LOCATE(?,CONCAT_WS(CHAR(32),v.given_names,v.first_surname,v.second_surname))>0)';
+                array_push($params,$viewer,'REVOKED',$query);
+            }
+            $where.=')';
+        }
         if($status!=='ALL'){$where.=' AND s.status=?';$params[]=$status;}
         // Category predicate is mandatory also for target reads: a Master cannot probe peers/Director.
         $select=$this->pdo->prepare('SELECT s.account_id,s.governance_class,s.status,a.status AS account_status FROM internal_staff s JOIN auth_accounts a ON a.account_id=s.account_id WHERE '.$where.' ORDER BY s.account_id LIMIT '.($target!==null?1:$size+1).' OFFSET '.($target!==null?0:($page-1)*$size));

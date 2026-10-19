@@ -173,3 +173,7 @@ Sin objetos nuevos. Reutiliza versiones/procedencia personal, invitaciones y cas
 ## PANEL04 — proyección sin migración
 
 [Contrato](../identity/ASE-ADM02-PANEL04.md): manifest documental y audit existente minimizados, sin tabla/ledger/versionado paralelo. History máximo100 con orden UTC+event_id, sólo target/caso exacto y ámbito delegado; sin metadata privada. No nuevas atribuciones, porcentajes, pagos o comisiones.
+
+## PANEL05 — búsquedas y recuperación sin migración
+
+[PANEL05](../identity/ASE-ADM02-PANEL05.md) filtra nombres actuales vía completions/casos/versiones sólo en reader Director con fuente conectada, antes de LIMIT. Pendientes conserva creator/binding. Lee recibos actor+operation bajo locks canónicos y estado mínimo de invitación Director-only; nunca retorna token ni destinatario. Sin nuevas tablas, writer ni cambios de auditoría/grants.

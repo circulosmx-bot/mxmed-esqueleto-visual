@@ -184,3 +184,7 @@ Preparación en asistente aprobado de cuatro pasos, revisión contextual separad
 ## ASE-ADM02-PANEL04
 
 [Panel contextual](identity/ASE-ADM02-PANEL04.md), base UXFLOW03 f9fe6950: encabezado/rol/logout canónicos, alta debajo de lista, secciones solicitadas y lectura mínima de historial existente. Permisos/admisión/MFA/baja preservados. No se encontró asignación vendedor ni relación asesor–cliente: no conexión financiera ni comisiones inventadas. Sólo ensayo sintético; aceptación visual del Director pendiente.
+
+## ASE-ADM02-PANEL05
+
+[Corrección dirigida](identity/ASE-ADM02-PANEL05.md), base PANEL04 b356b06e: cierre del asistente, lectura de resultado incierto, validación/feedback de invitación sintética, categorías/filtro compacto, búsqueda de nombres autorizados antes de paginar y explicación de permisos suspendidos. Sin nueva autoridad ni activación; 88 checks + 5 adicionales PASS, Chromium/WebKit en tres tamaños. Aceptación visual pendiente según contrato.

@@ -7,7 +7,7 @@ final class InvitationInput
     public static function validate(string $action,array $b):array
     {
         $keys=match($action){
-            'csrf'=>[], 'result'=>['operation_id'],
+            'csrf'=>[], 'result'=>['operation_id'], 'case_status'=>['case_id'],
             'issue'=>['operation_id','case_id','expected_version','recipient_email'],
             'reissue'=>['operation_id','case_id','expected_version','recipient_email','invitation_id'],
             'revoke'=>['operation_id','case_id','expected_version','invitation_id'],

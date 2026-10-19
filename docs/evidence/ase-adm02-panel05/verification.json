@@ -1,0 +1,153 @@
+{
+  "result": "PASS",
+  "source_baseline": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+  "changed_code_sha256": {
+    "assets/css/internal-team-admission.css": "be658a7888e47bca4c1d6e1cc745fc60f719341c9b50221b221ca8048afdc27e",
+    "assets/js/internal-team.js": "a1163a5cbbba8179bdf475a527e9e67672ca679b63a5e77df6704c1e4dbdb0ce",
+    "assets/js/staff-workflow.js": "add8a9626efdbde688b2135563308942bcdbf7940b1abe7b8d3c708a0f639488",
+    "modules/identity/StaffAdmission/InvitationInput.php": "bda4b6642046268d388230456aa13e12b0a82f83b1c5cab01e34409437651f77",
+    "modules/identity/StaffAdmission/InvitationService.php": "a9ae54c330435abf801cfa9155ad3b1f39f226ad102394759a54ad616a5877ef",
+    "modules/identity/StaffAdmission/Service.php": "97c948c09201efc66c18af2748c422e83f4ba32f0f7bd7efbc4a6f31ebd73cf3",
+    "modules/identity/StaffWorkflow/Http.php": "e035398937e56d82ebe2d9bb33846a87cc9bb8c62deff66df9524d6c721ae9f5",
+    "modules/identity/StaffWorkflow/Service.php": "1dd85a1e338c8332c6c25783ed00402e7cf4060f07c5c1c47338dacf6d94a776",
+    "modules/identity/Team/ReadService.php": "111b7a916193c6bae4fdb26a7f2bdec5ad8c2fac763e1e097e30cfaa7c1a2c94",
+    "partials/identity/internal-team.php": "4af48f8e1347b691d51113e1f512159a9b38b8ce800e932af4b867b831c65871",
+    "partials/identity/staff-workflow.php": "ee8e68af58213b1a924810ed90e179586cae96830603187f0d54b8bedd526192",
+    "scripts/ase-adm02-panel05-browser.py": "7e5471fd45166274abceb8e40b9e6150454dc782145dd111946741ac039aa1cb",
+    "scripts/ase-adm02-panel05-checks.py": "e11242b0b803e7d6aff7b725ee988a17bdf2b84f5dc8d528c744afe7ffbb6610",
+    "scripts/ase-adm02-panel05-qa.py": "afa5373b90cee8151f0e6efc18ae72ee4b3443985f5c7c2171ebcffcbe53a28e",
+    "scripts/ase-adm02-panel05-smoke.py": "4acba432bd909de04ca8f588676e897e7e66ba1ab55c34ac91ac0646f0e2cf6b"
+  },
+  "syntax_checked": [
+    "assets/js/internal-team.js",
+    "assets/js/staff-workflow.js",
+    "modules/identity/StaffAdmission/InvitationInput.php",
+    "modules/identity/StaffAdmission/InvitationService.php",
+    "modules/identity/StaffAdmission/Service.php",
+    "modules/identity/StaffWorkflow/Http.php",
+    "modules/identity/StaffWorkflow/Service.php",
+    "modules/identity/Team/ReadService.php",
+    "partials/identity/internal-team.php",
+    "partials/identity/staff-workflow.php",
+    "scripts/ase-adm02-panel05-browser.py",
+    "scripts/ase-adm02-panel05-checks.py",
+    "scripts/ase-adm02-panel05-qa.py",
+    "scripts/ase-adm02-panel05-smoke.py"
+  ],
+  "owned_source_pins_verified": 33,
+  "qa_source_hashes_unchanged": true,
+  "protected_unchanged": true,
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc02": {
+      "head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxflow03": {
+      "head": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel04": {
+      "head": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "chromium_review": {
+    "opened_at_unix": 1792369692.455213,
+    "chromium_opened": true,
+    "director_session_ready": true,
+    "applicant_session_ready": true,
+    "guide_local_only": true,
+    "expiry_unix": 1792455590.748555
+  },
+  "context_sync_status": "PASS_UPDATED",
+  "failed_attempts_preserved": 3,
+  "production_activation": false,
+  "local_link_paths_checked": 803,
+  "broken_links": [],
+  "qa_harness_note": "After focused checks passed, removed temporary development wait/retry wrapper. Tested check body and product sources unchanged; standard owned harness retains normal failure cleanup."
+}

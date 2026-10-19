@@ -5,6 +5,7 @@ if(!empty($staffWorkflowApplicant)){require __DIR__.'/staff-applicant.php';retur
 <h2 id="onboarding-title" tabindex="-1">Agregar integrante</h2><p id="onboarding-description">Prepara la incorporación. La persona confirmará sus datos y presentará sus documentos desde su propia cuenta.</p>
 <ol class="wizard-steps" aria-label="Pasos de incorporación"><li>Persona</li><li>Categoría</li><li>Permisos</li><li>Revisión</li></ol>
 <div id="onboarding-content"></div><p id="onboarding-feedback" role="status" aria-live="polite"></p>
+<button id="check-onboarding" type="button" hidden>Consultar estado de preparación</button>
 <div class="dialog-actions"><button id="cancel-onboarding" type="button">Cerrar</button><button id="save-onboarding" type="button">Guardar borrador</button><button id="previous-onboarding" type="button">Anterior</button><button id="next-onboarding" type="button" class="primary">Continuar</button></div>
 </dialog>
 <dialog id="staff-case" aria-labelledby="staff-case-title"><h2 id="staff-case-title" tabindex="-1">Solicitud de incorporación</h2><div id="staff-case-content"></div><p id="staff-case-status" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="close-staff-case" type="button">Cerrar</button></div></dialog>

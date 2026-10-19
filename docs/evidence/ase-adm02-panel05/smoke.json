@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Wizard geometry 1440",
+      "pass": true
+    },
+    {
+      "name": "Wizard geometry 1366",
+      "pass": true
+    },
+    {
+      "name": "Wizard geometry 390",
+      "pass": true
+    },
+    {
+      "name": "In-flight dismissal commits exactly one invitation under the same operation",
+      "pass": true
+    },
+    {
+      "name": "Existing invitation reconciled without duplicate or changed case version",
+      "pass": true
+    }
+  ],
+  "check_count": 5
+}

@@ -76,7 +76,7 @@ final class Service
     /** Enrich only already-authorized Director directory rows; never evidence bytes. */
     public function team(array $cookies,array $input):array
     {
-        $data=(new \Identity\Team\ReadService($this->p,$this->sessions))->read($cookies,$input);
+        $data=(new \Identity\Team\ReadService($this->p,$this->sessions,true))->read($cookies,$input);
         if(!$data['authority']['can_read_masters'])return $data;
         return $this->unit->run($cookies,function($a)use($data,$input){
             foreach($data['items'] as &$item){
@@ -105,12 +105,20 @@ final class Service
         self::keys($b,['case_id','purpose']);Policy::purpose($b['purpose']);
         return $this->unit->run($cookies,function($a)use($b){$c=$this->case($b['case_id']);$this->own($a,$c);$this->audit($a,$c,'read',$this->uuid());return ['version'=>(int)$this->query('SELECT COALESCE(MAX(asset_version),0) FROM auth_staff_media_assets WHERE case_id=? AND purpose=?',[$c['case_id'],$b['purpose']])->fetchColumn()];});
     }
-    public function cases(array $cookies):array
+    public function cases(array $cookies,array $input=[]):array
     {
-        return $this->unit->run($cookies,function($a){
+        foreach($input as $key=>$value)if(!in_array($key,['q','page','page_size','pending'],true))throw new \RuntimeException('workflow_invalid');
+        $query=$input['q']??'';$page=$input['page']??1;$size=$input['page_size']??50;
+        if(!is_string($query)||($query!==''&&!preg_match('/^[\\p{L}\\p{N} ._:\\x{0027}-]{1,64}$/uD',$query))||!is_int($page)||$page<1||$page>1000||!is_int($size)||$size<1||$size>50||isset($input['pending'])&&!is_bool($input['pending']))throw new \RuntimeException('workflow_invalid');
+        return $this->unit->run($cookies,function($a)use($input,$query,$page,$size){
             $staff=$this->query("SELECT 1 FROM internal_staff WHERE account_id=? AND governance_class='DIRECTOR' AND status='ACTIVE'",[$a->accountId()])->fetchColumn();
-            $rows=$this->query('SELECT case_id,state,version,EXISTS(SELECT 1 FROM auth_staff_admission_completions x WHERE x.case_id=auth_staff_admission_cases.case_id) AS admitted FROM auth_staff_admission_cases WHERE '.($staff?'creator_account_id=?':'bound_account_id=?').' ORDER BY updated_at DESC LIMIT 50',[$a->accountId()])->fetchAll(PDO::FETCH_ASSOC);
-            foreach($rows as $c)$this->audit($a,$c,'read',$this->uuid());return ['items'=>$rows];
+            $where=$staff?'c.creator_account_id=?':'c.bound_account_id=?';$args=[$a->accountId()];
+            if(!$staff){$where.=' AND c.binding_credential_version=? AND c.binding_reference IS NOT NULL';$args[]=$a->principal()->credentialVersion();}
+            if($input['pending']??false)$where.=" AND c.state<>'REVOKED' AND NOT EXISTS(SELECT 1 FROM auth_staff_admission_completions x WHERE x.case_id=c.case_id)";
+            if($query!==''){$where.=' AND (LOCATE(?,c.case_id)>0 OR LOCATE(?,CONCAT_WS(CHAR(32),v.given_names,v.first_surname,v.second_surname))>0)';array_push($args,$query,$query);}
+            $rows=$this->query('SELECT c.case_id,c.state,c.version,CONCAT_WS(CHAR(32),v.given_names,v.first_surname,v.second_surname) AS display_name,EXISTS(SELECT 1 FROM auth_staff_admission_completions x WHERE x.case_id=c.case_id) AS admitted FROM auth_staff_admission_cases c JOIN auth_staff_admission_versions v ON v.case_id=c.case_id AND v.version=c.version WHERE '.$where.' ORDER BY c.updated_at DESC,c.case_id LIMIT '.($size+1).' OFFSET '.(($page-1)*$size),$args)->fetchAll(PDO::FETCH_ASSOC);
+            $more=count($rows)>$size;$rows=array_slice($rows,0,$size);
+            foreach($rows as $c)$this->audit($a,$c,'read',$this->uuid());return ['items'=>$rows,'page'=>$page,'has_more'=>$more];
         });
     }
     public function view(array $cookies,string $id):array

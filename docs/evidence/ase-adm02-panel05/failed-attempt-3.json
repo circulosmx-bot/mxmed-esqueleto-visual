@@ -1,0 +1,158 @@
+{
+  "result": "FAIL",
+  "error": "Locator expected to be enabled\nActual value: disabled \nCall log:\n  - Expect \"to_be_enabled\" with timeout 5000ms\n  - waiting for locator(\"#check-onboarding\")\n    9 \u00d7 locator resolved to <button disabled type=\"button\" id=\"check-onboarding\">Consultar estado de preparaci\u00f3n</button>\n      - unexpected value \"disabled\"\n",
+  "checks": [
+    {
+      "name": "Suspended and removed commands remain denied",
+      "pass": true
+    },
+    {
+      "name": "Name filtering before pagination",
+      "pass": true
+    },
+    {
+      "name": "Name search respects category and status",
+      "pass": true
+    },
+    {
+      "name": "Master cannot discover private names or other categories",
+      "pass": true
+    },
+    {
+      "name": "Applicant cannot search staff directory",
+      "pass": true
+    },
+    {
+      "name": "No global account enumeration",
+      "pass": true
+    },
+    {
+      "name": "Pending name search paginates before LIMIT",
+      "pass": true
+    },
+    {
+      "name": "Applicant pending search does not disclose another case",
+      "pass": true
+    },
+    {
+      "name": "Receipt absence is not disclosed without Director authority",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 modal button, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 modal escape, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 modal backdrop, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 compact expanded listbox",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 suspended explanation and controls",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 unsaved cancel/discard",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 modal button, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 modal escape, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 modal backdrop, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 compact expanded listbox",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 suspended explanation and controls",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 unsaved cancel/discard",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 modal button, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 modal escape, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 modal backdrop, inside click and focus/scroll restore",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 compact expanded listbox",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 suspended explanation and controls",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 unsaved cancel/discard",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium category order and hierarchy",
+      "pass": true
+    },
+    {
+      "name": "chromium name/no-results/clear search",
+      "pass": true
+    },
+    {
+      "name": "chromium category clears search and stale details",
+      "pass": true
+    },
+    {
+      "name": "chromium removed read-only controls",
+      "pass": true
+    },
+    {
+      "name": "chromium pending names searched on server",
+      "pass": true
+    },
+    {
+      "name": "Recipient rejected before final step",
+      "pass": true
+    },
+    {
+      "name": "Saved canonical draft survives close",
+      "pass": true
+    },
+    {
+      "name": "Four-step canonical success and doubleclick protection",
+      "pass": true
+    }
+  ]
+}

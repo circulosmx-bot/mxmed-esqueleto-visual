@@ -348,3 +348,7 @@ P=separación explícita aprobada; S=asistente y lectores/writers existentes; C=
 ## ID-07 / COM-10 — PANEL04
 
 P=reorganización explícita del Director; S=componentes/writers existentes y proyección audit minimizada; C=logout, documento por manifest, historial según target/delegación; V=ver [PANEL04](../identity/ASE-ADM02-PANEL04.md); O=ensayo aislado, sin activación. COM financiero no integrado: falta atribución canónica y clasificación vendedor, no se infiere de la categoría ADVISOR.
+
+## ID-07 / COM-10 — PANEL05
+
+P=seis correcciones explícitas; S=modal/filtros/búsqueda y recibos canónicos; C=consulta de operación/caso/invitación antes de reintento explícito, sin writer nuevo; V=ver [PANEL05](../identity/ASE-ADM02-PANEL05.md); O=preview sintético loopback. ACTIVE editable sólo según autoridad real; SUSPENDED/REMOVED protegidos.

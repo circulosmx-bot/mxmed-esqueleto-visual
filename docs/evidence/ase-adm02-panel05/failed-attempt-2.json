@@ -1,0 +1,22 @@
+{
+  "result": "FAIL",
+  "error": "Master cannot discover private names or other categories",
+  "checks": [
+    {
+      "name": "Suspended and removed commands remain denied",
+      "pass": true
+    },
+    {
+      "name": "Name filtering before pagination",
+      "pass": true
+    },
+    {
+      "name": "Name search respects category and status",
+      "pass": true
+    },
+    {
+      "name": "Master cannot discover private names or other categories",
+      "pass": false
+    }
+  ]
+}

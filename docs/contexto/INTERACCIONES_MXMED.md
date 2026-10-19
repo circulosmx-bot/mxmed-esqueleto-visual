@@ -215,3 +215,7 @@ Agregar → Persona/Categoría/Permisos/Revisión → prepare/issue sin activaci
 ## J09 — PANEL04
 
 Staff → categoría/estado → integrante → datos/documentación/funciones/restricciones/clientes/historial. Alta bajo listado → asistente UXFLOW03; acciones sensibles contextuales intactas. Cerrar sesión → POST Identity/CSRF → revocación canónica → retiro del panel. Historial distingue BY_MEMBER/ON_MEMBER y scope Master delegado. J08 no cambia: sin atribución comercial no se conectan finanzas. [PANEL04](../identity/ASE-ADM02-PANEL04.md).
+
+## J09 — PANEL05
+
+[PANEL05](../identity/ASE-ADM02-PANEL05.md): categoría primaria → estado secundario → búsqueda autorizada antes de paginar → selección/permiso. Asistente admite dismissal en vuelo; reapertura → lectura de recibo y estado canónico → éxito confirmado o reintento explícito con el mismo ID, nunca reenvío automático. Dominio de ensayo explicado antes del submit; entrega pendiente no equivale a no-commit.

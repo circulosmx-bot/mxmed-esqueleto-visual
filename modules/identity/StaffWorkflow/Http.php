@@ -27,8 +27,18 @@ final class Http
                 $r=['csrf_token'=>$i->csrf()->issueAuthenticated($a->session()->tokenDigest()),'director'=>$staff&&$staff['governance_class']==='DIRECTOR'&&$staff['status']==='ACTIVE','account_id'=>$a->accountId(),'synthetic'=>true];
             }else{
                 if(!$i->csrf()->validAuthenticated($_SERVER['HTTP_X_CSRF_TOKEN']??'',$a->session()->tokenDigest()))throw new \RuntimeException('workflow_denied');
+                // This composition is exclusively synthetic. Validate before the canonical write,
+                // rather than discovering the reserved-domain restriction after commit/delivery.
+                if(in_array($action,['issue','reissue'],true)){
+                    $validated=\Identity\StaffAdmission\InvitationInput::validate($action,$input);
+                    if(!str_ends_with($validated['recipient_email'],'@example.test')){
+                        http_response_code(400);echo json_encode(['error'=>'synthetic_recipient_required','retry'=>false]);return;
+                    }
+                }
                 $r=match($action){
                     'prepare','correct','confirm','update','revoke'=>$cases->command($_COOKIE,$action,$input),
+                    'case_result'=>$cases->read($_COOKIE,'result',$input),
+                    'invitation_status'=>$invites->read($_COOKIE,'case_status',$input),
                     'case'=>$cases->read($_COOKIE,'read',$input),
                     'issue','reissue','accept'=>$invites->command($_COOKIE,$action,$input),
                     'invitation_result'=>$invites->read($_COOKIE,'result',$input),
@@ -36,7 +46,7 @@ final class Http
                     'media_status'=>$flow->mediaStatus($_COOKIE,$input),
                     'media_result'=>$media->result($_COOKIE,$input),
                     'submit'=>$flow->submit($_COOKIE,$input),
-                    'cases'=>$flow->cases($_COOKIE),
+                    'cases'=>$flow->cases($_COOKIE,$input),
                     'view'=>self::view($flow,$input),
                     'challenge'=>$flow->challenge($_COOKIE,$input),
                     'verify'=>$flow->verify($_COOKIE,$input),

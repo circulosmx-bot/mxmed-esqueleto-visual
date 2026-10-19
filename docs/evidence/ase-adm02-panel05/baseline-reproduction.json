@@ -1,0 +1,37 @@
+[
+  {
+    "action": "prepare",
+    "status": 200,
+    "result": {
+      "operation_id": "2a8e41c9-4a54-444e-861a-4034fb4bc3e5",
+      "case_id": "adm_663964cad2c1851773cfd7f922e00c3b",
+      "version": 1,
+      "command": "prepare",
+      "audit_event_id": "44ebde1c-0a98-48cc-96a9-da49ed8da32a",
+      "committed": true,
+      "refresh_required": true
+    }
+  },
+  {
+    "action": "issue",
+    "status": 200,
+    "result": {
+      "operation_id": "3b9d893a-bf47-4367-9b8e-e1ac9f103ab7",
+      "case_id": "adm_663964cad2c1851773cfd7f922e00c3b",
+      "invitation_id": "sti_e9895b891cb9a20e9d06a2d31d36fd64",
+      "version": 1,
+      "command": "issue",
+      "audit_event_id": "b13f5cea-3bb2-4b0f-803a-36d88b3979ba",
+      "committed": true,
+      "outcome": "INVITATION_CREATED",
+      "delivery_state": "DELIVERY_PENDING",
+      "invitation_state": "ACTIVE",
+      "expires_at": "2026-10-19 01:19:38.644754",
+      "staff_accreditation": "PENDING",
+      "refresh_required": true
+    }
+  },
+  {
+    "feedback": "Invitación preparada. La solicitud está pendiente de vinculación y confirmación personal. No se ha concedido acceso al equipo."
+  }
+]
