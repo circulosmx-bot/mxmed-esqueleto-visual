@@ -188,3 +188,7 @@ Preparación en asistente aprobado de cuatro pasos, revisión contextual separad
 ## ASE-ADM02-PANEL05
 
 [Corrección dirigida](identity/ASE-ADM02-PANEL05.md), base PANEL04 b356b06e: cierre del asistente, lectura de resultado incierto, validación/feedback de invitación sintética, categorías/filtro compacto, búsqueda de nombres autorizados antes de paginar y explicación de permisos suspendidos. Sin nueva autoridad ni activación; 88 checks + 5 adicionales PASS, Chromium/WebKit en tres tamaños. Aceptación visual pendiente según contrato.
+
+## ASE-ADM02-PANEL06
+
+[Corrección focalizada](identity/ASE-ADM02-PANEL06.md), base PANEL05 e4f4fb04: diálogos acotados a viewport y cierre/foco consistente; edición parcial del mismo perfil versionado con género/contacto no verificado, fotografía privada StaffMedia y avatar independiente; login/logout Identity originales conectados al ensayo. Diez capacidades editables existentes y seis restricciones justificadas, sin ampliar autoridad. Migración sólo en infraestructura propia sintética, sin tocar 8091. 816 comprobaciones dirigidas + 14 smoke finales PASS; Chromium/WebKit y límites exactos en el contrato. Aceptación visual del Director pendiente.

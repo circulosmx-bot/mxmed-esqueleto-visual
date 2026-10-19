@@ -1,0 +1,51 @@
+{
+  "result": "FAIL",
+  "checks": [
+    {
+      "name": "Requested email absent; inspected only owned synthetic database",
+      "pass_": true
+    },
+    {
+      "name": "Exact ten editable catalog capabilities for ACTIVE Advisor",
+      "pass_": true
+    },
+    {
+      "name": "All ten canonical grants persist",
+      "pass_": true
+    },
+    {
+      "name": "Canonical individual revoke persists",
+      "pass_": true
+    },
+    {
+      "name": "Suspended and removed grant denied",
+      "pass_": true
+    },
+    {
+      "name": "Changed fields reject credential edits and invalid gender/phone",
+      "pass_": true
+    },
+    {
+      "name": "Master and other applicant cannot read private profile",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 wizard dismissal and background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 long wizard viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 long wizard all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 long wizard native focus contained",
+      "pass_": false
+    }
+  ],
+  "error": "AssertionError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel06-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel06-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel06/scripts/ase-adm02-panel06-browser.py\", line 56, in run\n    p.locator('#add-member').click();p.locator('#next-onboarding').click();expect(p.locator('#onboarding-feedback')).to_contain_text('Completa');reachable('onboarding',label+' long wizard');dismiss('onboarding','escape')\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel06/scripts/ase-adm02-panel06-browser.py\", line 49, in reachable\n    p.keyboard.press('Tab');check(label+' native focus contained',d.evaluate('(e)=>e.contains(document.activeElement)'));p.keyboard.press('Shift+Tab')\n  File \"/tmp/panel06-run.py\", line 16, in focused_check\n    if not ok:raise AssertionError(name)\nAssertionError: chromium 1440x900 zoom 1 long wizard native focus contained\n"
+}

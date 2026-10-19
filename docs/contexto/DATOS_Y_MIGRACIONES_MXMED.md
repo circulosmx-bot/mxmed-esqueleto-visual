@@ -177,3 +177,7 @@ Sin objetos nuevos. Reutiliza versiones/procedencia personal, invitaciones y cas
 ## PANEL05 — búsquedas y recuperación sin migración
 
 [PANEL05](../identity/ASE-ADM02-PANEL05.md) filtra nombres actuales vía completions/casos/versiones sólo en reader Director con fuente conectada, antes de LIMIT. Pendientes conserva creator/binding. Lee recibos actor+operation bajo locks canónicos y estado mínimo de invitación Director-only; nunca retorna token ni destinatario. Sin nuevas tablas, writer ni cambios de auditoría/grants.
+
+## PANEL06 — extensión mínima de la misma versión personal
+
+[PANEL06](../identity/ASE-ADM02-PANEL06.md) y migración [2026_10_19_01](../../modules/identity/db/migrations/2026_10_19_01_staff_personal_presentation.sql): gender/contact_phone/avatar/presentation en `auth_staff_admission_versions`, defaults neutros, versiones/procedencia/auditoría y triggers conservados. Teléfono de contacto no verificado; correo sigue `auth_accounts`, sin nueva credencial/identidad. Retrato conserva assets/operaciones/cifrado StaffMedia; sujeto y actor editor separados, propósito independiente de evidencia MFA. Sólo datadir nuevo sintético. El usuario SQL del ensayo recibe SELECT sobre memberships ya existentes para current-session; no se crean memberships ni roles. Los recibos de revisión exponen sólo la intención propia y su consumo, sin pruebas reutilizables ni bytes privados.

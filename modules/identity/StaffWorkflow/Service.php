@@ -82,10 +82,10 @@ final class Service
             foreach($data['items'] as &$item){
                 $id=$this->query('SELECT case_id FROM auth_staff_admission_completions WHERE account_id=?',[$item['account_reference']])->fetchColumn();if(!$id)continue;
                 $c=$this->case($id);$this->director($a,$c);
-                $p=$this->row('SELECT given_names,first_surname,second_surname,operation_state,operation_city FROM auth_staff_admission_versions WHERE case_id=? AND version=?',[$id,$c['version']]);
+                $p=$this->row('SELECT given_names,first_surname,second_surname,operation_state,operation_city,gender,contact_phone,avatar,presentation FROM auth_staff_admission_versions WHERE case_id=? AND version=?',[$id,$c['version']]);
                 $manifest=$this->query('SELECT manifest FROM auth_staff_document_sets WHERE case_id=? ORDER BY sequence_number DESC LIMIT 1',[$id])->fetchColumn();
                 $item['documents']=$manifest?array_map(static fn($d)=>['kind'=>$d['kind'],'version'=>$d['document_version'],'pages'=>count($d['pages'])],json_decode($manifest,true,16,JSON_THROW_ON_ERROR)):[];
-                $item['admission_case_id']=$id;$item['personal_editable']=$item['staff_status']!=='REMOVED';$item['personal_profile']=$p;$item['identity_review']=['current'=>false];
+                $item['admission_case_id']=$id;$item['personal_editable']=$item['staff_status']!=='REMOVED';$item['personal_profile']=$p;$item['account_email']=$this->row('SELECT email_address,email_verified_at FROM auth_accounts WHERE account_id=?',[$c['bound_account_id']]);$item['identity_review']=['current'=>false];
                 try{$review=$this->approved($c);$item['identity_review']=['current'=>true,'review_version'=>$review['review_id']];}catch(\RuntimeException){}
                 if(isset($input['target']))$item['history']=\Identity\Team\ActivityProjection::read($this->p,$item['account_reference'],$data['authority'],$id);
                 $this->audit($a,$c,'read',$this->uuid());
@@ -103,7 +103,7 @@ final class Service
     public function mediaStatus(array $cookies,array $b):array
     {
         self::keys($b,['case_id','purpose']);Policy::purpose($b['purpose']);
-        return $this->unit->run($cookies,function($a)use($b){$c=$this->case($b['case_id']);$this->own($a,$c);$this->audit($a,$c,'read',$this->uuid());return ['version'=>(int)$this->query('SELECT COALESCE(MAX(asset_version),0) FROM auth_staff_media_assets WHERE case_id=? AND purpose=?',[$c['case_id'],$b['purpose']])->fetchColumn()];});
+        return $this->unit->run($cookies,function($a)use($b){$c=$this->case($b['case_id']);if($b['purpose']===Policy::PORTRAIT){if(!(new \Identity\StaffMedia\Authority($this->p))->portrait($a,$c))throw new \RuntimeException('workflow_denied');}else $this->own($a,$c);$this->audit($a,$c,'read',$this->uuid());$asset=$this->query('SELECT asset_id,asset_version FROM auth_staff_media_assets WHERE case_id=? AND purpose=? ORDER BY asset_version DESC LIMIT 1',[$c['case_id'],$b['purpose']])->fetch(PDO::FETCH_ASSOC);return ['version'=>(int)($asset['asset_version']??0),'asset_id'=>$asset['asset_id']??null,'case_version'=>(int)$c['version']];});
     }
     public function cases(array $cookies,array $input=[]):array
     {
@@ -139,6 +139,19 @@ final class Service
                 }catch(\RuntimeException){}
             }
             $this->audit($a,$c,'read',$this->uuid());return ['case_id'=>$id,'sets'=>$sets,'review'=>$review,'review_current'=>$current,'legal_reference'=>$this->legalReference,'admitted'=>$admitted,'available_actions'=>$actions];});
+    }
+    /** Exact receipt metadata only; never evidence bytes or reusable authentication proof. */
+    public function reviewResult(array $cookies,array $b):array
+    {
+        self::keys($b,['case_id','intent_id']);
+        if(!is_string($b['case_id'])||!preg_match('/^adm_[a-f0-9]{32}$/D',$b['case_id'])||!is_string($b['intent_id'])||!preg_match('/^intent_[a-f0-9]{32}$/D',$b['intent_id']))throw new \RuntimeException('workflow_invalid');
+        return $this->unit->run($cookies,function($a)use($b){
+            $c=$this->case($b['case_id']);$this->director($a,$c);
+            $i=$this->row('SELECT actor_account_id,credential_version,case_id,action,consumed_at,expires_at FROM auth_staff_review_intents WHERE intent_id=? FOR UPDATE',[$b['intent_id']]);
+            if($i['actor_account_id']!==$a->accountId()||$i['case_id']!==$c['case_id']||(int)$i['credential_version']!==$a->principal()->credentialVersion())throw new \RuntimeException('workflow_denied');
+            $this->audit($a,$c,'read',$this->uuid());
+            return ['intent_id'=>$b['intent_id'],'case_id'=>$c['case_id'],'action'=>$i['action'],'committed'=>$i['consumed_at']!==null,'outcome'=>$i['consumed_at']!==null?'COMMITTED':'NOT_CONSUMED','expired'=>$i['expires_at']<=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u')];
+        });
     }
     public function challenge(array $cookies,array $b):array
     {

@@ -43,11 +43,13 @@ final class Http
                     'issue','reissue','accept'=>$invites->command($_COOKIE,$action,$input),
                     'invitation_result'=>$invites->read($_COOKIE,'result',$input),
                     'upload'=>self::upload($media,$input),
+                    'portrait'=>self::portrait($media,$input),
                     'media_status'=>$flow->mediaStatus($_COOKIE,$input),
                     'media_result'=>$media->result($_COOKIE,$input),
                     'submit'=>$flow->submit($_COOKIE,$input),
                     'cases'=>$flow->cases($_COOKIE,$input),
                     'view'=>self::view($flow,$input),
+                    'review_result'=>$flow->reviewResult($_COOKIE,$input),
                     'challenge'=>$flow->challenge($_COOKIE,$input),
                     'verify'=>$flow->verify($_COOKIE,$input),
                     'evidence'=>$flow->readEvidence($_COOKIE,$input),
@@ -63,6 +65,8 @@ final class Http
             http_response_code($status);echo json_encode(['error'=>$status===409?'conflict_refresh_required':($status===400?'invalid_request':($status===403?'access_denied':'unavailable_reconcile_required')),'retry'=>false]);
         }
     }
+    private static function portrait($media,array $b):array
+    {if(($b['purpose']??null)!==\Identity\StaffMedia\Policy::PORTRAIT)throw new \RuntimeException('workflow_denied');$r=$media->read($_COOKIE,$b);$r['base64']=base64_encode($r['bytes']);unset($r['bytes']);return $r;}
     private static function view(Service $s,array $b):array{Service::keys($b,['case_id']);return $s->view($_COOKIE,$b['case_id']);}
     private static function upload($media,array $b):array
     {Service::keys($b,['metadata','base64']);if(!is_string($b['base64'])||strlen($b['base64'])>90000)throw new \RuntimeException('workflow_invalid');$bytes=base64_decode($b['base64'],true);if(!is_string($bytes))throw new \RuntimeException('workflow_invalid');return $media->write($_COOKIE,$b['metadata'],$bytes);}

@@ -1,0 +1,6 @@
+{
+  "result": "FAIL",
+  "passed_before_failure": 10,
+  "failure": "WebKit did not restore contextual edit focus after rerender; pointer activation does not necessarily focus a button on this platform.",
+  "correction": "Remember the actual pointer trigger in addition to focus events."
+}

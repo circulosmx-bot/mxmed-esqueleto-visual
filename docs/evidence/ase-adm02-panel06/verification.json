@@ -1,0 +1,126 @@
+{
+  "result": "PASS",
+  "syntax": [
+    {
+      "file": "assets/js/internal-team-master.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/internal-team.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-applicant.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-personal.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-workflow.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/team-dialogs.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffAdmission/Input.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffAdmission/Service.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffMedia/Authority.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffMedia/Service.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffWorkflow/Http.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffWorkflow/Service.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "partials/identity/internal-team.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "partials/identity/staff-workflow.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel06-browser.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel06-checks.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel06-qa.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel06-smoke.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel06-verify.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-workflow-checks.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-workflow-router.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-workflow-runtime.php",
+      "syntax": "PASS"
+    }
+  ],
+  "relative_document_links": 589,
+  "diff_check": "PASS",
+  "source_sha256": {
+    "assets/css/internal-team-admission.css": "efb531e61a62242febe83d0d80d4b176d24544c345144c30b9ddc8032f643ee9",
+    "assets/js/internal-team-master.js": "e5687bf281abb6c3b7ce0d9d57182f6621dda691f888b1e3c787b21ca25cc4b2",
+    "assets/js/internal-team.js": "9ba501d9d2936851d232c77827e30806791bc1603028d6ed68d41761f46c0457",
+    "assets/js/staff-applicant.js": "e80c1490214127f14d4eb7825f0876f508145c31271a39d397024d48eb6d0481",
+    "assets/js/staff-personal.js": "544899ae23e2426f4abe351931e113cb03e064bf613e8d09668d66e601e97edf",
+    "assets/js/staff-workflow.js": "edb365c63ae23a9fbc3fbf2a7f204f79d6dada20fc339778eecea3551e4c6200",
+    "assets/js/team-dialogs.js": "c572b8330327c105cda0c68671b6b5ca86617612d4c8703f554ed346992c2938",
+    "modules/identity/StaffAdmission/Input.php": "9dfbe4dfe137b830f3d157914e4386a2a1185162034f3ed624d8917a0021a0d7",
+    "modules/identity/StaffAdmission/Service.php": "1caff8855f166bb0db242ab680fba5daa24e82d5f488ddb41f9d5f8a396238cb",
+    "modules/identity/StaffMedia/Authority.php": "6017f9cb610cb6792e822d71c5ce07af702d712be349763a3c66022ec4e0a0ee",
+    "modules/identity/StaffMedia/Service.php": "fb9946ce28100316a544c444b3018d08e44683fccce7dca718e35c0b7bd6ad0e",
+    "modules/identity/StaffWorkflow/Http.php": "eaacda61c53787077114aa1c13c603ba42884fb536ea892ba101f1f26a8e5761",
+    "modules/identity/StaffWorkflow/Service.php": "3d989731f5501eb361cd7070733589ff6a950c417970e74275f37f32fa38279a",
+    "modules/identity/db/migrations/2026_10_19_01_staff_personal_presentation.sql": "222244e18f8ce481d53ca05886cdbdd2c39b88fbbac65a0afd4d91df202a32cf",
+    "partials/identity/internal-team.php": "ddd4e88fe6fc150b1c6590ceef339e135a881c02fa6957e0174ca5976325ac9c",
+    "partials/identity/staff-workflow.php": "4c6f029fa407dcddb70e5724f1be85682d59e9735639104d7c5fcbbc99e9f3d3",
+    "scripts/ase-adm02-panel06-browser.py": "b66ae7083987c59b409ec2e64c2a1e16281c9ff13e2f68f6324fa5603881d652",
+    "scripts/ase-adm02-panel06-checks.py": "3fc9e806be7e81e91542755914b51e4123fd854b76f971e8e9443bb6a30518aa",
+    "scripts/ase-adm02-panel06-qa.py": "5539f899d1896736375d083b836ff93db315bab3ad711dc920f9b61544b62dc7",
+    "scripts/ase-adm02-panel06-smoke.py": "50d68db2bb5d967189ab17a3451b2e438b0aab2aeacc03b470d60e42e1405ed6",
+    "scripts/ase-adm02-panel06-verify.py": "358b2d2c5765ab2995a7f1541183b7b0a141a6e54ad116c42570d6cc00445f09",
+    "scripts/ase-adm02-workflow-checks.py": "f4ff5e90086d4732f1f5cf1f0d9b768ffe16f9c75f1b05c2b6e470e1ff884be6",
+    "scripts/ase-adm02-workflow-router.php": "efee6018a03e4c2cc2c34b675e9293032f00ab9094a0f5eb90b39ce9df6a7709",
+    "scripts/ase-adm02-workflow-runtime.php": "aaacf15d6ec16b2aca04e4c49eea7ad1427b15445fe33e7000e7456aeb2082bc"
+  },
+  "no_database_connections": true,
+  "protected_unchanged": true,
+  "protected_worktrees": 20,
+  "owned_php_source_pins_verified": 33,
+  "synthetic_secrets_absent_from_changes": true
+}

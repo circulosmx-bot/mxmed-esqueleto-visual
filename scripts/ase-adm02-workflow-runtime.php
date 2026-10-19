@@ -18,7 +18,7 @@ function staffWorkflowOwnedServices():array
     $root=realpath($owned.'/staff-private');
     $policy=new \Identity\StaffMedia\Policy(65536,512,65536,800,153600,'synthetic-custody-only','synthetic-owned-disposal-only',file_get_contents($owned.'/media-operation-key'));
     $cipher=new \Identity\StaffMedia\Cipher('synthetic-media-v1',['synthetic-media-v1'=>file_get_contents($owned.'/media-key')]);$storage=new \Identity\StaffMedia\Storage($root,153640);
-    $media=new \Identity\StaffMedia\Service($p,$sessions,$policy,$cipher,$storage,new \Identity\StaffMedia\Images($policy,$root),$root);
+    $media=new \Identity\StaffMedia\Service($p,$sessions,$policy,$cipher,$storage,new \Identity\StaffMedia\Images($policy,$root),$root,new \Identity\StaffMedia\Authority($p));
     $flow=new \Identity\StaffWorkflow\Service($p,$sessions,$mfa,$security,$cipher,$storage,'synthetic-staff-acceptance-v1');
     $delivery=new class($owned) implements \Identity\StaffAdmission\InvitationDeliveryPort {
         public function __construct(private string $owned){}

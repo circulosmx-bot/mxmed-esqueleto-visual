@@ -4,7 +4,7 @@
 const $=id=>document.getElementById(id),uid=()=>crypto.randomUUID(),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={given_names:'Nombre(s)',first_surname:'Primer apellido',second_surname:'Segundo apellido',operation_state:'Estado',operation_city:'Ciudad'};
 const actions={READ:'Consultar evidencia',CORRECTIONS:'Solicitar correcciones',ACCEPT:'Aceptar evidencia y concluir revisión',REJECT:'Rechazar evidencia',ADMIT:'Aprobar admisión'};
-let csrf='',director=false,busy=false,wizard=null,step=0,caseData=null,caseView=null,caseInvitation=null,profileCase=null,intent=null,recoveryKey='',recovered=null;
+let csrf='',director=false,busy=false,wizard=null,step=0,caseData=null,caseView=null,caseInvitation=null,intent=null,recoveryKey='',recovered=null,reviewPending=null;
 const name=c=>Object.keys(labels).slice(0,3).map(k=>c.profile?.[k]).filter(Boolean).join(' ');
 const say=m=>{$('wf-status').textContent=m;},changed=()=>window.dispatchEvent(new Event('staff-workflow-changed'));
 async function api(action,input={}){
@@ -17,24 +17,21 @@ function fields(prefix,profile){return `<div class="admission-fields">${Object.e
 function profile(prefix){return Object.fromEntries(Object.keys(labels).map(k=>[k,$(prefix+'-'+k).value.trim()]));}
 function show(id){$(id).showModal();$(id).querySelector('input,button')?.focus();}
 function controls(){if(!wizard)return;const locked=busy||!!wizard.pending&&wizard.pending.state!=='NONCOMMIT';for(const id of ['save-onboarding','next-onboarding','previous-onboarding'])$(id).disabled=locked;$('onboarding-content').querySelectorAll('input,select').forEach(e=>{e.disabled=locked||e.tagName==='SELECT'&&e.id!=='new-channel'||e.id==='new-channel'&&!!wizard.case_id;});$('check-onboarding').hidden=!wizard.pending;$('check-onboarding').disabled=busy;}
-async function work(status,fn){if(busy)return;busy=true;controls();try{await fn();}catch(e){$(status).textContent=e.message;}finally{busy=false;controls();}}
+async function work(status,fn){if(busy)return;busy=true;controls();try{await fn();}catch(e){$(status).textContent=e.message;}finally{busy=false;if(!$('staff-stepup').open){intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}controls();}}
 for(const id of ['onboarding','staff-case','staff-profile','staff-stepup'])$(id).addEventListener('cancel',e=>{e.preventDefault();close(id);});
-let priorOverflow='';
+
 function close(id){
  if(id==='onboarding'){
   if(!wizard?.pending&&wizard?.dirty&&!confirm('¿Descartar los cambios sin guardar? El borrador guardado se conserva.'))return;
-  const pending=!!wizard?.pending;$(id).close();document.body.style.overflow=priorOverflow;$('add-member').focus();
+  const pending=!!wizard?.pending;$(id).close();$('add-member').focus();
   if(pending||busy)say('Preparación conservada. Agregar integrante permite consultar el resultado sin reenviar la operación.');else wizard=null;
   return;
  }
- if(busy)return;
- if(id==='staff-stepup'){intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}
+ if(id==='staff-profile'){window.staffPersonal?.dismiss();return;}
+ if(busy){$(id).close();say('Operación en curso. Consulta el caso antes de iniciar otra acción; no se reenviará al cerrar.');return;}
+ if(id==='staff-stepup'){if($('staff-reason').value&&!confirm('¿Descartar el motivo sin enviar?'))return;intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}
  if(id==='staff-case')$('staff-case-content').replaceChildren();$(id).close();
 }
-let backdropDown=false;
-const outside=e=>{const b=$('onboarding').getBoundingClientRect();return e.target===$('onboarding')&&(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom);};
-$('onboarding').addEventListener('pointerdown',e=>{backdropDown=outside(e);});
-$('onboarding').addEventListener('click',e=>{if(backdropDown&&outside(e))close('onboarding');backdropDown=false;});
 $('cancel-onboarding').onclick=()=>close('onboarding');$('close-staff-case').onclick=()=>close('staff-case');$('cancel-staff-profile').onclick=()=>close('staff-profile');$('cancel-staff-stepup').onclick=()=>close('staff-stepup');
 function remember(){
  // Only non-secret operation/case identifiers survive a reload. Never profile/email/credentials/tokens.
@@ -42,7 +39,7 @@ function remember(){
 }
 function start(c=null){
  if(!(wizard?.pending||busy&&wizard)){wizard={profile:c?.profile||{},email:'',channel:c?.channel||'ASSISTED',case_id:c?.case_id||'',version:c?.version||1,operation:uid(),recipient:uid(),invitationOperation:uid(),dirty:false,done:false,pending:recovered};recovered=null;step=0;}
- renderWizard();priorOverflow=document.body.style.overflow;document.body.style.overflow='hidden';show('onboarding');
+ renderWizard();show('onboarding');
  if(wizard.pending)$('onboarding-feedback').textContent='Hay una operación pendiente de comprobar. Consulta su estado; no se reenviará al abrir.';
 }
 function capture(){if(step===0){wizard.profile=profile('new');wizard.email=$('new-email').value.trim();wizard.channel=$('new-channel').value;}}
@@ -108,7 +105,7 @@ function renderCase(){
  if($('resume-preparation'))$('resume-preparation').onclick=()=>{const c=caseData;close('staff-case');start(c);};
 }
 async function openCase(id){await work('wf-status',async()=>{await loadCase(id);$('staff-case-status').textContent='';show('staff-case');});}
-async function begin(action){await work('staff-case-status',async()=>{
+async function begin(action){if(reviewPending){say('Consulta primero el resultado pendiente. No se repetirá la operación.');return;}await work('staff-case-status',async()=>{
  await loadCase(caseData.case_id);if(!caseView.available_actions.includes(action))throw new Error('La acción ya no está disponible. Revisa el estado actual.');
  intent={action,case_id:caseData.case_id,set_id:caseView.sets[0].set_id};$('staff-stepup-title').textContent=actions[action];$('staff-stepup-target').textContent=name(caseData)+' · versión '+caseData.version;
  $('staff-reason-label').hidden=!['CORRECTIONS','REJECT'].includes(action);$('staff-reason').value='';$('staff-password').value='';$('staff-code').value='';$('staff-password-stage').hidden=false;$('staff-code-stage').hidden=true;$('staff-stepup-status').textContent='Confirma esta acción con tu cuenta actual.';show('staff-stepup');
@@ -121,15 +118,19 @@ $('staff-challenge').onclick=()=>work('staff-stepup-status',async()=>{
 $('staff-execute').onclick=()=>work('staff-stepup-status',async()=>{
  const code=$('staff-code').value;$('staff-code').value='';const proof=await api('verify',{challenge_id:intent.challenge_id,challenge:intent.challenge,code});const body={intent_id:intent.intent_id,proof_id:proof.proof_id,proof:proof.proof},action=intent.action,id=intent.case_id;
  // Never automatically reuse a proof after an uncertain response.
- $('staff-code-stage').hidden=true;intent=null;
+ $('staff-code-stage').hidden=true;reviewPending={case_id:id,intent_id:intent.intent_id,action};rememberReview();intent=null;
  const result=await api(action==='READ'?'evidence':action==='ADMIT'?'admit':'decide',action==='ADMIT'?{case_id:id,...body}:body);
- try{await loadCase(id);}catch(_){throw new Error('Operación confirmada; no pudimos actualizar la consulta. Cierra y consulta el caso antes de repetir acciones.');}$('staff-stepup').close();$('staff-case-status').textContent=actions[action]+': operación confirmada.';
+ if(action==='READ'&&(!Array.isArray(result.pages)||!result.pages.length||result.pages.some(p=>typeof p.base64!=='string'||!['image/png','image/jpeg'].includes(p.mime_type))))throw new Error('La respuesta documental no es válida. Consulta el resultado antes de continuar.');
+ const receipt=await api('review_result',{case_id:id,intent_id:reviewPending.intent_id});if(receipt.committed!==true||receipt.intent_id!==reviewPending.intent_id||receipt.case_id!==id||receipt.action!==action)throw new Error('No se confirmó la intención exacta. Consulta su resultado.');
+ reviewPending=null;rememberReview();try{await loadCase(id);}catch(_){throw new Error('Operación confirmada; no pudimos actualizar la consulta. Cierra y consulta el caso antes de repetir acciones.');}$('staff-stepup').close();$('staff-case-status').textContent=actions[action]+': operación confirmada.';
  if(action==='READ'){for(const page of result.pages){const img=document.createElement('img');img.alt=`Documento ${page.document_id}, ${page.side}`;img.src=`data:${page.mime_type};base64,${page.base64}`;img.width=320;img.style.maxWidth='100%';$('case-pages').append(img);}}else changed();
 });
+function rememberReview(){try{if(reviewPending)sessionStorage.setItem(recoveryKey+':review',JSON.stringify(reviewPending));else sessionStorage.removeItem(recoveryKey+':review');}catch(_){}$('review-reconcile').hidden=!reviewPending;}
+$('review-reconcile').onclick=()=>work('wf-status',async()=>{if(!reviewPending)return;const r=await api('review_result',{case_id:reviewPending.case_id,intent_id:reviewPending.intent_id});if(r.intent_id!==reviewPending.intent_id||r.case_id!==reviewPending.case_id||r.action!==reviewPending.action)throw new Error('La respuesta no corresponde a esta revisión.');if(r.committed===true){reviewPending=null;rememberReview();say('Operación confirmada. Consulta nuevamente el caso; no se volvió a ejecutar.');changed();}else if(r.outcome==='NOT_CONSUMED'&&r.expired===true){reviewPending=null;rememberReview();say('La intención venció sin ejecutar. Revisa el caso antes de iniciar otra acción con nueva verificación.');}else say('La intención aún no tiene un resultado confirmado. Puedes volver a consultar; no se reutilizará la prueba ni se enviará otra ejecución.');});
 window.staffWorkflowDirectory={
  async pending(q='',page=1){if(!director)throw new Error('pending_denied');return api('cases',{q,page,page_size:20,pending:true});},open:openCase,
- async profile(id){await work('wf-status',async()=>{profileCase=await api('case',{case_id:id});$('staff-profile-content').innerHTML=fields('edit',profileCase.profile);$('staff-profile-status').textContent='';show('staff-profile');});}
+ async profile(id){return window.staffPersonal.open(id);}
 };
-$('save-staff-profile').onclick=()=>work('staff-profile-status',async()=>{const values=profile('edit');if(!values.given_names||!values.first_surname)throw new Error('Completa nombre y primer apellido.');await api('update',{operation_id:uid(),case_id:profileCase.case_id,expected_version:profileCase.version,...values});$('staff-profile').close();say('Nueva versión personal guardada. Requiere confirmación de la persona.');changed();});
-api('bootstrap').then(b=>{csrf=b.csrf_token;director=b.director;recoveryKey='staff-preparation-operation:'+b.account_id;try{recovered=JSON.parse(sessionStorage.getItem(recoveryKey));}catch(_){}if(director){$('add-member').disabled=false;$('add-member').onclick=()=>{start();};}}).catch(e=>say(e.message));
+window.staffWorkflowApi=api;
+api('bootstrap').then(b=>{csrf=b.csrf_token;director=b.director;recoveryKey='staff-preparation-operation:'+b.account_id;try{recovered=JSON.parse(sessionStorage.getItem(recoveryKey));reviewPending=JSON.parse(sessionStorage.getItem(recoveryKey+':review'));}catch(_){}rememberReview();if(director){$('add-member').disabled=false;$('add-member').onclick=()=>{start();};}}).catch(e=>say(e.message));
 })();

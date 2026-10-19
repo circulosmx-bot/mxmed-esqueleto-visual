@@ -1,0 +1,7 @@
+{
+  "result": "FAIL",
+  "passed_before_failure": 13,
+  "failure": "WebKit focuses the tabindex=-1 parent section between pointerdown and click; focusin replaced the remembered edit button.",
+  "diagnosis": "Observed actual pointerdown -> ancestor focusin -> click -> dialog event sequence.",
+  "correction": "Capture the activation click as well as pointerdown; canonical refresh is already awaited and selected member preserved."
+}

@@ -1,0 +1,6 @@
+{
+  "result": "FAIL",
+  "passed_before_failure": 8,
+  "failure": "Focus restoration target existed inside a collapsed personal details section after canonical rerender.",
+  "correction": "Reopen the original context details before restoring focus; no authority changes."
+}

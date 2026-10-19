@@ -1,0 +1,15 @@
+{
+  "result": "FAIL",
+  "checks": [
+    {
+      "name": "Requested email absent; inspected only owned synthetic database",
+      "pass_": true
+    },
+    {
+      "name": "Exact ten editable catalog capabilities for ACTIVE Advisor",
+      "pass_": true
+    }
+  ],
+  "error": "AssertionError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel06-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel06-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel06/scripts/ase-adm02-panel06-browser.py\", line 14, in run\n    for cap in expected:assert command('grant',records['bruno']['account'],cap)[0]==200\nAssertionError\n"
+}

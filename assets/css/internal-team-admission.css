@@ -69,3 +69,19 @@
 #status-options button:focus-visible { outline:2px solid var(--teal); outline-offset:-2px; }
 #clear-staff-search { font-size:.75rem; margin:6px 0; }
 #synthetic-email-help { font-size:.8rem; color:var(--muted); }
+
+/* PANEL06: bounded native dialogs, scrollable bodies and nested focus remain native. */
+dialog { box-sizing:border-box; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+dialog > h2 { position:sticky; top:-24px; background:white; z-index:2; padding:10px 0; margin-top:0; overflow-wrap:anywhere; }
+dialog > div:not(.dialog-actions) { min-height:0; }
+dialog .dialog-actions { position:static; flex-wrap:wrap; background:white; padding:12px 0 0; }
+dialog input,dialog select,dialog textarea { max-width:100%; box-sizing:border-box; }
+dialog button { white-space:normal; overflow-wrap:anywhere; }
+#onboarding .dialog-actions { position:static; }
+.personal-portrait { width:72px; height:72px; display:block; object-fit:cover; border-radius:8px; background:var(--soft); }
+.personal-values { display:grid; grid-template-columns:1fr 2fr; gap:8px; overflow-wrap:anywhere; }
+.personal-values dd { margin:0; }
+#profile-photo-help { font-size:.8rem; }
+@media(max-width:600px) { dialog { padding:16px; } dialog > h2 { top:-16px; } dialog .dialog-actions { display:flex; flex-direction:row; } dialog .dialog-actions button { flex:1 1 40%; } .personal-values { grid-template-columns:1fr; } }
+
+dialog { max-height:min(calc(100dvh - 24px),calc(var(--team-visible-height,100dvh) - 24px)); max-width:calc(var(--team-visible-width,100vw) - 24px); }

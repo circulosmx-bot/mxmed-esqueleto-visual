@@ -4,7 +4,8 @@
 <title>Equipo interno y permisos · México Médico</title>
 <link rel="stylesheet" href="/assets/css/media-review-inbox.css"><link rel="stylesheet" href="/assets/css/internal-team.css">
 <link rel="stylesheet" href="/assets/css/internal-team-commercial.css"><link rel="stylesheet" href="/assets/css/internal-team-admission.css"><link rel="stylesheet" href="/assets/css/internal-team-readonly.css">
-<?php if(!empty($staffWorkflowReady)): ?><script src="/assets/js/staff-workflow.js" defer></script><?php endif; ?>
+<script src="/assets/js/team-dialogs.js" defer></script>
+<?php if(!empty($staffWorkflowReady)): ?><script src="/assets/js/staff-workflow.js" defer></script><script src="/assets/js/staff-personal.js" defer></script><?php endif; ?>
 <script src="/assets/js/internal-team-editor.js" defer></script><script src="/assets/js/internal-team-master.js" defer></script><script src="/assets/js/internal-team.js" defer></script></head><body>
 <a class="skip-link" href="#advisor-detail" id="skip-detail">Ir al detalle del integrante</a>
 <main class="advisor-workspace">

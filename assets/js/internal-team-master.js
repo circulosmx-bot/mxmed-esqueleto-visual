@@ -12,7 +12,7 @@
       return `<p>Delegación actualmente ${(flow.member.master_delegations||[]).includes(flow.capability)?'vigente':'no concedida'}. Cambia una sola capacidad. No concede uso operativo ni gestión de asesores; no afecta otras delegaciones.</p>`;
     };
   window.createTeamMasterFlow=({editor,read,refresh})=>{
-    let data=null,token='',generation=0,active=false,busy=false,state='READ_UNAVAILABLE',flow=null,challenge=null,proof=null,timer=null,returnFocus=null;
+    let paused=false,data=null,token='',generation=0,active=false,busy=false,state='READ_UNAVAILABLE',flow=null,challenge=null,proof=null,timer=null,returnFocus=null;
     const member=()=>data?.items?.[0];
     const notice=(s,text)=>{state=s;const el=$('master-status');if(el){el.dataset.state=s;el.textContent=text||messages[s];}};
     async function request(action,body,caseId){
@@ -48,26 +48,28 @@
       else if(next==='REAUTHENTICATION_REQUIRED'){accept.textContent='Confirmar con contraseña';accept.onclick=confirm;}
       else if(next==='MFA_CHALLENGE_PENDING'){accept.textContent='Verificar MFA';accept.onclick=verify;}
       else if(next==='MFA_VERIFIED'){accept.textContent='Ejecutar esta acción';accept.onclick=execute;}
-      else if(next==='UNKNOWN_OUTCOME'){accept.textContent='Consultar resultado';accept.onclick=reconcile;cancel.disabled=true;}
+      else if(next==='UNKNOWN_OUTCOME'){accept.textContent='Consultar resultado';accept.onclick=reconcile;cancel.disabled=false;cancel.textContent='Cerrar y conservar caso';cancel.onclick=pause;}
       else if(['CONFLICT','EXPIRED','READ_UNAVAILABLE','NO_AUTHORITY'].includes(next)){accept.hidden=true;cancel.textContent=flow.case?'Cancelar caso y cerrar':'Cerrar';}
       else {accept.disabled=true;accept.textContent='Procesando…';}
-      dialog.oncancel=e=>{e.preventDefault();if(!busy&&next!=='UNKNOWN_OUTCOME'){if(finish)close();else cancelFlow();}};
+      if(busy){cancel.disabled=false;cancel.textContent='Cerrar y conservar caso';cancel.onclick=pause;}
+      dialog.oncancel=e=>{e.preventDefault();if(busy||next==='UNKNOWN_OUTCOME')pause();else if(finish)close();else cancelFlow();};
       dialog.onkeydown=e=>{
         if(e.key!=='Tab'||!active)return;
         const controls=[...dialog.querySelectorAll('input,button,[tabindex]')].filter(el=>!el.disabled&&!el.hidden&&el.tabIndex>=0&&el.getClientRects().length);
         e.preventDefault();if(!controls.length){dialog.focus();return;}
         const index=controls.indexOf(document.activeElement),step=e.shiftKey?-1:1;controls[(index+step+controls.length)%controls.length].focus();
       };
-      if(!dialog.open)dialog.showModal();
-      if(!busy){const input=dialog.querySelector('input');(input||(!accept.hidden&&!accept.disabled?accept:cancel)).focus();}
+      if(!dialog.open&&!paused)dialog.showModal();
+      if(!busy&&!paused){const input=dialog.querySelector('input');(input||(!accept.hidden&&!accept.disabled?accept:cancel)).focus();}
     }
+    function pause(){paused=true;$('confirmation').close();let button=$('resume-master-case');if(!button){button=document.createElement('button');button.id='resume-master-case';button.type='button';button.textContent='Retomar caso pendiente';$('master-status')?.after(button);}button.onclick=()=>{paused=false;button.remove();$('confirmation').showModal();$('cancel-confirmation').focus();};notice(state,'Caso conservado. Retoma la consulta; no se volverá a ejecutar la operación.');}
     function exact(c){return c&&c.case_id?.match(/^master_[a-f0-9]{32}$/)&&typeof c.operation_id==='string'&&c.operation_id.length===36&&c.operation===flow.operation&&c.target===flow.target&&c.capability===flow.capability&&typeof c.intent_digest==='string'&&c.intent_digest.length===64;}
     function expired(){return flow?.case&&Date.parse(flow.case.expires_at.replace(' ','T').slice(0,23)+'Z')<=Date.now();}
     function error(r){clearSecrets();show(r?.status===409?'CONFLICT':r?.status===401||r?.status===403?'NO_AUTHORITY':'READ_UNAVAILABLE');}
     async function start(operation,capability){
       if(active||editor.busy||!allowed(operation,capability))return;
       if(editor.dirty()||editor.uncertain){notice('PENDING_CONFIRMATION','Resuelve los permisos pendientes: completa GUARDAR PERMISOS, usa Revertir o cancela esta acción Master. No se descartó el borrador.');state='READY_FOR_EXACT_ACTION';return;}
-      active=true;generation++;returnFocus=$('advisor-detail').contains(document.activeElement)&&document.activeElement.matches('button,input,select,textarea,a[href]')?document.activeElement:null;flow={operation,capability,target:member().account_reference,member:structuredClone(member()),case:null,executed:false};mount();
+      paused=false;active=true;generation++;returnFocus=$('advisor-detail').contains(document.activeElement)&&document.activeElement.matches('button,input,select,textarea,a[href]')?document.activeElement:null;flow={operation,capability,target:member().account_reference,member:structuredClone(member()),case:null,executed:false};mount();
       show('PENDING_CONFIRMATION',consequences()+'<label class="ack-row"><input id="master-ack" type="checkbox">Confirmo esta acción individual y sus consecuencias.</label>');
     }
     async function open(){

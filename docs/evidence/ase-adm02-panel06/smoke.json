@@ -1,0 +1,62 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Changed required name rejected by server",
+      "pass": true
+    },
+    {
+      "name": "Profile update requires CSRF",
+      "pass": true
+    },
+    {
+      "name": "Stale personal version cannot overwrite current",
+      "pass": true
+    },
+    {
+      "name": "Rejected updates create no personal version",
+      "pass": true
+    },
+    {
+      "name": "Private asset cannot be read under a different authorized case",
+      "pass": true
+    },
+    {
+      "name": "Master cannot write another member portrait",
+      "pass": true
+    },
+    {
+      "name": "Director cannot upload portrait to removed staff",
+      "pass": true
+    },
+    {
+      "name": "Exact review receipt returns committed metadata without proofs or bytes",
+      "pass": true
+    },
+    {
+      "name": "Master cannot inspect Director review receipts",
+      "pass": true
+    },
+    {
+      "name": "Review intent cannot be reconciled under another case",
+      "pass": true
+    },
+    {
+      "name": "chromium lost portrait ACK reconciles exact operation after Escape/reload; no second upload",
+      "pass": true
+    },
+    {
+      "name": "chromium focus returns to contextual edit after canonical rerender",
+      "pass": true
+    },
+    {
+      "name": "webkit lost portrait ACK reconciles exact operation after Escape/reload; no second upload",
+      "pass": true
+    },
+    {
+      "name": "webkit focus returns to contextual edit after canonical rerender",
+      "pass": true
+    }
+  ],
+  "check_count": 14
+}

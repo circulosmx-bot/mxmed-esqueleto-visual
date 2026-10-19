@@ -352,3 +352,7 @@ P=reorganización explícita del Director; S=componentes/writers existentes y pr
 ## ID-07 / COM-10 — PANEL05
 
 P=seis correcciones explícitas; S=modal/filtros/búsqueda y recibos canónicos; C=consulta de operación/caso/invitación antes de reintento explícito, sin writer nuevo; V=ver [PANEL05](../identity/ASE-ADM02-PANEL05.md); O=preview sintético loopback. ACTIVE editable sólo según autoridad real; SUSPENDED/REMOVED protegidos.
+
+## ID-02 / ID-03 / ID-07 / COM-10 — PANEL06
+
+P=corrección explícita de diálogos/perfil/login, sin ampliar roles; S=perfil versionado con género/contacto no verificado/avatar, retrato StaffMedia privado Director con relación completada y propósito separado, cierre consistente; C=writers/recibos existentes y login/logout Identity originales conectados al router aislado; V=ver [PANEL06](../identity/ASE-ADM02-PANEL06.md); O=ensayo propio loopback, sin migración/activación real. Diez capacidades ya conectadas conservan edición/enforcement; dos de correcciones excluyen Advisor y cuatro de perfiles carecen de consumidor. No se elimina ninguna de estas restricciones.

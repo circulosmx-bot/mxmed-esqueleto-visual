@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);if(empty($staffWorkflowReady)){http_response_code(503);exit;}
 if(!empty($staffWorkflowApplicant)){require __DIR__.'/staff-applicant.php';return;} ?>
-<p id="wf-status" role="status" aria-live="polite"></p>
+<p id="wf-status" role="status" aria-live="polite"></p><button id="review-reconcile" type="button" hidden>Consultar resultado de revisión pendiente</button>
 <dialog id="onboarding" aria-labelledby="onboarding-title" aria-describedby="onboarding-description">
 <h2 id="onboarding-title" tabindex="-1">Agregar integrante</h2><p id="onboarding-description">Prepara la incorporación. La persona confirmará sus datos y presentará sus documentos desde su propia cuenta.</p>
 <ol class="wizard-steps" aria-label="Pasos de incorporación"><li>Persona</li><li>Categoría</li><li>Permisos</li><li>Revisión</li></ol>

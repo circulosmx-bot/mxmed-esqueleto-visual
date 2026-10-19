@@ -219,3 +219,7 @@ Staff → categoría/estado → integrante → datos/documentación/funciones/re
 ## J09 — PANEL05
 
 [PANEL05](../identity/ASE-ADM02-PANEL05.md): categoría primaria → estado secundario → búsqueda autorizada antes de paginar → selección/permiso. Asistente admite dismissal en vuelo; reapertura → lectura de recibo y estado canónico → éxito confirmado o reintento explícito con el mismo ID, nunca reenvío automático. Dominio de ensayo explicado antes del submit; entrega pendiente no equivale a no-commit.
+
+## J09 — PANEL06
+
+[PANEL06](../identity/ASE-ADM02-PANEL06.md): selección autorizada → Datos personales → edición de campos cambiados/nueva versión → confirmación personal. Correo Identity sólo consulta; teléfono explícitamente no verificado. Foto privada y avatar tienen selección reversible, independiente del género. Diálogos conservan foco/scroll/anidamiento, cierre y recuperación de operaciones en curso por referencia exacta. Logout revoca sesión → login existente en blanco → autenticación normal → ruta del rol autorizado; Back no restituye acceso. MFA documental y límites Master permanecen independientes.

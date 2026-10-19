@@ -1,0 +1,6 @@
+{
+  "result": "FAIL",
+  "passed_before_failure": 13,
+  "failure": "Asynchronous directory refresh replaced the restored opener after modal close, especially in WebKit. It also selected the first member instead of retaining the edited member.",
+  "correction": "Await canonical directory refresh, preserve the selected member and personal section, then report completion and restore focus."
+}

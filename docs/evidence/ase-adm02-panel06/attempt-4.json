@@ -1,0 +1,1551 @@
+{
+  "result": "FAIL",
+  "checks": [
+    {
+      "name": "Requested email absent; inspected only owned synthetic database",
+      "pass_": true
+    },
+    {
+      "name": "Exact ten editable catalog capabilities for ACTIVE Advisor",
+      "pass_": true
+    },
+    {
+      "name": "All ten canonical grants persist",
+      "pass_": true
+    },
+    {
+      "name": "Canonical individual revoke persists",
+      "pass_": true
+    },
+    {
+      "name": "Suspended and removed grant denied",
+      "pass_": true
+    },
+    {
+      "name": "Changed fields reject credential edits and invalid gender/phone",
+      "pass_": true
+    },
+    {
+      "name": "Master and other applicant cannot read private profile",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 wizard dismissal and background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 long wizard viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 long wizard all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 long wizard native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 expanded profile viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 expanded profile all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 expanded profile native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 documents viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 documents all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 documents native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 READ backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 CORRECTIONS backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 REJECT backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 final background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1440x900 zoom 1 no horizontal page overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 wizard dismissal and background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 long wizard viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 long wizard all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 long wizard native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 expanded profile viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 expanded profile all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 expanded profile native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 documents viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 documents all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 documents native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 READ backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 CORRECTIONS backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 REJECT backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 final background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1 no horizontal page overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 wizard dismissal and background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 long wizard viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 long wizard all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 long wizard native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 expanded profile viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 expanded profile all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 expanded profile native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 documents viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 documents all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 documents native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 READ backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 CORRECTIONS backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 REJECT backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 final background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 390x844 zoom 1 no horizontal page overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 wizard dismissal and background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 long wizard viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 long wizard all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 long wizard native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 expanded profile viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 expanded profile all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 expanded profile native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 documents viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 documents all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 documents native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 READ backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 CORRECTIONS backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 REJECT backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 final background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 900x400 zoom 1 no horizontal page overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 wizard dismissal and background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 long wizard viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 long wizard all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 long wizard native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 expanded profile viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 expanded profile all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 expanded profile native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 documents viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 documents all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 documents native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 READ backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 CORRECTIONS backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT button viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT button all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT button native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT escape viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT escape all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT escape native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT backdrop viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT backdrop all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 REJECT backdrop native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 nested background remains locked",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 final background unlock",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 grant confirmation native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 lifecycle native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member viewport bounds",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member all visible fields and footer controls reachable",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 remove-member native focus contained",
+      "pass_": true
+    },
+    {
+      "name": "chromium 1366x768 zoom 1.5 no horizontal page overflow",
+      "pass_": true
+    },
+    {
+      "name": "chromium unsaved profile discard confirmation",
+      "pass_": true
+    },
+    {
+      "name": "chromium profile persists and avatar independent of gender",
+      "pass_": true
+    },
+    {
+      "name": "chromium private optimized portrait displayed",
+      "pass_": true
+    },
+    {
+      "name": "chromium reversible avatar switch retains private photo",
+      "pass_": true
+    }
+  ],
+  "error": "AssertionError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel06-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel06-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel06/scripts/ase-adm02-panel06-browser.py\", line 100, in run\n    execute_review('READ');expect(p.locator('#case-pages img')).to_have_count(2);reachable('staff-case',engine+' expanded private evidence');check(engine+' real MFA and private document read preserved',True)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel06/scripts/ase-adm02-panel06-browser.py\", line 85, in execute_review\n    p.locator('#staff-code').fill('xxxxxx');p.locator('#staff-execute').click();expect(p.locator('#staff-stepup-status')).to_contain_text('Revisa los datos');expect(p.locator('#staff-stepup')).to_be_visible()\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/sync_api/_generated.py\", line 19909, in to_contain_text\n    self._sync(\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_assertions.py\", line 229, in to_contain_text\n    await self._expect_impl(\n  File \"/Users/circulodigital/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_assertions.py\", line 85, in _expect_impl\n    raise AssertionError(\nAssertionError: Locator expected to contain text 'Revisa los datos'\nActual value: Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta operaci\u00f3n. \nCall log:\n  - Expect \"to_contain_text\" with timeout 5000ms\n  - waiting for locator(\"#staff-stepup-status\")\n    2 \u00d7 locator resolved to <p role=\"status\" aria-live=\"polite\" id=\"staff-stepup-status\">Introduce un c\u00f3digo vigente para esta acci\u00f3n.</p>\n      - unexpected value \"Introduce un c\u00f3digo vigente para esta acci\u00f3n.\"\n    7 \u00d7 locator resolved to <p role=\"status\" aria-live=\"polite\" id=\"staff-stepup-status\">Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta \u2026</p>\n      - unexpected value \"Tu sesi\u00f3n o la pol\u00edtica vigente no autoriza esta operaci\u00f3n.\"\n\n"
+}

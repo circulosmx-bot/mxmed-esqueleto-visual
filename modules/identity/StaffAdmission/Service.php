@@ -78,21 +78,27 @@ final class Service
                 if(!$admin&&($case['bound_account_id']!==$actor->accountId()||(int)$case['binding_credential_version']!==$actor->principal()->credentialVersion()))throw new \RuntimeException('admission_denied');
                 if($case['state']==='REVOKED'&&!($old&&$action==='revoke'))throw new \RuntimeException('admission_conflict');
             }
+            if(isset($b['changes'])){
+                $target=$this->query('SELECT status FROM internal_staff WHERE account_id=? FOR UPDATE',[$case['bound_account_id']])->fetchColumn();
+                if($target==='REMOVED')throw new \RuntimeException('admission_denied');
+            }
             if($old){if(!hash_equals($old['request_digest'],$digest)||($case&&$old['case_id']!==$case['case_id']))throw new \RuntimeException('admission_conflict');return $this->outcome($old);}
             $now=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u');
             if($action==='prepare'){
                 $id='adm_'.bin2hex(random_bytes(16));$version=1;
                 $this->query('INSERT INTO auth_staff_admission_cases(case_id,channel,creator_account_id,recipient_reference,proposed_category,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',[$id,$b['channel'],$actor->accountId(),$b['recipient_reference'],$b['proposed_category'],$now,$now]);
-                $profile=array_intersect_key($b,array_flip(Input::FIELDS));
+                $profile=array_intersect_key($b,array_flip(Input::FIELDS))+['gender'=>'UNSPECIFIED','contact_phone'=>'','avatar'=>'NONE','presentation'=>'PLACEHOLDER'];
             }else{
                 if((int)$case['version']!==$b['expected_version'])throw new \RuntimeException('admission_conflict');
                 $id=$case['case_id'];$version=(int)$case['version']+1;
                 $profile=$this->row('SELECT * FROM auth_staff_admission_versions WHERE case_id=? AND version=?',[$id,$case['version']]);
-                if(in_array($action,['update','correct'],true))$profile=array_intersect_key($b,array_flip(Input::FIELDS));
+                if(in_array($action,['update','correct'],true))$profile=array_replace($profile,$b['changes']??array_intersect_key($b,array_flip(Input::FIELDS)));
             }
             if($action==='confirm'&&($profile['given_names']===''||$profile['first_surname']===''||$case['state']==='PERSON_CONFIRMED'))throw new \RuntimeException('admission_conflict');
             $provenance=match($action){'prepare','update'=>'ADMIN_PREPARED','correct'=>'APPLICANT_CORRECTED','confirm'=>'APPLICANT_CONFIRMED','revoke'=>'INTENTION_REVOKED'};
-            $this->query('INSERT INTO auth_staff_admission_versions(case_id,version,previous_version,given_names,first_surname,second_surname,operation_state,operation_city,provenance,source_actor_account_id,source_credential_version,recorded_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',[$id,$version,$version===1?null:$version-1,...array_map(fn($k)=>$profile[$k],Input::FIELDS),$provenance,$actor->accountId(),$actor->principal()->credentialVersion(),$now]);
+            if(($profile['presentation']??'')==='AVATAR'&&($profile['avatar']??'NONE')==='NONE')throw new \RuntimeException('admission_invalid');
+            if(($profile['presentation']??'')==='PORTRAIT'&&!$this->query("SELECT 1 FROM auth_staff_media_assets WHERE case_id=? AND purpose='INTERNAL_PRESENTATION_PORTRAIT' LIMIT 1",[$id])->fetchColumn())throw new \RuntimeException('admission_invalid');
+            $this->query('INSERT INTO auth_staff_admission_versions(case_id,version,previous_version,given_names,first_surname,second_surname,operation_state,operation_city,gender,contact_phone,avatar,presentation,provenance,source_actor_account_id,source_credential_version,recorded_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[$id,$version,$version===1?null:$version-1,...array_map(fn($k)=>$profile[$k],[...Input::FIELDS,...Input::EXTRA]),$provenance,$actor->accountId(),$actor->principal()->credentialVersion(),$now]);
             $state=match($action){'confirm'=>'PERSON_CONFIRMED','revoke'=>'REVOKED',default=>'PREPARING'};
             $this->query('UPDATE auth_staff_admission_cases SET version=?,current_profile_version=?,state=?,updated_at=? WHERE case_id=?',[$version,$version,$state,$now,$id]);
             $event=Audit::append($this->pdo,$actor,$id,$action,$b['operation_id'],$version,$provenance);
