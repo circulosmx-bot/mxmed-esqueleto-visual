@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "sections": [
+    "summary",
+    "images"
+  ],
+  "capabilities": [
+    "media_review_read",
+    "media_review_source_download",
+    "media_review_corrected_upload",
+    "media_review_approve",
+    "media_review_improve",
+    "media_review_request_replacement"
+  ],
+  "physicians": 2,
+  "pending_count": 6,
+  "media_audit_count": 24,
+  "authority": "separate_canonical_ADVISOR",
+  "source_head": "5ca9bfa24b081afdc652d7f65443f3b80979f34e"
+}

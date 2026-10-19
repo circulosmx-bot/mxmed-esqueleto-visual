@@ -22,4 +22,9 @@ await run('/internal/media-review/index.php?section=correcciones',false,'/intern
 await run('https://evil.example/internal/media-review/index.php?section=equipo',false,null);
 await run('/internal/media-review/index.php?section=equipo&role=DIRECTOR',false,null);
 await run('/internal/media-review/index.php?section=equipo#untrusted',false,null);
+await run('/internal/staff-workspace/index.php',false,'/internal/staff-workspace/index.php');
+await run('/internal/staff-workspace/index.php?role=DIRECTOR',false,null);
+await run('/internal/staff-workspace/index.php#untrusted',false,null);
+await run('https://evil.example/internal/staff-workspace/index.php',false,null);
+await run('/private-app.php?next=/internal/staff-workspace/index.php',false,null);
 console.log(JSON.stringify({result:'PASS',checks,scope:'Existing canonical login return navigation only; team server independently revalidates session/staff/grants'}));

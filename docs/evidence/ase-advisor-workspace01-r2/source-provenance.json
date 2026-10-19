@@ -1,0 +1,32 @@
+{
+  "start_head": "5ca9bfa24b081afdc652d7f65443f3b80979f34e",
+  "feature_branch": "feature/ase-advisor-workspace01-r2-top-tabs",
+  "source_sha256": {
+    "api/internal/workspace/media.php": "e1c164cbb8404f43873251b745ce8c1c8e88ee35380f3cb11208c6fc96e199ed",
+    "api/internal/workspace/read.php": "06dc3602c11461affe4546a3e40f0197a12b2eaef31a5bec027ef7953c6b5438",
+    "assets/css/staff-workspace.css": "6f89ec24fd4d5a4a1aa343ae92278f58a09ccb91fbf807ee3055cd942f3530c9",
+    "assets/js/staff-workspace.js": "f62a278c50a9e8f04988650c219e73c6318386108f6fb21325d208efb85f749b",
+    "internal/staff-workspace/index.php": "369effff882b14062f09a44a493e4b521a8ecb68ade4d3768d07694c44514a63",
+    "modules/identity/Team/ActivityProjection.php": "ee4d0a11864e6fca0a92bd84fcf1d8b82d913fb5ec6c4d271dab438fc4fd947f",
+    "modules/identity/tests/TeamReadDestinationTest.mjs": "deeb51a7c1efe9501347039569f461b72904ba01ec3e0ff394178e4988d3e209",
+    "modules/media/services/AdvisorWorkspaceService.php": "6e9d8e4318ae3ced9334ccf84104bab09d3d7cd4abdf8f661037d58596fe0804",
+    "public/identity/acceso.php": "812f0cbba665bfcf0a441fc5eb5ae05a48c1b24bbdb0a8ebd8d5a776153c2931",
+    "public/identity/identity-access.js": "2441d4e517325e465202c1c08b040fa9c249c5228125f94c968cfc3f9cc3c8cb",
+    "scripts/ase-adm02-oper09-browser.py": "89ae074bc410fba23d62eb0643699a3b2c75be25a8b7fc27df998ecc1ce414c3",
+    "scripts/ase-adm02-workflow-router.php": "44952d12a576b606efa5b25ab99c1aaad0acbb258f7f7d60b7642eaec5195d13",
+    "scripts/ase-advisor-workspace-browser.py": "68f5256518465144310c8a10e1b0beb6142e4ae37241b40f1ccc5702842c77e6",
+    "scripts/ase-advisor-workspace-checks.py": "9a115748f2c741894d18048d253e8f7f9c43fc8aa3e9ec6a881c55d5ad77f404",
+    "scripts/ase-advisor-workspace-fixture.php": "51c9336dbca943cb2f5077cb748354182b4d62f5c1dac2b18a7fe143b559843d",
+    "scripts/ase-advisor-workspace-qa.py": "7e21494e3215ed0b9ab8c5f2eab25732f51e46b73276c35f9319a8bc2fb36c33",
+    "scripts/ase-advisor-workspace-review.py": "8ff98d9a049db711a2ed71fe0d45d11cb60ccf1fc5e5692d888243e3c0271804"
+  },
+  "owned_runtime_pins_match": true,
+  "all_changed_source_syntax": "PASS",
+  "post_main_qa_checks": [
+    "supplemental-smoke.json",
+    "login-return.json",
+    "delivered-preview.json"
+  ],
+  "original_worktrees_untouched": 24,
+  "production_activation": false
+}

@@ -61,7 +61,9 @@ final class ActivityProjection
         }
         $items=[];
         foreach(array_slice($rows,0,100) as $e){
-            $description=self::OPERATIONS[$e['operation']]??self::ACTIONS[$e['action']];
+            // Media events have an action but no governance operation. Keep their
+            // existing label without using NULL as an array offset (PHP 8.5).
+            $description=self::OPERATIONS[$e['operation']??'']??self::ACTIONS[$e['action']];
             if(in_array($e['operation'],['grant','revoke','delegate','revoke_delegation'],true)&&isset(\Identity\Services\InternalCapabilityCatalog::all()[$e['capability']]))$description.=': '.\Identity\Services\InternalCapabilityCatalog::all()[$e['capability']]['label'];
             $items[]=['id'=>$e['event_id'],'at'=>str_replace(' ','T',$e['occurred_at_utc']).'Z','description'=>$description,'resource'=>$e['resource_reference'],'outcome'=>$e['outcome'],'direction'=>$e['real_actor_reference']==='account:'.$target?'BY_MEMBER':'ON_MEMBER'];
         }

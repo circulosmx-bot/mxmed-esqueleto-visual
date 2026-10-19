@@ -1,0 +1,8 @@
+{
+  "result": "PASS",
+  "served_sha256": {
+    "assets/js/staff-workspace.js": "f62a278c50a9e8f04988650c219e73c6318386108f6fb21325d208efb85f749b",
+    "assets/css/staff-workspace.css": "6f89ec24fd4d5a4a1aa343ae92278f58a09ccb91fbf807ee3055cd942f3530c9",
+    "public/identity/identity-access.js": "2441d4e517325e465202c1c08b040fa9c249c5228125f94c968cfc3f9cc3c8cb"
+  }
+}

@@ -7,7 +7,17 @@ try{
  $services=staffWorkflowOwnedServices();
  if($path==='/api/internal/staff-admission/workflow.php'){\Identity\StaffWorkflow\Http::handle($services);return true;}
  if(in_array($path,['/api/identity/index.php/logout','/api/identity/index.php/login','/api/identity/index.php/current-session'],true)){require __DIR__.'/../api/identity/index.php';return true;}
- if($path==='/public/identity/acceso.php'){$command='python3 '.realpath(__DIR__.(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py')).' '.realpath(getenv('ASE_INT02A_OWNED'));$staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];require __DIR__.'/../public/identity/acceso.php';return true;}
+ if($path==='/public/identity/acceso.php'){
+  $workspace=getenv('MXMED_ADVISOR_WORKSPACE_REVIEW')==='1';
+  $control=$workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py');
+  $owned=realpath(getenv('ASE_INT02A_OWNED'));$command='python3 '.realpath(__DIR__.$control).' '.$owned;
+  $staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];
+  if($workspace&&($_GET['next']??'')==='/internal/staff-workspace/index.php'){
+   $record=json_decode(file_get_contents($owned.'/oper09-advisor.json'),true,512,JSON_THROW_ON_ERROR);
+   $staffSyntheticLoginGuide=['email'=>$record['email'],'destination'=>'Gestión de perfiles médicos','credentials'=>$command.' credentials-advisor','mfa'=>null];
+  }
+  require __DIR__.'/../public/identity/acceso.php';return true;
+ }
  if(in_array($path,['/public/identity/identity-access.js','/public/identity/identity-access.css','/assets/mexico-medico.svg'],true))return false;
  if(preg_match('~^/assets/(css|js)/[a-z0-9-]+\.(css|js)$~D',$path))return false;
  if($path==='/api/internal/team/read.php'){
@@ -15,6 +25,14 @@ try{
   echo json_encode($services[1]->team($_COOKIE,$_GET),JSON_THROW_ON_ERROR|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);return true;
  }
  if(preg_match('~^/api/internal/team/(read|csrf|capability|lifecycle)\.php$~D',$path))return false;
+ // R2 opts in only inside the owner-verified disposable composition. Both routes
+ // enforce canonical staff authority independently of this transport allowlist.
+ if(getenv('MXMED_ADVISOR_WORKSPACE_REVIEW')==='1' && in_array($path,['/internal/staff-workspace/index.php','/api/internal/workspace/read.php','/api/internal/workspace/media.php'],true)){
+  require __DIR__.'/..'.$path;return true;
+ }
+ if(getenv('MXMED_ADVISOR_WORKSPACE_REVIEW')==='1' && preg_match('~^/api/media/index\.php/public/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$~D',$path)){
+  require __DIR__.'/../api/media/index.php';return true;
+ }
  // Existing consumer, opt-in only in the owned OPER09 composition. Its own Identity/grant
  // boundary runs unchanged; Equipo retains its independent authority.
  if(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1' && (($path==='/internal/media-review/index.php' && !isset($_GET['section'])) || preg_match('~^/api/internal/media-review/(pending|batches|batch|submission|review-image|source-download|approval-options)\.php$~D',$path))){

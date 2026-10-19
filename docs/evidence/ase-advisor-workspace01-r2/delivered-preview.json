@@ -1,0 +1,32 @@
+{
+  "result": "PASS",
+  "proof": {
+    "director": {
+      "opened_at": 1792383141.6436741,
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      }
+    },
+    "advisor": {
+      "opened_at": 1792383141.8439198,
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      }
+    },
+    "director_login_guide": true,
+    "advisor_login_guide": true,
+    "source_pins_match": true
+  },
+  "expiry_unix": 1792469173.119081,
+  "origin": "https://127.0.0.1:57716"
+}

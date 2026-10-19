@@ -24,7 +24,7 @@ def review_action(p,action,owned,sql):
 
 def run(stage,r,check,cli):
  owned,origin,sql=[r[k] for k in ['owned','origin','sql']]
- out=ROOT/'docs/evidence/ase-adm02-oper09';out.mkdir(parents=True,exist_ok=True)
+ out=r.get('OUT',ROOT/'docs/evidence/ase-adm02-oper09');out.mkdir(parents=True,exist_ok=True)
  recordfile=owned/'oper09-advisor.json'
  record=json.loads(recordfile.read_text()) if recordfile.exists() else {'email':'oper09_advisor@example.test','name':'Irene Ficticia Oper09'}
  def save():recordfile.write_text(json.dumps(record))

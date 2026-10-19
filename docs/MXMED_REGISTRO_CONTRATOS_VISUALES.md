@@ -144,3 +144,9 @@ El Director aprobó selección → consecuencias → confirmación → contrase�
 ## ASE-ADM02-IMP01 — UI-0
 
 [Backend aislado](identity/ASE-ADM02-IMP01-staff-case-foundation.md): sin layout, copy, CSS, imágenes o interacción nuevos. + AGREGAR INTEGRANTE, invitación/documentos/review/admisión/activación no se habilitan. Baseline R2/COM/ADM conservado; no QA visual nueva ni autorización operacional.
+
+## ASE-ADVISOR-WORKSPACE01-R2 — composición autorizada, aceptación pendiente
+
+[Contrato R2](identity/ASE-ADVISOR-WORKSPACE01-R2.md), baseline OPER09 `5ca9bfa24b081afdc652d7f65443f3b80979f34e`: la solicitud revisada del Director autoriza encabezado staff, búsqueda/pendientes, encabezado médico y una fila de pestañas superiores con panel amplio. Reemplaza expresamente el menú lateral global solicitado antes de la interrupción; no se entregan dos sistemas de navegación equivalentes. Las nueve etiquetas son dominios propuestos sujetos a consumidor/autoridad, no nueve permisos o formularios obligatorios. Resumen e Imágenes son el alcance declarado; controles contextuales y overflow accesible, sin Save global engañoso.
+
+La referencia externa sólo orienta estructura. No autoriza copiar estilos/código/personas, overrides de planes, opiniones o workflows de variantes. El Director considera resuelto el modal OPER09 para esta etapa salvo regresión y pide preservar el panel Director; no se reabre su rediseño. QA visual nueva: ventana Chromium nativa 1366×783 dentro de ventana/área disponible de 870 px; Chromium/WebKit a 1440×900, 1366×768 y 390×844, Más/acciones y footer Director alcanzables. Evidencia enlazada en el contrato. `DIRECTOR_VISUAL_ACCEPTANCE=PENDING` para este workspace, sin afirmar pixel0, Safari físico, aceptación móvil definitiva ni activación productiva.

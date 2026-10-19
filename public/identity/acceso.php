@@ -24,16 +24,18 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
         <h1 id="login-title">Accede a México Médico</h1>
         <p class="auth-card__intro">Ingresa a tu cuenta para administrar tus perfiles y servicios.</p>
         <div class="state-panel" data-state-panel aria-live="polite"><strong data-state-title></strong><span data-state-copy></span></div>
-        <?php if(isset($staffSyntheticLoginGuide)): ?>
-        <details class="state-panel" id="staff-synthetic-login-guide"><summary>Acceso de prueba: qa_director@example.test</summary>
+        <?php if(isset($staffSyntheticLoginGuide)): $staffGuideEmail=htmlspecialchars($staffSyntheticLoginGuide['email']??'qa_director@example.test',ENT_QUOTES,'UTF-8'); ?>
+        <details class="state-panel" id="staff-synthetic-login-guide"><summary>Acceso de prueba: <?= $staffGuideEmail ?></summary>
           <strong>Revisión aislada con datos ficticios</strong>
-          <p>Cuenta: <code>qa_director@example.test</code>. Tu cuenta habitual y su contraseña real no están en esta base.</p>
+          <p>Cuenta: <code><?= $staffGuideEmail ?></code>. Tu cuenta habitual y su contraseña real no están en esta base.</p>
           <p>Para copiar la contraseña de prueba al portapapeles, ejecuta este comando local y pégala en Contraseña:</p>
           <code><?= htmlspecialchars($staffSyntheticLoginGuide['credentials'], ENT_QUOTES, 'UTF-8') ?></code>
-          <p>Después de iniciar sesión volverás a Equipo interno y permisos. Si expiró tu sesión, inicia sesión de nuevo; no necesitas recrear el servicio.</p>
+          <p>Después de iniciar sesión volverás a <?= htmlspecialchars($staffSyntheticLoginGuide['destination']??'Equipo interno y permisos',ENT_QUOTES,'UTF-8') ?>. Si expiró tu sesión, inicia sesión de nuevo; no necesitas recrear el servicio.</p>
+          <?php if($staffSyntheticLoginGuide['mfa']??null): ?>
           <p>La consulta de documentos y las decisiones sensibles piden contraseña y MFA por acción. Obtén el código ficticio actual con:</p>
           <code><?= htmlspecialchars($staffSyntheticLoginGuide['mfa'], ENT_QUOTES, 'UTF-8') ?></code>
           <p>El código cambia cada 30 segundos y no puede reutilizarse. Cerrar sesión no vuelve a autenticarte automáticamente.</p>
+          <?php endif; ?>
         </details>
         <?php endif; ?>
         <form class="auth-form" method="post" action="/api/identity/index.php/login" data-identity-form data-flow="login">

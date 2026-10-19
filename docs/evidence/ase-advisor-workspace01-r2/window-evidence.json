@@ -1,0 +1,55 @@
+{
+  "native": {
+    "width": 1366,
+    "height": 783,
+    "outerHeight": 870,
+    "availableHeight": 870,
+    "scrollWidth": 1366
+  },
+  "responsive": [
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "context": "Bruno Ejemplo del R\u00edo",
+      "engine": "chromium"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366,
+      "context": "Bruno Ejemplo del R\u00edo",
+      "engine": "chromium"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "context": "Bruno Ejemplo del R\u00edo",
+      "engine": "chromium"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "context": "Bruno Ejemplo del R\u00edo",
+      "engine": "webkit"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366,
+      "context": "Bruno Ejemplo del R\u00edo",
+      "engine": "webkit"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "context": "Bruno Ejemplo del R\u00edo",
+      "engine": "webkit"
+    }
+  ],
+  "physical_safari": "NOT_RUN",
+  "mobile_final": "INTERIM_MOBILE_SMOKE_ONLY"
+}

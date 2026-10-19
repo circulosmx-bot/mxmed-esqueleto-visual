@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Director history valid JSON with recorded Media operations after PHP 8.5 fix",
+      "pass": true
+    },
+    {
+      "name": "Desktop keyboard tab navigation preserves physician context",
+      "pass": true
+    },
+    {
+      "name": "Compact More menu places focus on reachable option",
+      "pass": true
+    },
+    {
+      "name": "Escape closes More and restores focus",
+      "pass": true
+    },
+    {
+      "name": "Canonical logout and pagehide emit no browser exceptions",
+      "pass": true
+    },
+    {
+      "name": "Canonical relogin after compact workspace logout",
+      "pass": true
+    }
+  ],
+  "check_count": 6
+}

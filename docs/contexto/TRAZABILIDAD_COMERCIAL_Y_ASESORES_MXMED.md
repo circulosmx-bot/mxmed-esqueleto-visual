@@ -142,6 +142,8 @@ Cada caso indica cinco ejes independientes: **P** política/contrato, **S** fuen
 <a id="workspace-com-10"></a>
 ## COM-10 — ¿Se puede extender el workspace existente para asesores?
 
+**Sucesor R2 verificado en aislamiento:** [ASE-ADVISOR-WORKSPACE01-R2](../identity/ASE-ADVISOR-WORKSPACE01-R2.md) autoriza encabezado/contexto médico/pestañas superiores, búsqueda y pendientes del trabajo accesible. Conecta Resumen/Imágenes al ámbito Media; no crea cartera, CRM, soporte universal ni permisos de venta/plan. El mapa histórico que sigue conserva sus fuentes; la matriz R2 distingue los nueve dominios propuestos y dieciséis capabilities. QA nueva: 57 checks PASS, seis facultades Media reales y grants/revocación por Director con sesión Advisor independiente; seis smoke y 13 retorno-login separados. Dos ventanas nativas entregadas; no acredita acceso comercial ni producción y aceptación visual nueva PENDING.
+
 **Sí, como punto de integración existente**, con límites de cada acción. Ya hay Identity, gobierno y workspace interno de medios/C4/correcciones. No se encontró un CRM funcional completo de ventas/cartera/cupones/Call Center. No se requiere ni se autoriza otra jerarquía, login o aplicación. La viabilidad de reutilización no equivale a aprobación de nuevas pantallas.
 
 ### Contrato, productores y consumidores actuales
