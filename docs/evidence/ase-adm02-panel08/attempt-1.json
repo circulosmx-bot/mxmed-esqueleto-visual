@@ -1,0 +1,19 @@
+{
+  "result": "FAIL",
+  "checks": [
+    {
+      "name": "Suspended operational grants rejected",
+      "pass_": true
+    },
+    {
+      "name": "Advisor self grant rejected",
+      "pass_": true
+    },
+    {
+      "name": "Master beyond delegation rejected",
+      "pass_": false
+    }
+  ],
+  "error": "AssertionError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel08-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel08-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel08/scripts/ase-adm02-panel08-browser.py\", line 15, in run\n    check('Master beyond delegation rejected',command('grant',records['bruno']['account'],'media_review_approve','master')[0]==403)\n  File \"/tmp/panel08-run.py\", line 16, in focused_check\n    if not ok:raise AssertionError(name)\nAssertionError: Master beyond delegation rejected\n"
+}

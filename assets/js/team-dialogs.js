@@ -2,6 +2,15 @@
 (() => {
 'use strict';
 const dialogs=[...document.querySelectorAll('dialog')];
+// Keep the original nodes/listeners and domain-owned dismissal handlers.
+for(const d of dialogs){
+ const heading=d.querySelector(':scope > h2'),footer=d.querySelector(':scope > .dialog-actions');
+ const body=document.createElement('div');body.className='team-dialog-body';body.tabIndex=0;body.setAttribute('role','region');
+ if(d.getAttribute('aria-labelledby'))body.setAttribute('aria-labelledby',d.getAttribute('aria-labelledby'));
+ for(const node of [...d.childNodes])if(node!==heading&&node!==footer)body.append(node);
+ d.classList.add('team-dialog');if(heading)d.append(heading);d.append(body);if(footer)d.append(footer);
+ new MutationObserver(()=>{if(d.open)body.scrollTop=0;}).observe(d,{attributes:true,attributeFilter:['open']});
+}
 function viewport(){const z=parseFloat(getComputedStyle(document.documentElement).zoom)||1,v=window.visualViewport;for(const d of dialogs){d.style.setProperty('--team-visible-height',((v?.height||innerHeight)/z)+'px');d.style.setProperty('--team-visible-width',((v?.width||innerWidth)/z)+'px');}}
 viewport();window.addEventListener('resize',viewport);window.visualViewport?.addEventListener('resize',viewport);new MutationObserver(viewport).observe(document.documentElement,{attributes:true,attributeFilter:['style']});let overflow=null,lastFocus=null;
 document.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const d=dialogs.filter(x=>x.open).at(-1);if(!d||d.contains(document.activeElement))return;e.preventDefault();const controls=[...d.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(x=>!x.disabled&&x.tabIndex>=0&&x.getClientRects().length);(e.shiftKey?controls.at(-1):controls[0])?.focus();},true);

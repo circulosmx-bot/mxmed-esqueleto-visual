@@ -1,0 +1,68 @@
+[
+  {
+    "group": "Correcciones de perfiles",
+    "capability": "public_profile_correction_review",
+    "name": "Revisar informes de perfiles",
+    "consumer": "modules/profiles/Corrections/ReportReviewService.php; internal/media-review/index.php?section=correcciones",
+    "director_editable": "NO",
+    "grant_persistence": "BLOCKED",
+    "effective_enforcement": "PASS",
+    "final_ui_state": "UNAVAILABLE",
+    "blocker": "Consumidor y MFA reservados a DIRECTOR/MASTER_ADMIN; no contrato Advisor"
+  },
+  {
+    "group": "Correcciones de perfiles",
+    "capability": "public_profile_correction_apply",
+    "name": "Aplicar correcciones autorizadas",
+    "consumer": "modules/profiles/Corrections/ApplicationAuthority.php; internal/media-review/index.php?section=correcciones",
+    "director_editable": "NO",
+    "grant_persistence": "BLOCKED",
+    "effective_enforcement": "PASS",
+    "final_ui_state": "UNAVAILABLE",
+    "blocker": "Consumidor y MFA reservados a DIRECTOR/MASTER_ADMIN; no contrato Advisor"
+  },
+  {
+    "group": "Administración de perfiles",
+    "capability": "profile_create",
+    "name": "Crear perfiles médicos",
+    "consumer": "NONE",
+    "director_editable": "NO",
+    "grant_persistence": "BLOCKED",
+    "effective_enforcement": "NOT_AVAILABLE",
+    "final_ui_state": "UNAVAILABLE",
+    "blocker": "Sólo declaración ProfileGovernancePolicy; no existe ruta staff operativa"
+  },
+  {
+    "group": "Administración de perfiles",
+    "capability": "profile_curate",
+    "name": "Curar perfiles médicos",
+    "consumer": "NONE",
+    "director_editable": "NO",
+    "grant_persistence": "BLOCKED",
+    "effective_enforcement": "NOT_AVAILABLE",
+    "final_ui_state": "UNAVAILABLE",
+    "blocker": "Sólo declaración ProfileGovernancePolicy; no existe ruta staff operativa"
+  },
+  {
+    "group": "Administración de perfiles",
+    "capability": "profile_publication_manage",
+    "name": "Gestionar publicación",
+    "consumer": "NONE",
+    "director_editable": "NO",
+    "grant_persistence": "BLOCKED",
+    "effective_enforcement": "NOT_AVAILABLE",
+    "final_ui_state": "UNAVAILABLE",
+    "blocker": "Sólo declaración ProfileGovernancePolicy; no existe ruta staff operativa"
+  },
+  {
+    "group": "Administración de perfiles",
+    "capability": "profile_support_assist",
+    "name": "Asistir administración de perfil",
+    "consumer": "NONE",
+    "director_editable": "NO",
+    "grant_persistence": "BLOCKED",
+    "effective_enforcement": "NOT_AVAILABLE",
+    "final_ui_state": "UNAVAILABLE",
+    "blocker": "Sólo declaración ProfileGovernancePolicy; no existe ruta staff operativa"
+  }
+]

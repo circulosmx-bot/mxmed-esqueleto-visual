@@ -7,7 +7,7 @@ try{
  $services=staffWorkflowOwnedServices();
  if($path==='/api/internal/staff-admission/workflow.php'){\Identity\StaffWorkflow\Http::handle($services);return true;}
  if(in_array($path,['/api/identity/index.php/logout','/api/identity/index.php/login','/api/identity/index.php/current-session'],true)){require __DIR__.'/../api/identity/index.php';return true;}
- if($path==='/public/identity/acceso.php'){$command='python3 '.realpath(__DIR__.'/ase-adm02-panel07-review.py').' '.realpath(getenv('ASE_INT02A_OWNED'));$staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];require __DIR__.'/../public/identity/acceso.php';return true;}
+ if($path==='/public/identity/acceso.php'){$command='python3 '.realpath(__DIR__.'/ase-adm02-panel08-review.py').' '.realpath(getenv('ASE_INT02A_OWNED'));$staffSyntheticLoginGuide=['credentials'=>$command.' credentials','mfa'=>$command.' mfa'];require __DIR__.'/../public/identity/acceso.php';return true;}
  if(in_array($path,['/public/identity/identity-access.js','/public/identity/identity-access.css','/assets/mexico-medico.svg'],true))return false;
  if(preg_match('~^/assets/(css|js)/[a-z0-9-]+\.(css|js)$~D',$path))return false;
  if($path==='/api/internal/team/read.php'){

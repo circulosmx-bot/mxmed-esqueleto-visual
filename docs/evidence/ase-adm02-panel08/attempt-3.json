@@ -1,0 +1,275 @@
+{
+  "result": "FAIL",
+  "checks": [
+    {
+      "name": "Suspended operational grants rejected",
+      "pass_": true
+    },
+    {
+      "name": "Advisor self grant rejected",
+      "pass_": true
+    },
+    {
+      "name": "Master beyond delegation rejected",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440x900-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440x900 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440x900-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1440x900 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366x768-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366x768 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366x768-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1366x768 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1280x720-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1280x720 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1280x720-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-1280x720 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x844-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x844 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x844-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x844 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x480-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x480 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x480-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-390x480 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "chromium-save actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium personal save persists canonical version after reload",
+      "pass_": true
+    },
+    {
+      "name": "chromium AVATAR review shows prepared image in four steps",
+      "pass_": true
+    },
+    {
+      "name": "chromium AVATAR canonical persistence without admission",
+      "pass_": true
+    },
+    {
+      "name": "chromium PORTRAIT review shows prepared image in four steps",
+      "pass_": true
+    },
+    {
+      "name": "UI reconciles real committed upload after lost acknowledgement without replay",
+      "pass_": true
+    },
+    {
+      "name": "chromium PORTRAIT canonical persistence without admission",
+      "pass_": true
+    },
+    {
+      "name": "chromium prebinding portrait encrypted and case-scoped",
+      "pass_": true
+    },
+    {
+      "name": "chromium public_profile_correction_review accurately unavailable for Advisor",
+      "pass_": true
+    },
+    {
+      "name": "chromium public_profile_correction_apply accurately unavailable for Advisor",
+      "pass_": true
+    },
+    {
+      "name": "chromium corrections expands/collapses without misleading group selector",
+      "pass_": true
+    },
+    {
+      "name": "chromium profile_create accurately unavailable for Advisor",
+      "pass_": true
+    },
+    {
+      "name": "chromium profile_curate accurately unavailable for Advisor",
+      "pass_": true
+    },
+    {
+      "name": "chromium profile_publication_manage accurately unavailable for Advisor",
+      "pass_": true
+    },
+    {
+      "name": "chromium profile_support_assist accurately unavailable for Advisor",
+      "pass_": true
+    },
+    {
+      "name": "chromium profiles expands/collapses without misleading group selector",
+      "pass_": true
+    },
+    {
+      "name": "chromium-permission-confirmation actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-lifecycle actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-remove-member actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-identity actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-password actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-mfa actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-protected-evidence actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "chromium-correction-stepup actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1440x900-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1440x900 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1440x900-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1440x900 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1366x768-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1366x768 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1366x768-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1366x768 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1280x720-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1280x720 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1280x720-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-1280x720 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x844-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x844 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x844-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x844 wizard reopens at beginning",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x480-personal actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x480 reopen begins at first personal field",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x480-wizard actual wheel reaches final content and visible footer",
+      "pass_": true
+    },
+    {
+      "name": "webkit-390x480 wizard reopens at beginning",
+      "pass_": false
+    }
+  ],
+  "error": "AssertionError",
+  "trace": "Traceback (most recent call last):\n  File \"/tmp/panel08-run.py\", line 18, in browser\n    a=list(args);a[1]=focused_check;module('focused'+str(attempt),root/'scripts/ase-adm02-panel08-browser.py').run(*a)\n  File \"/Users/circulodigital/Documents/GitHub/mxmed-ase-adm02-panel08/scripts/ase-adm02-panel08-browser.py\", line 39, in run\n    p.locator('#add-member').click();bottom('onboarding','#new-image-help',label+'-wizard');p.locator('#cancel-onboarding').click();expect(p.locator('#onboarding')).not_to_be_visible();p.locator('#add-member').click();check(label+' wizard reopens at beginning',p.locator('#onboarding .team-dialog-body').evaluate('(e)=>e.scrollTop')<5);p.locator('#cancel-onboarding').click()\n  File \"/tmp/panel08-run.py\", line 16, in focused_check\n    if not ok:raise AssertionError(name)\nAssertionError: webkit-390x480 wizard reopens at beginning\n"
+}

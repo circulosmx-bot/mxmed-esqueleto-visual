@@ -227,3 +227,7 @@ Staff → categoría/estado → integrante → datos/documentación/funciones/re
 ## J09 — PANEL07
 
 [PANEL07](../identity/ASE-ADM02-PANEL07.md): acción explícita → bootstrap CSRF vigente → lectura/escritura canónica, sin reintentar mutaciones. Sesión ausente → login Identity → nueva autenticación → Equipo; guía sintética local disponible tras logout. Edición y consulta muestran carga/denegación en el diálogo; revisión histórica/versiones no equivalen a evidencia vigente ni aprobación automática. Popup en top layer → Escape/backdrop cierra primero la lista y conserva el modal. No cambia TTL/MFA ni autorización de documentos; foto indisponible no bloquea los demás campos personales autorizados.
+
+## J09 — PANEL08
+
+[PANEL08](../identity/ASE-ADM02-PANEL08.md): selección local de avatar/retrato → caso canónico → StaffMedia privado → nueva versión personal → invitación sintética. Upload incierto → media_result exacto, sin duplicar al cerrar/reabrir. Retrato anterior al binding mantiene procedencia account_id NULL inmutable; el caso lleva el vínculo posterior. Director creador deja de tener autoridad preparatoria al binding; solicitante confirma por Identity. Modal: encabezado y pie fuera del cuerpo desplazable, foco posterior a habilitar campos y cierre sujeto al controlador de dominio.

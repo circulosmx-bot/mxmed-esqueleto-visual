@@ -1,0 +1,91 @@
+{
+  "result": "PASS",
+  "syntax": [
+    {
+      "file": "assets/js/internal-team-editor.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-personal.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/staff-workflow.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/team-dialogs.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "assets/js/team-selects.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffMedia/Authority.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "modules/identity/StaffMedia/Service.php",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel08-browser.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel08-checks.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel08-native-zoom.js",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel08-qa.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel08-review.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-panel08-verify.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-workflow-checks.py",
+      "syntax": "PASS"
+    },
+    {
+      "file": "scripts/ase-adm02-workflow-router.php",
+      "syntax": "PASS"
+    }
+  ],
+  "relative_document_links": 611,
+  "diff_check": "PASS",
+  "source_sha256": {
+    "assets/css/internal-team-admission.css": "72768cd16bf62217259e3cbe2d9539af25e82f3e8b6e0daa52d323784fdcacfd",
+    "assets/js/internal-team-editor.js": "7d079ecdf02f66b0542c87f51a26c78b1ac7e18d0cd906917330ad9b67d18604",
+    "assets/js/staff-personal.js": "af07217d4d33051deb57162464e0dda054ff268638d3f02b6406363d82e03c82",
+    "assets/js/staff-workflow.js": "d413ee1b89e88a52b5c6504c4226771a063b92e2b91fcee51024065470d5305d",
+    "assets/js/team-dialogs.js": "9faa6a0e06f153bbd5a9957a5ab2acc5d5797598aa99bc7035b1d1b3a4c4a978",
+    "assets/js/team-selects.js": "173a61b09641ff1cd1d3d544602ed02d2a9c2cdce236c39a4cae2be8ca118a28",
+    "modules/identity/StaffMedia/Authority.php": "d60bff7eeb517bc32460ed1054693bb49e8252b98db9972ab2d130a40eace598",
+    "modules/identity/StaffMedia/Service.php": "b7e6a40ae22ddf354ef138501e87e1af34133f17c7325976c71b20f211207c20",
+    "modules/identity/db/migrations/2026_10_19_02_staff_preparation_portrait.sql": "ebe3723929aae5e5efd7950ad209a6b8c48d42e4befe8125b0422ad6aa6d44fb",
+    "scripts/ase-adm02-panel08-browser.py": "5b97912bb4957cccbec9d2527cc97e846635087aa53767c12bf89aa37e1b11ab",
+    "scripts/ase-adm02-panel08-checks.py": "3862bde509f2980c0eb050424f0192fb72930647462af9a61aba825bfa425031",
+    "scripts/ase-adm02-panel08-native-zoom.js": "e73680c25485ce3c08bad1f186c441c4a24b32b6df46d1248cf2d7e98046172f",
+    "scripts/ase-adm02-panel08-qa.py": "4b40073060ecc74945acc6df2926646547790a31829a29aa6056b46ca88db00e",
+    "scripts/ase-adm02-panel08-review.py": "0b931b52f8fec66b42546a3abf88d93d473b37e9d2845909d7c8ace92a23a2bc",
+    "scripts/ase-adm02-panel08-verify.py": "4d7a569081bbe345d19377f4def391595b7f34189a2bd25ad53a1881261fc23b",
+    "scripts/ase-adm02-workflow-checks.py": "2737f77b81efebe698ad69afe0e142591185fef8d64df85bfe4bc0a704bca8b0",
+    "scripts/ase-adm02-workflow-router.php": "6eb06b2e91c8030d881b174a093530a407b21f2e2cdf8a62fa0bf4a6e24dbe55"
+  },
+  "no_database_connections": true,
+  "protected_worktrees": 22,
+  "protected_unchanged": true,
+  "owned_php_source_pins_verified": 33,
+  "private_fixture_secrets_absent": true
+}

@@ -360,3 +360,7 @@ P=corrección explícita de diálogos/perfil/login, sin ampliar roles; S=perfil 
 ## ID-02 / ID-03 / ID-07 / COM-10 — PANEL07
 
 [PANEL07](../identity/ASE-ADM02-PANEL07.md): P=correcciones explícitas de cinco hallazgos, sin ampliar autoridades; S=renovación CSRF antes de acción sin replay, 401 diferenciado, errores en diálogo y menú compacto con popover; C=writers/lectores existentes, evidencia con MFA y login Identity con guía sólo en ensayo; V=134 checks funcionales, 42 de zoom nativo, 18 de recuperación y 58 de layout final dirigidos; O=loopback sintético, aceptación visual pendiente. Los consumidores de correcciones rechazan Advisor aun con grant y su contrato MFA lo excluye; las cuatro claves profile_* siguen sin consumidor. Sin modificación de owner/colaborador/publicación, schema o roles.
+
+## ID-02 / ID-03 / ID-07 / COM-10 — PANEL08
+
+[PANEL08](../identity/ASE-ADM02-PANEL08.md): P=corrección UI-2 y retrato preparatorio case-scoped autorizados; S=contenedor modal con cuerpo flex desplazable, imagen opcional en Persona y misma escritura versionada/cifrada; C=caso → imagen → presentación → invitación, binding/confirmación/admisión separados; V=111 checks funcionales/seguridad +18 zoom nativo PASS y38 recorridos modales; O=sólo loopback sintético. Correcciones siguen restringidas a Director/Master; profile_* no tiene consumidor staff. No nuevos IDs ni autoridad owner.

@@ -196,3 +196,7 @@ Preparación en asistente aprobado de cuatro pasos, revisión contextual separad
 ## ASE-ADM02-PANEL07
 
 [Corrección funcional](identity/ASE-ADM02-PANEL07.md), base PANEL06 419fe1fc: CSRF canónico fresco por acción, errores contextuales y recuperación de sesión; revisión existente con caso/estado/versiones y MFA preservado; listbox compacto compartido, contención y zoom nativo 125 % Chromium/WebKit; guía de login exclusivamente sintética. Mismos writers/permisos: dos correcciones reservadas a Director/Master y cuatro funciones de perfiles sin consumidor. QA dirigida y límites en contrato; fuente oficial/8091 preservados, sin nueva migración ni producción. Aceptación visual pendiente.
+
+## PANEL08 — revisión dirigida de interacciones
+
+[PANEL08](identity/ASE-ADM02-PANEL08.md), baseline ec8024df: rama aislada con shell modal de encabezado/cuerpo/pie, imagen opcional en los cuatro pasos y retrato privado de preparación limitado al Director creador. Los seis permisos de correcciones/perfiles se documentan individualmente sin ampliar contratos ni inventar consumidores. Verificación dirigida:111 checks funcionales/seguridad y18 zoom nativo PASS,38 recorridos con fondo/pie medidos,22 worktrees/listeners protegidos. Sin activación real ni aceptación visual del Director.

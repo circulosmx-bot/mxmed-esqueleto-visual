@@ -181,3 +181,7 @@ Sin objetos nuevos. Reutiliza versiones/procedencia personal, invitaciones y cas
 ## PANEL06 — extensión mínima de la misma versión personal
 
 [PANEL06](../identity/ASE-ADM02-PANEL06.md) y migración [2026_10_19_01](../../modules/identity/db/migrations/2026_10_19_01_staff_personal_presentation.sql): gender/contact_phone/avatar/presentation en `auth_staff_admission_versions`, defaults neutros, versiones/procedencia/auditoría y triggers conservados. Teléfono de contacto no verificado; correo sigue `auth_accounts`, sin nueva credencial/identidad. Retrato conserva assets/operaciones/cifrado StaffMedia; sujeto y actor editor separados, propósito independiente de evidencia MFA. Sólo datadir nuevo sintético. El usuario SQL del ensayo recibe SELECT sobre memberships ya existentes para current-session; no se crean memberships ni roles. Los recibos de revisión exponen sólo la intención propia y su consumo, sin pruebas reutilizables ni bytes privados.
+
+## PANEL08 — retrato privado previo al binding
+
+[PANEL08](../identity/ASE-ADM02-PANEL08.md) y [migración2026_10_19_02](../../modules/identity/db/migrations/2026_10_19_02_staff_preparation_portrait.sql): auth_staff_media_assets.account_id nullable sólo para INTERNAL_PRESENTATION_PORTRAIT, CHECK impide evidencia sin cuenta. Mantiene FK a caso/versión, fuente actor, cifrado/AAD, recibos y triggers inmutables. NULL es procedencia de captura; no se actualiza al binding. Lectura requiere autorización sobre el mismo caso y propósito. Sin tablas nuevas ni backfill; DDL instalado sólo en datadir nuevo sintético.

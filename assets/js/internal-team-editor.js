@@ -58,10 +58,10 @@
         const inputs=[...family.querySelectorAll('[data-capability]')],group=family.querySelector('[data-group-count]');
         const eligible=inputs.filter(i=>keys.includes(i.dataset.capability)),visible=inputs.filter(i=>i.dataset.exposed==='true'),count=visible.filter(i=>draft.has(i.dataset.capability)).length;
         const unknown=visible.length!==inputs.length;
-        group.disabled=!enabled||!eligible.length;group.checked=!unknown&&count===inputs.length;group.indeterminate=unknown||(count>0&&count<inputs.length);group.setAttribute('aria-checked',group.indeterminate?'mixed':String(group.checked));
+        group.hidden=!eligible.length;group.disabled=!enabled||!eligible.length;group.checked=!unknown&&count===inputs.length;group.indeterminate=unknown||(count>0&&count<inputs.length);group.setAttribute('aria-checked',group.indeterminate?'mixed':String(group.checked));
         group.onchange=()=>{if(!group.disabled){const select=!eligible.every(i=>draft.has(i.dataset.capability));eligible.forEach(i=>select?draft.add(i.dataset.capability):draft.delete(i.dataset.capability));mount();}};
         family.querySelector('.family-count').textContent=`${count} de ${visible.length} permisos visibles · ${eligible.length} editables`;
-        family.querySelector('.family-limit').textContent=unknown?'Otras asignaciones son desconocidas y no se modificarán.':eligible.length?'La selección es un borrador; requiere confirmación.':restriction();
+        family.querySelector('.family-limit').textContent=unknown?'Otras asignaciones son desconocidas y no se modificarán.':eligible.length?'La selección es un borrador; requiere confirmación.':family.dataset.family==='corrections'?'La revisión y aplicación de correcciones están reservadas a Dirección y Master autorizado.':family.dataset.family==='profiles'?'Estas funciones aún no están disponibles para el equipo interno.':restriction();
       });
       $('lifecycle').disabled=!enabled||!lifecycleOperations().length;
       $('lifecycle').onclick=()=>changeLifecycle();

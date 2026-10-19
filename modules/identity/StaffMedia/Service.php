@@ -84,7 +84,7 @@ final class Service
         return $this->finish($this->unit->run($cookies,function($actor)use($b){
             $case=$this->case($b);if(!$this->allowed($actor,$case,$b['purpose']))return $this->denied($actor,$b,'read');
             $a=$this->asset($b['asset_id']);
-            if(!$a||$a['case_id']!==$case['case_id']||$a['account_id']!==$case['bound_account_id']||$a['purpose']!==$b['purpose']||(int)$a['asset_version']!==$b['asset_version']||(int)$case['version']!==$b['expected_case_version'])return $this->denied($actor,$b,'read');
+            if(!$a||$a['case_id']!==$case['case_id']||!($a['account_id']===$case['bound_account_id']||($a['account_id']===null&&$a['purpose']===Policy::PORTRAIT))||$a['purpose']!==$b['purpose']||(int)$a['asset_version']!==$b['asset_version']||(int)$case['version']!==$b['expected_case_version'])return $this->denied($actor,$b,'read');
             try{$bytes=$this->bytes($a);}catch(\Throwable $e){Audit::append($this->pdo,$actor,$b['case_id'],$b['purpose'],'read',$b['asset_version'],$this->uuid(),'FAILURE');return ['failure'=>$this->failure($e)];}
             Audit::append($this->pdo,$actor,$b['case_id'],$b['purpose'],'read',$b['asset_version'],$this->uuid());
             return ['bytes'=>$bytes,'mime_type'=>$a['mime_type'],'asset_id'=>$a['asset_id'],'asset_version'=>(int)$a['asset_version'],
@@ -100,7 +100,7 @@ final class Service
             $case=$this->case($b);if(!$this->allowed($actor,$case,$b['purpose']))return $this->denied($actor,$b,'result');
             $op=$this->query('SELECT * FROM auth_staff_media_operations WHERE actor_account_id=? AND operation_id=?',[$actor->accountId(),$b['operation_id']])->fetch(PDO::FETCH_ASSOC);
             if($op){
-                $a=$this->asset($op['asset_id']);if($op['case_id']!==$case['case_id']||!$a||$a['purpose']!==$b['purpose']||$a['account_id']!==$case['bound_account_id'])return $this->denied($actor,$b,'result');
+                $a=$this->asset($op['asset_id']);if($op['case_id']!==$case['case_id']||!$a||$a['purpose']!==$b['purpose']||!($a['account_id']===$case['bound_account_id']||($a['account_id']===null&&$a['purpose']===Policy::PORTRAIT)))return $this->denied($actor,$b,'result');
                 try{$this->bytes($a);$state='COMMITTED_AVAILABLE';}catch(\Throwable $e){$state=match($this->failure($e)){'staff_media_file_unavailable'=>'COMMITTED_FILE_UNAVAILABLE','staff_media_key_unavailable'=>'COMMITTED_KEY_UNAVAILABLE',default=>'COMMITTED_INTEGRITY_UNAVAILABLE'};}
                 $r=$this->outcome($a,$b['operation_id'])+['reconciliation'=>$state];
             }else{

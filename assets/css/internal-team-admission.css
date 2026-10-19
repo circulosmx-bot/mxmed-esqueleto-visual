@@ -95,3 +95,14 @@ dialog { max-height:min(calc(100dvh - 24px),calc(var(--team-visible-height,100dv
 .team-select-options button:focus-visible { outline:2px solid var(--teal,#007a89); outline-offset:-2px; }
 .team-select-options button:disabled { opacity:.55; }
 select[aria-hidden=true][hidden] { display:none; }
+
+/* PANEL08: one constrained shell; only the shrinking middle region scrolls. */
+/* ID-scoped legacy dialog rules must not restore a second scroll container. */
+html body dialog.team-dialog { inset:0; margin:auto; box-sizing:border-box; padding:16px; overflow:hidden !important; min-height:0; height:fit-content; max-height:calc(min(100dvh,var(--team-visible-height,100dvh)) - 24px) !important; max-width:calc(min(100vw,var(--team-visible-width,100vw)) - 24px); }
+html body dialog.team-dialog[open] { display:flex; flex-direction:column; }
+html body dialog.team-dialog > h2 { position:static; flex:0 0 auto; margin:0; padding:0 0 12px; }
+html body dialog.team-dialog > .team-dialog-body { flex:1 1 auto; min-height:0; min-width:0; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; padding:3px 6px; overflow-wrap:anywhere; }
+html body dialog.team-dialog > .dialog-actions { position:static !important; flex:0 0 auto; margin:0; padding:12px 0 0; gap:8px; border-top:1px solid var(--line); display:flex; flex-direction:row; flex-wrap:wrap; }
+html body dialog.team-dialog > .dialog-actions button { width:auto; min-width:0; }
+@media(max-width:600px) { html body dialog.team-dialog > .dialog-actions button { flex:1 1 40%; padding:8px; } }
+.family-select:has(input[hidden]) { cursor:default; }

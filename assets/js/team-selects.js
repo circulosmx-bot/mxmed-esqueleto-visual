@@ -19,7 +19,7 @@
     if(e.select.disabled)return;if(active===e){close(true);return;}close();search='';
     e.list.replaceChildren(...[...e.select.options].map(o=>{const b=document.createElement('button');b.type='button';b.role='option';b.tabIndex=-1;b.disabled=o.disabled;b.textContent=o.textContent;b.setAttribute('aria-selected',String(o.selected));
       b.onclick=event=>{event.preventDefault();if(b.disabled)return;e.select.value=o.value;close(true);sync(e.select);e.select.dispatchEvent(new Event('input',{bubbles:true}));e.select.dispatchEvent(new Event('change',{bubbles:true}));};return b;}));
-    (e.button.closest('dialog')||document.body).append(e.list);e.list.showPopover();active=e;e.button.setAttribute('aria-expanded','true');position(e);
+    (e.button.closest('dialog')||document.body).append(e.list);e.list.showPopover();active=e;e.button.setAttribute('aria-expanded','true');position(e);e.anchor=e.button.getBoundingClientRect();
     const selected=e.list.querySelector('[aria-selected=true]:not(:disabled)')||options(e)[0];selected?.focus({preventScroll:true});selected?.scrollIntoView({block:'nearest'});
   }
   function enhance(select){
@@ -46,7 +46,7 @@
   document.addEventListener('click',e=>{if(dismissedBackdrop){dismissedBackdrop=false;e.preventDefault();e.stopImmediatePropagation();}},true);
   // Handle popup keys before the dialog's Tab trap or Escape dismissal.
   document.addEventListener('keydown',e=>{if(active&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close(true);}else if(active&&e.key==='Tab'){close(true);}},true);
-  document.addEventListener('close',()=>close(),true);document.addEventListener('scroll',e=>{if(active&&!active.list.contains(e.target))close();},true);
+  document.addEventListener('close',()=>close(),true);document.addEventListener('scroll',e=>{if(active&&!active.list.contains(e.target)){const b=active.button.getBoundingClientRect(),a=active.anchor;if(!a||Math.abs(b.top-a.top)>1||Math.abs(b.left-a.left)>1)close();}},true);
   window.addEventListener('resize',()=>{if(active)position(active);});visualViewport?.addEventListener('resize',()=>{if(active)position(active);});
   window.teamSelects={sync,close};scan();
 })();

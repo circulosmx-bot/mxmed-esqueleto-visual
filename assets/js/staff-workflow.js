@@ -18,8 +18,8 @@ async function api(action,input={}){
 }
 function fields(prefix,profile){return `<div class="admission-fields">${Object.entries(labels).map(([k,l])=>`<label class="wizard-field">${l}<input id="${prefix}-${k}" maxlength="120" value="${esc(profile[k]||'')}"></label>`).join('')}</div>`;}
 function profile(prefix){return Object.fromEntries(Object.keys(labels).map(k=>[k,$(prefix+'-'+k).value.trim()]));}
-function show(id){$(id).showModal();$(id).querySelector('input,button')?.focus();}
-function controls(){if(!wizard)return;const locked=busy||!!wizard.pending&&wizard.pending.state!=='NONCOMMIT';for(const id of ['save-onboarding','next-onboarding','previous-onboarding'])$(id).disabled=locked;$('onboarding-content').querySelectorAll('input,select').forEach(e=>{e.disabled=locked||e.tagName==='SELECT'&&e.id!=='new-channel'||e.id==='new-channel'&&!!wizard.case_id;});$('check-onboarding').hidden=!wizard.pending;$('check-onboarding').disabled=busy;}
+function show(id){const d=$(id);d.showModal();const heading=d.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}d.querySelector('.team-dialog-body')?.scrollTo(0,0);}
+function controls(){if(!wizard)return;const locked=busy||!!wizard.pending&&wizard.pending.state!=='NONCOMMIT';for(const id of ['save-onboarding','next-onboarding','previous-onboarding'])$(id).disabled=locked;$('onboarding-content').querySelectorAll('input,select').forEach(e=>{e.disabled=locked||e.tagName==='SELECT'&&!['new-channel','new-image-mode','new-avatar'].includes(e.id)||e.id==='new-channel'&&!!wizard.case_id;});$('check-onboarding').hidden=!wizard.pending;$('check-onboarding').disabled=busy;}
 async function work(status,fn){if(busy)return;busy=true;controls();try{await fn();}catch(e){$(status).textContent=e.message;}finally{busy=false;if(!$('staff-stepup').open){intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}controls();}}
 for(const id of ['onboarding','staff-case','staff-profile','staff-stepup'])$(id).addEventListener('cancel',e=>{e.preventDefault();close(id);});
 
@@ -38,11 +38,12 @@ function close(id){
 $('cancel-onboarding').onclick=()=>close('onboarding');$('close-staff-case').onclick=()=>close('staff-case');$('cancel-staff-profile').onclick=()=>close('staff-profile');$('cancel-staff-stepup').onclick=()=>close('staff-stepup');
 function remember(){
  // Only non-secret operation/case identifiers survive a reload. Never profile/email/credentials/tokens.
- try{if(wizard?.pending)sessionStorage.setItem(recoveryKey,JSON.stringify({operation_id:wizard.pending.operation_id,action:wizard.pending.action,case_id:wizard.case_id}));else sessionStorage.removeItem(recoveryKey);}catch(_){}
+ try{if(wizard?.pending)sessionStorage.setItem(recoveryKey,JSON.stringify({operation_id:wizard.pending.operation_id,action:wizard.pending.action,case_id:wizard.case_id,image:{mode:wizard.image.mode,avatar:wizard.image.avatar,uploaded:wizard.image.uploaded}}));else sessionStorage.removeItem(recoveryKey);}catch(_){}
 }
 function start(c=null){
- if(!(wizard?.pending||busy&&wizard)){wizard={profile:c?.profile||{},email:'',channel:c?.channel||'ASSISTED',case_id:c?.case_id||'',version:c?.version||1,operation:uid(),recipient:uid(),invitationOperation:uid(),dirty:false,done:false,pending:recovered};recovered=null;step=0;}
+ if(!(wizard?.pending||busy&&wizard)){wizard={profile:c?.profile||{},email:'',channel:c?.channel||'ASSISTED',case_id:c?.case_id||'',version:c?.version||1,operation:uid(),recipient:uid(),invitationOperation:uid(),image:{mode:recovered?.image?.mode||c?.profile?.presentation||'PLACEHOLDER',avatar:recovered?.image?.avatar||(['NEUTRAL','FEMININE','MASCULINE'].includes(c?.profile?.avatar)?c.profile.avatar:'NEUTRAL'),file:null,preview:'',uploaded:recovered?.image?.uploaded||c?.profile?.presentation==='PORTRAIT'},dirty:false,done:false,pending:recovered};recovered=null;step=0;}
  renderWizard();show('onboarding');
+ if(c?.profile?.presentation==='PORTRAIT')loadPreparedPortrait(wizard);
  if(wizard.pending)$('onboarding-feedback').textContent='Hay una operación pendiente de comprobar. Consulta su estado; no se reenviará al abrir.';
 }
 function capture(){if(step===0){wizard.profile=profile('new');wizard.email=$('new-email').value.trim();wizard.channel=$('new-channel').value;}}
@@ -54,9 +55,51 @@ function renderWizard(){
  if(step===1)$('onboarding-content').innerHTML='<label class="wizard-field">Categoría interna<select disabled><option>Asesor</option></select></label><p>La incorporación inicia como Asesor. La designación Master requiere su procedimiento independiente.</p>';
  if(step===2)$('onboarding-content').innerHTML='<h3>Permisos iniciales</h3><p>La admisión no concede permisos automáticamente. Después de aprobarla, configura los permisos individuales en Acceso y funciones.</p><p>La persona confirmará sus propios datos y documentos; la revisión de identidad es un paso posterior independiente.</p>';
  if(step===3)$('onboarding-content').innerHTML=`<dl class="onboarding-summary"><dt>Persona</dt><dd>${esc(name({profile:wizard.profile}))}</dd><dt>Destino de la invitación</dt><dd>${esc(wizard.email||'Pendiente de completar')}</dd><dt>Ciudad / estado</dt><dd>${esc([wizard.profile.operation_city,wizard.profile.operation_state].filter(Boolean).join(', ')||'Sin información')}</dd><dt>Categoría</dt><dd>Asesor</dd><dt>Permisos</dt><dd>Sin concesiones automáticas</dd><dt>Vía</dt><dd>${wizard.channel==='ASSISTED'?'Asistida':'Remota preautorizada'}</dd></dl><p>Se prepara una solicitud y su invitación. No se activa acceso al equipo.</p>`;
+ if(step===3)$('onboarding-content').insertAdjacentHTML('beforeend',imageSummary());
  if(wizard.done){$('onboarding-content').insertAdjacentHTML('beforeend','<button id="open-prepared-case" type="button">Ver solicitud preparada</button>');$('open-prepared-case').onclick=()=>{const id=wizard.case_id;close('onboarding');openCase(id);};}
- if(step===0){$('new-channel').value=wizard.channel;$('onboarding-content').oninput=()=>{wizard.dirty=true;};}controls();
+ if(step===0){renderImage();$('new-channel').value=wizard.channel;$('onboarding-content').oninput=()=>{wizard.dirty=true;};}controls();
 }
+
+const portraitPurpose='INTERNAL_PRESENTATION_PORTRAIT';
+function imagePreview(){const i=wizard.image;return i.mode==='AVATAR'?window.staffPersonal.avatar(i.avatar):i.mode==='PORTRAIT'&&i.preview?`<img class="personal-portrait" alt="Vista previa de fotografía seleccionada" src="${i.preview}">`:'<p>Sin imagen seleccionada.</p>';}
+async function loadPreparedPortrait(target){try{const m=await api('media_status',{case_id:target.case_id,purpose:portraitPurpose});if(!m.asset_id)return;const r=await api('portrait',{case_id:target.case_id,purpose:portraitPurpose,expected_case_version:m.case_version,asset_id:m.asset_id,asset_version:m.version});if(wizard!==target||target.image.file)return;target.image.preview=`data:${r.mime_type};base64,${r.base64}`;if($('new-image-preview'))$('new-image-preview').innerHTML=imagePreview();}catch(_){if(wizard===target)$('onboarding-feedback').textContent='La fotografía guardada no está disponible para consulta en este estado.';}}
+function imageSummary(){return '<h3>Imagen de presentación</h3>'+imagePreview()+'<p>La imagen de presentación no es evidencia de identidad. Se guarda en la solicitud; no activa acceso al equipo.</p>';}
+function renderImage(){
+ const i=wizard.image;$('onboarding-content').insertAdjacentHTML('beforeend',`<h3>Imagen de presentación</h3><label class="wizard-field">Presentación<select id="new-image-mode"><option value="PLACEHOLDER">Sin imagen</option><option value="AVATAR">Elegir avatar</option><option value="PORTRAIT">Subir fotografía</option></select></label><label class="wizard-field" id="new-avatar-area">Avatar<select id="new-avatar"><option value="NEUTRAL">Neutral</option><option value="FEMININE">Femenino</option><option value="MASCULINE">Masculino</option></select></label><label class="wizard-field" id="new-photo-area">Fotografía privada<input id="new-photo" type="file" accept="image/png,image/jpeg"></label><div id="new-image-preview"></div><p id="new-image-help">Opcional e independiente del género. PNG o JPEG ficticio, máximo 64 KiB, 512 px por lado y 65,536 píxeles. La selección permanece en esta ventana hasta guardar el caso; no es un documento de identidad.</p>`);
+ $('new-image-mode').value=i.mode;$('new-avatar').value=i.avatar;
+ const refresh=()=>{$('new-avatar-area').hidden=i.mode!=='AVATAR';$('new-photo-area').hidden=i.mode!=='PORTRAIT';$('new-image-preview').innerHTML=imagePreview();};refresh();
+ $('new-image-mode').onchange=()=>{i.mode=$('new-image-mode').value;wizard.dirty=true;refresh();};
+ $('new-avatar').onchange=()=>{i.avatar=$('new-avatar').value;wizard.dirty=true;refresh();};
+ $('new-photo').onchange=async()=>{const f=$('new-photo').files[0];if(!f)return;try{
+ if(!['image/png','image/jpeg'].includes(f.type)||f.size>65536)throw new Error('Selecciona PNG o JPEG de hasta 64 KiB.');
+ const url=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(f);});
+ const img=new Image();img.src=url;await img.decode();if(img.width>512||img.height>512||img.width*img.height>65536)throw new Error('La fotografía supera las dimensiones permitidas.');
+ i.file=f;i.preview=url;i.uploaded=false;wizard.dirty=true;refresh();$('onboarding-feedback').textContent='Fotografía seleccionada, aún no guardada.';
+ }catch(e){$('new-photo').value='';$('onboarding-feedback').textContent=e.message||'No se pudo leer la fotografía.';}};
+}
+async function reconcileImage(){
+ const p=wizard.pending,r=await api('media_result',{case_id:wizard.case_id||p.case_id,purpose:portraitPurpose,operation_id:p.operation_id});
+ if(r.operation_id!==p.operation_id||r.case_id!==(wizard.case_id||p.case_id))throw new Error('El resultado no corresponde a esta fotografía.');
+ if(r.committed&&r.reconciliation==='COMMITTED_AVAILABLE'){wizard.case_id=r.case_id;wizard.image.mode='PORTRAIT';wizard.image.uploaded=true;wizard.pending=null;remember();$('onboarding-feedback').textContent='Fotografía privada confirmada. Continúa para guardar su presentación.';return true;}
+ if(!r.committed&&r.reconciliation==='NO_COMMITTED_OPERATION_OR_FILE'){p.state='NONCOMMIT';$('onboarding-feedback').textContent='No se guardó la fotografía. Puedes volver a seleccionarla; se conserva el identificador.';return false;}
+ throw new Error('La fotografía requiere conciliación. No repitas la carga.');
+}
+async function persistImage(){
+ const i=wizard.image;if(wizard.pending&&wizard.pending.state!=='NONCOMMIT')return false;
+ if(i.mode==='PORTRAIT'&&!i.uploaded){
+  if(!i.file)throw new Error('Selecciona una fotografía antes de guardar esta presentación.');
+  const c=await api('case',{case_id:wizard.case_id}),m=await api('media_status',{case_id:wizard.case_id,purpose:portraitPurpose});
+  wizard.pending={action:'upload',operation_id:wizard.pending?.operation_id||uid(),case_id:wizard.case_id,state:'PENDING'};remember();controls();
+  try{const r=await api('upload',{metadata:{operation_id:wizard.pending.operation_id,case_id:wizard.case_id,expected_case_version:c.version,expected_asset_version:m.version,purpose:portraitPurpose,declared_mime:i.file.type},base64:i.preview.split(',')[1]});
+   if(!r.committed||r.operation_id!==wizard.pending.operation_id||r.case_id!==wizard.case_id)throw new Error('Carga pendiente de confirmar.');
+   i.uploaded=true;wizard.pending=null;remember();
+  }catch(e){wizard.pending.state='UNKNOWN';throw e;}
+ }
+ const c=await api('case',{case_id:wizard.case_id}),patch={presentation:i.mode,avatar:i.mode==='AVATAR'?i.avatar:(c.profile.avatar||'NONE')};
+ if(Object.entries(patch).some(([k,v])=>c.profile[k]!==v)){const r=await mutate('update',{case_id:c.case_id,expected_version:c.version,operation_id:uid(),changes:patch});draftResult(r);}else wizard.version=c.version;
+ return true;
+}
+
 function draftResult(r){wizard.case_id=r.case_id;wizard.version=r.version;wizard.operation=uid();wizard.dirty=false;wizard.pending=null;remember();changed();}
 function invitationResult(r){
  wizard.done=true;wizard.dirty=false;wizard.pending=null;remember();step=3;renderWizard();
@@ -66,6 +109,7 @@ function invitationResult(r){
 }
 async function reconcile(){
  const pending=wizard.pending;if(!pending)return true;
+ if(pending.action==='upload')return reconcileImage();
  const result=await api(pending.action==='issue'?'invitation_result':'case_result',{operation_id:pending.operation_id});
  if(result.operation_id!==pending.operation_id||!(result.committed===true||result.committed===false&&result.outcome==='NOT_RECORDED'))throw new Error('La consulta no confirmó un resultado válido. Puedes volver a consultar el estado.');
  if(result.committed){if(result.command!==pending.action||!/^adm_[a-f0-9]{32}$/.test(result.case_id)||!Number.isInteger(result.version))throw new Error('El recibo no corresponde a esta preparación. Consulta nuevamente.');if(pending.action==='issue'){wizard.case_id=result.case_id;await api('case',{case_id:result.case_id});invitationResult(result);}else{const c=await api('case',{case_id:result.case_id});draftResult(result);wizard.profile=c.profile;wizard.version=c.version;wizard.channel=c.channel;renderWizard();$('onboarding-feedback').textContent='Borrador guardado confirmado. Puedes continuar; no se volvió a crear.';}return true;}
@@ -79,21 +123,22 @@ async function mutate(action,input){
  wizard.pending={action,operation_id:input.operation_id,case_id:input.case_id||'',input,state:'PENDING'};remember();controls();
  try{const result=await api(action,input);if(result.committed!==true||result.operation_id!==input.operation_id||result.command!==action||!/^adm_[a-f0-9]{32}$/.test(result.case_id)||!Number.isInteger(result.version))throw new Error('La respuesta no acredita el resultado de esta operación.');return result;}catch(e){wizard.pending.state='UNKNOWN';$('onboarding-feedback').textContent=e.message+' Consulta el estado para continuar con seguridad.';throw new Error($('onboarding-feedback').textContent);}
 }
-async function saveDraft(){capture();if(!valid())return false;if(wizard.pending){await reconcile();if(wizard.pending?.state!=='NONCOMMIT')return false;}
+async function saveDraft(){capture();if(!valid())return false;if(wizard.pending){const mediaPending=wizard.pending.action==='upload';await reconcile();if(wizard.pending?.state!=='NONCOMMIT')return false;if(mediaPending)return true;}
  if(wizard.case_id&&!wizard.dirty&&(!wizard.pending||wizard.pending.action==='issue'))return true;
- const input={operation_id:wizard.operation,...wizard.profile};
+ const input={operation_id:wizard.operation,...Object.fromEntries(Object.keys(labels).map(k=>[k,wizard.profile[k]||'']))};
  const result=wizard.case_id?await mutate('update',{...input,case_id:wizard.case_id,expected_version:wizard.version}):await mutate('prepare',{...input,recipient_reference:wizard.recipient,channel:wizard.channel,proposed_category:'ADVISOR'});
  draftResult(result);return true;
 }
 $('check-onboarding').onclick=()=>work('onboarding-feedback',reconcile);
 $('previous-onboarding').onclick=()=>{if(busy)return;capture();step--;renderWizard();};
-$('save-onboarding').onclick=()=>work('onboarding-feedback',async()=>{if(await saveDraft())$('onboarding-feedback').textContent='Borrador guardado. Puedes continuar ahora o retomar el caso desde Pendientes.';});
+$('save-onboarding').onclick=()=>work('onboarding-feedback',async()=>{if(await saveDraft()&&await persistImage())$('onboarding-feedback').textContent='Borrador guardado. Puedes continuar ahora o retomar el caso desde Pendientes.';});
 $('next-onboarding').onclick=()=>work('onboarding-feedback',async()=>{
  capture();if(!valid())return;if(step<3){step++;renderWizard();return;}
  if(!wizard.email){$('onboarding-feedback').textContent='Completa el correo del destinatario en Persona.';return;}
  if(wizard.pending){await reconcile();if(wizard.done||wizard.pending?.state!=='NONCOMMIT')return;}
  if(wizard.case_id){const existing=await api('invitation_status',{case_id:wizard.case_id});if(existing.invitation){invitationResult(existing.invitation);return;}}
  if((!wizard.case_id||wizard.dirty)&&!await saveDraft())return;
+ if(!await persistImage())return;
  const state=await api('invitation_status',{case_id:wizard.case_id});
  if(state.invitation){invitationResult(state.invitation);return;}
  if(state.account_bound||state.case_state!=='PREPARING'||state.version!==wizard.version)throw new Error('La solicitud cambió o ya está vinculada. Consulta su estado desde Pendientes.');
