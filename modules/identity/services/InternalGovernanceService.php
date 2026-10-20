@@ -17,6 +17,11 @@ final class InternalGovernanceService
     public const ADVISOR_REMOVAL='advisor_removal';
     public function execute(array $cookies,string $operation,string $target,?string $capability=null,?string $targetPrecondition=null):array
     {return $this->perform($cookies,$operation,$target,$capability,$targetPrecondition);}
+    public function activatePrepared(array $cookies,\Identity\StaffWorkflow\Intentions $intentions,array $input):array
+    {
+        if(!$intentions->usesConnection($this->pdo))throw new RuntimeException('governance_connection_mismatch');
+        return $this->perform($cookies,'grant',$intentions->target($input['case_id']),$input['capability'],self::ACTIVE_ADVISOR_OPERATIONAL,null,null,[$intentions,$input]);
+    }
     public function executePrivileged(array $cookies,string $caseId,string $proofId,string $rawProof):array
     {
         if($this->masterCases===null)throw new RuntimeException('master_composition_required');
@@ -28,7 +33,7 @@ final class InternalGovernanceService
         if(!$workflow->usesConnection($this->pdo))throw new RuntimeException('governance_connection_mismatch');
         return $this->perform($cookies,'register',$target,null,null,null,[$workflow,$input]);
     }
-    private function perform(array $cookies,string $operation,string $target,?string $capability,?string $targetPrecondition,?array $privileged=null,?array $admission=null):array
+    private function perform(array $cookies,string $operation,string $target,?string $capability,?string $targetPrecondition,?array $privileged=null,?array $admission=null,?array $prepared=null):array
     {
         if(!in_array($operation,['register','appoint_master','remove_master','remove_advisor','suspend','reactivate','grant','revoke','delegate','revoke_delegation'],true))throw new RuntimeException('governance_invalid_operation');
         $hasCapability=in_array($operation,['grant','revoke','delegate','revoke_delegation'],true);
@@ -79,6 +84,10 @@ final class InternalGovernanceService
                 $admissionGate=$admission[0]->admissionGate($this->pdo,$session,$admission[1],$target);
                 if(isset($admissionGate['replay'])){$live=$this->sessions->resolve($cookies,true);if(!$live||$live->accountId()!==$actor||(string)$live->session()->sessionId()!==(string)$session->session()->sessionId())throw new RuntimeException('governance_denied');$this->pdo->commit();return ['account_id'=>$target,'committed'=>true,'replayed'=>true];}
             }
+            if($prepared!==null){
+                if(!$director)throw new RuntimeException('governance_denied');
+                if($prepared[0]->authorizeActivation($session,$target,$capability,$prepared[1])){$this->pdo->commit();return ['committed'=>true,'replayed'=>true,'refresh_required'=>true];}
+            }
             if($operation==='register'){
                 if($t||$accounts[$target]!=='active')throw new RuntimeException('governance_conflict');
                 $this->pdo->prepare("INSERT INTO internal_staff(account_id,governance_class,status) VALUES(?,'ADVISOR','ACTIVE')")->execute([$target]);
@@ -122,6 +131,7 @@ final class InternalGovernanceService
                 $live=$this->sessions->resolve($cookies,true);
                 if(!$live||$live->accountId()!==$actor||(string)$live->session()->sessionId()!==(string)$session->session()->sessionId())throw new RuntimeException('governance_denied');
             }
+            if($prepared!==null){$prepared[0]->finishActivation($session,$prepared[1],(string)$auditEvent->value('event_id'));$live=$this->sessions->resolve($cookies,true);if(!$live||(string)$live->session()->sessionId()!==(string)$session->session()->sessionId())throw new RuntimeException('governance_denied');}
             if(!$this->pdo->commit())throw new RuntimeException('governance_commit_failed');return $result;
         }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }

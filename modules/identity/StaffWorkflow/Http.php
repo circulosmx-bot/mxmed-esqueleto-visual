@@ -24,7 +24,7 @@ final class Http
             if($action==='bootstrap'){
                 Service::keys($input,[]);
                 $q=$i->pdo()->prepare('SELECT governance_class,status FROM internal_staff WHERE account_id=?');$q->execute([$a->accountId()]);$staff=$q->fetch(\PDO::FETCH_ASSOC);
-                $r=['csrf_token'=>$i->csrf()->issueAuthenticated($a->session()->tokenDigest()),'director'=>$staff&&$staff['governance_class']==='DIRECTOR'&&$staff['status']==='ACTIVE','account_id'=>$a->accountId(),'synthetic'=>true];
+                $r=['csrf_token'=>$i->csrf()->issueAuthenticated($a->session()->tokenDigest()),'director'=>$staff&&$staff['governance_class']==='DIRECTOR'&&$staff['status']==='ACTIVE','account_id'=>$a->accountId(),'synthetic'=>true,'staff_control04'=>getenv('MXMED_STAFF_CONTROL04')==='1'];
             }else{
                 if(!$i->csrf()->validAuthenticated($_SERVER['HTTP_X_CSRF_TOKEN']??'',$a->session()->tokenDigest()))throw new \RuntimeException('workflow_denied');
                 // This composition is exclusively synthetic. Validate before the canonical write,
@@ -36,6 +36,10 @@ final class Http
                     }
                 }
                 $r=match($action){
+                    'simulate'=>self::simulate($i,$flow,$input),
+                    'activate_intention'=>self::activateIntention($i,$flow,$writer,$input),
+                    'intentions','prepare_intentions'=>self::intentions($i,$flow,$action,$input),
+                    'geography'=>self::geography($i,$flow,$a,$input),
                     'prepare','correct','confirm','update','revoke'=>$cases->command($_COOKIE,$action,$input),
                     'case_result'=>$cases->read($_COOKIE,'result',$input),
                     'invitation_status'=>$invites->read($_COOKIE,'case_status',$input),
@@ -65,6 +69,35 @@ final class Http
             http_response_code($status);echo json_encode(['error'=>$status===401?'authentication_required':($status===409?'conflict_refresh_required':($status===400?'invalid_request':($status===403?'access_denied':'unavailable_reconcile_required'))),'retry'=>false]);
         }
     }
+    private static function simulate($i,$flow,array $input):array
+    {
+        if(getenv('MXMED_STAFF_CONTROL04')!=='1')throw new \RuntimeException('workflow_denied');
+        Service::keys($input,['case_id']);
+        if(!is_string($input['case_id'])||!preg_match('/^adm_[a-f0-9]{32}$/D',$input['case_id']))throw new \RuntimeException('workflow_invalid');
+        $result=(new \Identity\StaffAdmission\UnitOfWork($i->pdo(),new CanonicalHttpSessionResolver($i->sessions())))->run($_COOKIE,function($actor)use($i,$flow,$input){
+            $case=$flow->case($input['case_id']);$flow->director($actor,$case);
+            $owned=realpath((string)getenv('ASE_INT02A_OWNED'));
+            if(!$owned||!preg_match('~^/private/tmp/mxmed-ase-adm02imp01-[a-zA-Z0-9_]+$~D',$owned)||fileowner($owned)!==posix_geteuid())throw new \RuntimeException('workflow_denied');
+            $path=$owned.'/simulation-'.$case['case_id'].'.json';
+            if(is_link($path))throw new \RuntimeException('workflow_denied');
+            if(is_file($path))return json_decode(file_get_contents($path),true,16,JSON_THROW_ON_ERROR);
+            if($case['proposed_category']!=='ADVISOR'||$case['bound_account_id']!==null)throw new \RuntimeException('workflow_denied');
+            $inv=$flow->query("SELECT invitation_id FROM auth_staff_admission_invitations WHERE case_id=? AND state='ACTIVE' AND expires_at>UTC_TIMESTAMP(6)",[$case['case_id']])->fetchColumn();
+            if(!$inv)throw new \RuntimeException('workflow_invitation_required');
+            $result=['case_id'=>$case['case_id'],'invitation_id'=>$inv,'state'=>'QUEUED','message'=>'Recorrido ficticio solicitado. La revisión y admisión requieren acciones explícitas del Director.'];
+            $result['requested_by']=$actor->accountId();$result['audit_event_id']=\Identity\StaffAdmission\Audit::append($i->pdo(),$actor,$case['case_id'],'update',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),(int)$case['version'],'SYNTHETIC_SIMULATION_REQUEST');
+            return $result+['_queue_path'=>$path];
+        });
+        // Publish the local job only after canonical authorization/audit has committed.
+        if(isset($result['_queue_path'])){$path=$result['_queue_path'];unset($result['_queue_path']);$f=@fopen($path,'x');if(!$f)throw new \RuntimeException('workflow_conflict');fwrite($f,json_encode($result,JSON_THROW_ON_ERROR));fclose($f);}
+        return $result;
+    }
+    private static function activateIntention($i,$flow,$writer,array $input):array
+    {if(getenv('MXMED_STAFF_CONTROL04')!=='1')throw new \RuntimeException('workflow_denied');Service::keys($input,['case_id','expected_case_version','expected_version','capability']);return $writer->activatePrepared($_COOKIE,new Intentions($i->pdo(),new CanonicalHttpSessionResolver($i->sessions()),$flow),$input);}
+    private static function intentions($i,$flow,string $action,array $input):array
+    {if(getenv('MXMED_STAFF_CONTROL04')!=='1')throw new \RuntimeException('workflow_denied');return (new Intentions($i->pdo(),new CanonicalHttpSessionResolver($i->sessions()),$flow))->handle($_COOKIE,$action,$input);}
+    private static function geography($identity,$flow,$actor,array $input):array
+    {Service::keys($input,[]);if(getenv('MXMED_STAFF_CONTROL04')!=='1')throw new \RuntimeException('workflow_denied');$flow->director($actor,['bound_account_id'=>null,'state'=>'PREPARING']);return ['locations'=>(new \Identity\StaffAdmission\Geography($identity->pdo()))->locations(),'city_label'=>'Ciudad / municipio'];}
     private static function portrait($media,array $b):array
     {if(($b['purpose']??null)!==\Identity\StaffMedia\Policy::PORTRAIT)throw new \RuntimeException('workflow_denied');$r=$media->read($_COOKIE,$b);$r['base64']=base64_encode($r['bytes']);unset($r['bytes']);return $r;}
     private static function view(Service $s,array $b):array{Service::keys($b,['case_id']);return $s->view($_COOKIE,$b['case_id']);}

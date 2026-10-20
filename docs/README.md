@@ -190,3 +190,7 @@ Los enlaces son candidatos de selección, no una lista obligatoria de ejecución
 - **Administración contextual del equipo:** [ASE-ADM02-PANEL04](identity/ASE-ADM02-PANEL04.md), sucesor de presentación UXFLOW03; logout, documentación e historial canónicos, con límites comerciales explícitos.
 
 - **Interacción y recuperación del panel staff:** [ASE-ADM02-PANEL05](identity/ASE-ADM02-PANEL05.md), sucesor dirigido de PANEL04; seis correcciones y QA sintética focalizada.
+
+## STAFF-CONTROL04 — incorporación, acceso manual e índice de interfaces
+
+[Contrato, matriz de quince dominios y guía de revisión](identity/STAFF-CONTROL04.md). Consultar para catálogo estado/municipio, facultades preparadas frente a efectivas, simulación del solicitante, login Director y seis entradas de desarrollo. Sucesor acotado de WORKSPACE03; sus consumidores Requests/Media permanecen canónicos. Cuatro superficies se documentan indisponibles, sin impersonación ni aplicaciones nuevas. Operación sólo sintética owned.

@@ -1,0 +1,30 @@
+{
+  "checks": [
+    {
+      "name": "Director explicitly grants four Requests/summary capabilities through existing UI",
+      "pass": true
+    },
+    {
+      "name": "Existing physician groups combine authorized Requests and Media",
+      "pass": true
+    },
+    {
+      "name": "Existing canonical decision requires password/MFA and leaves applicant response pending",
+      "pass": true
+    },
+    {
+      "name": "Request decision remains in authorized canonical history",
+      "pass": true
+    },
+    {
+      "name": "Advisor cannot use Director administration",
+      "pass": true
+    },
+    {
+      "name": "Cross-physician request context is rejected",
+      "pass": true
+    }
+  ],
+  "fixture_note": "Existing WORKSPACE02 prepare sets synthetic Aurora active/FREE; not a Media decision effect.",
+  "result": "PASS"
+}

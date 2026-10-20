@@ -252,3 +252,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## WORKSPACE03 — J01, J02 y J09
 
 [Contrato](../identity/ASE-ADVISOR-WORKSPACE03.md): Identity/grants actuales → scope de trabajo ya autorizado → reader de últimas decisiones/respuestas y submissions → grupos/contadores → panel existente. Un commit o lookup confirmado dispara lectura nueva; espera del solicitante sale de la cola accionable y su respuesta restaura una tarea. Una revocación retira la lectura/acción/resumen correspondiente; navegación no escribe eventos de negocio. No se conecta mensajería ni un nuevo writer de perfiles.
+
+## STAFF-CONTROL04 — J01/J02/J04/J09 y frontera J07/J08
+
+[Contrato](../identity/STAFF-CONTROL04.md). Catálogo Consultorio (J04) → selección estado/municipio → misma versión personal staff; no writer nuevo de ubicaciones. Director prepara caso/intenciones → solicitante sintético se registra/verifica/acepta/confirma/presenta evidencia (J01/J02) → Director revisa con MFA/admite → confirma grants individuales. El worker nunca ejecuta los dos últimos pasos. Requests/Media (J09) conservan contexto, decisiones y audit; lectura de resumen no concede detalle. Índice no transfiere sesión ni permisos a médico/operador/proveedor. J07/J08 se describen como fronteras existentes, sin conexión operacional nueva. Fallo o expiración owned requiere conciliación/recreación, no extensión de TTL ni replay ciego.

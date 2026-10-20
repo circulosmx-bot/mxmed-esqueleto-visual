@@ -1,0 +1,41 @@
+{
+  "checks": [
+    {
+      "name": "Concurrent intention edits serialize: one commit and one conflict",
+      "pass": true
+    },
+    {
+      "name": "Pending visual candidate has invitation and intentions but no account binding",
+      "pass": true
+    },
+    {
+      "name": "Fresh simulation completes via visible button with no recovery or identity bypass",
+      "pass": true
+    },
+    {
+      "name": "Repeated simulation reconciles same job without duplicate account",
+      "pass": true
+    },
+    {
+      "name": "Fresh simulation leaves review, admission and grants to explicit Director action",
+      "pass": true
+    },
+    {
+      "name": "Simulation request and applicant evidence preserve distinct audit provenance",
+      "pass": true
+    },
+    {
+      "name": "Activation replay does not restore a subsequently revoked grant",
+      "pass": true
+    },
+    {
+      "name": "Explicit canonical Director writer restores only intended test permission",
+      "pass": true
+    },
+    {
+      "name": "Admission precedes all effective grant rows in the synthetic demonstration",
+      "pass": true
+    }
+  ],
+  "result": "PASS"
+}

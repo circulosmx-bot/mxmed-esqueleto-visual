@@ -95,13 +95,15 @@
 
   function safePrivateDestination() {
     if(/^#operator-invitation=[A-Za-z0-9_.%~-]{20,512}$/.test(location.hash))return '/private-app.php'+location.hash;
-    const raw = new URLSearchParams(window.location.search).get('next') || '/private-app.php';
+    const syntheticStaffReview=document.body.dataset.syntheticStaffReview==='true';
+    const raw = new URLSearchParams(window.location.search).get('next') || (syntheticStaffReview?'/internal/media-review/index.php?section=equipo':'/private-app.php');
     try {
       const parsed = new URL(raw, window.location.origin);
       if (parsed.origin !== window.location.origin) return '/private-app.php';
       const allowed = parsed.pathname === '/' || parsed.pathname === '/index.html'
         || parsed.pathname === '/private-app.php' || parsed.pathname === '/provider/'
         || parsed.pathname === '/public/identity/perfil-medico.php'
+        || (syntheticStaffReview && parsed.pathname === '/staff-admission.php' && !parsed.search && !parsed.hash)
         || (parsed.pathname === '/internal/staff-workspace/index.php' && !parsed.search && !parsed.hash)
         || (parsed.pathname === '/internal/media-review/index.php' && parsed.search === '?section=acreditacion')
         || (parsed.pathname === '/internal/media-review/index.php' && parsed.search === '?section=correcciones' && !parsed.hash)
@@ -123,7 +125,8 @@
     const correctionReview = destination === '/internal/media-review/index.php?section=correcciones';
     const teamRead = destination === '/internal/media-review/index.php?section=equipo';
     const staffWorkspace = destination === '/internal/staff-workspace/index.php';
-    if (destination !== '/provider/' && !onboarding && !correctionReview && !teamRead && !staffWorkspace && session.application_access?.allowed !== true) {
+    const syntheticAdmission=document.body.dataset.syntheticStaffReview==='true'&&destination==='/staff-admission.php';
+    if (!syntheticAdmission && destination !== '/provider/' && !onboarding && !correctionReview && !teamRead && !staffWorkspace && session.application_access?.allowed !== true) {
       throw new Error('professional_access_required');
     }
     const signal = JSON.stringify({ type: 'authenticated', at: Date.now() });

@@ -11,13 +11,14 @@ try{
   $workspace=getenv('MXMED_ADVISOR_WORKSPACE_REVIEW')==='1';
   $workspace02=getenv('MXMED_ADVISOR_WORKSPACE02_REVIEW')==='1';
   $workspace03=$workspace02&&is_file(__DIR__.'/ase-advisor-workspace03-review.py');
-  $control=$workspace03?'/ase-advisor-workspace03-review.py':($workspace02?'/ase-advisor-workspace02-review.py':($workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py')));
+  $control=getenv('MXMED_STAFF_CONTROL04')==='1'?'/staff-control04-review.py':($workspace03?'/ase-advisor-workspace03-review.py':($workspace02?'/ase-advisor-workspace02-review.py':($workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py'))));
   $owned=realpath(getenv('ASE_INT02A_OWNED'));$command='python3 '.realpath(__DIR__.$control).' '.$owned;
   $staffSyntheticLoginGuide=['credentials'=>$command.($workspace02?' credentials-director':' credentials'),'mfa'=>$command.($workspace02?' mfa-director':' mfa')];
   if($workspace&&($_GET['next']??'')==='/internal/staff-workspace/index.php'){
    $record=json_decode(file_get_contents($owned.'/oper09-advisor.json'),true,512,JSON_THROW_ON_ERROR);
    $staffSyntheticLoginGuide=['email'=>$record['email'],'destination'=>'Gestión de perfiles médicos','credentials'=>$command.' credentials-advisor','mfa'=>$workspace02?$command.' mfa-advisor':null];
   }
+  $staffSyntheticLoginGuide['staff_control04']=getenv('MXMED_STAFF_CONTROL04')==='1';
   require __DIR__.'/../public/identity/acceso.php';return true;
  }
  if(in_array($path,['/public/identity/identity-access.js','/public/identity/identity-access.css','/assets/mexico-medico.svg'],true))return false;

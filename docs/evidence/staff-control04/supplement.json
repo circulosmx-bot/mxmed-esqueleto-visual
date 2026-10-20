@@ -1,0 +1,140 @@
+{
+  "checks": [
+    {
+      "name": "Manual Director login without next using documented clipboard command 1",
+      "pass": true
+    },
+    {
+      "name": "Manual Director login without next using documented clipboard command 2",
+      "pass": true
+    },
+    {
+      "name": "Original tmp and private tmp identify the same owned preview",
+      "pass": true
+    },
+    {
+      "name": "Requested real account was not imported",
+      "pass": true
+    },
+    {
+      "name": "Selected canonical location survives save and reload",
+      "pass": true
+    },
+    {
+      "name": "Server rejects invalid state municipality pair without new personal version",
+      "pass": true
+    },
+    {
+      "name": "Pending case cannot activate prepared permissions",
+      "pass": true
+    },
+    {
+      "name": "Concurrent stale intention version cannot overwrite latest configuration",
+      "pass": true
+    },
+    {
+      "name": "Advisor session remains independent of Director",
+      "pass": true
+    },
+    {
+      "name": "Advisor cannot read or change pending intentions",
+      "pass": true
+    },
+    {
+      "name": "All fifteen support domains remain discoverable",
+      "pass": true
+    },
+    {
+      "name": "Unconnected operator support does not expose owner commands",
+      "pass": true
+    },
+    {
+      "name": "Authorized Advisor Media decision reaches canonical APPROVED state",
+      "pass": true
+    },
+    {
+      "name": "Media approval does not publish hidden physician profile",
+      "pass": true
+    },
+    {
+      "name": "Media operation appears in authorized canonical history",
+      "pass": true
+    },
+    {
+      "name": "Six actual interfaces represented with session-scoped links",
+      "pass": true
+    },
+    {
+      "name": "Six actual interfaces represented with session-scoped links",
+      "pass": true
+    },
+    {
+      "name": "chromium responsive navigation and index 1440",
+      "pass": true
+    },
+    {
+      "name": "chromium responsive navigation and index 1366",
+      "pass": true
+    },
+    {
+      "name": "chromium responsive navigation and index 390",
+      "pass": true
+    },
+    {
+      "name": "webkit responsive navigation and index 1440",
+      "pass": true
+    },
+    {
+      "name": "webkit responsive navigation and index 1366",
+      "pass": true
+    },
+    {
+      "name": "webkit responsive navigation and index 390",
+      "pass": true
+    },
+    {
+      "name": "No browser JavaScript exceptions",
+      "pass": true
+    }
+  ],
+  "responsive": [
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "height": 900,
+      "pass": true
+    },
+    {
+      "engine": "chromium",
+      "width": 1366,
+      "height": 768,
+      "pass": true
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 844,
+      "pass": true
+    },
+    {
+      "engine": "webkit",
+      "width": 1440,
+      "height": 900,
+      "pass": true
+    },
+    {
+      "engine": "webkit",
+      "width": 1366,
+      "height": 768,
+      "pass": true
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "height": 844,
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "result": "PASS"
+}

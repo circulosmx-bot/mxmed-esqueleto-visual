@@ -2,7 +2,7 @@
 
 ## Ancla y alcance
 
-- Fecha de verificación documental: **2026-10-18**.
+- Fecha de verificación documental: **2026-10-20**.
 - Baseline oficial fuente verificado: `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`; rama oficial/upstream/remoto coincidentes y limpios al inicio ASE-INT01 R2.
 - Hito base ASE-INT01: rama aislada `feature/ase-int01-internal-team-readonly`, worktree `/Users/circulodigital/Documents/GitHub/mxmed-ase-int01-readonly`. Fuente oficial `mxmed-step2-vitals-r1` y prototipo visual312ee388 conservados; no confundir con `mxmed-esqueleto-visual`.
 - Aplicación original `https://localhost:8443/private-app.php` sin cambios. [ASE-INT01 R2](identity/ASE-INT01-R2-internal-team-readonly.md): sección Equipo del staff original con Identity canónica, sólo lecturas autorizadas, preview aislado8141, sin merge/promoción.
@@ -224,3 +224,7 @@ Preparación en asistente aprobado de cuatro pasos, revisión contextual separad
 ## ASE-ADVISOR-WORKSPACE03 — corrección aislada
 
 Baseline WORKSPACE02 `40b8691f94636909bfb448655939e91387f59fe5`. [Contrato WORKSPACE03](identity/ASE-ADVISOR-WORKSPACE03.md): una tarjeta por ID médico o aplicación sin materializar, once pestañas y contador de tareas accionables separado del total visible. Grant mínimo de resumen limitado a médicos ya accesibles mediante trabajo autorizado; sin cartera, consumidores nuevos ni detalles restringidos. Verificación dirigida: 53 checks principales y 10 complementarios PASS; no activación normal-local/producción ni cambios a 8091.
+
+## STAFF-CONTROL04 — incorporación y soporte aislados
+
+Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/mxmed-staff-control04-cross-surface`. [Contrato y guía](identity/STAFF-CONTROL04.md) sucede las once pestañas por quince áreas y conecta selección geográfica canónica, candidatos visibles, intenciones versionadas sin acceso anticipado y simulación legítima del solicitante. Admisión y grants siguen siendo decisiones explícitas distintas. Login sin `next` corregido sólo en composición sintética; no importa la cuenta habitual. Índice de seis superficies, dos contextos operativos y cuatro indisponibles en este runtime. QA y límites exactos en el contrato; activación productiva false, 8091 intacto y aceptación visual PENDING.

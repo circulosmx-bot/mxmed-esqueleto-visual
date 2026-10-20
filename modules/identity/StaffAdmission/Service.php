@@ -7,7 +7,7 @@ use PDO;
 /** Admission data only. No dependency on staff registration, grants, review or notifications. */
 final class Service
 {
-    public function __construct(private PDO $pdo,private CanonicalHttpSessionResolver $sessions){}
+    public function __construct(private PDO $pdo,private CanonicalHttpSessionResolver $sessions,private ?Geography $geography=null){}
     private function query(string $sql,array $args=[]):\PDOStatement
     {$q=$this->pdo->prepare($sql);$q->execute($args);return $q;}
     private function row(string $sql,array $args=[]):array
@@ -95,6 +95,7 @@ final class Service
                 if(in_array($action,['update','correct'],true))$profile=array_replace($profile,$b['changes']??array_intersect_key($b,array_flip(Input::FIELDS)));
             }
             if($action==='confirm'&&($profile['given_names']===''||$profile['first_surname']===''||$case['state']==='PERSON_CONFIRMED'))throw new \RuntimeException('admission_conflict');
+            if(in_array($action,['prepare','update','correct','confirm'],true))$this->geography?->validate($profile);
             $provenance=match($action){'prepare','update'=>'ADMIN_PREPARED','correct'=>'APPLICANT_CORRECTED','confirm'=>'APPLICANT_CONFIRMED','revoke'=>'INTENTION_REVOKED'};
             if(($profile['presentation']??'')==='AVATAR'&&($profile['avatar']??'NONE')==='NONE')throw new \RuntimeException('admission_invalid');
             if(($profile['presentation']??'')==='PORTRAIT'&&!$this->query("SELECT 1 FROM auth_staff_media_assets WHERE case_id=? AND purpose='INTERNAL_PRESENTATION_PORTRAIT' LIMIT 1",[$id])->fetchColumn())throw new \RuntimeException('admission_invalid');

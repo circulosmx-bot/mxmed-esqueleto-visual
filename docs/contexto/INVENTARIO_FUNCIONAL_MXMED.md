@@ -385,3 +385,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## Sucesor WORKSPACE03 — COM-10, ID-04..07, PUB-04..05, MED-01..03
 
 [WORKSPACE03](../identity/ASE-ADVISOR-WORKSPACE03.md) agrega un reader transaccional de pendientes por contexto exacto y el grant independiente physician_pending_summary_read. UI de once dominios, cuatro paneles existentes; los demás sólo informativos. Resumen autorizado no concede documentos, decisiones ni ámbito de cartera. Fuentes anteriores y writers conservados; ensayo owned con 53 checks principales y 10 complementarios PASS.
+
+## STAFF-CONTROL04 — ID-01/02/03/07, MED-01..03 y COM-10
+
+[Contrato](../identity/STAFF-CONTROL04.md). PRODUCT_POLICY: intenciones pendientes no conceden acceso; revisión/admisión/activación separadas. SOURCE_IMPLEMENTATION: adapter geográfico sobre `catalog_cp_colonias`, ledger versionado de intenciones y recibos del writer canónico, simulación por Identity/applicant HTTP; retorno de login sintético corregido. CONNECTIVITY: quince dominios discoverables, Requests/Media/Resumen/Historial operativos según grant; otros consumidores no conectados. Índice de seis rutas conserva identidades independientes. VERIFICATION: ensayos dirigidos enlazados en contrato. OPERATIONAL_STATUS: owned sintético, sin nuevas autoridades clínicas/comerciales ni activación normal-local. OP-01..03 y ORG-01..03 sólo mapeados, no implementados ni activados por esta entrega.

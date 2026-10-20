@@ -32,5 +32,5 @@ function staffWorkflowOwnedServices():array
     $limits=new \Identity\Services\RateLimitService($p,new \Identity\Contracts\RateLimitKeyHasher((string)getenv('MXMED_PREVIEW_PEPPER')),$clock);
     $ip=new \Identity\StaffAdmission\InvitationPolicy(3600,'synthetic-preview-validity','synthetic-recipient',file_get_contents($owned.'/recipient-key'));
     $invites=new \Identity\StaffAdmission\InvitationService($p,$sessions,$ip,$clock,$limits,$delivery);
-    return [$i,$flow,new \Identity\StaffAdmission\Service($p,$sessions),$invites,$media,new \Identity\Services\InternalGovernanceService($p,$sessions)];
+    return [$i,$flow,new \Identity\StaffAdmission\Service($p,$sessions,getenv('MXMED_STAFF_CONTROL04')==='1'?new \Identity\StaffAdmission\Geography($p):null),$invites,$media,new \Identity\Services\InternalGovernanceService($p,$sessions)];
 }

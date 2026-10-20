@@ -163,3 +163,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## ASE-ADVISOR-WORKSPACE03 — agrupación, once pestañas y contadores
 
 [Contrato y ficha acotada](identity/ASE-ADVISOR-WORKSPACE03.md). Cambio UI-2/UI-3 expresamente solicitado por el Director: una tarjeta por médico/aplicación, fila completa desplazable, menú accesible de secciones, badges por fuente y estados restringidos. Se conserva header, selección, paneles y modal WORKSPACE02; 8091 protegido. Ensayo Chromium/WebKit PASS en 1440×900, 1366×768 y 390×844, teclado, overflow y viewport nativo; 53 checks principales y 10 complementarios PASS. DIRECTOR_VISUAL_ACCEPTANCE=PENDING; Safari físico NOT_RUN y adaptación móvil final no acreditada.
+
+## STAFF-CONTROL04 — controles funcionales e índice solicitado
+
+[Contrato](identity/STAFF-CONTROL04.md): UI-2 para selección dependiente del catálogo, candidatos pendientes, intenciones y botón de simulación; UI-3 acotada al índice persistente/colapsable expresamente solicitado y quince pestañas. Shell, diálogos, grants individuales y navegación médica existente conservados. Rollback: cerrar el runner owned y volver a la rama baseline sin promover cambios a 8091; no se ensaya rollback destructivo de datos. Chromium/WebKit en 1440×900, 1366×768 y 390×844, evidencia en el contrato. Aceptación visual Director PENDING, Safari físico NOT_RUN; smoke móvil no certifica adaptación final.

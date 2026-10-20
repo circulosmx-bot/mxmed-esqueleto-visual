@@ -12,7 +12,7 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
   <title>Accede a México Médico · Prototipo UI-3</title>
   <link rel="stylesheet" href="/public/identity/identity-access.css">
 </head>
-<body data-flow="login">
+<body data-flow="login"<?= !empty($staffSyntheticLoginGuide['staff_control04'])?' data-synthetic-staff-review="true"':'' ?>>
   <div class="prototype-shell">
     <header class="prototype-header">
       <a class="prototype-brand" href="index.html" aria-label="México Médico · inicio del prototipo"><img src="../../../assets/mexico-medico.svg" alt="México Médico"></a>
@@ -27,6 +27,7 @@ $csrf = \Identity\Http\IdentityUiBootstrap::boot();
         <?php if(isset($staffSyntheticLoginGuide)): $staffGuideEmail=htmlspecialchars($staffSyntheticLoginGuide['email']??'qa_director@example.test',ENT_QUOTES,'UTF-8'); ?>
         <details class="state-panel" id="staff-synthetic-login-guide"><summary>Acceso de prueba: <?= $staffGuideEmail ?></summary>
           <strong>Revisión aislada con datos ficticios</strong>
+          <?php if(!empty($staffSyntheticLoginGuide['staff_control04'])): ?><p>Selecciona tu contexto de prueba: <a href="?next=%2Finternal%2Fmedia-review%2Findex.php%3Fsection%3Dequipo">Director</a> · <a href="?next=%2Finternal%2Fstaff-workspace%2Findex.php">Asesor</a>. Usa ventanas independientes para conservar ambas sesiones.</p><?php endif; ?>
           <p>Cuenta: <code><?= $staffGuideEmail ?></code>. Tu cuenta habitual y su contraseña real no están en esta base.</p>
           <p>Para copiar la contraseña de prueba al portapapeles, ejecuta este comando local y pégala en Contraseña:</p>
           <code><?= htmlspecialchars($staffSyntheticLoginGuide['credentials'], ENT_QUOTES, 'UTF-8') ?></code>

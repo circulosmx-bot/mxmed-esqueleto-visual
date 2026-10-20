@@ -246,3 +246,7 @@ COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta g
 ## WORKSPACE03 — seguimiento operativo acotado
 
 [WORKSPACE03](../identity/ASE-ADVISOR-WORKSPACE03.md) distingue ámbito de trabajo Media/solicitudes de cartera comercial. El permiso de resumen sólo añade agregados de la otra sección para esos mismos médicos, no enumera perfiles públicamente buscables ni descubre solicitantes. No crea relación asesor–cliente, propiedad comercial, asignación, venta, comisión o escalamiento; COM-01..09 y D01–D08 intactos.
+
+## STAFF-CONTROL04 — preparación de facultades y límites de soporte
+
+[Contrato y matriz](../identity/STAFF-CONTROL04.md). COM-10 incorpora configuración pendiente, explícitamente inefectiva hasta admisión y confirmación individual vigente por Director. No es asignación comercial ni cartera. Quince dominios distinguen consumidores operativos, resumen autorizado y conexión ausente. Facturación/pagos, plan médico, proveedor, operadores y clínica no heredan acceso del rol staff. COM-01..09, D01–D08, suscripción, comisiones, cobros y datos fiscales permanecen intactos. Índice de desarrollo no acredita operación comercial ni contexto médico.
