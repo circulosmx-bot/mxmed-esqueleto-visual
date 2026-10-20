@@ -228,3 +228,7 @@ Baseline WORKSPACE02 `40b8691f94636909bfb448655939e91387f59fe5`. [Contrato WORKS
 ## STAFF-CONTROL04 — incorporación y soporte aislados
 
 Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/mxmed-staff-control04-cross-surface`. [Contrato y guía](identity/STAFF-CONTROL04.md) sucede las once pestañas por quince áreas y conecta selección geográfica canónica, candidatos visibles, intenciones versionadas sin acceso anticipado y simulación legítima del solicitante. Admisión y grants siguen siendo decisiones explícitas distintas. Login sin `next` corregido sólo en composición sintética; no importa la cuenta habitual. Índice de seis superficies, dos contextos operativos y cuatro indisponibles en este runtime. QA y límites exactos en el contrato; activación productiva false, 8091 intacto y aceptación visual PENDING.
+
+## STAFF-CONTROL05 — corrección contextual aislada
+
+[Contrato e inventario](identity/STAFF-CONTROL05.md). Estado contextual de incorporación, lectura de progreso independiente y facultades previstas limitadas a once claves operativas. Editar no emite invitaciones; cancelar invalida aceptación sin borrar historia ni afectar staff admitido. Quince áreas distinguen cuatro coberturas operativas (Historial parcial) y once integraciones pendientes; índice conserva dos contextos independientes y cuatro no habilitados.

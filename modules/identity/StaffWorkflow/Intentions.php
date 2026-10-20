@@ -24,7 +24,7 @@ final class Intentions
     }
     public function finishActivation($actor,array $b,string $audit):void
     {$this->query('INSERT INTO auth_staff_intention_activations(case_id,intention_version,capability,actor_account_id,audit_event_id) VALUES(?,?,?,?,?)',[$b['case_id'],$b['expected_version'],$b['capability'],$actor->accountId(),$audit]);}
-    public static function catalog():array{return array_filter(InternalCapabilityCatalog::all(),static fn($c)=>$c['kind']==='operational'&&$c['delegable']===true);}
+    public static function catalog():array{return array_filter(InternalCapabilityCatalog::all(),static fn($c)=>$c['kind']==='operational'&&$c['delegable']===true&&in_array($c['domain'],['media_review','physician_requests'],true));}
     public function handle(array $cookies,string $action,array $b):array
     {
         Service::keys($b,$action==='intentions'?['case_id']:['case_id','expected_case_version','expected_version','capabilities','operation_id']);

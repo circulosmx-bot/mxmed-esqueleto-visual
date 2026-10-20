@@ -148,7 +148,7 @@
     const entry=workspaceSections().find(v=>v.id===section),restricted=entry?.restricted;
     for(const id of ['summary','requests','images','history'])$(id+'-panel').hidden=restricted||section!==id;
     $('restricted-panel').hidden=!restricted;
-    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=['requests','images','history'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'El consumidor de soporte interno de esta sección no está conectado. La navegación no concede permisos de médico, operador, acceso clínico ni facultades comerciales.';
+    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=['requests','images','history'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'Pendiente de integración para el Asesor. Esta área aún no permite consultar ni modificar información desde este panel. Las funciones de médico, operador y proveedor conservan sus accesos independientes.';
       const n=sectionCount(section);$('restricted-summary').textContent=n>0?`${n} ${n===1?'pendiente visible':'pendientes visibles'} bajo tu permiso de resumen. Solicita atención a una persona autorizada mediante los canales habituales.`:'No hay un resumen de pendientes disponible para tu cuenta en esta sección.';
     }
     $('work-panel').setAttribute('aria-labelledby','tab-'+section);$('work-panel').dataset.doctorId=doctor||'';$('work-panel').dataset.requestId=selectedRequestId||'';$('work-panel').dataset.section=section;

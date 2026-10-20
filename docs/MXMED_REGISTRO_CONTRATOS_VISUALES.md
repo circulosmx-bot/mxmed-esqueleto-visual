@@ -167,3 +167,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-CONTROL04 — controles funcionales e índice solicitado
 
 [Contrato](identity/STAFF-CONTROL04.md): UI-2 para selección dependiente del catálogo, candidatos pendientes, intenciones y botón de simulación; UI-3 acotada al índice persistente/colapsable expresamente solicitado y quince pestañas. Shell, diálogos, grants individuales y navegación médica existente conservados. Rollback: cerrar el runner owned y volver a la rama baseline sin promover cambios a 8091; no se ensaya rollback destructivo de datos. Chromium/WebKit en 1440×900, 1366×768 y 390×844, evidencia en el contrato. Aceptación visual Director PENDING, Safari físico NOT_RUN; smoke móvil no certifica adaptación final.
+
+## STAFF-CONTROL05 — corrección contextual aislada
+
+[Contrato e inventario](identity/STAFF-CONTROL05.md). Corrección UI-2 expresamente solicitada: siguiente acción según elegibilidad canónica, controles futuros omitidos, cancelación secundaria, facultades previstas frente a permisos activos y progreso visible. Shell/modal-scroll conservados. Índice explica apertura en ventana independiente mediante launcher; cuatro contextos no habilitados. Aceptación visual PENDING; sin promoción a 8091.

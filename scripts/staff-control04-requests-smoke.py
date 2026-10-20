@@ -6,8 +6,8 @@ from playwright.sync_api import sync_playwright,expect
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def module(name,path):
  s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
-def run(path):
- review=module('requests_review',ROOT/'scripts/staff-control04-review.py')
+def run(path,review_script='staff-control04-review.py',evidence='staff-control04'):
+ review=module('requests_review',ROOT/'scripts'/review_script)
  owned,approval=review.owned_configuration(path);info,origin,expiry,record=review.verified_preview(owned,approval)
  env=json.loads((owned/'review-env.json').read_text())
  conn=pymysql.connect(unix_socket=str(owned/'mysql.sock'),user='ase_fixture',password=env['ASE_INT02A_FIXTURE_PASSWORD'],database=env['MXMED_DB_NAME'],autocommit=True)
@@ -24,7 +24,7 @@ def run(path):
  fixture=json.loads((owned/'workspace02-fixture.json').read_text())
  helpers=module('requests_existing',ROOT/'scripts/ase-advisor-workspace03-browser.py');ws=helpers.ws
  results={'checks':[],'fixture_note':'Existing WORKSPACE02 prepare sets synthetic Aurora active/FREE; not a Media decision effect.'}
- out=ROOT/'docs/evidence/staff-control04/requests-smoke.json'
+ out=ROOT/'docs/evidence'/evidence/'requests-smoke.json'
  def check(name,ok):
   results['checks'].append({'name':name,'pass':bool(ok)});out.write_text(json.dumps(results,indent=2));print(('PASS ' if ok else 'FAIL ')+name,flush=True);assert ok,name
  with sync_playwright() as pw:

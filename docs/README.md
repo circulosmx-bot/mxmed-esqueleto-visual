@@ -194,3 +194,7 @@ Los enlaces son candidatos de selección, no una lista obligatoria de ejecución
 ## STAFF-CONTROL04 — incorporación, acceso manual e índice de interfaces
 
 [Contrato, matriz de quince dominios y guía de revisión](identity/STAFF-CONTROL04.md). Consultar para catálogo estado/municipio, facultades preparadas frente a efectivas, simulación del solicitante, login Director y seis entradas de desarrollo. Sucesor acotado de WORKSPACE03; sus consumidores Requests/Media permanecen canónicos. Cuatro superficies se documentan indisponibles, sin impersonación ni aplicaciones nuevas. Operación sólo sintética owned.
+
+## STAFF-CONTROL05 — corrección contextual aislada
+
+[Contrato e inventario](identity/STAFF-CONTROL05.md). Entrada para situación de pendientes, edición frente a reemisión, selección de facultades realmente conectadas, progreso de simulación y comandos de ventanas independientes. Matriz de quince áreas y guía de revisión acotada; no nuevos módulos.

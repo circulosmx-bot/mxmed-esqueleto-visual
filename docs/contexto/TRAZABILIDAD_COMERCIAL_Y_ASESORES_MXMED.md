@@ -250,3 +250,7 @@ COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta g
 ## STAFF-CONTROL04 — preparación de facultades y límites de soporte
 
 [Contrato y matriz](../identity/STAFF-CONTROL04.md). COM-10 incorpora configuración pendiente, explícitamente inefectiva hasta admisión y confirmación individual vigente por Director. No es asignación comercial ni cartera. Quince dominios distinguen consumidores operativos, resumen autorizado y conexión ausente. Facturación/pagos, plan médico, proveedor, operadores y clínica no heredan acceso del rol staff. COM-01..09, D01–D08, suscripción, comisiones, cobros y datos fiscales permanecen intactos. Índice de desarrollo no acredita operación comercial ni contexto médico.
+
+## STAFF-CONTROL05 — corrección contextual aislada
+
+[Contrato e inventario](../identity/STAFF-CONTROL05.md). COM-10 distingue facultad prevista de permiso activo con confirmación individual posterior. Cuatro dominios tienen cobertura operativa de soporte y once quedan pendientes; funciones comerciales existentes en otros contextos no se vuelven facultades de Asesor. COM-01..09, pagos, planes, ownership y D01–D08 sin cambios.

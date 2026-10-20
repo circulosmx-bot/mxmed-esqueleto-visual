@@ -256,3 +256,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-CONTROL04 — J01/J02/J04/J09 y frontera J07/J08
 
 [Contrato](../identity/STAFF-CONTROL04.md). Catálogo Consultorio (J04) → selección estado/municipio → misma versión personal staff; no writer nuevo de ubicaciones. Director prepara caso/intenciones → solicitante sintético se registra/verifica/acepta/confirma/presenta evidencia (J01/J02) → Director revisa con MFA/admite → confirma grants individuales. El worker nunca ejecuta los dos últimos pasos. Requests/Media (J09) conservan contexto, decisiones y audit; lectura de resumen no concede detalle. Índice no transfiere sesión ni permisos a médico/operador/proveedor. J07/J08 se describen como fronteras existentes, sin conexión operacional nueva. Fallo o expiración owned requiere conciliación/recreación, no extensión de TTL ni replay ciego.
+
+## STAFF-CONTROL05 — corrección contextual aislada
+
+[Contrato e inventario](../identity/STAFF-CONTROL05.md). J01/J02: lector de estado de simulación no inicia operaciones; hitos sólo tras registro/verificación, binding, confirmación y evidencia canónicos. Respuesta perdida se recupera por la misma operación/caso. J09 conserva Media/Requests e historia. Cancelar usa estado REVOKED para invalidar aceptación; no elimina la cuenta. Navegación entre roles usa ventanas independientes, sin cookies compartidas.

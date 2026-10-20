@@ -17,8 +17,8 @@ def setup(r,check):
  sql(f"INSERT INTO catalog_cp_colonias(cp,colonia,municipio,estado,is_active) SELECT TRIM(d_codigo),{a},{b},{c},1 FROM sepomex WHERE d_codigo REGEXP '^[0-9]{{5}}$' AND {a}<>'' GROUP BY TRIM(d_codigo),{a},{b},{c} ON DUPLICATE KEY UPDATE municipio=VALUES(municipio),estado=VALUES(estado),is_active=1")
  sql(f"GRANT SELECT ON `{db}`.catalog_cp_colonias TO 'ase_writer'@'127.0.0.1'")
  states=sql('SELECT estado,COUNT(DISTINCT municipio) FROM catalog_cp_colonias WHERE is_active=1 GROUP BY estado ORDER BY estado')
- r['ROOT'].joinpath('docs/evidence/staff-control04').mkdir(parents=True,exist_ok=True)
- (root/'docs/evidence/staff-control04/geography-source.json').write_text(json.dumps({'source':'db_backups/sepomex_20251115_114415.sql','sha256':hashlib.sha256((root/'db_backups/sepomex_20251115_114415.sql').read_bytes()).hexdigest(),'states':[{'state':v[0],'municipalities':v[1]} for v in states],'identifier_contract':'Existing natural keys estado/municipio; colony row id is not a city id.'},ensure_ascii=False,indent=2))
+ out=r.get('OUT',root/'docs/evidence/staff-control04');out.mkdir(parents=True,exist_ok=True)
+ (out/'geography-source.json').write_text(json.dumps({'source':'db_backups/sepomex_20251115_114415.sql','sha256':hashlib.sha256((root/'db_backups/sepomex_20251115_114415.sql').read_bytes()).hexdigest(),'states':[{'state':v[0],'municipalities':v[1]} for v in states],'identifier_contract':'Existing natural keys estado/municipio; colony row id is not a city id.'},ensure_ascii=False,indent=2))
  env['MXMED_STAFF_CONTROL04']='1'
  approval=json.loads((owned/'workflow-approval.json').read_text())
  for pattern in ['scripts/staff-control04*','modules/identity/db/migrations/2026_10_19_01_staff_capability_intentions.sql','internal/development/*.php','assets/js/staff-workflow.js','assets/js/internal-team.js','assets/js/staff-workspace.js','assets/css/staff-development-index.css','public/identity/acceso.php','public/identity/identity-access.js']:
@@ -27,7 +27,7 @@ def setup(r,check):
  check('Existing Consultorio geographic catalog imported into owned DB only',len(states)>1)
 
 def run(r,check,races):
- root,owned,env=[r[k] for k in ['ROOT','owned','env']];r['OUT']=root/'docs/evidence/staff-control04'
+ root,owned,env=[r[k] for k in ['ROOT','owned','env']];r.setdefault('OUT',root/'docs/evidence/staff-control04')
  def cli(file,action='',body=None):
   p=subprocess.run(['php',file]+([action] if action else []),cwd=root,env=env,input=json.dumps(body or {}),text=True,capture_output=True)
   if p.returncode:(owned/'staff04-fixture-error.log').write_text(p.stderr);raise RuntimeError('owned_fixture_failed')
@@ -51,7 +51,7 @@ def run(r,check,races):
    results.append({'name':name,'pass':bool(ok)});print(('PASS ' if ok else 'FAIL ')+name,flush=True)
    if not ok:raise AssertionError(name)
   try:
-   module('staff04_browser_'+str(time.time_ns()),root/'scripts/staff-control04-browser.py').run(r,focused,cli)
+   module('staff04_browser_'+str(time.time_ns()),root/r.get('BROWSER','scripts/staff-control04-browser.py')).run(r,focused,cli)
    for x in results:check(x['name'],x['pass'])
    break
   except Exception as e:

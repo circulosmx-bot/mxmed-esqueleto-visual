@@ -14,7 +14,8 @@ def run(root,owned,env,origin,deadline,resume_case=None):
  while time.time()<deadline and not (owned/'stop-review').exists():
   for path in owned.glob('simulation-adm_*.json'):
    if path.is_symlink():continue
-   data=json.loads(path.read_text())
+   try:data=json.loads(path.read_text())
+   except (ValueError,OSError):continue
    if resume_case is not None and data['case_id']!=resume_case:continue
    if data['state']!=('RESUME_VERIFIED' if resume_case else 'QUEUED'):continue
    data.update(state='RUNNING',message='Cuenta ficticia e incorporación en curso.');save(path,data)
@@ -31,6 +32,7 @@ def run(root,owned,env,origin,deadline,resume_case=None):
     else:
      account=cli('register',email)['account_id'];data['account_id']=account;save(path,data)
     if not existing or existing[1] is None:cli('verify',email)
+    data.setdefault('stages',['requested']);data['stages'].append('identity');save(path,data)
     version=row('SELECT version FROM auth_staff_admission_cases WHERE case_id=%s',(data['case_id'],))[0]
     with sync_playwright() as pw:
      browser=pw.chromium.launch();context=browser.new_context(ignore_https_errors=True);p=context.new_page()
@@ -42,13 +44,18 @@ def run(root,owned,env,origin,deadline,resume_case=None):
      bound=row('SELECT bound_account_id FROM auth_staff_admission_cases WHERE case_id=%s',(data['case_id'],))[0]
      if bound is not None:assert bound==account, 'exact_binding_required'
      if bound is None:call('accept',{'operation_id':str(uuid.uuid4()),'case_id':data['case_id'],'expected_version':int(version),'invitation_id':data['invitation_id'],'token':message['token']})
+     assert row('SELECT bound_account_id FROM auth_staff_admission_cases WHERE case_id=%s',(data['case_id'],))[0]==account
+     data['stages'].append('accepted');save(path,data)
      if row('SELECT state FROM auth_staff_admission_cases WHERE case_id=%s',(data['case_id'],))[0]!='PERSON_CONFIRMED':call('confirm',{'operation_id':str(uuid.uuid4()),'case_id':data['case_id'],'expected_version':int(version)})
+     assert row('SELECT state FROM auth_staff_admission_cases WHERE case_id=%s',(data['case_id'],))[0]=='PERSON_CONFIRMED'
+     data['stages'].append('confirmed');save(path,data)
      p.reload();p.locator('#wf-cases').select_option(data['case_id']);p.wait_for_timeout(300)
      p.locator('#wf-front').set_input_files(str(owned/'synthetic.png'));p.locator('#wf-back').set_input_files(str(owned/'synthetic.png'));p.locator('#wf-justification').fill('Imágenes geométricas ficticias para revisión local, sin documento personal.');p.locator('#wf-add-document').click();p.locator('#wf-documents').get_by_text('INE: 2 cara(s) añadidas',exact=True).wait_for()
      p.locator('#wf-consent').check();p.locator('#wf-submit').click();p.wait_for_timeout(500)
      assert row('SELECT set_id FROM auth_staff_document_sets WHERE case_id=%s',(data['case_id'],)), 'submission_unconfirmed'
+     data['stages'].append('evidence');save(path,data)
      browser.close()
-    conn.close();data.update(state='REVIEW_REQUIRED',message='Solicitante ficticio vinculado, datos confirmados y evidencia artificial presentada. Cierra y abre la solicitud para consultar evidencia, aceptar revisión y aprobar admisión con tu contraseña y MFA. Después confirma las facultades pendientes.')
+    conn.close();data['stages'].append('review');data.update(state='REVIEW_REQUIRED',message='Solicitante ficticio vinculado, datos confirmados y evidencia artificial presentada. Lista para revisión del Director. La revisión y admisión requieren tu contraseña y MFA; las facultades se confirman después.')
    except Exception as e:
     data.update(state='RECONCILIATION_REQUIRED',message='La simulación se detuvo sin repetir operaciones. Requiere comprobar el estado registrado; no se concedieron permisos desde la simulación.')
     (owned/'simulation-private-error.log').write_text(type(e).__name__+': '+str(e))

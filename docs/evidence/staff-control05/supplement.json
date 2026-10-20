@@ -1,0 +1,114 @@
+{
+  "checks": [
+    {
+      "name": "Registered unbound candidate has contextual status and zero review controls",
+      "pass": true
+    },
+    {
+      "name": "Saved intended capability survives reload and is never labelled active",
+      "pass": true
+    },
+    {
+      "name": "Disconnected capability rejected by server, not only hidden by UI",
+      "pass": true
+    },
+    {
+      "name": "Prepared capability cannot activate before admission",
+      "pass": true
+    },
+    {
+      "name": "Editing registered preparation never silently recreates invitation",
+      "pass": true
+    },
+    {
+      "name": "Separate confirmed reissuance replaces previous token and uses current version",
+      "pass": true
+    },
+    {
+      "name": "Operation status reader never queues a simulation",
+      "pass": true
+    },
+    {
+      "name": "Lost enqueue response recovers by status polling with stable operation identity",
+      "pass": true
+    },
+    {
+      "name": "Recovery shows six verified stages and next protected review action",
+      "pass": true
+    },
+    {
+      "name": "Simulation completion is REVIEW_REQUIRED with no staff or effective grants",
+      "pass": true
+    },
+    {
+      "name": "Cancellation invalidates effective invitation while preserving canonical history",
+      "pass": true
+    },
+    {
+      "name": "Cancelled invitation cannot bind a legitimate account; unrelated account survives",
+      "pass": true
+    },
+    {
+      "name": "Pending cancellation endpoint refuses already admitted staff",
+      "pass": true
+    },
+    {
+      "name": "Advisor cannot read Director simulation status or prepare faculties",
+      "pass": true
+    },
+    {
+      "name": "Index has two precise launcher commands, one session link and four truthful unavailable contexts",
+      "pass": true
+    },
+    {
+      "name": "Index has two precise launcher commands, one session link and four truthful unavailable contexts",
+      "pass": true
+    },
+    {
+      "name": "Fifteen fixed domains distinguish pending integration in ordinary Spanish",
+      "pass": true
+    },
+    {
+      "name": "Media decision/history preserve hidden physician publication boundary",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 pending modal scroll and footer remain accessible",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 development commands wrap without horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 pending modal scroll and footer remain accessible",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 development commands wrap without horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 pending modal scroll and footer remain accessible",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 development commands wrap without horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 pending modal scroll and footer remain accessible",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 development commands wrap without horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "No browser JavaScript errors",
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "result": "PASS"
+}

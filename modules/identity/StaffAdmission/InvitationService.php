@@ -51,7 +51,8 @@ final class InvitationService
             if($action==='case_status'){
                 $this->director($actor);
                 $case=$this->row('SELECT * FROM auth_staff_admission_cases WHERE case_id=? FOR UPDATE',[$b['case_id']]);
-                $inv=$this->query('SELECT invitation_id,state,delivery_state,expires_at FROM auth_staff_admission_invitations WHERE case_id=? ORDER BY issued_at DESC,invitation_id DESC LIMIT 1',[$case['case_id']])->fetch(PDO::FETCH_ASSOC);
+                $inv=$this->query('SELECT invitation_id,case_version,state,delivery_state,expires_at,last_observed_at FROM auth_staff_admission_invitations WHERE case_id=? ORDER BY issued_at DESC,invitation_id DESC LIMIT 1',[$case['case_id']])->fetch(PDO::FETCH_ASSOC);
+                if($inv){$inv['usable']=$case['state']==='PREPARING'&&$case['bound_account_id']===null&&$inv['state']==='ACTIVE'&&(int)$inv['case_version']===(int)$case['version']&&$inv['expires_at']>$this->now($inv);}
                 Audit::append($this->pdo,$actor,$case['case_id'],'result',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),(int)$case['version'],'INVITATION_STATUS');
                 return ['case_id'=>$case['case_id'],'version'=>(int)$case['version'],'case_state'=>$case['state'],'account_bound'=>$case['bound_account_id']!==null,'invitation'=>$inv?:null];
             }

@@ -82,6 +82,7 @@ final class Service
                 $target=$this->query('SELECT status FROM internal_staff WHERE account_id=? FOR UPDATE',[$case['bound_account_id']])->fetchColumn();
                 if($target==='REMOVED')throw new \RuntimeException('admission_denied');
             }
+            if($action==='revoke'&&$case['bound_account_id']!==null&&$this->query('SELECT account_id FROM internal_staff WHERE account_id=? FOR UPDATE',[$case['bound_account_id']])->fetchColumn())throw new \RuntimeException('admission_denied');
             if($old){if(!hash_equals($old['request_digest'],$digest)||($case&&$old['case_id']!==$case['case_id']))throw new \RuntimeException('admission_conflict');return $this->outcome($old);}
             $now=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u');
             if($action==='prepare'){
