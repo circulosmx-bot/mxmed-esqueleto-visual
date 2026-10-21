@@ -218,3 +218,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## STAFF-DOC-VIS02 — acknowledgement y fecha de transporte
 
 [Contrato](../identity/STAFF-DOC-VIS02.md), [migración aditiva](../../modules/identity/db/migrations/2026_10_21_01_staff_document_ack.sql). Extiende CHECK de intent con ACK; ledger inmutable `auth_staff_document_acknowledgements` ligado a caso/versión/set/intent, actor/credencial/rol DIRECTOR, timestamp y audit canónico. No sustituye identity_reviews ni completions. `delivered_at` nullable registra ACK del puerto de transporte; sin backfill ni inferencia de correo externo. La composición actual sólo prepara sobre local. DDL exclusivamente ensayado en DB owned nueva, HTTP SELECT/INSERT para ledger; no migración real.
+
+## STAFF-DOC-LIFECYCLE03 — mismos objetos, sin nueva migración
+
+[Contrato](../identity/STAFF-DOC-LIFECYCLE03.md). Resolución histórica por case_id+set_id, revisión/ack por conjunto y recibo READ exacto. Nuevas entregas conservan assets/manifests anteriores; no modifica completions, cuentas ni grants. Misma metadata de retención/custodia y cifrado; no plazos nuevos ni borrado físico.

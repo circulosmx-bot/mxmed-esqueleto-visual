@@ -55,7 +55,7 @@
       $('directory-content').querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>navigate(()=>selectCase(b.dataset.case,true)));
       $('directory-content').inert=false;$('directory-content').setAttribute('aria-busy','false');
       if(automaticDetailEpoch!==detailEpoch)return; // A click made during directory loading takes precedence.
-      if(restore?.case)await selectCase(restore.case,false);else if(restore?.account)await select(restore.account,false);else if(data.items.length)await select(data.items[0].account_reference,false);
+      if(restore?.case){const admitted=data.items.find(m=>m.admission_case_id===restore.case);if(admitted)await select(admitted.account_reference,false);else await selectCase(restore.case,false);}else if(restore?.account)await select(restore.account,false);else if(data.items.length)await select(data.items[0].account_reference,false);
     }catch(error){if(epoch===listEpoch)failure(error);}finally{if(epoch===listEpoch){$('directory-content').inert=false;$('directory-content').setAttribute('aria-busy','false');if(automaticDetailEpoch===detailEpoch)$('advisor-detail').setAttribute('aria-busy','false');}}
   }
   async function select(reference,focus){
@@ -93,7 +93,7 @@
     const m=selected,master=m.governance_class==='MASTER_ADMIN';
     $('advisor-detail').innerHTML=`<header class="detail-header"><div class="detail-heading-row"><div><p class="eyebrow">${master?'Administrador maestro':'Asesor'}</p><h2 id="detail-title" tabindex="-1">${esc(personName(m))}</h2><span class="status ${m.staff_status==='ACTIVE'?'':'suspended'}">${staffStatus(m)}</span><p class="team-reference">Cuenta: ${esc(m.account_reference)}</p></div><div class="member-actions"><button id="lifecycle" type="button" class="lifecycle" disabled>${m.staff_status==='SUSPENDED'?'REACTIVAR':'SUSPENDER'} ${master?'MASTER':'ASESOR'}</button><button id="remove-member" type="button" class="lifecycle" disabled>DAR DE BAJA DEL EQUIPO</button></div></div></header>
       ${!master&&m.staff_status!=='ACTIVE'?`<p class="authority-note">${m.staff_status==='SUSPENDED'?'Este integrante está suspendido. Sus permisos no pueden modificarse mientras permanezca suspendido.':'Este integrante fue dado de baja. Sus permisos no pueden modificarse.'} <button type="button" id="return-active">Ver asesores activos</button></p>`:''}<details class="admission-section" id="personal-data"><summary>DATOS PERSONALES</summary>${window.staffPersonal?window.staffPersonal.summary(m):'<p>Información personal no disponible en tu ámbito.</p>'}${m.personal_editable?'<button type="button" id="member-edit">Editar datos personales</button>':''}</details>
-      <details class="admission-section" id="identity-evidence"><summary>DOCUMENTACIÓN</summary><p class="team-unavailable">${m.identity_review?(m.identity_review.current?'Revisión positiva vigente sobre las versiones presentadas. Los documentos se consultan sólo desde la solicitud con MFA.':'La evidencia o los datos cambiaron; la revisión anterior no acredita las versiones actuales.'):'Evidencia no disponible: este registro no tiene un caso de admisión conectado. No se infiere una revisión pendiente.'}</p>${m.documents?.length?'<ul>'+m.documents.map(d=>`<li>${esc(d.kind==='INE'?'Identificación INE':d.kind==='PASSPORT'?'Pasaporte':d.kind)} · versión ${esc(d.version)} · ${esc(d.pages)} páginas</li>`).join('')+'</ul>':''}${m.admission_case_id?'<button type="button" id="member-evidence">Consultar revisión de identidad</button>':''}</details>
+      <details class="admission-section" id="identity-evidence"><summary>DOCUMENTACIÓN</summary>${m.admission_case_id?'<div id="member-documentation"></div>':'<p>No hay un expediente documental autorizado conectado a este registro.</p>'}</details>
       <details class="admission-access" open id="access-functions"><summary>ACCESO Y FUNCIONES</summary><div id="capabilities-form"><div class="matrix" id="operational-matrix"><h3 class="matrix-title">Permisos para usar funciones</h3>${matrix('use',m.grants)}
 </div>
       ${master&&authority.can_read_masters?`<details class="master-governance"><summary>Gestión y delegación para asesores</summary><label class="ack-row"><input id="master-management" type="checkbox" disabled ${m.management_granted?'checked':''}> Permiso vigente de administración de asesores</label><p>Usar una función y delegarla son hechos separados. Cada cambio exige una confirmación y autorización individual.</p><div id="delegation-matrix">${matrix('delegate',m.master_delegations||[],true)}</div></details>`:''}
@@ -107,7 +107,7 @@
     $('advisor-detail').querySelectorAll('[data-expand]').forEach(button=>button.onclick=()=>{const body=$(button.dataset.expand);body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));button.textContent=body.hidden?'Expandir':'Contraer';});
     window.staffPersonal?.loadPortrait(m);
     if($('member-edit'))$('member-edit').onclick=()=>navigate(()=>window.staffWorkflowDirectory.profile(m.admission_case_id));
-    if($('member-evidence'))$('member-evidence').onclick=()=>navigate(()=>window.staffWorkflowDirectory.open(m.admission_case_id));
+    if(m.admission_case_id)window.staffWorkflowDirectory.documents(m.admission_case_id,$('member-documentation'));
     if($('return-active'))$('return-active').onclick=()=>navigate(()=>{status='ACTIVE';page=1;q='';$('advisor-search').value='';return load();});
     editor.mount();masterFlow.mount();
   }
@@ -131,7 +131,7 @@
       listEpoch++;detailEpoch++;selected=null;authority=null;document.body.replaceChildren();location.replace('/public/identity/acceso.php?next='+encodeURIComponent('/internal/media-review/index.php?section=equipo'));
     }catch(_){say('No pudimos confirmar el cierre de sesión. Intenta nuevamente.');button.disabled=false;}
   });
-  window.staffWorkflowRefresh=()=>{const restore=selectedCase?{case:selectedCase}:{account:selected?.account_reference},personalOpen=$('personal-data')?.open,openSections=[...document.querySelectorAll('#staff-case details[open][id]')].map(e=>e.id),message=$('staff-case-status')?.textContent;return navigate(async()=>{await load(restore);if(personalOpen&&$('personal-data'))$('personal-data').open=true;if(restore.case&&$('staff-case-status')){$('staff-case-status').textContent=message||'';openSections.forEach(id=>{if($(id))$(id).open=true;});}});};
+  window.staffWorkflowRefresh=()=>{const restore=selectedCase?{case:selectedCase}:{account:selected?.account_reference},personalOpen=$('personal-data')?.open,documentsOpen=$('identity-evidence')?.open,openSections=[...document.querySelectorAll('#staff-case details[open][id]')].map(e=>e.id),message=$('staff-case-status')?.textContent;return navigate(async()=>{await load(restore);if(documentsOpen&&$('identity-evidence'))$('identity-evidence').open=true;if(personalOpen&&$('personal-data'))$('personal-data').open=true;if(restore.case&&$('staff-case-status')){$('staff-case-status').textContent=message||'';openSections.forEach(id=>{if($(id))$(id).open=true;});}});};
   window.addEventListener('staff-workflow-changed',()=>window.staffWorkflowRefresh());
   load();
 })();

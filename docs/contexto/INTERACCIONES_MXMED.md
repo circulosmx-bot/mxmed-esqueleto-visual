@@ -280,3 +280,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-DOC-VIS02 — J09, examen y respuesta a corrección
 
 [Contrato](../identity/STAFF-DOC-VIS02.md). READ → overview → ampliar/volver → cerrar sin acknowledgement o ACK explícito con step-up propio → estado Documentos revisados. CORRECTIONS conserva razón/actor/set/audit; cuenta vinculada consulta su solicitud y reenvía conjunto por submit. Nueva versión invalida revisión/ack actuales sin borrar antecedentes; Director sigue el mismo caso. No notificación externa.
+
+## STAFF-DOC-LIFECYCLE03 — J09 documental independiente
+
+[Contrato](../identity/STAFF-DOC-LIFECYCLE03.md). Integrante → DOCUMENTACIÓN actual/historial → READ exacto con password/MFA → visor y retorno sin decisión. Titular → sustitución/corrección/adición justificada → nuevo set/versiones → nueva revisión independiente. Completion, estado staff y grants se conservan.

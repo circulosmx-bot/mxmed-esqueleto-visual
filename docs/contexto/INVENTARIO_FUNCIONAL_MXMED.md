@@ -413,3 +413,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-DOC-VIS02 — ID-02/03/07 y COM-10
 
 [Contrato](../identity/STAFF-DOC-VIS02.md). P=examen separado de aprobación; S=ACK versionado y auditable, invitaciones legibles y corrección contextual; C=mismo UnitOfWork/Identity/MFA, nueva acción específica sin proof reutilizable; V=verificación dirigida en contrato; O=owned sintético, sin activación normal-local. Advisor/Master sin nueva facultad.
+
+## STAFF-DOC-LIFECYCLE03 — ID-02/03/07 y COM-10
+
+[Contrato](../identity/STAFF-DOC-LIFECYCLE03.md). P=consulta persistente y actualización controlada autorizadas; S=READ exacto independiente de currentSet, submit post-admisión; C=Identity/MFA/StaffMedia/writers originales; V=verificación dirigida en contrato; O=sólo owned sintético. No nueva facultad para Master/Advisor.

@@ -6,6 +6,7 @@ const labels={given_names:'Nombre(s)',first_surname:'Primer apellido',second_sur
 const actions={READ:'Consultar evidencia',ACK:'Confirmar revisión de documentos',CORRECTIONS:'Solicitar correcciones',ACCEPT:'Aceptar evidencia y concluir revisión',REJECT:'Rechazar evidencia',ADMIT:'Aprobar admisión'};
 let actor=null,caseEpoch=0,mountedCase=null,preparationDirty=false;
 let enhanced=false,locations=[],intentionData=null,simulationData=null,pollTimer=null,pollEpoch=0;
+let documentHost=null;
 let csrf='',director=false,busy=false,wizard=null,step=0,caseData=null,caseView=null,caseInvitation=null,intent=null,recoveryKey='',recovered=null,reviewPending=null;
 const name=c=>Object.keys(labels).slice(0,3).map(k=>c.profile?.[k]).filter(Boolean).join(' ');
 const say=m=>{$('wf-status').textContent=m;},changed=()=>setTimeout(()=>window.dispatchEvent(new Event('staff-workflow-changed')),0);
@@ -34,7 +35,7 @@ async function geography(prefix,values){
 function profile(prefix){return Object.fromEntries(Object.keys(labels).map(k=>[k,$(prefix+'-'+k).value.trim()]));}
 function show(id){const d=$(id);d.showModal();const heading=d.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}d.querySelector('.team-dialog-body')?.scrollTo(0,0);}
 function controls(){for(const id of ['staff-challenge','staff-execute'])$(id).disabled=busy;for(const e of document.querySelectorAll('#edit-preparation select'))e.disabled=busy||e.dataset.geoLoading==='true'||e.id==='edit-operation_city'&&!$('edit-operation_state')?.value;if(!wizard)return;const locked=busy||!!wizard.pending&&wizard.pending.state!=='NONCOMMIT';for(const id of ['save-onboarding','next-onboarding','previous-onboarding'])$(id).disabled=locked;$('onboarding-content').querySelectorAll('input,select').forEach(e=>{e.disabled=locked||e.dataset.geoLoading==='true'||e.tagName==='SELECT'&&!['new-channel','new-image-mode','new-avatar','new-operation_state','new-operation_city'].includes(e.id)||e.id==='new-operation_city'&&!$('new-operation_state')?.value||e.id==='new-channel'&&!!wizard.case_id;});$('check-onboarding').hidden=!wizard.pending;$('check-onboarding').disabled=busy;}
-async function work(status,fn){if(busy)return;busy=true;$('staff-case-content').inert=true;controls();try{await fn();}catch(e){$(status).textContent=e.message;}finally{busy=false;$('staff-case-content').inert=false;if(!$('staff-stepup').open){intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}controls();}}
+async function work(status,fn){if(busy)return;busy=true;$('staff-case-content').inert=true;controls();try{await fn();}catch(e){$(status).textContent=e.message;if(documentHost&&status==='staff-case-status'){const note=documentHost.querySelector('[data-document-status]');if(note)note.textContent=e.message;}}finally{busy=false;$('staff-case-content').inert=false;if(!$('staff-stepup').open){intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}controls();}}
 for(const id of ['onboarding','staff-profile','staff-stepup'])$(id).addEventListener('cancel',e=>{e.preventDefault();close(id);});
 
 function close(id){
@@ -173,7 +174,7 @@ const facultyCopy={
  physician_new_profile_resolve:['Resolver solicitud de perfil nuevo','Decisión sobre la solicitud exacta, con contraseña/MFA. La aprobación crea sólo el perfil permitido; no lo publica ni activa servicios.']
 };
 function detachCase(){
- window.staffEvidenceViewer?.clear();clearTimeout(pollTimer);pollEpoch++;caseEpoch++;mountedCase=null;preparationDirty=false;
+ documentHost=null;window.staffEvidenceViewer?.clear();clearTimeout(pollTimer);pollEpoch++;caseEpoch++;mountedCase=null;preparationDirty=false;
  $('staff-case-parking').append($('staff-case'));
 }
 async function loadCase(id){
@@ -181,11 +182,12 @@ async function loadCase(id){
  const data=await api('case',{case_id:id});
  if(data.state==='REVOKED'){if(epoch!==caseEpoch||mountedCase!==id)return;caseData=data;preparationDirty=false;$('detail-title').textContent=name(data);document.querySelector('#advisor-detail .detail-header .status').textContent='Incorporación cancelada';$('staff-case-content').innerHTML='<p>Incorporación pendiente cancelada. La invitación ya no se puede aceptar; la cuenta y el historial se conservan.</p>';return;}
  const view=await api('view',{case_id:id});
+ if(documentHost){if(epoch!==caseEpoch||mountedCase!==id)return;caseData=data;caseView=view;preparationDirty=false;renderDocumentation();return;}
  const invitation=director?(await api('invitation_status',{case_id:id})).invitation:null;
  const intentions=enhanced&&director?await api('intentions',{case_id:id}):null;
  const simulation=enhanced&&director?await api('simulation_status',{case_id:id}):null;
  if(epoch!==caseEpoch||mountedCase!==id)return;
- caseData=data;caseView=view;caseInvitation=invitation;intentionData=intentions;simulationData=simulation;preparationDirty=false;renderCase();
+ caseData=data;caseView=view;caseInvitation=invitation;intentionData=intentions;simulationData=simulation;preparationDirty=false;if(documentHost)renderDocumentation();else renderCase();
  if(['QUEUED','RUNNING'].includes(simulationData?.state))scheduleProgress(id,pollEpoch);
 }
 function invitationLabel(){
@@ -230,7 +232,7 @@ async function pollProgress(id,epoch){
 }
 function renderCase(){
  const id=caseData.case_id,version=caseData.version,available=caseView.available_actions;
- const primary=available.includes('ADMIT')?'ADMIT':available.includes('ACCEPT')?'ACCEPT':available.includes('READ')?'READ':null;
+ const primary=caseView.admitted?null:available.includes('ADMIT')?'ADMIT':available.includes('ACCEPT')?'ACCEPT':available.includes('READ')?'READ':null;
  const headline=caseView.review_current&&caseView.review?.decision==='CORRECTIONS'?'Correcciones solicitadas — Pendiente de nueva entrega':caseView.admitted?'Admisión registrada':primary==='ADMIT'?'Evidencia aceptada — Aprobar admisión':primary?(simulationData?.state==='REVIEW_REQUIRED'?'Simulación completada — Lista para revisión del Director':'Lista para revisión del Director'):'Pendiente de completar incorporación';
  const remaining=!caseData.account_bound?'La persona debe aceptar su invitación con una cuenta Identity y confirmar sus datos.':caseData.state!=='PERSON_CONFIRMED'?'La persona debe confirmar la versión vigente de sus datos.':!caseView.sets.length?'La persona debe presentar su evidencia de identidad.':'La evidencia o revisión debe corresponder a los datos vigentes.';
  $('staff-case-title').textContent=name(caseData)||'Solicitud de incorporación';
@@ -248,6 +250,7 @@ function renderCase(){
  }
  if(caseView.review){const review=caseView.review;$('staff-case-content').insertAdjacentHTML('beforeend','<section id="correction-history"><h3>'+esc(review.decision==='CORRECTIONS'?'Correcciones solicitadas':'Antecedente de revisión')+'</h3><p>'+esc(review.reason)+'</p><p>'+(caseView.review_current?'Corresponde al conjunto vigente.':'La nueva entrega requiere revisión independiente; se conserva el antecedente.')+'</p><small>Cuenta revisora: '+esc(review.reviewer_account_id)+' · Auditoría: '+esc(review.audit_event_id)+'</small></section>');}
  renderIntentions();
+ $('staff-case-content').insertAdjacentHTML('beforeend','<details class="admission-section" open><summary>DOCUMENTACIÓN</summary><div id="case-documentation"></div></details>');renderDocumentation($('case-documentation'));
  $('staff-case-content').insertAdjacentHTML('beforeend',`<details class="admission-section" id="invitation-details"><summary>Consultar invitación</summary><p>${esc(invitationLabel())}</p>${invitationDetails()}</details>`);
  if(!caseData.account_bound&&!caseView.admitted){
   $('staff-case-content').insertAdjacentHTML('beforeend','<details class="admission-section" id="edit-preparation"><summary>Editar preparación</summary><p>Guarda sólo datos. No crea ni reenvía invitaciones. Si ya existe una, el cambio de versión exige una nueva emisión autorizada por separado.</p>'+fields('edit',caseData.profile)+'<button type="button" id="save-preparation-edit">Guardar datos preparados</button></details>');geography('edit',caseData.profile);
@@ -263,15 +266,32 @@ function renderCase(){
  if(!caseView.admitted){$('staff-case-content').insertAdjacentHTML('beforeend','<details class="admission-section"><summary>Otras opciones</summary><button id="revoke-preparation" type="button">Cancelar incorporación</button><p>Se cancelará esta incorporación sin eliminar los datos y antecedentes registrados de la persona.</p></details>');$('revoke-preparation').onclick=()=>{if(confirm('¿Cancelar esta incorporación pendiente? Su invitación ya no podrá aceptarse. Se conservan la cuenta Identity, los documentos y el historial. No se da de baja a personal activo.'))work('staff-case-status',async()=>{await api('revoke',{case_id:id,expected_version:version,operation_id:uid()});clearTimeout(pollTimer);pollEpoch++;changed();say('Incorporación pendiente cancelada; invitación inutilizable e historial conservado.');});};}
  $('staff-case-content').querySelectorAll('[data-review-action]').forEach(button=>button.onclick=()=>begin(button.dataset.reviewAction));
 }
+function documentDate(value){if(!value)return 'Sin fecha registrada';const d=new Date(value.replace(' ','T')+'Z');return Number.isFinite(d.getTime())?d.toLocaleString('es-MX',{timeZone:'America/Mexico_City'})+' (Ciudad de México)':'Sin fecha registrada';}
+function renderDocumentation(host=documentHost){
+ if(!host)return;
+ const sets=caseView.sets,latest=sets[0];
+ const card=(set,historical)=>{
+  const docs=JSON.parse(set.manifest),r=set.review,a=set.acknowledgement;
+  return '<article data-document-set="'+esc(set.set_id)+'"><h4>Conjunto '+esc(set.sequence_number)+(historical?' · Histórico':' · Última entrega')+'</h4><p>Presentado: '+esc(documentDate(set.created_at))+'</p><ul>'+docs.map(d=>'<li>'+esc(d.kind==='INE'?'INE':'Pasaporte')+' · versión '+esc(d.document_version)+' · '+d.pages.map(p=>esc({FRONT:'Anverso',BACK:'Reverso',BIOGRAPHIC:'Página biográfica'}[p.side])).join(', ')+'<br>Motivo registrado: '+esc(d.justification)+'</li>').join('')+'</ul><p>'+esc(r?({ACCEPT:'Evidencia aceptada',REJECT:'Evidencia rechazada',CORRECTIONS:'Correcciones solicitadas'}[r.decision]):'Pendiente de revisión')+(r?' · Cuenta revisora: '+esc(r.reviewer_account_id)+' · '+esc(documentDate(r.created_at)):'')+'</p>'+(a?'<p>Documentos revisados · '+esc(a.reviewer_account_id)+' · '+esc(documentDate(a.created_at))+'</p>':'')+(!historical&&set.set_id!==caseView.current_set_id?'<p>Hay cambios posteriores; esta entrega no acredita la versión actual.</p>':'')+'<button type="button" data-consult-set="'+esc(set.set_id)+'">Consultar documentos'+(historical?' históricos':'')+'</button></article>';
+ };
+ host.innerHTML='<p data-document-status role="status" aria-live="polite"></p><h3>DOCUMENTACIÓN ACTUAL</h3>'+(latest?card(latest,false):'<p>Sin documentos presentados.</p>')+'<p>La consulta requiere tu contraseña actual de Director y un código MFA vigente. No acepta evidencia ni concede permisos.</p><h3>HISTORIAL DOCUMENTAL</h3>'+(sets.length>1?sets.slice(1).map(s=>card(s,true)).join(''):'<p>Sin versiones anteriores.</p>')+'<h3>Actualizar documentación</h3><p>La persona titular debe ingresar con su propia cuenta a <a href="/staff-admission.php" target="_blank" rel="noopener">su documentación</a> y presentar la sustitución, corrección de imagen o documento adicional justificado. No requiere otra admisión. El Director no puede cargar documentos en su nombre.</p>';
+ host.append($('staff-review-help').content.cloneNode(true));
+ host.querySelectorAll('[data-consult-set]').forEach(b=>{b.disabled=!caseView.can_consult;b.onclick=()=>begin('READ',b.dataset.consultSet);});
+ if(documentHost&&caseView.admitted){const area=document.createElement('div');area.className='member-actions';for(const action of caseView.available_actions.filter(a=>['ACCEPT','REJECT','CORRECTIONS'].includes(a))){const b=document.createElement('button');b.type='button';b.textContent=actions[action];b.dataset.reviewAction=action;b.onclick=()=>begin(action);area.append(b);}host.append(area);}
+}
+async function documents(id,host){
+ documentHost=host;mountedCase=id;host.textContent='Cargando documentación autorizada…';
+ try{await loadCase(id);}catch(e){host.textContent=e.message;}
+}
 async function mountCase(id){
- mountedCase=id;$('advisor-detail').innerHTML='<header class="detail-header"><p class="eyebrow">Incorporación de integrante</p><h2 id="detail-title" tabindex="-1">Cargando solicitud…</h2><span class="status">Pendiente de admisión</span></header>';
+ documentHost=null;mountedCase=id;$('advisor-detail').innerHTML='<header class="detail-header"><p class="eyebrow">Incorporación de integrante</p><h2 id="detail-title" tabindex="-1">Cargando solicitud…</h2><span class="status">Pendiente de admisión</span></header>';
  $('advisor-detail').append($('staff-case'));$('staff-case-title').hidden=true;$('staff-case-content').replaceChildren();$('staff-case-status').textContent='Cargando el caso autorizado…';
  try{await loadCase(id);if(mountedCase===id)$('staff-case-status').textContent='';}catch(e){if(mountedCase===id)$('staff-case-status').textContent=e.message;}
 }
 async function openCase(id){return window.staffSelectCase?.(id);}
 async function begin(action,expectedSet=null){if(reviewPending){say('Consulta primero el resultado pendiente. No se repetirá la operación.');return;}await work('staff-case-status',async()=>{
- await loadCase(caseData.case_id);if(expectedSet&&caseView.sets[0]?.set_id!==expectedSet)throw new Error('La evidencia cambió; consulta el conjunto vigente antes de confirmar su revisión.');if(!caseView.available_actions.includes(action))throw new Error('La acción ya no está disponible. Revisa el estado actual.');
- intent={action,case_id:caseData.case_id,set_id:caseView.sets[0].set_id};const role=actor?.class==='DIRECTOR'?'Director':actor?.class==='MASTER_ADMIN'?'Administrador maestro':'usuario autenticado';
+ await loadCase(caseData.case_id);if(action!=='READ'&&expectedSet&&caseView.current_set_id!==expectedSet)throw new Error('La evidencia cambió; consulta el conjunto vigente antes de confirmar su revisión.');if(!(action==='READ'?caseView.can_consult:caseView.available_actions.includes(action)))throw new Error('La acción ya no está disponible. Revisa el estado actual.');
+ intent={action,case_id:caseData.case_id,set_id:action==='READ'?(expectedSet||caseView.sets[0]?.set_id):caseView.current_set_id};const role=actor?.class==='DIRECTOR'?'Director':actor?.class==='MASTER_ADMIN'?'Administrador maestro':'usuario autenticado';
  $('staff-stepup-title').textContent=action==='CORRECTIONS'?'Solicitar corrección de documentos':actions[action];
  $('staff-corrections-description').hidden=action!=='CORRECTIONS';$('staff-corrections-channel').hidden=action!=='CORRECTIONS';$('staff-reason-caption').textContent=action==='CORRECTIONS'?'¿Qué necesita corregir?':'Motivo';
  $('staff-stepup-target').textContent=actions[action]+' de '+name(caseData)+' · versión '+caseData.version;
@@ -295,14 +315,14 @@ $('staff-execute').onclick=()=>work('staff-stepup-status',async()=>{
  const receipt=await api('review_result',{case_id:id,intent_id:reviewPending.intent_id});if(receipt.committed!==true||receipt.intent_id!==reviewPending.intent_id||receipt.case_id!==id||receipt.action!==action)throw new Error('No se confirmó la intención exacta. Consulta su resultado.');
  reviewPending=null;rememberReview();try{await loadCase(id);}catch(_){throw new Error('Operación confirmada; no pudimos actualizar la consulta. Cierra y consulta el caso antes de repetir acciones.');}$('staff-stepup').close();$('staff-case-status').textContent=actions[action]+': operación confirmada.';
  if(action==='READ'){
-  if(!evidenceSet||caseData.case_id!==id||caseData.version!==evidenceCaseVersion||caseView.sets[0]?.set_id!==evidenceSet.set_id)throw new Error('El caso o la evidencia cambió. Consulta el estado antes de abrir documentos de nuevo.');
-  window.staffEvidenceViewer.render({name:name(caseData),category:caseData.proposed_category,set:evidenceSet,review:caseView.review,reviewCurrent:caseView.review_current,ackCurrent:caseView.document_ack_current,actions:caseView.available_actions},result.pages);$('ack-staff-evidence').onclick=()=>{$('staff-evidence').close();begin('ACK',evidenceSet.set_id);};show('staff-evidence');
+  if(!evidenceSet||caseData.case_id!==id||caseData.version!==evidenceCaseVersion||result.case_id!==id||result.set_id!==evidenceSet.set_id||result.case_version!==Number(evidenceSet.case_version))throw new Error('El caso o la evidencia cambió. Consulta el estado antes de abrir documentos de nuevo.');
+  window.staffEvidenceViewer.render({name:name(caseData),category:caseData.proposed_category,set:evidenceSet,review:evidenceSet.review,reviewCurrent:!!evidenceSet.review,ackCurrent:!!evidenceSet.acknowledgement,historical:evidenceSet.set_id!==caseView.current_set_id,actions:evidenceSet.set_id===caseView.current_set_id?caseView.available_actions:[]},result.pages);$('ack-staff-evidence').onclick=()=>{$('staff-evidence').close();begin('ACK',evidenceSet.set_id);};show('staff-evidence');
  }else changed();
 });
 function rememberReview(){try{if(reviewPending)sessionStorage.setItem(recoveryKey+':review',JSON.stringify(reviewPending));else sessionStorage.removeItem(recoveryKey+':review');}catch(_){}$('review-reconcile').hidden=!reviewPending;}
 $('review-reconcile').onclick=()=>work('wf-status',async()=>{if(!reviewPending)return;const r=await api('review_result',{case_id:reviewPending.case_id,intent_id:reviewPending.intent_id});if(r.intent_id!==reviewPending.intent_id||r.case_id!==reviewPending.case_id||r.action!==reviewPending.action)throw new Error('La respuesta no corresponde a esta revisión.');if(r.committed===true){reviewPending=null;rememberReview();say('Operación confirmada. Consulta nuevamente el caso; no se volvió a ejecutar.');changed();}else if(r.outcome==='NOT_CONSUMED'&&r.expired===true){reviewPending=null;rememberReview();say('La intención venció sin ejecutar. Revisa el caso antes de iniciar otra acción con nueva verificación.');}else say('La intención aún no tiene un resultado confirmado. Puedes volver a consultar; no se reutilizará la prueba ni se enviará otra ejecución.');});
 window.staffWorkflowDirectory={
- mount:mountCase,detach:detachCase,canLeave(){if(busy||$('staff-stepup').open||$('staff-evidence').open){say('Finaliza la operación actual antes de cambiar de integrante.');return false;}return !preparationDirty||confirm('¿Descartar los cambios de preparación o facultades sin guardar?');},
+ mount:mountCase,documents,detach:detachCase,canLeave(){if(busy||$('staff-stepup').open||$('staff-evidence').open){say('Finaliza la operación actual antes de cambiar de integrante.');return false;}return !preparationDirty||confirm('¿Descartar los cambios de preparación o facultades sin guardar?');},
  async pending(q='',page=1){if(!director)throw new Error('pending_denied');return api('cases',{q,page,page_size:20,pending:true});},open:openCase,
  async profile(id){return window.staffPersonal.open(id);}
 };

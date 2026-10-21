@@ -1,0 +1,184 @@
+{
+  "result": "PASS",
+  "start_head": "e88a6dd387a3e9491cb99e6738cac55ba86c42c1",
+  "branch": "feature/mxmed-staff-doc-lifecycle03",
+  "source_sha256": {
+    "assets/js/internal-team.js": "c0bc1401d892ea1444dcf4dc6ddac923f0a0b28ffc485297c92df953c350ca72",
+    "assets/js/staff-applicant.js": "066aa1a7559434ccdc4cf930c80e83237e03ef5a28d7a54c2c49d14c5234c0c1",
+    "assets/js/staff-evidence-viewer.js": "d9663cf5cf3e401c5ccbf82f98d8cd2379693713ee54a98b22de682e0b141f6b",
+    "assets/js/staff-workflow.js": "e82adba7abc0c8ac1b93231463bf5456c781a213cb8e59e552fa4f82fbb42ab3",
+    "modules/identity/StaffWorkflow/Service.php": "2417f1f50ea9a4549be1a66ccb233c0c694157a03c172bfa6b31ff6f90f05905",
+    "partials/identity/staff-applicant.php": "7ac9644de8d5fba053418d0059192a9e5a2f6e83990ad3a3fb987eee6649413a",
+    "scripts/staff-doc-lifecycle03-browser.py": "114727906f6cb8d617727be22b2baf9b2639bbdc6d2efee1a26388d89a73817e",
+    "scripts/staff-doc-lifecycle03-qa.py": "1f5be9c245c99214df1a35ceb437d90383f9a7b6e7b0bdb766616cf2967883d4",
+    "scripts/staff-doc-lifecycle03-security.py": "b393e7d943ef5d57a38ee9053076041908532baf7a85ec98584f74de56554916",
+    "scripts/staff-doc-lifecycle03-review.py": "6b054a5c3841f82bf67517283dd7c2a01609722c17498537165b5a8fd1a1ba84"
+  },
+  "composition_and_functional_checks": 34,
+  "supplemental_security_checks": 16,
+  "canonical_audit_check": "PASS",
+  "protected_unchanged": true,
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc02": {
+      "head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxflow03": {
+      "head": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel04": {
+      "head": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel05": {
+      "head": "e4f4fb046acba6a75f20682d772cc2d4a197e8a8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel06": {
+      "head": "419fe1fc6d79b545aae3502a3f6991699fc4c685",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel07": {
+      "head": "ec8024dfd4c16237877f92a25f4351e2ec0bdc16",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel08": {
+      "head": "f486c42bd5272246a4a6b110d18affba641b29ff",
+      "status": ""
+    },
+    "mxmed-ase-adm02-oper09": {
+      "head": "5ca9bfa24b081afdc652d7f65443f3b80979f34e",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace01-r2": {
+      "head": "0dbccc946476f7f5e8e4de000e7f186913069a80",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace02-profile-requests": {
+      "head": "40b8691f94636909bfb448655939e91387f59fe5",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace03-physician-pending-groups": {
+      "head": "8d0dfef72d45253fc9827e22a1f451f6abd3c981",
+      "status": ""
+    },
+    "mxmed-staff-control04-cross-surface": {
+      "head": "f134ee3454000d97dc1df991b81f72eee7559274",
+      "status": ""
+    },
+    "mxmed-staff-control05-admission-simplification": {
+      "head": "ab6b78349c26b9f80906065dedfdb1210449726f",
+      "status": ""
+    },
+    "mxmed-staff-control06-director-ux": {
+      "head": "cbc92d964240a595e2804b4134fbe290cf02e226",
+      "status": ""
+    },
+    "mxmed-staff-control06-r2-director-layout": {
+      "head": "01d17ac8726f827841fcc8fc83c24b9f9ea003a6",
+      "status": ""
+    },
+    "mxmed-staff-control07-stable-navigation": {
+      "head": "486124b33bdc8179ffc58f5f4eaf0d06d99463b3",
+      "status": ""
+    },
+    "mxmed-staff-doc-vis01": {
+      "head": "15abdce80876f3f123b8d5954dae64ce1a1f40e6",
+      "status": ""
+    },
+    "mxmed-staff-doc-vis02": {
+      "head": "e88a6dd387a3e9491cb99e6738cac55ba86c42c1",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "physical_safari": "NOT_RUN",
+  "production_activation": false,
+  "director_visual_acceptance": "PENDING",
+  "context_sync": "PASS_UPDATED"
+}

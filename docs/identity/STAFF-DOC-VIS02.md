@@ -65,3 +65,7 @@ Martha → Revisar incorporación → contraseña y MFA → documentos. Ampliar 
 - CONTEXT_SYNC_STATUS: PASS_UPDATED.
 - DOCUMENTATION_COMMIT: mismo commit de implementación y evidencia de esta rama.
 - REMAINING_CONTEXT_GAPS: ninguno dentro del alcance; aceptación visual PENDING, Safari físico y activación real no realizados.
+
+## Sucesor documental STAFF-DOC-LIFECYCLE03
+
+[LIFECYCLE03](STAFF-DOC-LIFECYCLE03.md) sucede la navegación hacia documentos y habilita consulta histórica/actualización propia post-admisión en una rama nueva. Este documento conserva la evidencia histórica VIS02; su fixture pendiente puede haber sido admitido posteriormente por el Director durante la revisión.

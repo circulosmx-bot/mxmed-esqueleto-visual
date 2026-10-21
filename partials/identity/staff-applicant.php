@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);if(empty($staffWorkflowReady)){http_response_code(503);exit;} ?>
 <?php if(!empty($staffWorkflowApplicant)): ?><link rel="stylesheet" href="/assets/css/media-review-inbox.css"><?php endif; ?>
 <details class="admission-requests panel" id="admission-requests" <?php if(!empty($staffWorkflowApplicant))echo 'open'; ?>>
-<summary>Solicitudes de incorporación</summary>
+<summary>Mi incorporación y documentación</summary>
 <ol class="wizard-steps"><li>Persona</li><li>Documentos</li><li>Revisión</li><li>Admisión</li></ol>
 <p id="wf-status" role="status" aria-live="polite">Validando sesión…</p>
 <label class="wizard-field">Solicitud <select id="wf-cases"><option value="">Seleccionar</option></select></label><button id="wf-refresh" type="button">Actualizar</button>
@@ -12,7 +12,7 @@
 <details><summary>Aceptar invitación</summary><label class="wizard-field">Solicitud <input id="wf-inv-case"></label><label class="wizard-field">Invitación <input id="wf-inv-id"></label><label class="wizard-field">Código privado <input id="wf-token" type="password" autocomplete="off"></label><button id="wf-accept-invite" type="button">Vincular mi cuenta</button></details></div>
 </details>
 <details class="admission-section" open><summary>IDENTIDAD Y DOCUMENTACIÓN</summary>
-<div id="wf-upload" hidden><label class="wizard-field">Documento <select id="wf-kind"><option value="INE">INE: anverso y reverso</option><option value="PASSPORT">Pasaporte mexicano: página biográfica</option></select></label>
+<div id="wf-upload" hidden><h3>Actualizar documentación</h3><p>La nueva entrega conserva las versiones anteriores. No crea otra admisión ni cambia tus permisos. Presenta sólo documentos justificados.</p><label class="wizard-field">Tipo de actualización<select id="wf-update-mode"><option value="REPLACE">Sustituir documento existente</option><option value="CORRECT">Corregir imagen ilegible</option><option value="ADD">Agregar tipo de documento justificado</option></select></label><label class="wizard-field">Documento <select id="wf-kind"><option value="INE">INE: anverso y reverso</option><option value="PASSPORT">Pasaporte mexicano: página biográfica</option></select></label>
 <label class="wizard-field">Justificación <input id="wf-justification" maxlength="300" value="Verificación inicial de identidad"></label>
 <label class="wizard-field">Primera cara <input id="wf-front" type="file" accept="image/jpeg,image/png"></label><label class="wizard-field">Reverso INE <input id="wf-back" type="file" accept="image/jpeg,image/png"></label>
 <button id="wf-add-document" type="button">Añadir documento al envío</button><ul id="wf-documents"></ul>

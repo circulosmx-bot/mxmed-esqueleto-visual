@@ -218,3 +218,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-DOC-VIS02 — examen, invitación y correcciones
 
 [Contrato vigente y guía](identity/STAFF-DOC-VIS02.md). Sucede VIS01 en navegación y acknowledgement explícito; fuente de fechas y ciclo de corrección, con migración sólo ensayada en infraestructura owned.
+
+## STAFF-DOC-LIFECYCLE03 — documentos actuales e históricos
+
+[Consulta, actualización propia y guía de revisión](identity/STAFF-DOC-LIFECYCLE03.md). Sucesor dirigido de VIS02 para documentación después de admisión, mismo storage y controles canónicos.

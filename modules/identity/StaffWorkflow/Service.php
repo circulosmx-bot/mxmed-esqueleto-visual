@@ -37,6 +37,15 @@ final class Service
         if($account['status']!=='active'||$account['email_verified_at']===null||(int)$account['credential_version']!==(int)$c['binding_credential_version'])throw new \RuntimeException('workflow_binding_invalid');
         return $s;
     }
+    /** Consultation resolves an immutable exact set, independently of review eligibility. */
+    private function consultationSet(array $c,string $id):array
+    {
+        $s=$this->row('SELECT * FROM auth_staff_document_sets WHERE case_id=? AND set_id=?',[$c['case_id'],$id]);
+        if($s['actor_account_id']!==$c['bound_account_id']||$s['legal_reference']!==$this->legalReference)throw new \RuntimeException('workflow_denied');
+        $account=$this->row('SELECT a.status,a.email_verified_at,k.credential_version FROM auth_accounts a JOIN auth_account_credentials k USING(account_id) WHERE account_id=?',[$c['bound_account_id']]);
+        if($account['status']!=='active'||$account['email_verified_at']===null||(int)$account['credential_version']!==(int)$c['binding_credential_version'])throw new \RuntimeException('workflow_binding_invalid');
+        return $s;
+    }
     public function submit(array $cookies,array $b):array
     {
         self::keys($b,['case_id','expected_version','operation_id','documents','legal_reference','accepted']);
@@ -44,7 +53,7 @@ final class Service
         $id='set_'.str_replace('-','',self::uuidInput($b['operation_id']));
         return $this->unit->run($cookies,function($actor)use($b,$id){
             $c=$this->case($b['case_id']);$this->own($actor,$c);
-            if($c['state']!=='PERSON_CONFIRMED'||(int)$c['version']!==$b['expected_version']||$this->query('SELECT 1 FROM auth_staff_admission_completions WHERE case_id=?',[$c['case_id']])->fetchColumn())throw new \RuntimeException('workflow_stale');
+            if($c['state']!=='PERSON_CONFIRMED'||(int)$c['version']!==$b['expected_version'])throw new \RuntimeException('workflow_stale');
             $previous=[];foreach($this->query('SELECT manifest FROM auth_staff_document_sets WHERE case_id=? ORDER BY sequence_number',[$c['case_id']])->fetchAll(PDO::FETCH_COLUMN) as $history)foreach(json_decode($history,true) as $d)$previous[$d['document_id']]=$d;
             $manifest=[];$assets=[];$docs=[];
             if(count($b['documents'])<1||count($b['documents'])>4)throw new \RuntimeException('workflow_invalid'); // technical envelope, not production policy
@@ -125,22 +134,26 @@ final class Service
     {
         return $this->unit->run($cookies,function($a)use($id){$c=$this->case($id);
             if($c['bound_account_id']===$a->accountId())$this->own($a,$c);else $this->director($a,$c);
-            $sets=$this->query('SELECT set_id,case_version,sequence_number,manifest,created_at FROM auth_staff_document_sets WHERE case_id=? ORDER BY sequence_number DESC LIMIT 20',[$id])->fetchAll(PDO::FETCH_ASSOC);
+            $sets=$this->query('SELECT set_id,case_version,sequence_number,manifest,created_at FROM auth_staff_document_sets WHERE case_id=? ORDER BY sequence_number DESC',[$id])->fetchAll(PDO::FETCH_ASSOC);
+            foreach($sets as &$set){
+                $set['review']=$this->query('SELECT decision,reason,reviewer_account_id,audit_event_id,created_at FROM auth_staff_identity_reviews WHERE case_id=? AND set_id=? ORDER BY created_at DESC,review_id DESC LIMIT 1',[$id,$set['set_id']])->fetch(PDO::FETCH_ASSOC)?:null;
+                $set['acknowledgement']=$this->query('SELECT reviewer_account_id,reviewer_role,audit_event_id,created_at FROM auth_staff_document_acknowledgements WHERE case_id=? AND set_id=? ORDER BY created_at DESC,acknowledgement_id DESC LIMIT 1',[$id,$set['set_id']])->fetch(PDO::FETCH_ASSOC)?:null;
+            }unset($set);
             $review=$this->query('SELECT review_id,set_id,reviewer_account_id,audit_event_id,decision,reason,created_at FROM auth_staff_identity_reviews WHERE case_id=? ORDER BY created_at DESC,review_id DESC LIMIT 1',[$id])->fetch(PDO::FETCH_ASSOC)?:null;
             $ack=null;$ackCurrent=false;
             $ack=$this->query('SELECT acknowledgement_id,case_version,set_id,reviewer_account_id,reviewer_role,audit_event_id,created_at FROM auth_staff_document_acknowledgements WHERE case_id=? ORDER BY created_at DESC,acknowledgement_id DESC LIMIT 1',[$id])->fetch(PDO::FETCH_ASSOC)?:null;
-            $current=false;try{$s=$this->currentSet($c);$ackCurrent=$ack&&$ack['set_id']===$s['set_id']&&(int)$ack['case_version']===(int)$c['version'];$current=$review&&$review['set_id']===$s['set_id'];}catch(\RuntimeException){}
+            $current=false;$currentSetId=null;try{$s=$this->currentSet($c);$currentSetId=$s['set_id'];$ackCurrent=$ack&&$ack['set_id']===$s['set_id']&&(int)$ack['case_version']===(int)$c['version'];$current=$review&&$review['set_id']===$s['set_id'];}catch(\RuntimeException){}
             $admitted=(bool)$this->query('SELECT 1 FROM auth_staff_admission_completions WHERE case_id=?',[$id])->fetchColumn();$actions=[];
             // Eligibility projection only: each operation revalidates all authority and versions.
             if($c['bound_account_id']!==$a->accountId()){
                 try{$s=$this->currentSet($c);$actions[]='READ';if($this->hasRead($a,$c,$s['set_id']))$actions[]='ACK';
-                    if(!$admitted){$actions[]='CORRECTIONS';$actions[]='REJECT';
+                    {$actions[]='CORRECTIONS';$actions[]='REJECT';
                         if($this->query("SELECT 1 FROM auth_staff_review_intents WHERE case_id=? AND set_id=? AND actor_account_id=? AND session_id=? AND action='READ' AND consumed_at IS NOT NULL AND expires_at>UTC_TIMESTAMP(6)",[$id,$s['set_id'],$a->accountId(),(string)$a->session()->sessionId()])->fetchColumn()){$actions[]='ACCEPT';}
-                        try{$this->approved($c);if($c['proposed_category']==='ADVISOR'&&!$this->query('SELECT 1 FROM internal_staff WHERE account_id=?',[$c['bound_account_id']])->fetchColumn())$actions[]='ADMIT';}catch(\RuntimeException){}
+                        try{$this->approved($c);if(!$admitted&&$c['proposed_category']==='ADVISOR'&&!$this->query('SELECT 1 FROM internal_staff WHERE account_id=?',[$c['bound_account_id']])->fetchColumn())$actions[]='ADMIT';}catch(\RuntimeException){}
                     }
                 }catch(\RuntimeException){}
             }
-            $this->audit($a,$c,'read',$this->uuid());return ['case_id'=>$id,'sets'=>$sets,'review'=>$review,'review_current'=>$current,'document_ack'=>$ack,'document_ack_current'=>$ackCurrent,'legal_reference'=>$this->legalReference,'admitted'=>$admitted,'available_actions'=>$actions];});
+            $this->audit($a,$c,'read',$this->uuid());return ['case_id'=>$id,'sets'=>$sets,'review'=>$review,'review_current'=>$current,'document_ack'=>$ack,'document_ack_current'=>$ackCurrent,'legal_reference'=>$this->legalReference,'admitted'=>$admitted,'can_consult'=>$c['bound_account_id']!==$a->accountId(),'current_set_id'=>$currentSetId,'available_actions'=>$actions];});
     }
     /** Exact receipt metadata only; never evidence bytes or reusable authentication proof. */
     public function reviewResult(array $cookies,array $b):array
@@ -163,7 +176,7 @@ final class Service
         // Password authentication and rate limits use their own canonical transaction before domain locks.
         $reauth=$this->security->reauthenticate($a,$this->row('SELECT email_address FROM auth_accounts WHERE account_id=?',[$a->accountId()])['email_address'],$b['password'],['ip'=>$_SERVER['REMOTE_ADDR']??'127.0.0.1']);
         return $this->unit->run($cookies,function($actor)use($b,$reauth){
-            $c=$this->case($b['case_id']);$this->director($actor,$c);$s=$this->currentSet($c);
+            $c=$this->case($b['case_id']);$this->director($actor,$c);$s=$b['action']==='READ'?$this->consultationSet($c,$b['set_id']):$this->currentSet($c);
             if($s['set_id']!==$b['set_id'])throw new \RuntimeException('workflow_stale');
             if($b['action']==='ACK'&&!$this->hasRead($actor,$c,$s['set_id']))throw new \RuntimeException('workflow_read_required');
             $this->query("UPDATE auth_governance_cases SET status='REVOKED' WHERE operation='STAFF_ADMISSION_REVIEW' AND beneficiary_account_id=? AND status IN ('OPEN','APPROVED')",[$c['bound_account_id']]);
@@ -184,7 +197,7 @@ final class Service
     }
     private function consume($a,array $c,array $i,array $b):void
     {
-        $this->director($a,$c);$s=$this->currentSet($c);
+        $this->director($a,$c);$s=$i['action']==='READ'?$this->consultationSet($c,$i['set_id']):$this->currentSet($c);
         if($s['set_id']!==$i['set_id']||$i['consumed_at']!==null||$i['expires_at']<=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u'))throw new \RuntimeException('workflow_stale');
         $g=$this->row('SELECT status FROM auth_governance_cases WHERE case_id=? FOR UPDATE',[$i['intent_id']]);if($g['status']!=='OPEN')throw new \RuntimeException('workflow_stale');
         $this->mfa->consumeProof($this->p,$b['proof_id'],$b['proof'],$a->accountId(),(string)$a->session()->sessionId(),$a->principal()->credentialVersion(),'STAFF_ADMISSION_REVIEW',$i['intent_id'],$c['bound_account_id'],$c['bound_account_id'],null,$i['intent_id']);
@@ -240,9 +253,9 @@ final class Service
     public function readEvidence(array $cookies,array $b):array
     {
         self::keys($b,['intent_id','proof_id','proof']);$pre=$this->row('SELECT case_id FROM auth_staff_review_intents WHERE intent_id=?',[$b['intent_id']]);
-        return $this->unit->run($cookies,function($a)use($b,$pre){$c=$this->case($pre['case_id']);$i=$this->intent($a,$b['intent_id']);if($i['action']!=='READ')throw new \RuntimeException('workflow_denied');$this->consume($a,$c,$i,$b);$set=$this->currentSet($c);$pages=[];
+        return $this->unit->run($cookies,function($a)use($b,$pre){$c=$this->case($pre['case_id']);$i=$this->intent($a,$b['intent_id']);if($i['action']!=='READ')throw new \RuntimeException('workflow_denied');$this->consume($a,$c,$i,$b);$set=$this->consultationSet($c,$i['set_id']);$pages=[];
             foreach(json_decode($set['manifest'],true) as $d)foreach($d['pages'] as $page){$pages[]=['document_id'=>$d['document_id'],'side'=>$page['side'],...$this->bytes($page['asset_id'],$c)];}
-            \Identity\StaffMedia\Audit::append($this->p,$a,$c['case_id'],Policy::EVIDENCE,'review_read',(int)$set['sequence_number'],$this->uuid());return ['pages'=>$pages];});
+            \Identity\StaffMedia\Audit::append($this->p,$a,$c['case_id'],Policy::EVIDENCE,'review_read',(int)$set['sequence_number'],$this->uuid());return ['case_id'=>$c['case_id'],'set_id'=>$set['set_id'],'case_version'=>(int)$set['case_version'],'pages'=>$pages];});
     }
     public function approved(array $c):array
     {

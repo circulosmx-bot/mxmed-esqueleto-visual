@@ -1,0 +1,69 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Actual Director login logout relogin",
+      "pass": true
+    },
+    {
+      "name": "Incorrect password cannot open protected images",
+      "pass": true
+    },
+    {
+      "name": "Invalid MFA cannot open protected images",
+      "pass": true
+    },
+    {
+      "name": "Historical ACK cannot target obsolete set",
+      "pass": true
+    },
+    {
+      "name": "Historical ACCEPT cannot target obsolete set",
+      "pass": true
+    },
+    {
+      "name": "Active replacement obtains its own explicit acknowledgement",
+      "pass": true
+    },
+    {
+      "name": "Active replacement can receive separate acceptance without new admission",
+      "pass": true
+    },
+    {
+      "name": "Applicant does not acquire reviewer authority for own evidence",
+      "pass": true
+    },
+    {
+      "name": "Exact submission retry returns same set without duplication",
+      "pass": true
+    },
+    {
+      "name": "Media replay and reconciliation retain exact committed asset",
+      "pass": true
+    },
+    {
+      "name": "Director cannot impersonate applicant upload",
+      "pass": true
+    },
+    {
+      "name": "Director cannot submit applicant document set",
+      "pass": true
+    },
+    {
+      "name": "Staff remains active with zero grants and one admission",
+      "pass": true
+    },
+    {
+      "name": "Justified added type preserves unchanged INE logical version",
+      "pass": true
+    },
+    {
+      "name": "Director UI renders all preserved and added authorized pages",
+      "pass": true
+    },
+    {
+      "name": "Addition preserves one active membership and zero grants",
+      "pass": true
+    }
+  ]
+}

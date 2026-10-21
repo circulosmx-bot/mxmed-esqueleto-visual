@@ -252,3 +252,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-DOC-VIS02 — examen explícito y correcciones
 
 [Contrato](identity/STAFF-DOC-VIS02.md), baseline `15abdce80876f3f123b8d5954dae64ce1a1f40e6`. Confirmación de examen versionada con MFA propio, distinta de aceptación/admisión; ampliación con retorno al conjunto. Invitaciones con fechas autoritativas y entrega local sintética explícita; corrección visible para la cuenta solicitante y nueva entrega por writers existentes. Sólo nueva composición owned, sin 8091 ni producción; verificación dirigida y aceptación visual según contrato.
+
+## STAFF-DOC-LIFECYCLE03 — ciclo documental aislado
+
+[Contrato](identity/STAFF-DOC-LIFECYCLE03.md), baseline `e88a6dd3`. Consulta independiente del proceso de incorporación, actual/historial y actualizaciones propias post-admisión sobre el mismo caso. Preserva Identity/MFA, versiones, relación staff y grants. Verificación dirigida PASS, aceptación visual PENDING; sin promoción a 8091 ni producción.

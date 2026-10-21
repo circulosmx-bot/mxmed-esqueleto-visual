@@ -3,7 +3,7 @@
 'use strict';
 const $=id=>document.getElementById(id),dialog=$('staff-evidence');
 if(!dialog)return;
-let returnOverview=null;
+let returnOverview=null,canAck=false;
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
 const type=d=>({INE:'INE',PASSPORT:'Pasaporte'}[d.kind]||'Documento de identidad — Tipo no especificado');
 const label=(page,index)=>({FRONT:'Anverso',BACK:'Reverso',BIOGRAPHIC:'Página biográfica'}[page.side]||(Number.isInteger(page.page_number)&&page.page_number>0?'Página '+page.page_number:'Imagen '+(index+1)));
@@ -13,14 +13,14 @@ function clear(){
  $('protected-case-pages').replaceChildren();$('staff-evidence-context').replaceChildren();$('staff-evidence-next').textContent='';
 }
 function render(context,pages){
- clear();
+ clear();canAck=context.actions.includes('ACK')&&!context.historical;$('ack-staff-evidence').hidden=!canAck;
  const documents=typeof context.set.manifest==='string'?JSON.parse(context.set.manifest):context.set.manifest;
  if(!Array.isArray(documents)||!pages.length||pages.some(p=>!documents.some(d=>d.document_id===p.document_id)))throw new Error('La evidencia no corresponde al conjunto consultado.');
  const header=$('staff-evidence-context');header.append(el('h3',context.name,'evidence-applicant'));
  const category={ADVISOR:'Asesor',MASTER_ADMIN:'Administrador maestro'}[context.category]||'Categoría no especificada';
  const status=context.reviewCurrent?({ACCEPT:'Evidencia aceptada',CORRECTIONS:'Correcciones solicitadas',REJECT:'Evidencia rechazada'}[context.review?.decision]||'Estado de revisión no disponible'):'Pendiente de revisión';
  header.append(el('p',context.ackCurrent?'Documentos revisados':'Revisión de documentos sin confirmar','evidence-ack-status'));
- header.append(el('p',category+' · '+status,'evidence-status'),el('p','Conjunto de evidencia · versión '+context.set.sequence_number+' · datos del caso v'+context.set.case_version,'evidence-version'));
+ header.append(el('p',category+' · '+status,'evidence-status'),el('p',(context.historical?'Conjunto histórico · versión ':'Conjunto de evidencia · versión ')+context.set.sequence_number+' · datos del caso v'+context.set.case_version,'evidence-version'));
  if(context.review&&!context.reviewCurrent)header.append(el('p','La revisión anterior no acredita este conjunto vigente.','evidence-version'));
  const groups=$('protected-case-pages');
  for(const [index,doc] of documents.entries()){
@@ -37,7 +37,7 @@ function render(context,pages){
     grid.hidden=true;large.hidden=false;
     for(const id of ['close-staff-evidence','evidence-close-help','ack-staff-evidence'])$(id).hidden=true;
     back.hidden=false;back.focus({preventScroll:true});
-    returnOverview=()=>{image.removeAttribute('src');large.hidden=true;grid.hidden=false;for(const other of groups.children)other.hidden=false;for(const id of ['close-staff-evidence','evidence-close-help','ack-staff-evidence'])$(id).hidden=false;back.hidden=true;returnOverview=null;button.focus({preventScroll:true});};back.onclick=()=>returnOverview?.();
+    returnOverview=()=>{image.removeAttribute('src');large.hidden=true;grid.hidden=false;for(const other of groups.children)other.hidden=false;for(const id of ['close-staff-evidence','evidence-close-help','ack-staff-evidence'])$(id).hidden=false;$('ack-staff-evidence').hidden=!canAck;back.hidden=true;returnOverview=null;button.focus({preventScroll:true});};back.onclick=()=>returnOverview?.();
    };grid.append(figure);
   });group.append(grid,large);groups.append(group);
  }
@@ -46,6 +46,8 @@ function render(context,pages){
  $('staff-evidence-next').textContent=(eligible.length?'Al cerrar, puedes volver al caso para: '+eligible.map(a=>names[a]).join('; ')+'. ':'Cierra para volver al estado actual del caso. ')+'Consultar o confirmar el examen de documentos no valida la identidad, no acepta la evidencia ni admite al integrante. Cada acción protegida conserva su contraseña y MFA independientes.';
 }
 window.staffEvidenceViewer={render,clear};
+// Handle enlargement at keydown, before native CloseWatcher can force-close a dialog.
+dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&returnOverview){e.preventDefault();e.stopPropagation();returnOverview();}},true);
 dialog.addEventListener('cancel',e=>{if(returnOverview){e.preventDefault();e.stopImmediatePropagation();returnOverview();}},true);
 dialog.addEventListener('close',clear);
 window.addEventListener('pagehide',clear);

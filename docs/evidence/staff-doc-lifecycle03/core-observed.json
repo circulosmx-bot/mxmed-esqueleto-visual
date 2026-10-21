@@ -1,0 +1,94 @@
+{
+  "source": "Actual successful owned runner stdout immediately before responsive closure failure; no backend substitute for UI checks",
+  "checks": [
+    {
+      "name": "A repeated protected consultation renders images after close without acknowledgement",
+      "pass": true
+    },
+    {
+      "name": "Closing documents never manufactures acknowledgement",
+      "pass": true
+    },
+    {
+      "name": "Consumed READ proof remains one-use",
+      "pass": true
+    },
+    {
+      "name": "B consultation after explicit acknowledgement",
+      "pass": true
+    },
+    {
+      "name": "C consultation after evidence acceptance",
+      "pass": true
+    },
+    {
+      "name": "Admitted member shows ordinary staff controls, not another onboarding",
+      "pass": true
+    },
+    {
+      "name": "D post-admission protected current images rendered",
+      "pass": true
+    },
+    {
+      "name": "G immutable replacement retains document identity and advances version",
+      "pass": true
+    },
+    {
+      "name": "H earlier metadata and ciphertext hashes remain unchanged",
+      "pass": true
+    },
+    {
+      "name": "I replacement does not inherit old review or acknowledgement",
+      "pass": true
+    },
+    {
+      "name": "J active staff and grants remain byte-equivalent",
+      "pass": true
+    },
+    {
+      "name": "L single admission and stable account binding",
+      "pass": true
+    },
+    {
+      "name": "E current set exact version shown in UI",
+      "pass": true
+    },
+    {
+      "name": "F archived previous set remains protected readable and distinct",
+      "pass": true
+    },
+    {
+      "name": "Historical consultation does not reset current review",
+      "pass": true
+    },
+    {
+      "name": "K oper09_advisor cross-case metadata and evidence denied",
+      "pass": true
+    },
+    {
+      "name": "K qa_master cross-case metadata and evidence denied",
+      "pass": true
+    },
+    {
+      "name": "Cross-case set binding denied despite Director authority",
+      "pass": true
+    },
+    {
+      "name": "M historical reads attributed to current actor and canonical audit",
+      "pass": true
+    }
+  ],
+  "source_hashes": {
+    "assets/js/internal-team.js": "c0bc1401d892ea1444dcf4dc6ddac923f0a0b28ffc485297c92df953c350ca72",
+    "assets/js/staff-applicant.js": "066aa1a7559434ccdc4cf930c80e83237e03ef5a28d7a54c2c49d14c5234c0c1",
+    "assets/js/staff-workflow.js": "e82adba7abc0c8ac1b93231463bf5456c781a213cb8e59e552fa4f82fbb42ab3",
+    "assets/js/staff-evidence-viewer.js": "d9663cf5cf3e401c5ccbf82f98d8cd2379693713ee54a98b22de682e0b141f6b",
+    "modules/identity/StaffWorkflow/Service.php": "2417f1f50ea9a4549be1a66ccb233c0c694157a03c172bfa6b31ff6f90f05905",
+    "partials/identity/staff-applicant.php": "7ac9644de8d5fba053418d0059192a9e5a2f6e83990ad3a3fb987eee6649413a"
+  },
+  "followup_change": {
+    "file": "assets/js/staff-evidence-viewer.js",
+    "previous_sha256": "bb2761f681213ff9e11c302755b26594933787279348d74937f6a4bfde1cc6f2",
+    "scope": "Escape keydown only; core functional/authentication/writer results preserved; current Chromium and historical WebKit viewer reverified by strict responsive checks"
+  }
+}

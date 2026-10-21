@@ -1,0 +1,8 @@
+{
+  "result": "PASS",
+  "actual_canonical_read_events": 19,
+  "actor": "account:qa_director",
+  "resource": "exact synthetic Martha admission case",
+  "retention_class": "ROLE_ADMIN",
+  "new_retention_period": false
+}
