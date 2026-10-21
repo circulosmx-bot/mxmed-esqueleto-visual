@@ -168,27 +168,27 @@ final class Service
             return ['intent_id'=>$b['intent_id'],'case_id'=>$c['case_id'],'action'=>$i['action'],'committed'=>$i['consumed_at']!==null,'outcome'=>$i['consumed_at']!==null?'COMMITTED':'NOT_CONSUMED','expired'=>$i['expires_at']<=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u')];
         });
     }
-    public function challenge(array $cookies,array $b):array
+    /** Session-authorized Director operation; not a reusable authentication proof. */
+    public function authorize(array $cookies,array $b):array
     {
-        self::keys($b,['case_id','set_id','action','reason','password']);
-        if(!in_array($b['action'],['READ','ACK','CORRECTIONS','ACCEPT','REJECT','ADMIT'],true)||!is_string($b['reason'])||strlen(trim($b['reason']))<8||strlen($b['reason'])>500)throw new \RuntimeException('workflow_invalid');
-        $a=$this->sessions->resolve($cookies,true);if(!$a)throw new \RuntimeException('workflow_denied');
-        // Password authentication and rate limits use their own canonical transaction before domain locks.
-        $reauth=$this->security->reauthenticate($a,$this->row('SELECT email_address FROM auth_accounts WHERE account_id=?',[$a->accountId()])['email_address'],$b['password'],['ip'=>$_SERVER['REMOTE_ADDR']??'127.0.0.1']);
-        return $this->unit->run($cookies,function($actor)use($b,$reauth){
-            $c=$this->case($b['case_id']);$this->director($actor,$c);$s=$b['action']==='READ'?$this->consultationSet($c,$b['set_id']):$this->currentSet($c);
-            if($s['set_id']!==$b['set_id'])throw new \RuntimeException('workflow_stale');
-            if($b['action']==='ACK'&&!$this->hasRead($actor,$c,$s['set_id']))throw new \RuntimeException('workflow_read_required');
-            $this->query("UPDATE auth_governance_cases SET status='REVOKED' WHERE operation='STAFF_ADMISSION_REVIEW' AND beneficiary_account_id=? AND status IN ('OPEN','APPROVED')",[$c['bound_account_id']]);
+        self::keys($b,['case_id','set_id','action','reason','expected_version','expected_review_id']);
+        if(!in_array($b['action'],['READ','ACK','CORRECTIONS','ACCEPT','REJECT','ADMIT'],true)||!is_string($b['reason'])||strlen(trim($b['reason']))<8||strlen($b['reason'])>500||!is_int($b['expected_version'])||$b['expected_version']<1||!($b['expected_review_id']===null||is_string($b['expected_review_id'])))throw new \RuntimeException('workflow_invalid');
+        return $this->unit->run($cookies,function($actor)use($b){
+            $c=$this->case($b['case_id']);$this->director($actor,$c);
+            $s=$b['action']==='READ'?$this->consultationSet($c,$b['set_id']):$this->currentSet($c);
+            if($s['set_id']!==$b['set_id']||(int)$c['version']!==$b['expected_version']||$this->latestReview($c)!==$b['expected_review_id'])throw new \RuntimeException('workflow_stale');
+            if(in_array($b['action'],['ACK','ACCEPT'],true)&&!$this->hasRead($actor,$c,$s['set_id']))throw new \RuntimeException('workflow_read_required');
+            if($b['action']==='ADMIT'){
+                $this->approved($c);
+                if($c['proposed_category']!=='ADVISOR'||$this->query('SELECT 1 FROM internal_staff WHERE account_id=?',[$c['bound_account_id']])->fetchColumn())throw new \RuntimeException('workflow_denied');
+            }
             $id='intent_'.bin2hex(random_bytes(16));
-            $this->query('INSERT INTO auth_staff_review_intents(intent_id,actor_account_id,case_id,set_id,action,reason,session_id,credential_version,expires_at) VALUES(?,?,?,?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE))',[$id,$actor->accountId(),$c['case_id'],$s['set_id'],$b['action'],$b['reason'],(string)$actor->session()->sessionId(),$actor->principal()->credentialVersion()]);
-            $this->query("INSERT INTO auth_governance_cases(case_id,operation_id,operation,requester_account_id,beneficiary_account_id,reason,expires_at) VALUES(?,?,'STAFF_ADMISSION_REVIEW',?,?,?,DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE))",[$id,$this->uuid(),$actor->accountId(),$c['bound_account_id'],$b['reason']]);
-            $r=$this->mfa->issueChallenge($actor->accountId(),'STAFF_ADMISSION_REVIEW',$id,$c['bound_account_id'],$c['bound_account_id'],null,$reauth);
-            $this->audit($actor,$c,'review_intent',$this->uuid());return ['intent_id'=>$id,...$r];
+            $this->query('INSERT INTO auth_staff_review_intents(intent_id,actor_account_id,case_id,set_id,action,reason,session_id,credential_version,expires_at,session_case_version,session_review_id) VALUES(?,?,?,?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE),?,?)',[$id,$actor->accountId(),$c['case_id'],$s['set_id'],$b['action'],$b['reason'],(string)$actor->session()->sessionId(),$actor->principal()->credentialVersion(),$c['version'],$b['expected_review_id']]);
+            $this->audit($actor,$c,'review_intent',$this->uuid());return ['intent_id'=>$id];
         });
     }
-    public function verify(array $cookies,array $b):array
-    {self::keys($b,['challenge_id','challenge','code']);$a=$this->sessions->resolve($cookies,true);if(!$a)throw new \RuntimeException('workflow_denied');return $this->mfa->verifyChallenge($a->accountId(),(string)$a->session()->sessionId(),$a->principal()->credentialVersion(),$b['challenge_id'],$b['challenge'],$b['code']);}
+    private function latestReview(array $c):?string
+    {return $this->query('SELECT review_id FROM auth_staff_identity_reviews WHERE case_id=? ORDER BY created_at DESC,review_id DESC LIMIT 1',[$c['case_id']])->fetchColumn()?:null;}
     public function intent($actor,string $id):array
     {
         $i=$this->row('SELECT * FROM auth_staff_review_intents WHERE intent_id=? FOR UPDATE',[$id]);
@@ -199,19 +199,18 @@ final class Service
     {
         $this->director($a,$c);$s=$i['action']==='READ'?$this->consultationSet($c,$i['set_id']):$this->currentSet($c);
         if($s['set_id']!==$i['set_id']||$i['consumed_at']!==null||$i['expires_at']<=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u'))throw new \RuntimeException('workflow_stale');
-        $g=$this->row('SELECT status FROM auth_governance_cases WHERE case_id=? FOR UPDATE',[$i['intent_id']]);if($g['status']!=='OPEN')throw new \RuntimeException('workflow_stale');
-        $this->mfa->consumeProof($this->p,$b['proof_id'],$b['proof'],$a->accountId(),(string)$a->session()->sessionId(),$a->principal()->credentialVersion(),'STAFF_ADMISSION_REVIEW',$i['intent_id'],$c['bound_account_id'],$c['bound_account_id'],null,$i['intent_id']);
-        $this->query("UPDATE auth_governance_cases SET status='CONSUMED',approved_at=UTC_TIMESTAMP(6),consumed_at=UTC_TIMESTAMP(6) WHERE case_id=?",[$i['intent_id']]);
+        // Old MFA intents have no session snapshot and cannot be consumed by this policy.
+        if($i['session_case_version']===null||(int)$i['session_case_version']!==(int)$c['version']||$i['session_review_id']!==$this->latestReview($c))throw new \RuntimeException('workflow_stale');
         $this->query('UPDATE auth_staff_review_intents SET consumed_at=UTC_TIMESTAMP(6) WHERE intent_id=?',[$i['intent_id']]);
     }
     private function hasRead($actor,array $c,string $set):bool
     {
         return (bool)$this->query("SELECT 1 FROM auth_staff_review_intents WHERE case_id=? AND set_id=? AND actor_account_id=? AND session_id=? AND credential_version=? AND action='READ' AND consumed_at IS NOT NULL AND expires_at>UTC_TIMESTAMP(6)",[$c['case_id'],$set,$actor->accountId(),(string)$actor->session()->sessionId(),$actor->principal()->credentialVersion()])->fetchColumn();
     }
-    /** Explicit examination only; its fresh MFA proof cannot decide identity or admit staff. */
+    /** Explicit examination only; its session-bound intent cannot decide identity or admit staff. */
     public function acknowledge(array $cookies,array $b):array
     {
-        self::keys($b,['intent_id','proof_id','proof']);
+        self::keys($b,['intent_id']);
         $pre=$this->row('SELECT case_id FROM auth_staff_review_intents WHERE intent_id=?',[$b['intent_id']]);
         return $this->unit->run($cookies,function($a)use($b,$pre){
             $c=$this->case($pre['case_id']);$i=$this->intent($a,$b['intent_id']);$this->director($a,$c);
@@ -227,7 +226,7 @@ final class Service
     }
     public function decide(array $cookies,array $b):array
     {
-        self::keys($b,['intent_id','proof_id','proof']);
+        self::keys($b,['intent_id']);
         $pre=$this->row('SELECT case_id FROM auth_staff_review_intents WHERE intent_id=?',[$b['intent_id']]);
         return $this->unit->run($cookies,function($a)use($b,$pre){$c=$this->case($pre['case_id']);$i=$this->intent($a,$b['intent_id']);$this->director($a,$c);
             if(!in_array($i['action'],['ACCEPT','REJECT','CORRECTIONS'],true))throw new \RuntimeException('workflow_invalid');
@@ -252,7 +251,7 @@ final class Service
     }
     public function readEvidence(array $cookies,array $b):array
     {
-        self::keys($b,['intent_id','proof_id','proof']);$pre=$this->row('SELECT case_id FROM auth_staff_review_intents WHERE intent_id=?',[$b['intent_id']]);
+        self::keys($b,['intent_id']);$pre=$this->row('SELECT case_id FROM auth_staff_review_intents WHERE intent_id=?',[$b['intent_id']]);
         return $this->unit->run($cookies,function($a)use($b,$pre){$c=$this->case($pre['case_id']);$i=$this->intent($a,$b['intent_id']);if($i['action']!=='READ')throw new \RuntimeException('workflow_denied');$this->consume($a,$c,$i,$b);$set=$this->consultationSet($c,$i['set_id']);$pages=[];
             foreach(json_decode($set['manifest'],true) as $d)foreach($d['pages'] as $page){$pages[]=['document_id'=>$d['document_id'],'side'=>$page['side'],...$this->bytes($page['asset_id'],$c)];}
             \Identity\StaffMedia\Audit::append($this->p,$a,$c['case_id'],Policy::EVIDENCE,'review_read',(int)$set['sequence_number'],$this->uuid());return ['case_id'=>$c['case_id'],'set_id'=>$set['set_id'],'case_version'=>(int)$set['case_version'],'pages'=>$pages];});
@@ -269,7 +268,9 @@ final class Service
     public function admissionGate(PDO $p,$actor,array $b,string $target):array
     {
         if($p!==$this->p||!$p->inTransaction())throw new \RuntimeException('workflow_transaction_required');
-        self::keys($b,['case_id','intent_id','proof_id','proof']);$c=$this->case($b['case_id']);$this->director($actor,$c);
+        $account=$this->row('SELECT a.status,a.email_verified_at,k.credential_version FROM auth_accounts a JOIN auth_account_credentials k USING(account_id) WHERE account_id=? FOR UPDATE',[$actor->accountId()]);
+        if($account['status']!=='active'||$account['email_verified_at']===null||(int)$account['credential_version']!==$actor->principal()->credentialVersion())throw new \RuntimeException('workflow_denied');
+        self::keys($b,['case_id','intent_id']);$c=$this->case($b['case_id']);$this->director($actor,$c);
         if($c['bound_account_id']!==$target||$c['proposed_category']!=='ADVISOR'||!$c['binding_reference'])throw new \RuntimeException('workflow_denied');
         $i=$this->intent($actor,$b['intent_id']);if($i['case_id']!==$c['case_id']||$i['action']!=='ADMIT')throw new \RuntimeException('workflow_denied');
         $old=$this->query('SELECT * FROM auth_staff_admission_completions WHERE case_id=?',[$c['case_id']])->fetch(PDO::FETCH_ASSOC);

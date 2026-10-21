@@ -63,3 +63,7 @@ Contraseña y código se copian al portapapeles sin imprimir secretos. Cada TOTP
 - CONTEXT_SYNC_STATUS: PASS_UPDATED.
 - DOCUMENTATION_COMMIT: mismo commit de implementación/evidencia.
 - REMAINING_CONTEXT_GAPS: ninguno dentro del alcance sintético; aceptación visual PENDING y gates productivos intactos.
+
+## Sucesor autorizado STAFF-AUTH-UX08
+
+[STAFF-AUTH-UX08](STAFF-AUTH-UX08.md) sucede la contraseña/MFA por operación **sólo** para consulta, ACK, decisión y admisión staff del Director autenticado. Conserva este historial y el resto de autoridades/writers; no altera login canónico ni gobierno Master.

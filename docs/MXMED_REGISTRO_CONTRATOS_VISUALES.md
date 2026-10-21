@@ -195,3 +195,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-DOC-LIFECYCLE03 — UI-2 autorizada
 
 [Ficha y evidencia](identity/STAFF-DOC-LIFECYCLE03.md). Solicitud expresa del Director: entrada permanente de consulta, actual/historial, actualización propia y detalle coherente después del alta. Mismo panel y visor responsive. Aceptación visual PENDING; sin promoción a 8091.
+
+## STAFF-AUTH-UX08 — UI-2 autorizada
+
+[Contrato](identity/STAFF-AUTH-UX08.md): visor/panel originales, consulta directa; confirmaciones de ACK/decisión/admisión sin campos de contraseña/código. Copy acotado y motivo obligatorio para corrección/rechazo; sin CSS ni rediseño. Verificación Chromium/WebKit en evidencia de la entrega; aceptación visual PENDING.

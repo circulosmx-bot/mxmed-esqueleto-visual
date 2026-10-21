@@ -256,3 +256,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-DOC-LIFECYCLE03 — ciclo documental aislado
 
 [Contrato](identity/STAFF-DOC-LIFECYCLE03.md), baseline `e88a6dd3`. Consulta independiente del proceso de incorporación, actual/historial y actualizaciones propias post-admisión sobre el mismo caso. Preserva Identity/MFA, versiones, relación staff y grants. Verificación dirigida PASS, aceptación visual PENDING; sin promoción a 8091 ni producción.
+
+## STAFF-AUTH-UX08 — política Director aprobada, verificación aislada
+
+[Contrato](identity/STAFF-AUTH-UX08.md). Padre `cd2a9ae940fa3aaa6e312bfd8294892d19bb7f04`; nueva rama `feature/mxmed-staff-auth-ux08`. Sesión canónica sustituye contraseña/MFA por acción únicamente para consulta, ACK, decisión y admisión staff. Autoridad/CSRF/versiones/audit y gobierno Master independientes; sin producción/8091. Estado de QA en el contrato; aceptación visual PENDING.

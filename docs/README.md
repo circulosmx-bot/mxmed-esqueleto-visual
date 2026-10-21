@@ -222,3 +222,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-DOC-LIFECYCLE03 — documentos actuales e históricos
 
 [Consulta, actualización propia y guía de revisión](identity/STAFF-DOC-LIFECYCLE03.md). Sucesor dirigido de VIS02 para documentación después de admisión, mismo storage y controles canónicos.
+
+## STAFF-AUTH-UX08 — administración Director con sesión canónica
+
+[Política aprobada, implementación y revisión](identity/STAFF-AUTH-UX08.md). Sucesor acotado de CONTROL07/VIS02/LIFECYCLE03: consulta directa y decisiones explícitas sin credenciales repetidas. Master y otros actos privilegiados conservan su ceremonia independiente.

@@ -56,8 +56,7 @@ final class Http
                     'cases'=>$flow->cases($_COOKIE,$input),
                     'view'=>self::view($flow,$input),
                     'review_result'=>$flow->reviewResult($_COOKIE,$input),
-                    'challenge'=>$flow->challenge($_COOKIE,$input),
-                    'verify'=>$flow->verify($_COOKIE,$input),
+                    'authorize'=>$flow->authorize($_COOKIE,$input),
                     'evidence'=>$flow->readEvidence($_COOKIE,$input),
                     'acknowledge'=>$flow->acknowledge($_COOKIE,$input),
                     'decide'=>$flow->decide($_COOKIE,$input),
@@ -108,5 +107,5 @@ final class Http
     private static function upload($media,array $b):array
     {Service::keys($b,['metadata','base64']);if(!is_string($b['base64'])||strlen($b['base64'])>90000)throw new \RuntimeException('workflow_invalid');$bytes=base64_decode($b['base64'],true);if(!is_string($bytes))throw new \RuntimeException('workflow_invalid');return $media->write($_COOKIE,$b['metadata'],$bytes);}
     private static function admit($writer,Service $flow,array $b):array
-    {Service::keys($b,['case_id','intent_id','proof_id','proof']);$q=$flow->query('SELECT bound_account_id FROM auth_staff_admission_cases WHERE case_id=?',[$b['case_id']]);$target=$q->fetchColumn();if(!is_string($target))throw new \RuntimeException('workflow_denied');return $writer->completeAdmission($_COOKIE,$target,$flow,$b);}
+    {Service::keys($b,['case_id','intent_id']);$q=$flow->query('SELECT bound_account_id FROM auth_staff_admission_cases WHERE case_id=?',[$b['case_id']]);$target=$q->fetchColumn();if(!is_string($target))throw new \RuntimeException('workflow_denied');return $writer->completeAdmission($_COOKIE,$target,$flow,$b);}
 }

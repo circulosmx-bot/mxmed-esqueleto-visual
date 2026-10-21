@@ -1,0 +1,8 @@
+{
+  "result": "PASS",
+  "actual_canonical_read_events": 11,
+  "actor": "account:qa_director",
+  "resource": "exact synthetic Martha case",
+  "review_receipt_mapping": "AuditV1PhysicalMapper SHA256 of canonical UUID",
+  "new_retention_period": false
+}

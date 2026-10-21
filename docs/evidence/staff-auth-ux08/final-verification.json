@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "baseline": "cd2a9ae940fa3aaa6e312bfd8294892d19bb7f04",
+  "branch": "feature/mxmed-staff-auth-ux08",
+  "focused_checks": 37,
+  "supplementary_security_checks": 11,
+  "private_read_audit": "PASS",
+  "protected_unchanged": true,
+  "source_sha256": {
+    "assets/js/staff-evidence-viewer.js": "1f754d3fe5e4813cf5c9d45c4a5669051e6693153e542e893cb192591e14d530",
+    "assets/js/staff-workflow.js": "ee4b50df5cb70d616e176b5f5e9a2d04e3faf831d29a730a93a7410ed9c71cf2",
+    "modules/identity/StaffWorkflow/Http.php": "338b1f0fa628dc125aa238ce4bcc066ea1a3aabed7914a3132415d8465592afe",
+    "modules/identity/StaffWorkflow/Service.php": "8592e99a607bec8d930d3bab1ab9b741851cef7829f29039bd7b3560697e0b67",
+    "partials/identity/staff-workflow.php": "e28b9d929af2110b56ebf5b1d49d50f2f0a36047831aaec770eda7fec61d43de",
+    "scripts/staff-auth-ux08-browser.py": "dc1e6935199ff4cc111c93cf5d14771d40f682c46729df830e8dd8718d7a9f46",
+    "scripts/staff-auth-ux08-qa.py": "0ded56c922592f68168a4b6f384022ec38f42a65b17022367b8eff42dfdd0288",
+    "scripts/staff-auth-ux08-review.py": "00fe104c818797783dab7ddaf27db7c287443c22c0a99d0826300f891f1bdceb",
+    "scripts/staff-auth-ux08-security.py": "c9ea648e5397af16ff2e3890a5b89d2c49fbf8af87934f6e31a50e3979e29f36",
+    "modules/identity/db/migrations/2026_10_21_02_staff_session_review.sql": "f44c12a4af5f26c99fc69b63066b0640848d8c426e29578b17152b60f5dd000d"
+  },
+  "chromium": "PASS",
+  "webkit": "PASS",
+  "physical_safari": "NOT_RUN",
+  "context_sync": "PASS_UPDATED",
+  "director_visual_acceptance": "PENDING",
+  "production_activation": false
+}

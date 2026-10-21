@@ -69,3 +69,7 @@ Martha → Revisar incorporación → contraseña y MFA → documentos. Ampliar 
 ## Sucesor documental STAFF-DOC-LIFECYCLE03
 
 [LIFECYCLE03](STAFF-DOC-LIFECYCLE03.md) sucede la navegación hacia documentos y habilita consulta histórica/actualización propia post-admisión en una rama nueva. Este documento conserva la evidencia histórica VIS02; su fixture pendiente puede haber sido admitido posteriormente por el Director durante la revisión.
+
+## Sucesor autorizado STAFF-AUTH-UX08
+
+[STAFF-AUTH-UX08](STAFF-AUTH-UX08.md) sucede la contraseña/MFA por operación **sólo** para consulta, ACK, decisión y admisión staff del Director autenticado. Conserva este historial y el resto de autoridades/writers; no altera login canónico ni gobierno Master.

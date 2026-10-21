@@ -78,3 +78,7 @@ La revisión Chromium aislada se abre con `python3 scripts/ase-adm02-workflow-re
 ## Corrección sucesora UXFUNC01
 
 [ASE-ADM02-UXFUNC01](ASE-ADM02-UXFUNC01.md) sucede la presentación/disponibilidad de acciones de esta consolidación y añade la baja definitiva de Advisor solicitada expresamente. Conserva Identity, admisión, media privada, MFA y gobierno Master independientes; la evidencia anterior describe su commit histórico.
+
+## Sucesor autorizado STAFF-AUTH-UX08
+
+[STAFF-AUTH-UX08](STAFF-AUTH-UX08.md) sucede la contraseña/MFA por operación **sólo** para consulta, ACK, decisión y admisión staff del Director autenticado. Conserva este historial y el resto de autoridades/writers; no altera login canónico ni gobierno Master.

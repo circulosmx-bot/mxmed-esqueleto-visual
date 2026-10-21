@@ -10,7 +10,8 @@ const label=(page,index)=>({FRONT:'Anverso',BACK:'Reverso',BIOGRAPHIC:'Página b
 function clear(){
  returnOverview=null;for(const id of ['close-staff-evidence','evidence-close-help','ack-staff-evidence'])if($(id))$(id).hidden=false;if($('evidence-back'))$('evidence-back').hidden=true;
  for(const img of dialog.querySelectorAll('img'))img.removeAttribute('src');
- $('protected-case-pages').replaceChildren();$('staff-evidence-context').replaceChildren();$('staff-evidence-next').textContent='';
+ // The dialog may already be detached during logout/pagehide; scrub its retained nodes.
+ dialog.querySelector('#protected-case-pages')?.replaceChildren();dialog.querySelector('#staff-evidence-context')?.replaceChildren();const next=dialog.querySelector('#staff-evidence-next');if(next)next.textContent='';
 }
 function render(context,pages){
  clear();canAck=context.actions.includes('ACK')&&!context.historical;$('ack-staff-evidence').hidden=!canAck;
@@ -43,7 +44,7 @@ function render(context,pages){
  }
  const eligible=context.actions.filter(a=>['ACCEPT','CORRECTIONS','REJECT','ADMIT'].includes(a));
  const names={ACCEPT:'Aceptar evidencia y concluir revisión',CORRECTIONS:'Solicitar correcciones',REJECT:'Rechazar evidencia',ADMIT:'Aprobar admisión'};
- $('staff-evidence-next').textContent=(eligible.length?'Al cerrar, puedes volver al caso para: '+eligible.map(a=>names[a]).join('; ')+'. ':'Cierra para volver al estado actual del caso. ')+'Consultar o confirmar el examen de documentos no valida la identidad, no acepta la evidencia ni admite al integrante. Cada acción protegida conserva su contraseña y MFA independientes.';
+ $('staff-evidence-next').textContent=(eligible.length?'Al cerrar, puedes volver al caso para: '+eligible.map(a=>names[a]).join('; ')+'. ':'Cierra para volver al estado actual del caso. ')+'Consultar o confirmar el examen de documentos no valida la identidad, no acepta la evidencia ni admite al integrante. Cada acción se autoriza por separado con tu sesión vigente.';
 }
 window.staffEvidenceViewer={render,clear};
 // Handle enlargement at keydown, before native CloseWatcher can force-close a dialog.

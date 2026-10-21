@@ -284,3 +284,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-DOC-LIFECYCLE03 — J09 documental independiente
 
 [Contrato](../identity/STAFF-DOC-LIFECYCLE03.md). Integrante → DOCUMENTACIÓN actual/historial → READ exacto con password/MFA → visor y retorno sin decisión. Titular → sustitución/corrección/adición justificada → nuevo set/versiones → nueva revisión independiente. Completion, estado staff y grants se conservan.
+
+## STAFF-AUTH-UX08 — J09 sin credenciales repetidas
+
+[Contrato](../identity/STAFF-AUTH-UX08.md). Login Identity → selección exacta → consulta privada directa; ACK/decisión/admisión → confirmación contextual → intención con snapshot → revalidación/consumo/audit → recibo. Contraseña/MFA por acción de CONTROL07/LIFECYCLE03 quedan sucedidos sólo aquí. Motivo para corrección/rechazo, grants separados, sesión expirada denegada y sin reenvío incierto. J08/Master no cambian.

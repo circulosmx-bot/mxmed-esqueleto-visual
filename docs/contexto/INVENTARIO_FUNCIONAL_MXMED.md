@@ -417,3 +417,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-DOC-LIFECYCLE03 — ID-02/03/07 y COM-10
 
 [Contrato](../identity/STAFF-DOC-LIFECYCLE03.md). P=consulta persistente y actualización controlada autorizadas; S=READ exacto independiente de currentSet, submit post-admisión; C=Identity/MFA/StaffMedia/writers originales; V=verificación dirigida en contrato; O=sólo owned sintético. No nueva facultad para Master/Advisor.
+
+## STAFF-AUTH-UX08 — ID-02/03/07 y COM-10
+
+[Contrato](../identity/STAFF-AUTH-UX08.md). P=decisión expresa de sesión Director para acciones staff acotadas; S=authorize y consumo ligados a sesión/caso/set/snapshot; C=Identity, CSRF, readers privados y writers canónicos; V=QA dirigida en contrato; O=owned sintético, sin activación real. Sucede la reautenticación por acción de los hitos anteriores sólo en este alcance.

@@ -222,3 +222,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## STAFF-DOC-LIFECYCLE03 — mismos objetos, sin nueva migración
 
 [Contrato](../identity/STAFF-DOC-LIFECYCLE03.md). Resolución histórica por case_id+set_id, revisión/ack por conjunto y recibo READ exacto. Nuevas entregas conservan assets/manifests anteriores; no modifica completions, cuentas ni grants. Misma metadata de retención/custodia y cifrado; no plazos nuevos ni borrado físico.
+
+## STAFF-AUTH-UX08 — snapshot de intención de sesión
+
+[Contrato](../identity/STAFF-AUTH-UX08.md) y [migración aditiva](../../modules/identity/db/migrations/2026_10_21_02_staff_session_review.sql). Dos columnas nullable session_case_version/session_review_id en auth_staff_review_intents; trigger conserva inmutabilidad. Historia MFA preservada; filas sin snapshot no admiten consumo bajo nueva política. Sin escrituras nuevas de grants/media/Identity ni instalación real.

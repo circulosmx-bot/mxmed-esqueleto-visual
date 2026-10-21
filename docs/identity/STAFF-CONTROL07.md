@@ -75,3 +75,7 @@ REMAINING_CONTEXT_GAPS=aceptación visual; Safari físico; gobierno Master opera
 ## Sucesor del visor documental
 
 [STAFF-DOC-VIS01](STAFF-DOC-VIS01.md) mejora sólo el visor privado y conserva navegación/step-up aquí documentados.
+
+## Sucesor autorizado STAFF-AUTH-UX08
+
+[STAFF-AUTH-UX08](STAFF-AUTH-UX08.md) sucede la contraseña/MFA por operación **sólo** para consulta, ACK, decisión y admisión staff del Director autenticado. Conserva este historial y el resto de autoridades/writers; no altera login canónico ni gobierno Master.

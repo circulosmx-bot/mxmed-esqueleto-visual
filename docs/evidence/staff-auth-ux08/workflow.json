@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "martha_case": "adm_9e4004fdb634b9731d9010ac907002a4",
+  "javascript_errors": [],
+  "engines": [
+    "Chromium",
+    "WebKit"
+  ],
+  "session_policy": "canonical Director session; no per-operation credentials"
+}

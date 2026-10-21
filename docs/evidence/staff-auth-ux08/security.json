@@ -1,0 +1,61 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Exact synthetic session exists in owned Valkey",
+      "pass": true
+    },
+    {
+      "name": "Actually expired canonical session denies protected read",
+      "pass": true
+    },
+    {
+      "name": "Legitimate login restores access after expiry",
+      "pass": true
+    },
+    {
+      "name": "Disabled Identity account denies operation",
+      "pass": true
+    },
+    {
+      "name": "Excluded Master endpoint remains closed without privileged ceremony",
+      "pass": true
+    },
+    {
+      "name": "Canonical login MFA TTL and excluded Master services byte-identical to baseline",
+      "pass": true
+    },
+    {
+      "name": "Authorized private reader returns no-store and exact pages",
+      "pass": true
+    },
+    {
+      "name": "Consumed read intent cannot be replayed",
+      "pass": true
+    },
+    {
+      "name": "Browser-supplied role is not an authorization source",
+      "pass": true
+    },
+    {
+      "name": "auth_staff_document_acknowledgements exact Director and physical canonical audit",
+      "pass": true
+    },
+    {
+      "name": "auth_staff_admission_completions exact Director and physical canonical audit",
+      "pass": true
+    }
+  ],
+  "excluded_sources_unchanged": [
+    "modules/identity/services/StaffMfaService.php",
+    "modules/identity/services/GovernanceSecurityContext.php",
+    "modules/identity/services/SessionService.php",
+    "modules/identity/services/InternalGovernanceService.php",
+    "modules/identity/http/CanonicalHttpSessionResolver.php",
+    "modules/identity/MasterGovernance/Policy.php",
+    "modules/identity/MasterGovernance/Http.php",
+    "modules/identity/MasterGovernance/Composition.php",
+    "modules/identity/MasterGovernance/Cases.php"
+  ],
+  "scope": "Owned disposable synthetic only; no restored expired token"
+}
