@@ -1,0 +1,57 @@
+{
+  "result": "PASS",
+  "baseline": "486124b33bdc8179ffc58f5f4eaf0d06d99463b3",
+  "verified_at_utc": "2026-10-21T06:19:00.544296+00:00",
+  "qa_count": 52,
+  "server_template_synthetic_label_absent_without_flags": true,
+  "canonical_backend_unchanged": true,
+  "protected_worktrees_and_listeners_unchanged": true,
+  "owned_source_pins_match": true,
+  "source_sha256": {
+    "assets/css/internal-team.css": "5c43053739a068cfe148a6428d4da8138e83df00e95107c0dc65ac276fe27822",
+    "assets/js/staff-workflow.js": "baa4f61d5c20bd65673cc836ed897c628950e8e43023e996e3e3745516ef042c",
+    "internal/development/interfaces.php": "cafec3eed8e0920cd3f666ee1b71f9b0b971f57b5e8ce6d9a809828c9de5e530",
+    "partials/identity/internal-team.php": "021d2e428ffd83c424a2261510d6b3abb3f18fc480d976d0be92c422a2c775f4",
+    "partials/identity/staff-workflow.php": "8ea252e5fe623c0d9dd0d7021cf1d1267262f0c0752eb7b8ada6ed53d6737c13",
+    "assets/js/staff-evidence-viewer.js": "137f0d503b25e5e773fe5bd97b8465df1e6ec7a589ab263736900d435b1df4d2",
+    "scripts/staff-doc-vis01-browser.py": "e7e0f6d0d1e9e530946a7c4a2287aba820815f0373c5dfcac2beb1bc1d534fd7",
+    "scripts/staff-doc-vis01-qa.py": "417530374b64ba16759093ba591b001d6739c13075cd00f1c8ffe53ecb568e97",
+    "scripts/staff-doc-vis01-review.py": "21986beb0e96aa78d1f40a2047bc681b0b11bcf79452bb0c737b5a8950b1fcbf"
+  },
+  "limitations": [
+    "Physical Safari not tested",
+    "Metadata fallback tested through presentation fixture; current intake remains INE/PASSPORT only",
+    "Director visual acceptance pending"
+  ],
+  "production_activation": false,
+  "review_browsers": {
+    "director": {
+      "opened_at": 1792563546.685024,
+      "url": "https://127.0.0.1:60678/internal/media-review/index.php?section=equipo",
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "canonical_login": true,
+      "synthetic_account": "qa_director@example.test"
+    },
+    "advisor": {
+      "opened_at": 1792563546.1897411,
+      "url": "https://127.0.0.1:60678/internal/staff-workspace/index.php",
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "canonical_login": true,
+      "synthetic_account": "oper09_advisor@example.test"
+    }
+  }
+}

@@ -49,7 +49,7 @@ function close(id){
  if(id==='staff-stepup'){if($('staff-reason').value&&!confirm('¿Descartar el motivo sin enviar?'))return;intent=null;$('staff-password').value='';$('staff-code').value='';$('staff-reason').value='';}
  $(id).close();
 }
-$('cancel-onboarding').onclick=()=>close('onboarding');$('close-staff-evidence').onclick=()=>$('staff-evidence').close();$('staff-evidence').addEventListener('close',()=>$('protected-case-pages').replaceChildren());$('cancel-staff-profile').onclick=()=>close('staff-profile');$('cancel-staff-stepup').onclick=()=>close('staff-stepup');
+$('cancel-onboarding').onclick=()=>close('onboarding');$('close-staff-evidence').onclick=()=>$('staff-evidence').close();$('cancel-staff-profile').onclick=()=>close('staff-profile');$('cancel-staff-stepup').onclick=()=>close('staff-stepup');
 function remember(){
  // Only non-secret operation/case identifiers survive a reload. Never profile/email/credentials/tokens.
  try{if(wizard?.pending)sessionStorage.setItem(recoveryKey,JSON.stringify({operation_id:wizard.pending.operation_id,action:wizard.pending.action,case_id:wizard.case_id,image:{mode:wizard.image.mode,avatar:wizard.image.avatar,uploaded:wizard.image.uploaded}}));else sessionStorage.removeItem(recoveryKey);}catch(_){}
@@ -173,7 +173,7 @@ const facultyCopy={
  physician_new_profile_resolve:['Resolver solicitud de perfil nuevo','Decisión sobre la solicitud exacta, con contraseña/MFA. La aprobación crea sólo el perfil permitido; no lo publica ni activa servicios.']
 };
 function detachCase(){
- clearTimeout(pollTimer);pollEpoch++;caseEpoch++;mountedCase=null;preparationDirty=false;
+ window.staffEvidenceViewer?.clear();clearTimeout(pollTimer);pollEpoch++;caseEpoch++;mountedCase=null;preparationDirty=false;
  $('staff-case-parking').append($('staff-case'));
 }
 async function loadCase(id){
@@ -278,6 +278,7 @@ $('staff-challenge').onclick=()=>work('staff-stepup-status',async()=>{
  const ch=await api('challenge',{case_id:intent.case_id,set_id:intent.set_id,action:intent.action,reason,password});intent={...intent,...ch};const deadline=new Date(typeof ch.expires_at==='string'?ch.expires_at:ch.expires_at?.date?.replace(' ','T')+'Z');$('staff-stepup-expiry').hidden=!Number.isFinite(deadline.getTime());$('staff-stepup-expiry').textContent='Esta confirmación vence a las '+deadline.toLocaleTimeString('es-MX')+'. Si vence, cierra e inicia de nuevo esta operación.';$('staff-password-stage').hidden=true;$('staff-code-stage').hidden=false;$('staff-stepup-status').textContent='Paso 2 de 2: introduce un código MFA vigente. Al confirmar se ejecutará esta operación, sin otra confirmación.';$('staff-code').focus({preventScroll:true});
 });
 $('staff-execute').onclick=()=>work('staff-stepup-status',async()=>{
+ const evidenceSet=intent.action==='READ'?structuredClone(caseView.sets.find(s=>s.set_id===intent.set_id)):null;const evidenceCaseVersion=caseData.version;
  const code=$('staff-code').value;$('staff-code').value='';const proof=await api('verify',{challenge_id:intent.challenge_id,challenge:intent.challenge,code});const body={intent_id:intent.intent_id,proof_id:proof.proof_id,proof:proof.proof},action=intent.action,id=intent.case_id;
  // Never automatically reuse a proof after an uncertain response.
  $('staff-code-stage').hidden=true;reviewPending={case_id:id,intent_id:intent.intent_id,action};rememberReview();intent=null;
@@ -285,7 +286,10 @@ $('staff-execute').onclick=()=>work('staff-stepup-status',async()=>{
  if(action==='READ'&&(!Array.isArray(result.pages)||!result.pages.length||result.pages.some(p=>typeof p.base64!=='string'||!['image/png','image/jpeg'].includes(p.mime_type))))throw new Error('La respuesta documental no es válida. Consulta el resultado antes de continuar.');
  const receipt=await api('review_result',{case_id:id,intent_id:reviewPending.intent_id});if(receipt.committed!==true||receipt.intent_id!==reviewPending.intent_id||receipt.case_id!==id||receipt.action!==action)throw new Error('No se confirmó la intención exacta. Consulta su resultado.');
  reviewPending=null;rememberReview();try{await loadCase(id);}catch(_){throw new Error('Operación confirmada; no pudimos actualizar la consulta. Cierra y consulta el caso antes de repetir acciones.');}$('staff-stepup').close();$('staff-case-status').textContent=actions[action]+': operación confirmada.';
- if(action==='READ'){for(const page of result.pages){const img=document.createElement('img');img.alt=`Documento ${page.document_id}, ${page.side}`;img.src=`data:${page.mime_type};base64,${page.base64}`;img.width=320;img.style.maxWidth='100%';$('protected-case-pages').append(img);}$('staff-evidence-title').textContent='Documentación protegida de '+name(caseData);show('staff-evidence');}else changed();
+ if(action==='READ'){
+  if(!evidenceSet||caseData.case_id!==id||caseData.version!==evidenceCaseVersion||caseView.sets[0]?.set_id!==evidenceSet.set_id)throw new Error('El caso o la evidencia cambió. Consulta el estado antes de abrir documentos de nuevo.');
+  window.staffEvidenceViewer.render({name:name(caseData),category:caseData.proposed_category,set:evidenceSet,review:caseView.review,reviewCurrent:caseView.review_current,actions:caseView.available_actions},result.pages);show('staff-evidence');
+ }else changed();
 });
 function rememberReview(){try{if(reviewPending)sessionStorage.setItem(recoveryKey+':review',JSON.stringify(reviewPending));else sessionStorage.removeItem(recoveryKey+':review');}catch(_){}$('review-reconcile').hidden=!reviewPending;}
 $('review-reconcile').onclick=()=>work('wf-status',async()=>{if(!reviewPending)return;const r=await api('review_result',{case_id:reviewPending.case_id,intent_id:reviewPending.intent_id});if(r.intent_id!==reviewPending.intent_id||r.case_id!==reviewPending.case_id||r.action!==reviewPending.action)throw new Error('La respuesta no corresponde a esta revisión.');if(r.committed===true){reviewPending=null;rememberReview();say('Operación confirmada. Consulta nuevamente el caso; no se volvió a ejecutar.');changed();}else if(r.outcome==='NOT_CONSUMED'&&r.expired===true){reviewPending=null;rememberReview();say('La intención venció sin ejecutar. Revisa el caso antes de iniciar otra acción con nueva verificación.');}else say('La intención aún no tiene un resultado confirmado. Puedes volver a consultar; no se reutilizará la prueba ni se enviará otra ejecución.');});

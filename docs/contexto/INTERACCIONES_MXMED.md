@@ -272,3 +272,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-CONTROL07 — J09 y selección sin desplazamientos
 
 [Contrato](../identity/STAFF-CONTROL07.md). Categoría → carga en región fija → lista conjunta → selección cuenta/caso → detalle exacto, descartando respuestas previas. Navegación/grants ordinarios sin reauth adicional. Documento/decisión/admisión → paso contraseña → paso MFA → ejecución exacta → recibo. Cada nueva acción protegida conserva challenge propio; el login no lo sustituye.
+
+## STAFF-DOC-VIS01 — J09, consulta y retorno
+
+[Contrato](../identity/STAFF-DOC-VIS01.md). Caso seleccionado → contraseña/MFA → READ exacto → recibo/contexto vigente → documentos agrupados → ampliar/cerrar → mismo caso y acciones elegibles. Cierre elimina fuentes privadas. Consulta, decisión, admisión y grants siguen separados.

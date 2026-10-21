@@ -210,3 +210,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-CONTROL07 — estabilidad de navegación y confirmaciones
 
 [Contrato vigente](identity/STAFF-CONTROL07.md): layout durante cargas, carreras de selección, matriz de reautenticación canónica y QA de Chromium/WebKit. Sucede la presentación R2, conservando sus writers y límites.
+
+## STAFF-DOC-VIS01 — consulta documental staff
+
+[Visor, evidencia y guía](identity/STAFF-DOC-VIS01.md). Sucesor del visor de STAFF-CONTROL07; agrupación actual, contexto, ampliación, privacidad y retorno sin cambios de seguridad/admisión.

@@ -71,3 +71,7 @@ CONTEXT_SYNC_STATUS=PASS_UPDATED
 DOCUMENTATION_COMMIT=incluido en commit aislado; hash en entrega
 REMAINING_CONTEXT_GAPS=aceptación visual; Safari físico; gobierno Master operativo fuera de alcance
 ```
+
+## Sucesor del visor documental
+
+[STAFF-DOC-VIS01](STAFF-DOC-VIS01.md) mejora sólo el visor privado y conserva navegación/step-up aquí documentados.

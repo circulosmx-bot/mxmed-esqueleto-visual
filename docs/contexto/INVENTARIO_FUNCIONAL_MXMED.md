@@ -405,3 +405,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-CONTROL07 — ID-02/03/07 y COM-10
 
 [Contrato](../identity/STAFF-CONTROL07.md). P=corrección dirigida autorizada; S=paneles estables y confirmación por operación; C=sesión/readers/writers/MFA/audit existentes; V=ensayo dirigido documentado; O=owned sintético. No reutilización de pruebas consumidas ni nuevas facultades. Master conserva caso/gate/autoridad propios.
+
+## STAFF-DOC-VIS01 — ID-02/03/07
+
+[Contrato](../identity/STAFF-DOC-VIS01.md). P=visor privado autorizado; S=contexto/tipo/lados/versiones, ampliación y limpieza; C=READ/manifest/recibo canónicos existentes; V=QA dirigida en contrato; O=owned sintético. No nueva capacidad ni permiso para Advisor/Master.

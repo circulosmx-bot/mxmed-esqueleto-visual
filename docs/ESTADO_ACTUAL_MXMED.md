@@ -244,3 +244,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-CONTROL07 — navegación y step-up por acción
 
 [Contrato](identity/STAFF-CONTROL07.md), baseline `01d17ac8726f827841fcc8fc83c24b9f9ea003a6` con encabezado STAFF. Regiones de lista/detalle estables, controles persistentes, carga accesible y descarte de respuestas previas. Contraseña/MFA siguen siendo específicos de cada operación protegida; no hay ticket canónico reutilizable entre READ, decisión y admisión. Composición nueva owned, sin activación ni promoción a 8091.
+
+## STAFF-DOC-VIS01 — visor privado de identidad staff
+
+[Contrato](identity/STAFF-DOC-VIS01.md), baseline STAFF-CONTROL07 `486124b3`. Contexto de solicitante, documento lógico/tipo/lados/versiones canónicos, ampliación y retorno al caso; banner sólo sintético. Sin cambios de autoridad, datos persistidos, API o writers. UI-2 aislada; aceptación visual pendiente.

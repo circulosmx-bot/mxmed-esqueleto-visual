@@ -1,0 +1,204 @@
+{
+  "result": "PASS",
+  "measurements": [
+    {
+      "label": "native Chromium",
+      "width": 1366,
+      "figures": [
+        {
+          "x": 226,
+          "y": 390.7734375,
+          "width": 449
+        },
+        {
+          "x": 691,
+          "y": 390.7734375,
+          "width": 449
+        }
+      ],
+      "dialog": {
+        "x": 203,
+        "y": 84.34375,
+        "width": 960,
+        "height": 614.3046875
+      },
+      "footer": {
+        "x": 967.4609375,
+        "y": 637.6484375,
+        "width": 178.5390625,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 1440x900",
+      "width": 1440,
+      "figures": [
+        {
+          "x": 263,
+          "y": 449.046875,
+          "width": 449
+        },
+        {
+          "x": 728,
+          "y": 449.046875,
+          "width": 449
+        }
+      ],
+      "dialog": {
+        "x": 240,
+        "y": 142.59375,
+        "width": 960,
+        "height": 614.796875
+      },
+      "footer": {
+        "x": 1004.453125,
+        "y": 696.390625,
+        "width": 178.546875,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 1366x768",
+      "width": 1366,
+      "figures": [
+        {
+          "x": 226,
+          "y": 383.046875,
+          "width": 449
+        },
+        {
+          "x": 691,
+          "y": 383.046875,
+          "width": 449
+        }
+      ],
+      "dialog": {
+        "x": 203,
+        "y": 76.59375,
+        "width": 960,
+        "height": 614.796875
+      },
+      "footer": {
+        "x": 967.453125,
+        "y": 630.390625,
+        "width": 178.546875,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 390x844",
+      "width": 390,
+      "figures": [
+        {
+          "x": 39,
+          "y": 278.0625,
+          "width": 312
+        },
+        {
+          "x": 39,
+          "y": 436.0625,
+          "width": 312
+        }
+      ],
+      "dialog": {
+        "x": 16,
+        "y": 12,
+        "width": 358,
+        "height": 820
+      },
+      "footer": {
+        "x": 33,
+        "y": 771,
+        "width": 324,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 1366x420",
+      "width": 1366,
+      "figures": [
+        {
+          "x": 226,
+          "y": 100.453125,
+          "width": 449
+        },
+        {
+          "x": 691,
+          "y": 100.453125,
+          "width": 449
+        }
+      ],
+      "dialog": {
+        "x": 203,
+        "y": 12,
+        "width": 960,
+        "height": 396
+      },
+      "footer": {
+        "x": 967.453125,
+        "y": 347,
+        "width": 178.546875,
+        "height": 44
+      }
+    },
+    {
+      "label": "webkit 1366x768",
+      "width": 1366,
+      "figures": [
+        {
+          "x": 226,
+          "y": 383.03125,
+          "width": 449
+        },
+        {
+          "x": 691,
+          "y": 383.03125,
+          "width": 449
+        }
+      ],
+      "dialog": {
+        "x": 203,
+        "y": 76.671875,
+        "width": 960,
+        "height": 614.640625
+      },
+      "footer": {
+        "x": 967.453125,
+        "y": 630.3125,
+        "width": 178.546875,
+        "height": 44
+      }
+    },
+    {
+      "label": "webkit 390x844",
+      "width": 390,
+      "figures": [
+        {
+          "x": 39,
+          "y": 277.96875,
+          "width": 312
+        },
+        {
+          "x": 39,
+          "y": 435.96875,
+          "width": 312
+        }
+      ],
+      "dialog": {
+        "x": 16,
+        "y": 12,
+        "width": 358,
+        "height": 819.984375
+      },
+      "footer": {
+        "x": 33,
+        "y": 770.984375,
+        "width": 324,
+        "height": 44
+      }
+    }
+  ],
+  "page_errors": [],
+  "metadata_fallback_test": "Presentation-only artificial fixture; no canonical upload changes",
+  "security": "Canonical password/MFA, exact receipts, replay and Advisor denials"
+}

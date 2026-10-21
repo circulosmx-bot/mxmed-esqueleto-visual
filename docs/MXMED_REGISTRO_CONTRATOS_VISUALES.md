@@ -183,3 +183,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-CONTROL07 — UI-2 dirigida
 
 [Ficha y evidencia](identity/STAFF-CONTROL07.md). Solicitud expresa autoriza estabilidad durante navegación y simplificación de confirmación protegida. Dos columnas y cabecera STAFF conservadas; regiones internas de scroll con dimensiones estables. Actor/operación conocidos no se solicitan otra vez. Aceptación visual PENDING; 8091 sin promoción.
+
+## STAFF-DOC-VIS01 — UI-2 autorizada
+
+[Contrato](identity/STAFF-DOC-VIS01.md). Solicitud expresa del Director para el visor de identidad staff: contexto, documentos agrupados, etiquetas source-backed, ampliación y footer accesible. No rediseño de otras superficies. Aceptación visual PENDING; 8091 preservado.

@@ -15,7 +15,7 @@ $items=[
  ['PANEL PROVEEDOR','/provider/index.php','Cuenta y relación organizacional autorizadas',false,'Portal existente; servicio y relación organizacional no habilitados en esta instancia'],
 ];
 $owned=realpath((string)getenv('ASE_INT02A_OWNED'));
-$control=getenv('MXMED_STAFF_CONTROL07')==='1'?'staff-control07':(getenv('MXMED_STAFF_CONTROL06_R2')==='1'?'staff-control06-r2':(getenv('MXMED_STAFF_CONTROL06')==='1'?'staff-control06':(getenv('MXMED_STAFF_CONTROL05')==='1'?'staff-control05':'staff-control04')));
+$control=getenv('MXMED_STAFF_DOC_VIS01')==='1'?'staff-doc-vis01':(getenv('MXMED_STAFF_CONTROL07')==='1'?'staff-control07':(getenv('MXMED_STAFF_CONTROL06_R2')==='1'?'staff-control06-r2':(getenv('MXMED_STAFF_CONTROL06')==='1'?'staff-control06':(getenv('MXMED_STAFF_CONTROL05')==='1'?'staff-control05':'staff-control04'))));
 $launcher=realpath(__DIR__.'/../../scripts/'.$control.'-review.py');
 $windows=[];
 foreach(['director','advisor'] as $actor){
