@@ -12,7 +12,6 @@
 <main class="advisor-workspace">
 <header class="workspace-header"><div><p class="eyebrow">MÉXICO MÉDICO · EQUIPO INTERNO</p><h1>EQUIPO INTERNO Y PERMISOS</h1></div><div class="team-session"><span id="team-role" class="prototype-badge"><?php echo ($teamAuthority['class']??'')==='DIRECTOR'?'Director':'Administrador maestro'; ?></span><button id="team-logout" type="button">Cerrar sesión</button><span id="team-mode" hidden></span></div></header>
 <?php if(!empty($staffWorkflowReady)){ require __DIR__.'/staff-workflow.php'; } ?>
-<p id="feedback" class="feedback" role="status" aria-live="polite">Cargando equipo…</p>
 <div class="mobile-navigation" aria-label="Vista del equipo"><button id="show-directory" type="button" aria-pressed="true">Directorio</button><button id="show-detail" type="button" aria-pressed="false">Detalle y permisos</button></div>
 <div class="workspace-columns" id="workspace-columns" data-mobile-view="directory">
 <aside class="directory panel" id="team-directory" aria-labelledby="directory-heading"><div class="panel-heading"><h2 id="directory-heading">STAFF</h2><button id="refresh-team" type="button">Actualizar</button></div>
@@ -20,6 +19,7 @@
 <div class="team-top-controls"><div id="staff-status-filter"><label for="staff-status" class="search-label">Estado del equipo</label><select id="staff-status" data-trigger-id="status-trigger" data-label="Estado del equipo"><option value="ACTIVE">Activos</option><option value="SUSPENDED">Suspendidos</option><option value="PENDING">Pendientes</option><option value="REMOVED">Dados de baja</option></select></div><button class="add-button" id="add-member" type="button" disabled>Agregar integrante</button></div>
 <p class="directory-note" id="authority-note" hidden></p><label for="advisor-search" class="search-label">Buscar integrante</label><input id="advisor-search" type="search" autocomplete="off" minlength="1" maxlength="64" placeholder="Nombre del integrante">
 <button id="clear-staff-search" type="button" hidden>Limpiar búsqueda</button>
+<p id="feedback" class="feedback" role="status" aria-live="polite">Cargando equipo…</p>
 <div id="directory-content" aria-live="polite" aria-busy="true"></div>
 <nav id="team-pagination" class="team-pagination" aria-label="Páginas del equipo"><button id="previous-team" type="button" disabled>Anterior</button><span id="team-page"></span><button id="next-team" type="button" disabled>Siguiente</button></nav>
 </aside>

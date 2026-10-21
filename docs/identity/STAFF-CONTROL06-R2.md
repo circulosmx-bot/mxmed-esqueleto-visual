@@ -53,3 +53,7 @@ CONTEXT_SYNC_STATUS=PASS_UPDATED
 DOCUMENTATION_COMMIT=incluido en commit aislado; hash en entrega
 REMAINING_CONTEXT_GAPS=aceptación visual del Director pendiente; Safari físico no ejecutado
 ```
+
+## Sucesor
+
+[STAFF-CONTROL07](STAFF-CONTROL07.md) sucede el comportamiento de carga/navegación y la presentación del step-up. Parte de `01d17ac8`, que cambió sólo el encabezado a STAFF después del ensayo R2 aquí conservado.

@@ -401,3 +401,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-CONTROL06-R2 — mismos ID-02/03/07 y COM-10
 
 [Contrato](../identity/STAFF-CONTROL06-R2.md). P=feedback explícito del Director; S=misma pantalla con cabecera compacta, lista Integrantes y alta superior; C=mismos handlers/readers/writers; V=ensayo dirigido en contrato; O=sintético owned. Ayuda de contraseña y MFA no concede autoridad ni muestra secretos.
+
+## STAFF-CONTROL07 — ID-02/03/07 y COM-10
+
+[Contrato](../identity/STAFF-CONTROL07.md). P=corrección dirigida autorizada; S=paneles estables y confirmación por operación; C=sesión/readers/writers/MFA/audit existentes; V=ensayo dirigido documentado; O=owned sintético. No reutilización de pruebas consumidas ni nuevas facultades. Master conserva caso/gate/autoridad propios.

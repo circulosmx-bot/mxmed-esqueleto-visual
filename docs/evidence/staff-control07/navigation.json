@@ -1,0 +1,76 @@
+{
+  "result": "PASS",
+  "measurements": [
+    {
+      "shifts": [],
+      "label": "chromium 1440",
+      "frames": 227,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "chromium 1440 members",
+      "frames": 127,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "chromium 1366",
+      "frames": 226,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "chromium 1366 members",
+      "frames": 126,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "chromium 390",
+      "frames": 225,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "webkit 1366",
+      "frames": 232,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "webkit 1366 members",
+      "frames": 134,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "webkit 390",
+      "frames": 232,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "native Chromium",
+      "frames": 226,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    },
+    {
+      "shifts": [],
+      "label": "native Chromium members",
+      "frames": 126,
+      "max_control_delta_px": 0,
+      "max_window_scroll_delta_px": 0
+    }
+  ],
+  "page_errors": []
+}

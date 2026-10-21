@@ -240,3 +240,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-CONTROL06-R2 — ajuste visual dirigido
 
 [Contrato R2](identity/STAFF-CONTROL06-R2.md), base `cbc92d964240a595e2804b4134fbe290cf02e226`. Cabecera compacta, lista neutral «Integrantes» con estados por tarjeta y alta junto al filtro. Ayuda explícita de contraseña/MFA y comandos sólo en la composición sintética. Sin cambios de autorización, writers o catálogo; aceptación visual pendiente y producción inactiva.
+
+## STAFF-CONTROL07 — navegación y step-up por acción
+
+[Contrato](identity/STAFF-CONTROL07.md), baseline `01d17ac8726f827841fcc8fc83c24b9f9ea003a6` con encabezado STAFF. Regiones de lista/detalle estables, controles persistentes, carga accesible y descarte de respuestas previas. Contraseña/MFA siguen siendo específicos de cada operación protegida; no hay ticket canónico reutilizable entre READ, decisión y admisión. Composición nueva owned, sin activación ni promoción a 8091.

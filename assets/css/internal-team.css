@@ -33,3 +33,17 @@ select{height:44px}
 .synthetic-review-help summary{cursor:pointer;min-height:44px;align-content:center}
 .synthetic-review-help code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75rem;user-select:all}
 @media(max-width:640px){.advisor-workspace{padding-top:12px}.advisor-workspace>.workspace-header{align-items:flex-start;gap:8px;margin-bottom:12px}.workspace-header .team-session{align-self:flex-end}.workspace-header h1{font-size:1.25rem}}
+
+/* STAFF-CONTROL07: stable panels; only their content regions scroll. */
+.workspace-columns{--team-panel-height:max(500px,calc(100dvh - 180px));align-items:stretch}
+.workspace-columns>.panel{height:var(--team-panel-height);min-height:500px;overflow-anchor:none}
+#team-directory{display:flex;flex-direction:column}
+#team-directory> :not(#directory-content){flex-shrink:0}
+#directory-content{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable}
+#directory-content[aria-busy=true]> *{visibility:hidden}
+#team-directory #feedback{display:block;height:2.8em;min-height:2.8em;margin:6px 0;font-size:.75rem;line-height:1.4;overflow:auto}
+#team-directory #feedback:empty{visibility:hidden}
+#advisor-detail{overflow:auto;scrollbar-gutter:stable}
+#advisor-detail[aria-busy=true]{cursor:progress}
+#team-directory .team-pagination{margin-top:8px}
+@media(max-width:640px){.workspace-columns{--team-panel-height:max(540px,calc(100dvh - 270px))}}

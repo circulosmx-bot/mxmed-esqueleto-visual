@@ -1,0 +1,60 @@
+{
+  "result": "PASS",
+  "verified_at_utc": "2026-10-21T05:48:34.277647+00:00",
+  "baseline": "01d17ac8726f827841fcc8fc83c24b9f9ea003a6",
+  "qa_check_count": 82,
+  "protected_runtime_unchanged": true,
+  "backend_identity_mfa_master_unchanged": true,
+  "owned_source_pins_match": true,
+  "chromium_layout_shift_includes_recent_input": true,
+  "webkit_coverage": "Geometry/scroll/races/modal, layout-shift PerformanceObserver not supported",
+  "source_sha256": {
+    "assets/css/internal-team.css": "1e4ffa4e4c575e3e94f65e4ab60938122df06cb1b23f8d0bd6ef768923eb8955",
+    "assets/js/internal-team.js": "028e952437e4ec209b42bc04104e74b7daa931d510f47d21f09837112e2529a0",
+    "assets/js/staff-workflow.js": "25d24791e5829d0de4d612cc5845bf533cd4ba222adf465323720bea5e702a11",
+    "partials/identity/internal-team.php": "0f5ff4128c7a608043cacd13ed51c85ea357a334ef7420c43444b11b47108527",
+    "partials/identity/staff-workflow.php": "819e88f4e238faad75573cd085d8da969862acd7c4a2d3dfbb2273cd64e3a615",
+    "internal/development/interfaces.php": "774da08fb4efedd532957b8e90020db7f73d3064dec2cf6129b295c5ee8db2d5",
+    "scripts/staff-control07-navigation.py": "a35fbd416a1a61c2ce68326f3a7f90a15aa4ff176fbba9399f8ea3e747d07e2e",
+    "scripts/staff-control07-qa.py": "0a5558b1400c22fd18fcf119e235fc4d91c86083d393b4d493c1d0983986548a",
+    "scripts/staff-control07-review.py": "71b546217a3b99d47e3be9bb3233c860d45b6d48df1ea7811383e7fd96d010f6",
+    "scripts/staff-control07-browser.py": "bd4b983a70cf028007c47c0f4017087742200737cf2b74830a563ac5d9b19945"
+  },
+  "limitations": [
+    "Director visual acceptance pending",
+    "Physical Safari not tested",
+    "Master appointment remains gated; no operation performed",
+    "Canonical stepup is single-operation; no reusable ticket"
+  ],
+  "production_activation": false,
+  "review_browsers": {
+    "director": {
+      "opened_at": 1792561723.724695,
+      "url": "https://127.0.0.1:61555/internal/media-review/index.php?section=equipo",
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "canonical_login": true,
+      "synthetic_account": "qa_director@example.test"
+    },
+    "advisor": {
+      "opened_at": 1792561723.766877,
+      "url": "https://127.0.0.1:61555/internal/staff-workspace/index.php",
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "canonical_login": true,
+      "synthetic_account": "oper09_advisor@example.test"
+    }
+  }
+}

@@ -206,3 +206,7 @@ Corrección dirigida actual: [STAFF-CONTROL06 — selección staff, autenticaci�
 ## STAFF-CONTROL06-R2 — revisión del Director
 
 Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles locales](identity/STAFF-CONTROL06-R2.md). Cabecera, controles superiores y ayuda MFA; mismos flujos canónicos.
+
+## STAFF-CONTROL07 — estabilidad de navegación y confirmaciones
+
+[Contrato vigente](identity/STAFF-CONTROL07.md): layout durante cargas, carreras de selección, matriz de reautenticación canónica y QA de Chromium/WebKit. Sucede la presentación R2, conservando sus writers y límites.

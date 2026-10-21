@@ -179,3 +179,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-CONTROL06-R2 — densidad y ayuda de revisión
 
 [Ficha R2](identity/STAFF-CONTROL06-R2.md). Feedback expreso del Director autoriza compactar cabecera, retirar copy redundante, neutralizar lista y elevar el botón de alta. Helper de credenciales/MFA exclusivamente sintético. UI-2 con ajustes visuales dirigidos autorizados; aceptación visual del resultado PENDING. 8091 sin promoción.
+
+## STAFF-CONTROL07 — UI-2 dirigida
+
+[Ficha y evidencia](identity/STAFF-CONTROL07.md). Solicitud expresa autoriza estabilidad durante navegación y simplificación de confirmación protegida. Dos columnas y cabecera STAFF conservadas; regiones internas de scroll con dimensiones estables. Actor/operación conocidos no se solicitan otra vez. Aceptación visual PENDING; 8091 sin promoción.

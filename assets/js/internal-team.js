@@ -30,7 +30,7 @@
     const button=document.createElement('button');button.type='button';button.id='retry-team';button.textContent='Reintentar consulta';button.onclick=load;$('directory-content').append(button);
   }
   async function load(restore=null){
-    editor.reset();const epoch=++listEpoch;detailEpoch++;const automaticDetailEpoch=detailEpoch;selected=null;empty('Selecciona un integrante');$('directory-content').innerHTML='';$('directory-content').setAttribute('aria-busy','true');say('Cargando equipo…');
+    editor.reset();const epoch=++listEpoch;detailEpoch++;const automaticDetailEpoch=detailEpoch;selected=null;empty('Selecciona un integrante');$('directory-content').inert=true;$('directory-content').setAttribute('aria-busy','true');$('advisor-detail').setAttribute('aria-busy','true');say('Cargando equipo…');$('filter-advisors').setAttribute('aria-pressed',String(category==='ADVISOR'));$('filter-masters').setAttribute('aria-pressed',String(category==='MASTER_ADMIN'));
     $('previous-team').disabled=true;$('next-team').disabled=true;
     try{
       $('staff-status-filter').hidden=false;$('staff-status').value=status;$('advisor-search').disabled=false;syncStatus();$('clear-staff-search').hidden=!q;
@@ -44,30 +44,33 @@
       authority=data.authority;catalog=data.catalog;$('filter-advisors').disabled=false;$('staff-status').querySelector('[value="PENDING"]').disabled=category!=='ADVISOR'||!authority.can_read_masters||!window.staffWorkflowDirectory;$('filter-masters').disabled=!authority.can_read_masters;syncStatus();
       $('filter-advisors').setAttribute('aria-pressed',String(category==='ADVISOR'));$('filter-masters').setAttribute('aria-pressed',String(category==='MASTER_ADMIN'));
       $('authority-note').textContent=authority.class==='DIRECTOR'?'Administración de Dirección. Selecciona un integrante para gestionar su acceso y sus permisos.':'Vista Master: sólo asesores. Los permisos y conteos se limitan a tus capacidades delegadas vigentes; no revelan otras asignaciones.';
-      $('directory-content').innerHTML=data.items.length?`<ul class="advisor-list">${data.items.map(m=>`<li><button type="button" class="advisor-card" data-member="${esc(m.account_reference)}" data-admission-case="${esc(m.admission_case_id||'')}" aria-pressed="false"><span class="avatar team-neutral" aria-hidden="true">○</span><span class="advisor-card-copy"><span class="advisor-name">${esc(personName(m))}</span><span class="team-reference">Cuenta: ${esc(m.account_reference)}</span><span class="advisor-meta"><span class="status ${m.staff_status==='ACTIVE'?'':'suspended'}">${staffStatus(m)}</span><span>${m.governance_class==='MASTER_ADMIN'?'Master':'Asesor'} · ${m.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}</span></span></span></button></li>`).join('')}</ul>`:'<div class="empty-state"><strong>No hay integrantes en este estado.</strong></div>';
-      $('directory-content').querySelectorAll('[data-member]').forEach(button=>button.onclick=()=>navigate(()=>select(button.dataset.member,true)));
+      let directoryHtml=data.items.length?`<ul class="advisor-list">${data.items.map(m=>`<li><button type="button" class="advisor-card" data-member="${esc(m.account_reference)}" data-admission-case="${esc(m.admission_case_id||'')}" aria-pressed="false"><span class="avatar team-neutral" aria-hidden="true">○</span><span class="advisor-card-copy"><span class="advisor-name">${esc(personName(m))}</span><span class="team-reference">Cuenta: ${esc(m.account_reference)}</span><span class="advisor-meta"><span class="status ${m.staff_status==='ACTIVE'?'':'suspended'}">${staffStatus(m)}</span><span>${m.governance_class==='MASTER_ADMIN'?'Master':'Asesor'} · ${m.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}</span></span></span></button></li>`).join('')}</ul>`:'<div class="empty-state"><strong>No hay integrantes en este estado.</strong></div>';
       $('team-page').textContent=`Página ${data.page}`;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;say(data.items.length?'':'No hay integrantes en este estado.');
       if(category==='ADVISOR'&&status==='ACTIVE'&&authority.can_read_masters&&window.staffWorkflowDirectory){
         const pending=await window.staffWorkflowDirectory.pending(q,1);if(epoch!==listEpoch)return;
-        if(pending.items.length){const block=document.createElement('section');block.innerHTML='<ul class="advisor-list" aria-label="Integrantes en preparación o revisión">'+pending.items.map(c=>`<li><button type="button" class="advisor-card" data-case="${esc(c.case_id)}"><span class="advisor-card-copy"><span class="advisor-name">${esc(c.display_name)}</span><span class="status">${c.state==='PERSON_CONFIRMED'?'Revisión pendiente':'Preparación'}</span></span></button></li>`).join('')+'</ul>';
-        block.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>navigate(()=>selectCase(b.dataset.case,true)));$('directory-content').prepend(block);}
+        if(pending.items.length){directoryHtml='<ul class="advisor-list" aria-label="Integrantes en preparación o revisión">'+pending.items.map(c=>`<li><button type="button" class="advisor-card" data-case="${esc(c.case_id)}"><span class="advisor-card-copy"><span class="advisor-name">${esc(c.display_name)}</span><span class="status">${c.state==='PERSON_CONFIRMED'?'Revisión pendiente':'Preparación'}</span></span></button></li>`).join('')+'</ul>'+directoryHtml;}
       }
+      $('directory-content').innerHTML=directoryHtml;
+      $('directory-content').querySelectorAll('[data-member]').forEach(b=>b.onclick=()=>navigate(()=>select(b.dataset.member,true)));
+      $('directory-content').querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>navigate(()=>selectCase(b.dataset.case,true)));
+      $('directory-content').inert=false;$('directory-content').setAttribute('aria-busy','false');
       if(automaticDetailEpoch!==detailEpoch)return; // A click made during directory loading takes precedence.
       if(restore?.case)await selectCase(restore.case,false);else if(restore?.account)await select(restore.account,false);else if(data.items.length)await select(data.items[0].account_reference,false);
-    }catch(error){if(epoch===listEpoch)failure(error);}finally{if(epoch===listEpoch)$('directory-content').setAttribute('aria-busy','false');}
+    }catch(error){if(epoch===listEpoch)failure(error);}finally{if(epoch===listEpoch){$('directory-content').inert=false;$('directory-content').setAttribute('aria-busy','false');if(automaticDetailEpoch===detailEpoch)$('advisor-detail').setAttribute('aria-busy','false');}}
   }
   async function select(reference,focus){
-    editor.reset();selected=null;empty('Cargando integrante…');highlight(reference,null);const epoch=++detailEpoch,listing=listEpoch;
+    editor.reset();selected=null;empty('Cargando integrante…');highlight(reference,null);$('advisor-detail').setAttribute('aria-busy','true');const epoch=++detailEpoch,listing=listEpoch;
     try{const data=await read({category,target:reference});if(epoch!==detailEpoch||listing!==listEpoch)return;
       authority=data.authority;catalog=data.catalog;selected=data.items[0];renderDetail();editor.adopt(data);masterFlow.adopt(data);highlight(reference,null);
-      if(focus){mobile('detail');$('detail-title').focus();}
-    }catch(error){if(epoch===detailEpoch)failure(error);}
+      if(focus){mobile('detail');$('detail-title').focus({preventScroll:true});}
+    }catch(error){if(epoch===detailEpoch)failure(error);}finally{if(epoch===detailEpoch)$('advisor-detail').setAttribute('aria-busy','false');}
   }
   function highlight(reference,id){document.querySelectorAll('[data-member],[data-case]').forEach(b=>b.setAttribute('aria-pressed',String(id?(b.dataset.case===id||b.dataset.admissionCase===id):b.dataset.member===reference)));}
   async function selectCase(id,focus){
-    editor.reset();detailEpoch++;empty('Cargando solicitud…');selected=null;selectedCase=id;highlight(null,id);
+    editor.reset();const epoch=++detailEpoch;empty('Cargando solicitud…');$('advisor-detail').setAttribute('aria-busy','true');selected=null;selectedCase=id;highlight(null,id);
     await window.staffWorkflowDirectory.mount(id);
-    if(selectedCase===id&&focus){mobile('detail');$('detail-title').focus();}
+    if(epoch===detailEpoch)$('advisor-detail').setAttribute('aria-busy','false');
+    if(epoch===detailEpoch&&selectedCase===id&&focus){mobile('detail');$('detail-title').focus({preventScroll:true});}
   }
   window.staffSelectCase=id=>navigate(()=>selectCase(id,true));
   function matrix(prefix,chosen,delegation=false){
@@ -117,7 +120,7 @@
   $('previous-team').onclick=()=>{if(page>1)navigate(()=>{page--;return load();});};
   $('next-team').onclick=()=>navigate(()=>{page++;return load();});$('refresh-team').onclick=()=>navigate(load);
   document.querySelectorAll('.team-navigation a').forEach(link=>link.onclick=e=>{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!e.altKey){e.preventDefault();navigate(()=>location.assign(link.href));}});
-  $('show-directory').onclick=()=>{mobile('directory');$('advisor-search').focus();};$('show-detail').onclick=()=>{mobile('detail');$('detail-title').focus();};$('skip-detail').onclick=()=>mobile('detail');
+  $('show-directory').onclick=()=>{mobile('directory');$('advisor-search').focus();};$('show-detail').onclick=()=>{mobile('detail');$('detail-title').focus({preventScroll:true});};$('skip-detail').onclick=()=>mobile('detail');
   $('team-logout').onclick=()=>navigate(async()=>{
     const button=$('team-logout');button.disabled=true;
     try {

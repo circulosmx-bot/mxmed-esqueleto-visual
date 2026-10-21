@@ -268,3 +268,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-CONTROL06-R2 — J09 sin cambios de autoridad
 
 [Contrato](../identity/STAFF-CONTROL06-R2.md). Filtro Estado del equipo y Agregar integrante comparten fila superior. Selección cuenta/caso conserva el panel y estado individual. Acciones sensibles explican contraseña del Director + MFA vigente; guía local sólo en preview. Revisión documental, decisión, admisión y permisos siguen separados. J04/geografía sólo re-verificado, sin cambio de fuente ni interacción.
+
+## STAFF-CONTROL07 — J09 y selección sin desplazamientos
+
+[Contrato](../identity/STAFF-CONTROL07.md). Categoría → carga en región fija → lista conjunta → selección cuenta/caso → detalle exacto, descartando respuestas previas. Navegación/grants ordinarios sin reauth adicional. Documento/decisión/admisión → paso contraseña → paso MFA → ejecución exacta → recibo. Cada nueva acción protegida conserva challenge propio; el login no lo sustituye.

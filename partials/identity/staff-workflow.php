@@ -2,9 +2,9 @@
 if(!empty($staffWorkflowApplicant)){require __DIR__.'/staff-applicant.php';return;} ?>
 <?php
 $staffReviewHelp='';
-if(getenv('MXMED_STAFF_CONTROL06_R2')==='1'&&($teamAuthority['class']??'')==='DIRECTOR'){
+if((getenv('MXMED_STAFF_CONTROL07')==='1'||getenv('MXMED_STAFF_CONTROL06_R2')==='1')&&($teamAuthority['class']??'')==='DIRECTOR'){
  $reviewOwned=realpath((string)getenv('ASE_INT02A_OWNED'));
- $reviewLauncher=realpath(__DIR__.'/../../scripts/staff-control06-r2-review.py');
+ $reviewLauncher=realpath(__DIR__.'/../../scripts/'.(getenv('MXMED_STAFF_CONTROL07')==='1'?'staff-control07':'staff-control06-r2').'-review.py');
  if($reviewOwned&&$reviewLauncher){
   $reviewCommand='python3 '.escapeshellarg($reviewLauncher).' '.escapeshellarg($reviewOwned).' ';
   $staffReviewHelp='<div class="synthetic-review-help"><p>En esta prueba sintética, obtén el código MFA vigente con el comando local indicado en la guía de revisión.</p><details><summary>Ver comandos de esta sesión de revisión</summary><p>Contraseña sintética del Director, al portapapeles:</p><code>'.htmlspecialchars($reviewCommand.'credentials-director',ENT_QUOTES,'UTF-8').'</code><p>Código MFA actual, al portapapeles:</p><code>'.htmlspecialchars($reviewCommand.'mfa-director',ENT_QUOTES,'UTF-8').'</code><p>Ejecuta el comando en tu terminal local. No compartas contraseñas ni códigos. El código debe estar vigente y no haberse usado.</p></details></div>';
@@ -26,6 +26,6 @@ if(getenv('MXMED_STAFF_CONTROL06_R2')==='1'&&($teamAuthority['class']??'')==='DI
 <dialog id="staff-profile" aria-labelledby="staff-profile-title"><h2 id="staff-profile-title">Editar datos personales</h2><p>Se conservará una nueva versión preparada por Dirección. La persona deberá confirmar los cambios; la revisión de identidad anterior puede requerir actualización. Esto no cambia la cuenta, las credenciales ni los permisos.</p><div id="staff-profile-content"></div><p id="staff-profile-status" role="status"></p><div class="dialog-actions"><button id="cancel-staff-profile" type="button">Cancelar</button><button id="save-staff-profile" type="button" class="primary">Guardar nueva versión</button></div></dialog>
 <dialog id="staff-stepup" aria-labelledby="staff-stepup-title"><h2 id="staff-stepup-title"></h2><p id="staff-stepup-target"></p><p id="staff-stepup-account"></p><p id="staff-stepup-explanation"></p><?= $staffReviewHelp ?>
 <label class="wizard-field" id="staff-reason-label" hidden>Motivo o corrección solicitada<textarea id="staff-reason" maxlength="500" rows="3"></textarea></label>
-<div id="staff-password-stage"><label class="wizard-field"><span id="staff-password-label">Contraseña de tu cuenta</span><input id="staff-password" type="password" autocomplete="current-password"></label><button id="staff-challenge" type="button" class="primary">Confirmar acción y continuar</button></div>
+<div id="staff-password-stage"><label class="wizard-field"><span id="staff-password-label">Contraseña de tu cuenta</span><input id="staff-password" type="password" autocomplete="current-password"></label><button id="staff-challenge" type="button" class="primary">Continuar al código MFA</button></div>
 <div id="staff-code-stage" hidden><label class="wizard-field">Código del autenticador<input id="staff-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label><button id="staff-execute" type="button" class="primary">Verificar y ejecutar</button></div>
-<p id="staff-stepup-status" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="cancel-staff-stepup" type="button">Cancelar</button></div></dialog>
+<p id="staff-stepup-expiry" hidden></p><p id="staff-stepup-status" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="cancel-staff-stepup" type="button">Cancelar</button></div></dialog>
