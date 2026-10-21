@@ -12,7 +12,7 @@ final class Audit
         if(!$pdo->inTransaction())throw new \RuntimeException('admission_transaction_required');
         $writer=new CanonicalAuditWriter(CanonicalAuditPolicyRegistry::canonical(),new CanonicalAuditMetadataSanitizer(),new TrustedAuditContextValidator(),new RandomAuditUuidProvider(),new SystemAuditUtcClock(),new HmacSha256AuditIpHasher(new EnvironmentAuditSecretProvider()),new CoarseAuditUserAgentSummarizer(),new JoinedPdoCanonicalAuditTransactionAdapter($pdo),new CanonicalAuditSealer(new CanonicalAuditSerializer()),new AuditV1PhysicalMapper());
         $reading=in_array($operation,['read','result'],true);
-        $admin=in_array($operation,['prepare','update','revoke','invitation_issue','invitation_reissue','invitation_revoke','invitation_delivery','review_intent','review_decision','admission_complete'],true);
+        $admin=in_array($operation,['prepare','update','revoke','invitation_issue','invitation_reissue','invitation_revoke','invitation_delivery','review_intent','review_decision','document_acknowledge','admission_complete'],true);
         $context=TrustedAuditContext::fromServer($actor->accountId(),'account',$reading?'AUTHORIZED_CASE_READER':($admin?'DIRECTOR':'APPLICANT'),'staff_admission',
             (new RandomAuditUuidProvider())->generateCanonicalUuid(),$id,(string)$actor->session()->sessionId(),null,null,'ADMIN','staff-admission/'.$operation);
         return (string)$writer->append(new CanonicalAuditEventInput($reading?'STAFF_ADMISSION_CASE_READ':'STAFF_ADMISSION_CASE_CHANGED','SUCCESS',$admin?'ADMIN_DECISION':'USER_REQUEST','account',$actor->accountId(),'staff_admission_case',$case,['operation'=>$operation,'case_id'=>$case,'version'=>$version,'provenance'=>$provenance]),$context)->value('event_id');

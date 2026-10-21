@@ -58,3 +58,7 @@ REMAINING_CONTEXT_GAPS=aceptación visual del Director y Safari físico pendient
 ```
 
 Mapas de datos: `CONTEXT_CHANGE=NO_IMPACT`; sin tablas, relaciones, metadatos persistidos, políticas ni writers nuevos.
+
+## Sucesor acotado
+
+[STAFF-DOC-VIS02](STAFF-DOC-VIS02.md) sucede la navegación del visor e incorpora acknowledgement explícito independiente de READ. Las afirmaciones anteriores de ausencia de nuevos datos/API describen exclusivamente VIS01; no aplicar al sucesor. Este worktree y su preview histórico se preservan.

@@ -214,3 +214,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## STAFF-CONTROL06 — proyección contextual sin DDL
 
 [Contrato](../identity/STAFF-CONTROL06.md). Bootstrap proyecta referencia de correo propio desde `auth_accounts` según el ID autenticado y categoría vigente desde `internal_staff`; no acepta cuenta/rol suministrados por el cliente. Casos, versiones, invitaciones, intenciones y geografía conservan sus fuentes y writers. Ninguna tabla, migración, catálogo municipal ni relación duplicada.
+
+## STAFF-DOC-VIS02 — acknowledgement y fecha de transporte
+
+[Contrato](../identity/STAFF-DOC-VIS02.md), [migración aditiva](../../modules/identity/db/migrations/2026_10_21_01_staff_document_ack.sql). Extiende CHECK de intent con ACK; ledger inmutable `auth_staff_document_acknowledgements` ligado a caso/versión/set/intent, actor/credencial/rol DIRECTOR, timestamp y audit canónico. No sustituye identity_reviews ni completions. `delivered_at` nullable registra ACK del puerto de transporte; sin backfill ni inferencia de correo externo. La composición actual sólo prepara sobre local. DDL exclusivamente ensayado en DB owned nueva, HTTP SELECT/INSERT para ledger; no migración real.

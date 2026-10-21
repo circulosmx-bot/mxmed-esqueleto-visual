@@ -51,8 +51,8 @@ final class InvitationService
             if($action==='case_status'){
                 $this->director($actor);
                 $case=$this->row('SELECT * FROM auth_staff_admission_cases WHERE case_id=? FOR UPDATE',[$b['case_id']]);
-                $inv=$this->query('SELECT invitation_id,case_version,state,delivery_state,expires_at,last_observed_at FROM auth_staff_admission_invitations WHERE case_id=? ORDER BY issued_at DESC,invitation_id DESC LIMIT 1',[$case['case_id']])->fetch(PDO::FETCH_ASSOC);
-                if($inv){$inv['usable']=$case['state']==='PREPARING'&&$case['bound_account_id']===null&&$inv['state']==='ACTIVE'&&(int)$inv['case_version']===(int)$case['version']&&$inv['expires_at']>$this->now($inv);}
+                $inv=$this->query('SELECT invitation_id,case_version,state,delivery_state,issued_at,delivered_at,expires_at,consumed_at,consumed_account_id,last_observed_at FROM auth_staff_admission_invitations WHERE case_id=? ORDER BY issued_at DESC,invitation_id DESC LIMIT 1',[$case['case_id']])->fetch(PDO::FETCH_ASSOC);
+                if($inv){$inv['expired']=$inv['state']!=='CONSUMED'&&$inv['expires_at']<=$this->now($inv);$inv['usable']=$case['state']==='PREPARING'&&$case['bound_account_id']===null&&$inv['state']==='ACTIVE'&&(int)$inv['case_version']===(int)$case['version']&&$inv['expires_at']>$this->now($inv);}
                 Audit::append($this->pdo,$actor,$case['case_id'],'result',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),(int)$case['version'],'INVITATION_STATUS');
                 return ['case_id'=>$case['case_id'],'version'=>(int)$case['version'],'case_state'=>$case['state'],'account_bound'=>$case['bound_account_id']!==null,'invitation'=>$inv?:null];
             }
@@ -135,7 +135,7 @@ final class InvitationService
                 $result=$this->unit->run($cookies,function($actor)use($result){
                     $this->director($actor);
                     $this->row('SELECT case_id FROM auth_staff_admission_cases WHERE case_id=? FOR UPDATE',[$result['case_id']]);
-                    $this->query("UPDATE auth_staff_admission_invitations SET delivery_state='DELIVERY_CONFIRMED' WHERE invitation_id=?",[$result['invitation_id']]);
+                    $this->query("UPDATE auth_staff_admission_invitations SET delivery_state='DELIVERY_CONFIRMED',delivered_at=COALESCE(delivered_at,UTC_TIMESTAMP(6)) WHERE invitation_id=?",[$result['invitation_id']]);
                     Audit::append($this->pdo,$actor,$result['case_id'],'invitation_delivery',(new \Platform\Services\RandomAuditUuidProvider())->generateCanonicalUuid(),$result['version'],'DELIVERY_CONFIRMED');
                     return [...$result,'delivery_state'=>'DELIVERY_CONFIRMED'];
                 });

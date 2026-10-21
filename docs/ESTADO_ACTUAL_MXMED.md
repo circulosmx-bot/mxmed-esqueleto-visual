@@ -2,7 +2,7 @@
 
 ## Ancla y alcance
 
-- Fecha de verificación documental: **2026-10-20**.
+- Fecha de verificación documental: **2026-10-21**.
 - Baseline oficial fuente verificado: `f92f37f1958af5140a96c04cb52c5c1ce7af8e01`; rama oficial/upstream/remoto coincidentes y limpios al inicio ASE-INT01 R2.
 - Hito base ASE-INT01: rama aislada `feature/ase-int01-internal-team-readonly`, worktree `/Users/circulodigital/Documents/GitHub/mxmed-ase-int01-readonly`. Fuente oficial `mxmed-step2-vitals-r1` y prototipo visual312ee388 conservados; no confundir con `mxmed-esqueleto-visual`.
 - Aplicación original `https://localhost:8443/private-app.php` sin cambios. [ASE-INT01 R2](identity/ASE-INT01-R2-internal-team-readonly.md): sección Equipo del staff original con Identity canónica, sólo lecturas autorizadas, preview aislado8141, sin merge/promoción.
@@ -248,3 +248,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-DOC-VIS01 — visor privado de identidad staff
 
 [Contrato](identity/STAFF-DOC-VIS01.md), baseline STAFF-CONTROL07 `486124b3`. Contexto de solicitante, documento lógico/tipo/lados/versiones canónicos, ampliación y retorno al caso; banner sólo sintético. Sin cambios de autoridad, datos persistidos, API o writers. UI-2 aislada; aceptación visual pendiente.
+
+## STAFF-DOC-VIS02 — examen explícito y correcciones
+
+[Contrato](identity/STAFF-DOC-VIS02.md), baseline `15abdce80876f3f123b8d5954dae64ce1a1f40e6`. Confirmación de examen versionada con MFA propio, distinta de aceptación/admisión; ampliación con retorno al conjunto. Invitaciones con fechas autoritativas y entrega local sintética explícita; corrección visible para la cuenta solicitante y nueva entrega por writers existentes. Sólo nueva composición owned, sin 8091 ni producción; verificación dirigida y aceptación visual según contrato.

@@ -68,3 +68,9 @@ html body #staff-evidence{width:min(960px,calc(100% - 32px));color:#013151;backg
 #staff-evidence [hidden]{display:none!important}
 #staff-evidence-next{font-size:.83rem;border-top:1px solid #d4e2e8;padding-top:12px}
 @media(max-width:640px){#staff-evidence .evidence-page-grid{grid-template-columns:1fr}#staff-evidence .evidence-applicant{font-size:1.15rem}}
+
+/* STAFF-DOC-VIS02: overview actions versus enlarged-image navigation. */
+#staff-evidence .dialog-actions [hidden] { display:none !important; }
+#staff-evidence .evidence-document[hidden] { display:none !important; }
+#staff-evidence #evidence-back { margin-right:auto; }
+#staff-evidence #evidence-close-help { font-size:.8rem; }

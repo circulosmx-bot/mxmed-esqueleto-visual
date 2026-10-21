@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "scope": "Actual presentation function only; canonical states/dates independently verified in browser QA",
+  "checks": [
+    {
+      "name": "CONSUMED retains authoritative meaning past expiry",
+      "pass": true
+    },
+    {
+      "name": "REVOKED retains authoritative meaning past expiry",
+      "pass": true
+    },
+    {
+      "name": "REPLACED retains authoritative meaning past expiry",
+      "pass": true
+    },
+    {
+      "name": "EXPIRED retains authoritative meaning past expiry",
+      "pass": true
+    },
+    {
+      "name": "ACTIVE retains authoritative meaning past expiry",
+      "pass": true
+    },
+    {
+      "name": "No transport acknowledgement is invented",
+      "pass": true
+    }
+  ]
+}

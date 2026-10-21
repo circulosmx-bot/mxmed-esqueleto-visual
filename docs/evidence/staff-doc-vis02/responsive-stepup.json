@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "Actual Director login/logout/login",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366x420 correction description, reachable challenge/footer, cancellation preserves selection",
+      "pass": true
+    },
+    {
+      "name": "chromium 390x844 correction description, reachable challenge/footer, cancellation preserves selection",
+      "pass": true
+    },
+    {
+      "name": "webkit 390x844 correction description, reachable challenge/footer, cancellation preserves selection",
+      "pass": true
+    }
+  ]
+}

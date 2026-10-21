@@ -276,3 +276,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-DOC-VIS01 — J09, consulta y retorno
 
 [Contrato](../identity/STAFF-DOC-VIS01.md). Caso seleccionado → contraseña/MFA → READ exacto → recibo/contexto vigente → documentos agrupados → ampliar/cerrar → mismo caso y acciones elegibles. Cierre elimina fuentes privadas. Consulta, decisión, admisión y grants siguen separados.
+
+## STAFF-DOC-VIS02 — J09, examen y respuesta a corrección
+
+[Contrato](../identity/STAFF-DOC-VIS02.md). READ → overview → ampliar/volver → cerrar sin acknowledgement o ACK explícito con step-up propio → estado Documentos revisados. CORRECTIONS conserva razón/actor/set/audit; cuenta vinculada consulta su solicitud y reenvía conjunto por submit. Nueva versión invalida revisión/ack actuales sin borrar antecedentes; Director sigue el mismo caso. No notificación externa.

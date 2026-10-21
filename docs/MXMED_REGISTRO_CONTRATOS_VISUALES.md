@@ -187,3 +187,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-DOC-VIS01 — UI-2 autorizada
 
 [Contrato](identity/STAFF-DOC-VIS01.md). Solicitud expresa del Director para el visor de identidad staff: contexto, documentos agrupados, etiquetas source-backed, ampliación y footer accesible. No rediseño de otras superficies. Aceptación visual PENDING; 8091 preservado.
+
+## STAFF-DOC-VIS02 — UI-2 autorizada
+
+[Contrato](identity/STAFF-DOC-VIS02.md). Solicitud expresa: retorno desde ampliación, examen explícito separado, invitaciones legibles, canal real de corrección y cancelación comprensible. Shell/layout base conservados; QA y limitaciones en contrato. Director visual PENDING; 8091 preservado.

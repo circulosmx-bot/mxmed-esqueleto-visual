@@ -214,3 +214,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-DOC-VIS01 — consulta documental staff
 
 [Visor, evidencia y guía](identity/STAFF-DOC-VIS01.md). Sucesor del visor de STAFF-CONTROL07; agrupación actual, contexto, ampliación, privacidad y retorno sin cambios de seguridad/admisión.
+
+## STAFF-DOC-VIS02 — examen, invitación y correcciones
+
+[Contrato vigente y guía](identity/STAFF-DOC-VIS02.md). Sucede VIS01 en navegación y acknowledgement explícito; fuente de fechas y ciclo de corrección, con migración sólo ensayada en infraestructura owned.

@@ -59,6 +59,7 @@ final class Http
                     'challenge'=>$flow->challenge($_COOKIE,$input),
                     'verify'=>$flow->verify($_COOKIE,$input),
                     'evidence'=>$flow->readEvidence($_COOKIE,$input),
+                    'acknowledge'=>$flow->acknowledge($_COOKIE,$input),
                     'decide'=>$flow->decide($_COOKIE,$input),
                     'admit'=>self::admit($writer,$flow,$input),
                     default=>throw new \RuntimeException('workflow_invalid')

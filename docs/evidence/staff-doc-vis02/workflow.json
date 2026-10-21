@@ -1,0 +1,99 @@
+{
+  "result": "PASS",
+  "measurements": [
+    {
+      "label": "native Chromium",
+      "dialog": {
+        "x": 203,
+        "y": 35.8203125,
+        "width": 960,
+        "height": 711.3515625
+      },
+      "ack": {
+        "x": 885.796875,
+        "y": 686.171875,
+        "width": 260.203125,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 1366x768",
+      "dialog": {
+        "x": 203,
+        "y": 28.078125,
+        "width": 960,
+        "height": 711.84375
+      },
+      "ack": {
+        "x": 885.796875,
+        "y": 678.921875,
+        "width": 260.203125,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 390x844",
+      "dialog": {
+        "x": 16,
+        "y": 12,
+        "width": 358,
+        "height": 820
+      },
+      "ack": {
+        "x": 33,
+        "y": 771,
+        "width": 324,
+        "height": 44
+      }
+    },
+    {
+      "label": "chromium 1366x420",
+      "dialog": {
+        "x": 203,
+        "y": 12,
+        "width": 960,
+        "height": 396
+      },
+      "ack": {
+        "x": 885.796875,
+        "y": 347,
+        "width": 260.203125,
+        "height": 44
+      }
+    },
+    {
+      "label": "webkit 1366x768",
+      "dialog": {
+        "x": 203,
+        "y": 28.203125,
+        "width": 960,
+        "height": 711.59375
+      },
+      "ack": {
+        "x": 885.75,
+        "y": 678.796875,
+        "width": 260.25,
+        "height": 44
+      }
+    },
+    {
+      "label": "webkit 390x844",
+      "dialog": {
+        "x": 16,
+        "y": 12,
+        "width": 358,
+        "height": 819.984375
+      },
+      "ack": {
+        "x": 33,
+        "y": 770.984375,
+        "width": 324,
+        "height": 44
+      }
+    }
+  ],
+  "page_errors": [],
+  "corrections_channel": "Authenticated applicant case; no external notification",
+  "ack_source": "auth_staff_document_acknowledgements; fresh intent/password/MFA; independent of identity decision",
+  "data": "Artificial geometric images and example.test identities only"
+}

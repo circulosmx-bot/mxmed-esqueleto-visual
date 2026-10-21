@@ -409,3 +409,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-DOC-VIS01 — ID-02/03/07
 
 [Contrato](../identity/STAFF-DOC-VIS01.md). P=visor privado autorizado; S=contexto/tipo/lados/versiones, ampliación y limpieza; C=READ/manifest/recibo canónicos existentes; V=QA dirigida en contrato; O=owned sintético. No nueva capacidad ni permiso para Advisor/Master.
+
+## STAFF-DOC-VIS02 — ID-02/03/07 y COM-10
+
+[Contrato](../identity/STAFF-DOC-VIS02.md). P=examen separado de aprobación; S=ACK versionado y auditable, invitaciones legibles y corrección contextual; C=mismo UnitOfWork/Identity/MFA, nueva acción específica sin proof reutilizable; V=verificación dirigida en contrato; O=owned sintético, sin activación normal-local. Advisor/Master sin nueva facultad.
