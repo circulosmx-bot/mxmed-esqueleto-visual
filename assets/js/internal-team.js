@@ -49,7 +49,7 @@
       $('team-page').textContent=`Página ${data.page}`;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;say(data.items.length?'':'No hay integrantes en este estado.');
       if(category==='ADVISOR'&&status==='ACTIVE'&&authority.can_read_masters&&window.staffWorkflowDirectory){
         const pending=await window.staffWorkflowDirectory.pending(q,1);if(epoch!==listEpoch)return;
-        if(pending.items.length){const block=document.createElement('section');block.innerHTML='<h3>Incorporaciones pendientes</h3><p>Sin acceso activo; preparación e invitaciones.</p><ul class="advisor-list">'+pending.items.map(c=>`<li><button type="button" class="advisor-card" data-case="${esc(c.case_id)}"><span class="advisor-card-copy"><span class="advisor-name">${esc(c.display_name)}</span><span class="status">${c.state==='PERSON_CONFIRMED'?'Datos confirmados · revisión pendiente':'Preparación / invitación pendiente'}</span></span></button></li>`).join('')+'</ul>';
+        if(pending.items.length){const block=document.createElement('section');block.innerHTML='<ul class="advisor-list" aria-label="Integrantes en preparación o revisión">'+pending.items.map(c=>`<li><button type="button" class="advisor-card" data-case="${esc(c.case_id)}"><span class="advisor-card-copy"><span class="advisor-name">${esc(c.display_name)}</span><span class="status">${c.state==='PERSON_CONFIRMED'?'Revisión pendiente':'Preparación'}</span></span></button></li>`).join('')+'</ul>';
         block.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>navigate(()=>selectCase(b.dataset.case,true)));$('directory-content').prepend(block);}
       }
       if(automaticDetailEpoch!==detailEpoch)return; // A click made during directory loading takes precedence.

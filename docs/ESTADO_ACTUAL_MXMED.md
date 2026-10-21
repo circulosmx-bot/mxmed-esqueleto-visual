@@ -236,3 +236,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-CONTROL06 — selección y reautenticación contextual
 
 [Contrato](identity/STAFF-CONTROL06.md), baseline STAFF-CONTROL05 `ab6b78349c26b9f80906065dedfdb1210449726f`. Selección cuenta/caso coherente en panel derecho; cuenta propia canónica identificada en contraseña/MFA; typeahead desde selector cerrado/abierto sin alterar Geography. Diálogos limitados a operaciones enfocadas y evidencia protegida; revisión, admisión y grants independientes. Sólo composición owned sintética; 8091/WORKSPACE02/03 sin cambios y aceptación visual PENDING.
+
+## STAFF-CONTROL06-R2 — ajuste visual dirigido
+
+[Contrato R2](identity/STAFF-CONTROL06-R2.md), base `cbc92d964240a595e2804b4134fbe290cf02e226`. Cabecera compacta, lista neutral «Integrantes» con estados por tarjeta y alta junto al filtro. Ayuda explícita de contraseña/MFA y comandos sólo en la composición sintética. Sin cambios de autorización, writers o catálogo; aceptación visual pendiente y producción inactiva.

@@ -397,3 +397,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-CONTROL06 — ID-02/03/07 y COM-10
 
 [Contrato](../identity/STAFF-CONTROL06.md). P=corrección dirigida autorizada; S=selectores y panel existentes, referencia de cuenta propia desde sesión canónica; C=readers de admisión/intenciones y autenticación/MFA sin writers nuevos; V=QA dirigida documentada en contrato; O=owned sintético, sin activación. No nuevas capacidades ni consumidores Advisor. Selección de solicitante no concede relación, permisos ni plaza médica.
+
+## STAFF-CONTROL06-R2 — mismos ID-02/03/07 y COM-10
+
+[Contrato](../identity/STAFF-CONTROL06-R2.md). P=feedback explícito del Director; S=misma pantalla con cabecera compacta, lista Integrantes y alta superior; C=mismos handlers/readers/writers; V=ensayo dirigido en contrato; O=sintético owned. Ayuda de contraseña y MFA no concede autoridad ni muestra secretos.

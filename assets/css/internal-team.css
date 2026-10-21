@@ -14,3 +14,22 @@ select{height:44px}
 /* Pending admission reuses the detail panel's existing content gutters. */
 #staff-case{padding:0 24px 24px;overflow-wrap:anywhere}
 @media(max-width:1000px){#staff-case{padding:0 18px 18px}}
+
+/* STAFF-CONTROL06-R2: approved compact section and top-level admission action. */
+.advisor-workspace{padding-top:16px}
+.advisor-workspace>.workspace-header{align-items:center;padding-bottom:12px;margin-bottom:16px;gap:12px}
+.workspace-header .eyebrow{margin:0 0 4px}
+.workspace-header h1{margin:0;line-height:1.2}
+.workspace-header .team-session{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.workspace-header .prototype-badge{padding:6px 8px}
+.workspace-header #team-logout{padding:8px 12px;min-height:44px}
+#wf-status:empty{display:none}
+.team-top-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:end;margin:12px 0}
+.team-top-controls #staff-status-filter{min-width:0;margin:0}
+.team-top-controls .add-button{margin:0;min-height:44px;width:100%;padding:8px;font-size:.8rem;white-space:normal}
+.team-top-controls #staff-status-filter .team-select-trigger{width:100%;min-width:0}
+.synthetic-review-help{font-size:.8rem;line-height:1.5;color:var(--muted);margin:8px 0 14px}
+.synthetic-review-help p{font-size:inherit;margin:6px 0}
+.synthetic-review-help summary{cursor:pointer;min-height:44px;align-content:center}
+.synthetic-review-help code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75rem;user-select:all}
+@media(max-width:640px){.advisor-workspace{padding-top:12px}.advisor-workspace>.workspace-header{align-items:flex-start;gap:8px;margin-bottom:12px}.workspace-header .team-session{align-self:flex-end}.workspace-header h1{font-size:1.25rem}}

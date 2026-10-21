@@ -202,3 +202,7 @@ Los enlaces son candidatos de selección, no una lista obligatoria de ejecución
 ## STAFF-CONTROL06 — selección staff y teclado geográfico
 
 Corrección dirigida actual: [STAFF-CONTROL06 — selección staff, autenticación y teclado geográfico](identity/STAFF-CONTROL06.md), panel derecho por caso/cuenta, actor canónico en reautenticación y typeahead sin nuevo catálogo; QA y guía owned en contrato.
+
+## STAFF-CONTROL06-R2 — revisión del Director
+
+Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles locales](identity/STAFF-CONTROL06-R2.md). Cabecera, controles superiores y ayuda MFA; mismos flujos canónicos.

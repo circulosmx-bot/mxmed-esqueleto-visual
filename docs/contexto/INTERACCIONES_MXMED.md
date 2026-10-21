@@ -264,3 +264,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-CONTROL06 — selección staff y J09
 
 [Contrato](../identity/STAFF-CONTROL06.md): tarjeta cuenta/caso → detalle derecho correspondiente → siguiente acción elegible → diálogo con actor/candidato → contraseña canónica → MFA → consulta documental / decisión / admisión independientes → refresco del caso seleccionado. Documento protegido se retira del DOM al cerrar su diálogo. J04 aporta el catálogo existente: prefijos normalizados sólo para búsqueda, selección conserva valor y dependencia estado/municipio. No añade flujo de registro.
+
+## STAFF-CONTROL06-R2 — J09 sin cambios de autoridad
+
+[Contrato](../identity/STAFF-CONTROL06-R2.md). Filtro Estado del equipo y Agregar integrante comparten fila superior. Selección cuenta/caso conserva el panel y estado individual. Acciones sensibles explican contraseña del Director + MFA vigente; guía local sólo en preview. Revisión documental, decisión, admisión y permisos siguen separados. J04/geografía sólo re-verificado, sin cambio de fuente ni interacción.

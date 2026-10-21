@@ -60,3 +60,7 @@ CONTEXT_SYNC_STATUS=PASS_UPDATED
 DOCUMENTATION_COMMIT=incluido en commit aislado; hash en entrega
 REMAINING_CONTEXT_GAPS=aceptación visual y Safari físico pendientes; integraciones ajenas sin cambios
 ```
+
+## Sucesor visual
+
+El [ajuste R2 solicitado por el Director](STAFF-CONTROL06-R2.md) sucede la disposición de cabecera, lista y acción de alta y añade ayuda local MFA; este contrato conserva la evidencia histórica de selección y autorización.

@@ -1,0 +1,68 @@
+{
+  "measurements": [
+    {
+      "viewport": "native Chromium",
+      "header": {
+        "x": 71,
+        "y": 74.296875,
+        "width": 1224,
+        "height": 67.3828125
+      },
+      "add": {
+        "x": 276,
+        "y": 335.6796875,
+        "width": 176,
+        "height": 44
+      },
+      "state": {
+        "x": 90,
+        "y": 335.6796875,
+        "width": 176,
+        "height": 44
+      }
+    },
+    {
+      "viewport": "Chromium 1366",
+      "header": {
+        "x": 71,
+        "y": 74.296875,
+        "width": 1224,
+        "height": 67.3828125
+      },
+      "add": {
+        "x": 276,
+        "y": 398.5625,
+        "width": 176,
+        "height": 44
+      },
+      "state": {
+        "x": 90,
+        "y": 398.5625,
+        "width": 176,
+        "height": 44
+      }
+    },
+    {
+      "viewport": "Chromium 390",
+      "header": {
+        "x": 16,
+        "y": 67.3984375,
+        "width": 358,
+        "height": 111.7109375
+      },
+      "add": {
+        "x": 200,
+        "y": 494.9140625,
+        "width": 159,
+        "height": 44
+      },
+      "state": {
+        "x": 31,
+        "y": 494.9140625,
+        "width": 159,
+        "height": 44
+      }
+    }
+  ],
+  "page_errors": []
+}

@@ -1,0 +1,135 @@
+{
+  "source": "db_backups/sepomex_20251115_114415.sql",
+  "sha256": "9d6032bc79d64472d2cbc3cf39d1342ca0ee8a8907cc91a38d537b92fec82a85",
+  "states": [
+    {
+      "state": "Aguascalientes",
+      "municipalities": 11
+    },
+    {
+      "state": "Baja California",
+      "municipalities": 7
+    },
+    {
+      "state": "Baja California Sur",
+      "municipalities": 5
+    },
+    {
+      "state": "Campeche",
+      "municipalities": 13
+    },
+    {
+      "state": "Chiapas",
+      "municipalities": 124
+    },
+    {
+      "state": "Chihuahua",
+      "municipalities": 67
+    },
+    {
+      "state": "Ciudad de México",
+      "municipalities": 16
+    },
+    {
+      "state": "Coahuila de Zaragoza",
+      "municipalities": 38
+    },
+    {
+      "state": "Colima",
+      "municipalities": 10
+    },
+    {
+      "state": "Durango",
+      "municipalities": 39
+    },
+    {
+      "state": "Guanajuato",
+      "municipalities": 46
+    },
+    {
+      "state": "Guerrero",
+      "municipalities": 85
+    },
+    {
+      "state": "Hidalgo",
+      "municipalities": 84
+    },
+    {
+      "state": "Jalisco",
+      "municipalities": 125
+    },
+    {
+      "state": "México",
+      "municipalities": 125
+    },
+    {
+      "state": "Michoacán de Ocampo",
+      "municipalities": 113
+    },
+    {
+      "state": "Morelos",
+      "municipalities": 36
+    },
+    {
+      "state": "Nayarit",
+      "municipalities": 20
+    },
+    {
+      "state": "Nuevo León",
+      "municipalities": 51
+    },
+    {
+      "state": "Oaxaca",
+      "municipalities": 570
+    },
+    {
+      "state": "Puebla",
+      "municipalities": 217
+    },
+    {
+      "state": "Querétaro",
+      "municipalities": 18
+    },
+    {
+      "state": "Quintana Roo",
+      "municipalities": 11
+    },
+    {
+      "state": "San Luis Potosí",
+      "municipalities": 59
+    },
+    {
+      "state": "Sinaloa",
+      "municipalities": 20
+    },
+    {
+      "state": "Sonora",
+      "municipalities": 72
+    },
+    {
+      "state": "Tabasco",
+      "municipalities": 17
+    },
+    {
+      "state": "Tamaulipas",
+      "municipalities": 43
+    },
+    {
+      "state": "Tlaxcala",
+      "municipalities": 60
+    },
+    {
+      "state": "Veracruz de Ignacio de la Llave",
+      "municipalities": 212
+    },
+    {
+      "state": "Yucatán",
+      "municipalities": 106
+    },
+    {
+      "state": "Zacatecas",
+      "municipalities": 58
+    }
+  ],
+  "identifier_contract": "Existing natural keys estado/municipio; colony row id is not a city id."
+}

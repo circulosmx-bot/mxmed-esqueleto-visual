@@ -1,0 +1,75 @@
+{
+  "result": "PASS",
+  "source_baseline": "cbc92d964240a595e2804b4134fbe290cf02e226",
+  "feature_branch": "feature/mxmed-staff-control06-r2-director-layout",
+  "checks": 35,
+  "protected_unchanged": true,
+  "protected_worktrees": 30,
+  "original_listener_pids_unchanged": {
+    "8091": [
+      "90106"
+    ],
+    "8092": [
+      "1727"
+    ],
+    "8443": [
+      "93582"
+    ],
+    "6385": [
+      "1590"
+    ],
+    "8140": [
+      "76748"
+    ],
+    "8141": [
+      "83715"
+    ]
+  },
+  "canonical_backend_api_and_geography_unchanged": true,
+  "syntax_checked": [
+    "assets/js/internal-team.js",
+    "assets/js/staff-workflow.js",
+    "internal/development/interfaces.php",
+    "partials/identity/internal-team.php",
+    "partials/identity/staff-workflow.php",
+    "scripts/staff-control06-r2-browser.py",
+    "scripts/staff-control06-r2-qa.py",
+    "scripts/staff-control06-r2-review.py"
+  ],
+  "runtime_pins_match": true,
+  "native_review": {
+    "opened_at": 1792545309.735724,
+    "url": "https://127.0.0.1:55716/internal/media-review/index.php?section=equipo",
+    "proof": {
+      "width": 1366,
+      "height": 783,
+      "outerWidth": 1366,
+      "outerHeight": 870,
+      "availableHeight": 870,
+      "scrollWidth": 1366
+    },
+    "canonical_login": true,
+    "synthetic_account": "qa_director@example.test"
+  },
+  "preview": {
+    "url": "https://127.0.0.1:55716/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792631464.361161,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-f5djbn68",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "production_activation": false,
+  "visual_acceptance": "PENDING",
+  "historical_suite_rerun": false,
+  "source_sha256": {
+    "assets/css/internal-team.css": "c6b2f9b6ba14e8d305756c108ec149a8fe62434ac42164c7e31edc4190c8f058",
+    "assets/js/internal-team.js": "25b3c93ea578ec7054785511bd1385ec42d208aa51a62c41cae259edc01025e4",
+    "assets/js/staff-workflow.js": "477dc7f6450290090dbf7411aa5abefeed8d479ef500375207ef19c05751f85f",
+    "internal/development/interfaces.php": "77dc73518535d8dabd43f2d963af2d548e86f87a573d37d2ba14c8c326702f34",
+    "partials/identity/internal-team.php": "c5c95232470761cad0bf7dca23cf0c9652e6a9776d2af0e626b0af82ce51f2de",
+    "partials/identity/staff-workflow.php": "d3bde403a6540ee07df2ea29f0a1f9b6024103231ea343b7286e2f9e3fa9cb68",
+    "scripts/staff-control06-r2-browser.py": "37e52545e9c9a68087bf6e57610584eff4b93da67e4969063300294f23b3d4f2",
+    "scripts/staff-control06-r2-qa.py": "392958f47d3802ba455512176f46208ae390a2c41468b5d69cccb0eb41dd13ec",
+    "scripts/staff-control06-r2-review.py": "7fcc121c06b652b7977bfede50b631c58e9b0df289cf5804d0b9502bac030f7a"
+  },
+  "local_links_checked": 750
+}
