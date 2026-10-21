@@ -199,3 +199,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-AUTH-UX08 — UI-2 autorizada
 
 [Contrato](identity/STAFF-AUTH-UX08.md): visor/panel originales, consulta directa; confirmaciones de ACK/decisión/admisión sin campos de contraseña/código. Copy acotado y motivo obligatorio para corrección/rechazo; sin CSS ni rediseño. Verificación Chromium/WebKit en evidencia de la entrega; aceptación visual PENDING.
+
+## STAFF-PANEL-UX09 — presentación aislada
+
+[STAFF-PANEL-UX09](identity/STAFF-PANEL-UX09.md): refinamiento UI-2/UI-3 aislado expresamente solicitado. Logo oficial existente, paleta/tokens y controles nativos; tres tamaños Chromium/WebKit. Aceptación visual PENDING, sin promoción a 8091.

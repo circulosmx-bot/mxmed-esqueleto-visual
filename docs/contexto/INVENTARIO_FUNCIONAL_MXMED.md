@@ -421,3 +421,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-AUTH-UX08 — ID-02/03/07 y COM-10
 
 [Contrato](../identity/STAFF-AUTH-UX08.md). P=decisión expresa de sesión Director para acciones staff acotadas; S=authorize y consumo ligados a sesión/caso/set/snapshot; C=Identity, CSRF, readers privados y writers canónicos; V=QA dirigida en contrato; O=owned sintético, sin activación real. Sucede la reautenticación por acción de los hitos anteriores sólo en este alcance.
+
+## STAFF-PANEL-UX09 — presentación aislada
+
+[Contrato](../identity/STAFF-PANEL-UX09.md). ID-02/03/07 y COM-10: P=refinamiento expresamente solicitado; S=presenter/template/CSS existentes; C=mismos endpoints y sesiones; V=QA dirigida en contrato; O=owned sintético, sin producción. Sin capacidades nuevas.

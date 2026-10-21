@@ -260,3 +260,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-AUTH-UX08 — política Director aprobada, verificación aislada
 
 [Contrato](identity/STAFF-AUTH-UX08.md). Padre `cd2a9ae940fa3aaa6e312bfd8294892d19bb7f04`; nueva rama `feature/mxmed-staff-auth-ux08`. Sesión canónica sustituye contraseña/MFA por acción únicamente para consulta, ACK, decisión y admisión staff. Autoridad/CSRF/versiones/audit y gobierno Master independientes; sin producción/8091. Estado de QA en el contrato; aceptación visual PENDING.
+
+## STAFF-PANEL-UX09 — presentación aislada
+
+[STAFF-PANEL-UX09](identity/STAFF-PANEL-UX09.md), padre `464707ba1eb75c60eb9098962de3a74da399110b`: área documental única, historia cerrada, invitación concisa, Asesores primero y logo/paleta canónicos. Sólo presentación aislada; AUTH-UX08/backend/8091 preservados, aceptación visual PENDING.

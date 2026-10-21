@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "engine": "chromium",
+      "mobile_button_width": true,
+      "destructive_confirmation": true,
+      "escape": true,
+      "no_repeated_credentials": true
+    },
+    {
+      "engine": "webkit",
+      "mobile_button_width": true,
+      "destructive_confirmation": true,
+      "escape": true,
+      "no_repeated_credentials": true
+    }
+  ]
+}

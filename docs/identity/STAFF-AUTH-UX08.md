@@ -51,3 +51,7 @@ python3 scripts/staff-auth-ux08-review.py /tmp/mxmed-ase-adm02imp01-b1fycplj sto
 - CONTEXT_SYNC_STATUS: PASS_UPDATED.
 - DOCUMENTATION_COMMIT: mismo commit aislado de fuente/evidencia.
 - REMAINING_CONTEXT_GAPS: aceptación visual y Safari físico pendientes; límites productivos previos conservados.
+
+## STAFF-PANEL-UX09 — presentación aislada
+
+[STAFF-PANEL-UX09](STAFF-PANEL-UX09.md) refina únicamente presentación y organización; conserva íntegros la sesión canónica, los readers/writers y la auditoría aquí documentados.

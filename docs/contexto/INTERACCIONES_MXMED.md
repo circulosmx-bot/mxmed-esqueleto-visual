@@ -288,3 +288,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-AUTH-UX08 — J09 sin credenciales repetidas
 
 [Contrato](../identity/STAFF-AUTH-UX08.md). Login Identity → selección exacta → consulta privada directa; ACK/decisión/admisión → confirmación contextual → intención con snapshot → revalidación/consumo/audit → recibo. Contraseña/MFA por acción de CONTROL07/LIFECYCLE03 quedan sucedidos sólo aquí. Motivo para corrección/rechazo, grants separados, sesión expirada denegada y sin reenvío incierto. J08/Master no cambian.
+
+## STAFF-PANEL-UX09 — presentación aislada
+
+[Contrato](../identity/STAFF-PANEL-UX09.md). J09: selección → documentación vigente → consulta/decisiones separadas; histórico sólo al expandir. Invitación resumida → Más detalles. Orden Asesores/Master en DOM. Se conserva la autoridad y el ciclo documental AUTH-UX08.

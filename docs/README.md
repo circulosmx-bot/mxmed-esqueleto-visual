@@ -226,3 +226,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-AUTH-UX08 — administración Director con sesión canónica
 
 [Política aprobada, implementación y revisión](identity/STAFF-AUTH-UX08.md). Sucesor acotado de CONTROL07/VIS02/LIFECYCLE03: consulta directa y decisiones explícitas sin credenciales repetidas. Master y otros actos privilegiados conservan su ceremonia independiente.
+
+## STAFF-PANEL-UX09 — presentación aislada
+
+[Contrato y guía STAFF-PANEL-UX09](identity/STAFF-PANEL-UX09.md): refinamiento de presentación sobre AUTH-UX08, sin cambios de autorización o datos.

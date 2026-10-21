@@ -74,3 +74,19 @@ html body #staff-evidence{width:min(960px,calc(100% - 32px));color:#013151;backg
 #staff-evidence .evidence-document[hidden] { display:none !important; }
 #staff-evidence #evidence-back { margin-right:auto; }
 #staff-evidence #evidence-close-help { font-size:.8rem; }
+
+/* STAFF-PANEL-UX09: existing ink/teal palette and semantic emphasis. */
+.team-brand{display:flex;align-items:center;gap:16px;min-width:0}.team-brand>img{width:112px;height:48px;object-fit:contain;flex-shrink:0}.team-brand>div{min-width:0}
+.advisor-workspace button:not(.advisor-card):not(.evidence-preview){font-weight:600}
+.advisor-workspace button:not(.advisor-card):not(.evidence-preview):not(.primary):not(.danger){border-color:var(--line);color:var(--ink);background:#fff}
+.advisor-workspace button:not(.advisor-card):not(.evidence-preview):not(.danger):not(:disabled):hover{border-color:var(--teal);background:var(--soft);color:var(--teal)}
+.advisor-workspace button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.advisor-workspace button.primary:not(:disabled):hover{background:var(--ink);border-color:var(--ink);color:#fff}
+.advisor-workspace .category-filter button[aria-pressed=true]{background:var(--soft);border-color:var(--teal);color:var(--teal)}
+.secondary-details{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}.secondary-details>summary{min-height:44px;align-content:center;cursor:pointer;color:var(--muted);font-size:.85rem;font-weight:600}
+.document-history article+article{border-top:1px solid var(--line);margin-top:16px;padding-top:8px}.documentation-actions{flex-direction:row;flex-wrap:wrap;margin:12px 0}.documentation-actions button{max-width:none}.invitation-state{font-weight:650;color:var(--ink)}.invitation-summary{margin:0}.invitation-summary dt{margin-top:8px}#invitation-details>h3{font-size:.95rem}
+@media(max-width:640px){.team-brand{gap:10px}.team-brand>img{width:72px;height:40px}.team-brand h1{font-size:1.08rem}.team-brand .eyebrow{font-size:.65rem}.documentation-actions,#staff-case-content .documentation-actions{flex-direction:column;align-items:stretch}.documentation-actions button{flex:none;width:100%}.category-filter{grid-template-columns:1fr 1.4fr}}
+
+/* Destructive palette reused from mxmed-admin-visual-primitives.css. */
+.advisor-workspace button.danger{background:#fff;border-color:#b77d7d;color:#923232}.advisor-workspace button.danger:not(:disabled):hover{border-color:#923232;background:#fff;color:#923232}
+.advisor-workspace button.primary:disabled{background:#e7eef1;border-color:#cfdae0;color:#607884}

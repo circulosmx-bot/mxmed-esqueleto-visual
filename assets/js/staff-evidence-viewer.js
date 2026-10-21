@@ -16,12 +16,12 @@ function clear(){
 function render(context,pages){
  clear();canAck=context.actions.includes('ACK')&&!context.historical;$('ack-staff-evidence').hidden=!canAck;
  const documents=typeof context.set.manifest==='string'?JSON.parse(context.set.manifest):context.set.manifest;
- if(!Array.isArray(documents)||!pages.length||pages.some(p=>!documents.some(d=>d.document_id===p.document_id)))throw new Error('La evidencia no corresponde al conjunto consultado.');
+ if(!Array.isArray(documents)||!pages.length||pages.some(p=>!documents.some(d=>d.document_id===p.document_id)))throw new Error('La documentación no corresponde al conjunto consultado.');
  const header=$('staff-evidence-context');header.append(el('h3',context.name,'evidence-applicant'));
  const category={ADVISOR:'Asesor',MASTER_ADMIN:'Administrador maestro'}[context.category]||'Categoría no especificada';
- const status=context.reviewCurrent?({ACCEPT:'Evidencia aceptada',CORRECTIONS:'Correcciones solicitadas',REJECT:'Evidencia rechazada'}[context.review?.decision]||'Estado de revisión no disponible'):'Pendiente de revisión';
+ const status=context.reviewCurrent?({ACCEPT:'Documentos aceptados',CORRECTIONS:'Correcciones solicitadas',REJECT:'Documentos rechazados'}[context.review?.decision]||'Estado de revisión no disponible'):'Pendiente de revisión';
  header.append(el('p',context.ackCurrent?'Documentos revisados':'Revisión de documentos sin confirmar','evidence-ack-status'));
- header.append(el('p',category+' · '+status,'evidence-status'),el('p',(context.historical?'Conjunto histórico · versión ':'Conjunto de evidencia · versión ')+context.set.sequence_number+' · datos del caso v'+context.set.case_version,'evidence-version'));
+ header.append(el('p',category+' · '+status,'evidence-status'),el('p',(context.historical?'Conjunto histórico · versión ':'Conjunto documental · versión ')+context.set.sequence_number+' · datos del caso v'+context.set.case_version,'evidence-version'));
  if(context.review&&!context.reviewCurrent)header.append(el('p','La revisión anterior no acredita este conjunto vigente.','evidence-version'));
  const groups=$('protected-case-pages');
  for(const [index,doc] of documents.entries()){
@@ -43,8 +43,8 @@ function render(context,pages){
   });group.append(grid,large);groups.append(group);
  }
  const eligible=context.actions.filter(a=>['ACCEPT','CORRECTIONS','REJECT','ADMIT'].includes(a));
- const names={ACCEPT:'Aceptar evidencia y concluir revisión',CORRECTIONS:'Solicitar correcciones',REJECT:'Rechazar evidencia',ADMIT:'Aprobar admisión'};
- $('staff-evidence-next').textContent=(eligible.length?'Al cerrar, puedes volver al caso para: '+eligible.map(a=>names[a]).join('; ')+'. ':'Cierra para volver al estado actual del caso. ')+'Consultar o confirmar el examen de documentos no valida la identidad, no acepta la evidencia ni admite al integrante. Cada acción se autoriza por separado con tu sesión vigente.';
+ const names={ACCEPT:'Aceptar documentos y concluir revisión',CORRECTIONS:'Solicitar correcciones',REJECT:'Rechazar documentos',ADMIT:'Aprobar admisión'};
+ $('staff-evidence-next').textContent=(eligible.length?'Al cerrar, puedes volver al caso para: '+eligible.map(a=>names[a]).join('; ')+'. ':'Cierra para volver al estado actual del caso. ')+'Consultar o confirmar el examen de documentos no valida la identidad, no acepta la documentación ni admite al integrante. Cada acción se autoriza por separado con tu sesión vigente.';
 }
 window.staffEvidenceViewer={render,clear};
 // Handle enlargement at keydown, before native CloseWatcher can force-close a dialog.
