@@ -210,3 +210,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## STAFF-CONTROL05 — corrección contextual aislada
 
 [Contrato e inventario](../identity/STAFF-CONTROL05.md). Sin tablas ni migraciones nuevas. InvitationService proyecta versión y usabilidad efectiva desde caso/estado/expiración; conserva la fila histórica emitida al cancelar el caso. Service rechaza revoke si la cuenta vinculada ya tiene relación staff. Intentions mantiene ledgers/versiones; catálogo de preparación reducido a consumidores conectados. Hitos de simulación son metadata privada desechable, no nueva autoridad ni estado de negocio.
+
+## STAFF-CONTROL06 — proyección contextual sin DDL
+
+[Contrato](../identity/STAFF-CONTROL06.md). Bootstrap proyecta referencia de correo propio desde `auth_accounts` según el ID autenticado y categoría vigente desde `internal_staff`; no acepta cuenta/rol suministrados por el cliente. Casos, versiones, invitaciones, intenciones y geografía conservan sus fuentes y writers. Ninguna tabla, migración, catálogo municipal ni relación duplicada.

@@ -232,3 +232,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-CONTROL05 — corrección contextual aislada
 
 [Contrato e inventario](identity/STAFF-CONTROL05.md). Estado contextual de incorporación, lectura de progreso independiente y facultades previstas limitadas a once claves operativas. Editar no emite invitaciones; cancelar invalida aceptación sin borrar historia ni afectar staff admitido. Quince áreas distinguen cuatro coberturas operativas (Historial parcial) y once integraciones pendientes; índice conserva dos contextos independientes y cuatro no habilitados.
+
+## STAFF-CONTROL06 — selección y reautenticación contextual
+
+[Contrato](identity/STAFF-CONTROL06.md), baseline STAFF-CONTROL05 `ab6b78349c26b9f80906065dedfdb1210449726f`. Selección cuenta/caso coherente en panel derecho; cuenta propia canónica identificada en contraseña/MFA; typeahead desde selector cerrado/abierto sin alterar Geography. Diálogos limitados a operaciones enfocadas y evidencia protegida; revisión, admisión y grants independientes. Sólo composición owned sintética; 8091/WORKSPACE02/03 sin cambios y aceptación visual PENDING.

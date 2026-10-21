@@ -171,3 +171,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-CONTROL05 — corrección contextual aislada
 
 [Contrato e inventario](identity/STAFF-CONTROL05.md). Corrección UI-2 expresamente solicitada: siguiente acción según elegibilidad canónica, controles futuros omitidos, cancelación secundaria, facultades previstas frente a permisos activos y progreso visible. Shell/modal-scroll conservados. Índice explica apertura en ventana independiente mediante launcher; cuatro contextos no habilitados. Aceptación visual PENDING; sin promoción a 8091.
+
+## STAFF-CONTROL06 — UI-2 dirigida
+
+[Ficha y contrato](identity/STAFF-CONTROL06.md). Solicitud expresa autoriza selección unificada del detalle derecho, explicación de reautenticación con cuenta Director y búsqueda geográfica por teclado. Conserva shell, modalidades de revisión/MFA y scroll del diálogo aprobado. Evidencia Chromium/WebKit en tres tamaños y viewport nativo según contrato; aceptación visual PENDING, Safari físico NOT_RUN. Sin promoción a 8091.

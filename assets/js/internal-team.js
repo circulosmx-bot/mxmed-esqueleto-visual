@@ -6,10 +6,10 @@
   const staffStatus=m=>({ACTIVE:'Activo',SUSPENDED:'Suspendido',REMOVED:'Baja definitiva'}[m.staff_status]||'Estado no disponible');
   const groups=[['requests','Solicitudes de perfiles médicos',['physician_requests']],['accreditation','Acreditación profesional',['physician_accreditation','professional_sources']],['media','Revisión de medios',['media_review']],['corrections','Correcciones de perfiles',['public_profile_corrections','public_profile_correction_application']],['profiles','Administración de perfiles',['profile_administration']],['providers','Organizaciones y proveedores',['provider_claim','provider_commercial']]];
   const future=new Set(['profile_create','profile_curate','profile_publication_manage','profile_support_assist']);
-  let category='ADVISOR',status='ACTIVE',page=1,q='',authority=null,catalog={},selected=null,listEpoch=0,detailEpoch=0,searchTimer;
+  let category='ADVISOR',status='ACTIVE',page=1,q='',authority=null,catalog={},selected=null,selectedCase=null,listEpoch=0,detailEpoch=0,searchTimer;
   const say=message=>{$('feedback').textContent=message;};
   const mobile=view=>{$('workspace-columns').dataset.mobileView=view;$('show-directory').setAttribute('aria-pressed',String(view==='directory'));$('show-detail').setAttribute('aria-pressed',String(view==='detail'));};
-  function empty(message){$('advisor-detail').innerHTML=`<div class="empty-state detail-empty"><h2 id="detail-title" tabindex="-1">${esc(message)}</h2><p>Selecciona un integrante o una solicitud en el directorio.</p></div>`;}
+  function empty(message){window.staffWorkflowDirectory?.detach();selectedCase=null;$('advisor-detail').innerHTML=`<div class="empty-state detail-empty"><h2 id="detail-title" tabindex="-1">${esc(message)}</h2><p>Selecciona un integrante o una solicitud en el directorio.</p></div>`;}
   async function read(params){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
     try{const response=await fetch('/api/internal/team/read.php?'+new URLSearchParams(params),{signal:controller.signal,method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
@@ -22,46 +22,54 @@
     else if(card){const status=card.querySelector('.status');status.textContent=staffStatus(selected);status.classList.toggle('suspended',selected.staff_status!=='ACTIVE');card.querySelector('.advisor-meta span:last-child').textContent=`Asesor · ${selected.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}`;}
   }});
   const masterFlow=window.createTeamMasterFlow({editor,read,refresh:async(target,nextCategory)=>{category=nextCategory;page=1;await load();await select(target,true);}});
-  async function navigate(action){clearTimeout(searchTimer);if(masterFlow.active){say('Finaliza o consulta el resultado de la operación de gobierno antes de continuar.');$('advisor-search').value=q;$('staff-status').value=status;return;}if(await editor.canLeave())await action();else $('advisor-search').value=q;if($('staff-status')){$('staff-status').value=status;syncStatus();}}
+  async function navigate(action){if(window.staffWorkflowDirectory&&!window.staffWorkflowDirectory.canLeave())return;clearTimeout(searchTimer);if(masterFlow.active){say('Finaliza o consulta el resultado de la operación de gobierno antes de continuar.');$('advisor-search').value=q;$('staff-status').value=status;return;}if(await editor.canLeave())await action();else $('advisor-search').value=q;if($('staff-status')){$('staff-status').value=status;syncStatus();}}
   function failure(error){
     editor.reset();
     authority=null;selected=null;detailEpoch++;$('directory-content').innerHTML='';empty('Consulta no disponible');$('filter-masters').disabled=true;$('filter-advisors').disabled=true;$('previous-team').disabled=true;$('next-team').disabled=true;
     say(error.status===401?'Tu sesión no está disponible. Inicia sesión mediante Identity.':error.status===403?'La consulta del equipo requiere autorización vigente.':'No pudimos consultar el equipo. Puedes intentar de nuevo.');
     const button=document.createElement('button');button.type='button';button.id='retry-team';button.textContent='Reintentar consulta';button.onclick=load;$('directory-content').append(button);
   }
-  async function load(){
-    editor.reset();const epoch=++listEpoch;detailEpoch++;selected=null;empty('Selecciona un integrante');$('directory-content').innerHTML='';$('directory-content').setAttribute('aria-busy','true');say('Cargando equipo…');
+  async function load(restore=null){
+    editor.reset();const epoch=++listEpoch;detailEpoch++;const automaticDetailEpoch=detailEpoch;selected=null;empty('Selecciona un integrante');$('directory-content').innerHTML='';$('directory-content').setAttribute('aria-busy','true');say('Cargando equipo…');
     $('previous-team').disabled=true;$('next-team').disabled=true;
     try{
       $('staff-status-filter').hidden=false;$('staff-status').value=status;$('advisor-search').disabled=false;syncStatus();$('clear-staff-search').hidden=!q;
       if(category==='ADVISOR'&&status==='PENDING'){
         const data=await window.staffWorkflowDirectory.pending(q,page);if(epoch!==listEpoch)return;const items=data.items;
         $('directory-content').innerHTML=items.length?`<ul class="advisor-list">${items.map(c=>`<li><button type="button" class="advisor-card" data-case="${esc(c.case_id)}"><span class="advisor-card-copy"><span class="advisor-name">${esc(c.display_name||'Solicitud pendiente')}</span><span class="team-reference">${esc(c.case_id)}</span><span class="status">${esc({DRAFT:'Preparación',PERSON_CONFIRMED:'Datos confirmados',PREPARED:'Preparación',AWAITING_PERSON:'Pendiente del solicitante'}[c.state]||'Pendiente de admisión')}</span></span></button></li>`).join('')}</ul>`:'<p class="empty-state">No hay solicitudes pendientes.</p>';
-        $('directory-content').querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>window.staffWorkflowDirectory.open(b.dataset.case).catch(()=>say('No se pudo consultar la solicitud.')));
-        $('team-page').textContent='Página '+data.page;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;empty('Solicitudes pendientes de admisión');say('Estos casos todavía no son integrantes activos. Selecciona uno para continuar su incorporación.');return;
+        $('directory-content').querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>navigate(()=>selectCase(b.dataset.case,true)));
+        $('team-page').textContent='Página '+data.page;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;empty('Solicitudes pendientes de admisión');say('Estos casos todavía no son integrantes activos. Selecciona uno para continuar su incorporación.');if(restore?.case)await selectCase(restore.case,false);return;
       }
       const data=await read({category,status,page:String(page),page_size:'20',q});if(epoch!==listEpoch)return;
       authority=data.authority;catalog=data.catalog;$('filter-advisors').disabled=false;$('staff-status').querySelector('[value="PENDING"]').disabled=category!=='ADVISOR'||!authority.can_read_masters||!window.staffWorkflowDirectory;$('filter-masters').disabled=!authority.can_read_masters;syncStatus();
       $('filter-advisors').setAttribute('aria-pressed',String(category==='ADVISOR'));$('filter-masters').setAttribute('aria-pressed',String(category==='MASTER_ADMIN'));
       $('authority-note').textContent=authority.class==='DIRECTOR'?'Administración de Dirección. Selecciona un integrante para gestionar su acceso y sus permisos.':'Vista Master: sólo asesores. Los permisos y conteos se limitan a tus capacidades delegadas vigentes; no revelan otras asignaciones.';
-      $('directory-content').innerHTML=data.items.length?`<ul class="advisor-list">${data.items.map(m=>`<li><button type="button" class="advisor-card" data-member="${esc(m.account_reference)}" aria-pressed="false"><span class="avatar team-neutral" aria-hidden="true">○</span><span class="advisor-card-copy"><span class="advisor-name">${esc(personName(m))}</span><span class="team-reference">Cuenta: ${esc(m.account_reference)}</span><span class="advisor-meta"><span class="status ${m.staff_status==='ACTIVE'?'':'suspended'}">${staffStatus(m)}</span><span>${m.governance_class==='MASTER_ADMIN'?'Master':'Asesor'} · ${m.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}</span></span></span></button></li>`).join('')}</ul>`:'<div class="empty-state"><strong>No hay integrantes en este estado.</strong></div>';
+      $('directory-content').innerHTML=data.items.length?`<ul class="advisor-list">${data.items.map(m=>`<li><button type="button" class="advisor-card" data-member="${esc(m.account_reference)}" data-admission-case="${esc(m.admission_case_id||'')}" aria-pressed="false"><span class="avatar team-neutral" aria-hidden="true">○</span><span class="advisor-card-copy"><span class="advisor-name">${esc(personName(m))}</span><span class="team-reference">Cuenta: ${esc(m.account_reference)}</span><span class="advisor-meta"><span class="status ${m.staff_status==='ACTIVE'?'':'suspended'}">${staffStatus(m)}</span><span>${m.governance_class==='MASTER_ADMIN'?'Master':'Asesor'} · ${m.active_operational_grant_count} permisos ${authority.can_read_masters?'operativos':'en tu ámbito'}</span></span></span></button></li>`).join('')}</ul>`:'<div class="empty-state"><strong>No hay integrantes en este estado.</strong></div>';
       $('directory-content').querySelectorAll('[data-member]').forEach(button=>button.onclick=()=>navigate(()=>select(button.dataset.member,true)));
       $('team-page').textContent=`Página ${data.page}`;$('previous-team').disabled=page===1;$('next-team').disabled=!data.has_more;say(data.items.length?'':'No hay integrantes en este estado.');
       if(category==='ADVISOR'&&status==='ACTIVE'&&authority.can_read_masters&&window.staffWorkflowDirectory){
         const pending=await window.staffWorkflowDirectory.pending(q,1);if(epoch!==listEpoch)return;
         if(pending.items.length){const block=document.createElement('section');block.innerHTML='<h3>Incorporaciones pendientes</h3><p>Sin acceso activo; preparación e invitaciones.</p><ul class="advisor-list">'+pending.items.map(c=>`<li><button type="button" class="advisor-card" data-case="${esc(c.case_id)}"><span class="advisor-card-copy"><span class="advisor-name">${esc(c.display_name)}</span><span class="status">${c.state==='PERSON_CONFIRMED'?'Datos confirmados · revisión pendiente':'Preparación / invitación pendiente'}</span></span></button></li>`).join('')+'</ul>';
-        block.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>window.staffWorkflowDirectory.open(b.dataset.case).catch(()=>say('No se pudo consultar la solicitud.')));$('directory-content').prepend(block);}
+        block.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>navigate(()=>selectCase(b.dataset.case,true)));$('directory-content').prepend(block);}
       }
-      if(data.items.length)await select(data.items[0].account_reference,false);
+      if(automaticDetailEpoch!==detailEpoch)return; // A click made during directory loading takes precedence.
+      if(restore?.case)await selectCase(restore.case,false);else if(restore?.account)await select(restore.account,false);else if(data.items.length)await select(data.items[0].account_reference,false);
     }catch(error){if(epoch===listEpoch)failure(error);}finally{if(epoch===listEpoch)$('directory-content').setAttribute('aria-busy','false');}
   }
   async function select(reference,focus){
-    editor.reset();empty('Cargando integrante…');const epoch=++detailEpoch,listing=listEpoch;
+    editor.reset();selected=null;empty('Cargando integrante…');highlight(reference,null);const epoch=++detailEpoch,listing=listEpoch;
     try{const data=await read({category,target:reference});if(epoch!==detailEpoch||listing!==listEpoch)return;
-      authority=data.authority;catalog=data.catalog;selected=data.items[0];renderDetail();editor.adopt(data);masterFlow.adopt(data);document.querySelectorAll('[data-member]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.member===reference)));
+      authority=data.authority;catalog=data.catalog;selected=data.items[0];renderDetail();editor.adopt(data);masterFlow.adopt(data);highlight(reference,null);
       if(focus){mobile('detail');$('detail-title').focus();}
     }catch(error){if(epoch===detailEpoch)failure(error);}
   }
+  function highlight(reference,id){document.querySelectorAll('[data-member],[data-case]').forEach(b=>b.setAttribute('aria-pressed',String(id?(b.dataset.case===id||b.dataset.admissionCase===id):b.dataset.member===reference)));}
+  async function selectCase(id,focus){
+    editor.reset();detailEpoch++;empty('Cargando solicitud…');selected=null;selectedCase=id;highlight(null,id);
+    await window.staffWorkflowDirectory.mount(id);
+    if(selectedCase===id&&focus){mobile('detail');$('detail-title').focus();}
+  }
+  window.staffSelectCase=id=>navigate(()=>selectCase(id,true));
   function matrix(prefix,chosen,delegation=false){
     return groups.map(([id,title,domains])=>{
       const definitions=Object.values(catalog).filter(c=>c.kind==='operational'&&c.delegable&&domains.includes(c.domain));
@@ -120,7 +128,7 @@
       listEpoch++;detailEpoch++;selected=null;authority=null;document.body.replaceChildren();location.replace('/public/identity/acceso.php?next='+encodeURIComponent('/internal/media-review/index.php?section=equipo'));
     }catch(_){say('No pudimos confirmar el cierre de sesión. Intenta nuevamente.');button.disabled=false;}
   });
-  window.staffWorkflowRefresh=()=>{const target=selected?.account_reference,personalOpen=$('personal-data')?.open;return navigate(async()=>{await load();if(target&&status!=='PENDING'){await select(target,false);if(personalOpen&&$('personal-data'))$('personal-data').open=true;}});};
+  window.staffWorkflowRefresh=()=>{const restore=selectedCase?{case:selectedCase}:{account:selected?.account_reference},personalOpen=$('personal-data')?.open,openSections=[...document.querySelectorAll('#staff-case details[open][id]')].map(e=>e.id),message=$('staff-case-status')?.textContent;return navigate(async()=>{await load(restore);if(personalOpen&&$('personal-data'))$('personal-data').open=true;if(restore.case&&$('staff-case-status')){$('staff-case-status').textContent=message||'';openSections.forEach(id=>{if($(id))$(id).open=true;});}});};
   window.addEventListener('staff-workflow-changed',()=>window.staffWorkflowRefresh());
   load();
 })();

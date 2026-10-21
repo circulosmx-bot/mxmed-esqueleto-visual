@@ -260,3 +260,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-CONTROL05 — corrección contextual aislada
 
 [Contrato e inventario](../identity/STAFF-CONTROL05.md). J01/J02: lector de estado de simulación no inicia operaciones; hitos sólo tras registro/verificación, binding, confirmación y evidencia canónicos. Respuesta perdida se recupera por la misma operación/caso. J09 conserva Media/Requests e historia. Cancelar usa estado REVOKED para invalidar aceptación; no elimina la cuenta. Navegación entre roles usa ventanas independientes, sin cookies compartidas.
+
+## STAFF-CONTROL06 — selección staff y J09
+
+[Contrato](../identity/STAFF-CONTROL06.md): tarjeta cuenta/caso → detalle derecho correspondiente → siguiente acción elegible → diálogo con actor/candidato → contraseña canónica → MFA → consulta documental / decisión / admisión independientes → refresco del caso seleccionado. Documento protegido se retira del DOM al cerrar su diálogo. J04 aporta el catálogo existente: prefijos normalizados sólo para búsqueda, selección conserva valor y dependencia estado/municipio. No añade flujo de registro.

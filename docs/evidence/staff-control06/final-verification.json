@@ -1,0 +1,409 @@
+{
+  "result": "PASS",
+  "baseline": "ab6b78349c26b9f80906065dedfdb1210449726f",
+  "check_count": 80,
+  "checks_by_report": {
+    "qa.json": 18,
+    "supplement.json": 44,
+    "selection-states.json": 8,
+    "keyboard-final.json": 10
+  },
+  "source_sha256": {
+    "assets/css/internal-team.css": "0801ad6a7df34e133662b4678616bed968cb1e705a4fe2514147c9973426ecc3",
+    "assets/js/internal-team.js": "5e60c85fa91e8d003e23b5269d45a47f74f357a5dfd10996839a86a20334e465",
+    "assets/js/staff-workflow.js": "e199acff27a9b0885a0e053375e85c55cc4f1d683018cb663e02e6044a103cce",
+    "assets/js/team-selects.js": "8cc9279362709c32cf803afde9d8160a856554244f66862791c11c777fbf3e9d",
+    "internal/development/interfaces.php": "330160891f018d17d41a5c6722b31821d36545f54d4336cd136b9d7f333ebba6",
+    "modules/identity/StaffWorkflow/Http.php": "8f3fb1dc1ad6675462e9ba09f7b42e06620f43946e57ae43f0ea326a16c1e860",
+    "partials/identity/staff-workflow.php": "46542ca0bee9e45806dc34b353cecc6618ce650e466a28bcb8997f22d97f69e7",
+    "scripts/staff-control06-browser.py": "87ac89753edcd14819e141aa2035801df9056f864bf0da2ddc1c5021d6aeff2b",
+    "scripts/staff-control06-keyboard-final.py": "9a4a03cea381908c18d641146c2460f5ac70edec0c497e61bdbc12f6afb1a7f3",
+    "scripts/staff-control06-qa.py": "2ea74b7bdf14ade63500049d048110640f9b87333f0f5feb6000e5a02a3cfb7e",
+    "scripts/staff-control06-review.py": "dbd16d593c12e467ac5b1ab337b1c88fc144891b24794b05eb32acd1ae6a4c30",
+    "scripts/staff-control06-selection-states.py": "9f3b3258b73bc69c567f743047d7ece731f09cf2d13c081c6a36ea81a7e1e77c",
+    "scripts/staff-control06-supplement.py": "82addeb4cf859655e6148488211df9ab54866d0e4b1a0e1dafa2908f8e74d3ac"
+  },
+  "canonical_security_and_workspace_sources_unchanged": [
+    "modules/identity/StaffWorkflow/Service.php",
+    "modules/identity/StaffWorkflow/Intentions.php",
+    "modules/identity/StaffAdmission",
+    "modules/identity/StaffMedia",
+    "modules/identity/services/StaffMfaService.php",
+    "modules/identity/services/GovernanceSecurityContext.php",
+    "modules/identity/services/InternalGovernanceService.php",
+    "modules/identity/PhysicianRequests",
+    "assets/js/staff-workspace.js",
+    "assets/js/staff-personal.js",
+    "scripts/staff-control04-simulation.py"
+  ],
+  "protected_before": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc02": {
+      "head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxflow03": {
+      "head": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel04": {
+      "head": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel05": {
+      "head": "e4f4fb046acba6a75f20682d772cc2d4a197e8a8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel06": {
+      "head": "419fe1fc6d79b545aae3502a3f6991699fc4c685",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel07": {
+      "head": "ec8024dfd4c16237877f92a25f4351e2ec0bdc16",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel08": {
+      "head": "f486c42bd5272246a4a6b110d18affba641b29ff",
+      "status": ""
+    },
+    "mxmed-ase-adm02-oper09": {
+      "head": "5ca9bfa24b081afdc652d7f65443f3b80979f34e",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace01-r2": {
+      "head": "0dbccc946476f7f5e8e4de000e7f186913069a80",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace02-profile-requests": {
+      "head": "40b8691f94636909bfb448655939e91387f59fe5",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace03-physician-pending-groups": {
+      "head": "8d0dfef72d45253fc9827e22a1f451f6abd3c981",
+      "status": ""
+    },
+    "mxmed-staff-control04-cross-surface": {
+      "head": "f134ee3454000d97dc1df991b81f72eee7559274",
+      "status": ""
+    },
+    "mxmed-staff-control05-admission-simplification": {
+      "head": "ab6b78349c26b9f80906065dedfdb1210449726f",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_after": {
+    "mxmed-step2-vitals-r1": {
+      "head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+      "status": ""
+    },
+    "mxmed-ase-vis01-prototype": {
+      "head": "312ee388f93c892e6caf7e845b11e2b42f9c3565",
+      "status": ""
+    },
+    "mxmed-ase-int01-readonly": {
+      "head": "09d3aefcf20266641d81aa128cec05f4a9e4ca03",
+      "status": ""
+    },
+    "mxmed-ase-int02a-governed-grants": {
+      "head": "05e428cf4354b1f722090c7532ced3784e0d4985",
+      "status": ""
+    },
+    "mxmed-ase-int02b-team-permission-ui": {
+      "head": "36eeb51655a1c24248405feae579cefc06ff3b44",
+      "status": ""
+    },
+    "mxmed-ase-int03a-advisor-lifecycle": {
+      "head": "b23d4b924d1170fc250afe3ed01555838ee684c8",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-governance-prep": {
+      "head": "e71f3618772ff652a40bb597d45c199d5e851d75",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-privileged-backend": {
+      "head": "ca8a6181db01eb32ee4e19b07fa46c0b53c4f1c7",
+      "status": ""
+    },
+    "mxmed-ase-int03b-master-ui": {
+      "head": "e3182791fd414c1195e3a7bb64bbb60d20d00530",
+      "status": ""
+    },
+    "mxmed-act03-governance-check-compat01": {
+      "head": "732938df607dc508f50f14e564ada86bba4590ca",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-admission-policy": {
+      "head": "f58e227da39eca2ae6a7d8b6e6a48615737d3ab5",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-case-foundation": {
+      "head": "2330be886bc984d8ce89c5952113d540bdf1f3cb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-staff-invitation-binding": {
+      "head": "27e0da02a4daf15d3c1a32ab5590e2527e835b52",
+      "status": ""
+    },
+    "mxmed-ase-adm02-private-staff-media": {
+      "head": "58f3fcf5db81ff5f2804833fd8470eed7c46e2c8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-functional-consolidation": {
+      "head": "66056af75a70de8e1821ac3064d48d629bc76bfb",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc01": {
+      "head": "3dfe09a2cc3f00bdb435b721493ec9a749f942e3",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxfunc02": {
+      "head": "3df2288bd4c14c58b98f5bd1921e5b8d5734337d",
+      "status": ""
+    },
+    "mxmed-ase-adm02-uxflow03": {
+      "head": "f9fe6950565ac3f15806b51246f49b5cf987801b",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel04": {
+      "head": "b356b06e5a7650fafaea82d08ac396611b3d4b09",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel05": {
+      "head": "e4f4fb046acba6a75f20682d772cc2d4a197e8a8",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel06": {
+      "head": "419fe1fc6d79b545aae3502a3f6991699fc4c685",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel07": {
+      "head": "ec8024dfd4c16237877f92a25f4351e2ec0bdc16",
+      "status": ""
+    },
+    "mxmed-ase-adm02-panel08": {
+      "head": "f486c42bd5272246a4a6b110d18affba641b29ff",
+      "status": ""
+    },
+    "mxmed-ase-adm02-oper09": {
+      "head": "5ca9bfa24b081afdc652d7f65443f3b80979f34e",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace01-r2": {
+      "head": "0dbccc946476f7f5e8e4de000e7f186913069a80",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace02-profile-requests": {
+      "head": "40b8691f94636909bfb448655939e91387f59fe5",
+      "status": ""
+    },
+    "mxmed-ase-advisor-workspace03-physician-pending-groups": {
+      "head": "8d0dfef72d45253fc9827e22a1f451f6abd3c981",
+      "status": ""
+    },
+    "mxmed-staff-control04-cross-surface": {
+      "head": "f134ee3454000d97dc1df991b81f72eee7559274",
+      "status": ""
+    },
+    "mxmed-staff-control05-admission-simplification": {
+      "head": "ab6b78349c26b9f80906065dedfdb1210449726f",
+      "status": ""
+    },
+    "listeners": {
+      "8091": [
+        "90106"
+      ],
+      "8092": [
+        "1727"
+      ],
+      "8443": [
+        "93582"
+      ],
+      "6385": [
+        "1590"
+      ],
+      "8140": [
+        "76748"
+      ],
+      "8141": [
+        "83715"
+      ]
+    },
+    "ase_int01_pointer_sha256": "a826665446b82867896a2c9084f6ee80dfcf0751ae66b1dd20aa8cf2452b358b"
+  },
+  "protected_unchanged": true,
+  "syntax": "PASS",
+  "changed_text_private_fixture_scan": "PASS",
+  "production_activation": false,
+  "physical_safari": "NOT_RUN",
+  "visual_acceptance": "PENDING",
+  "native_windows": {
+    "director": {
+      "opened_at": 1792542602.426552,
+      "url": "https://127.0.0.1:62103/internal/media-review/index.php?section=equipo",
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "canonical_login": true,
+      "synthetic_account": "qa_director@example.test"
+    },
+    "advisor": {
+      "opened_at": 1792542602.29279,
+      "url": "https://127.0.0.1:62103/internal/staff-workspace/index.php",
+      "proof": {
+        "width": 1366,
+        "height": 783,
+        "outerWidth": 1366,
+        "outerHeight": 870,
+        "availableHeight": 870,
+        "scrollWidth": 1366
+      },
+      "canonical_login": true,
+      "synthetic_account": "oper09_advisor@example.test"
+    }
+  },
+  "pertinent_links": [
+    {
+      "file": "docs/ESTADO_ACTUAL_MXMED.md",
+      "target": "identity/STAFF-CONTROL06.md"
+    },
+    {
+      "file": "docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md",
+      "target": "identity/STAFF-CONTROL06.md"
+    },
+    {
+      "file": "docs/README.md",
+      "target": "identity/STAFF-CONTROL06.md"
+    },
+    {
+      "file": "docs/contexto/DATOS_Y_MIGRACIONES_MXMED.md",
+      "target": "../identity/STAFF-CONTROL06.md"
+    },
+    {
+      "file": "docs/contexto/INTERACCIONES_MXMED.md",
+      "target": "../identity/STAFF-CONTROL06.md"
+    },
+    {
+      "file": "docs/contexto/INVENTARIO_FUNCIONAL_MXMED.md",
+      "target": "../identity/STAFF-CONTROL06.md"
+    },
+    {
+      "file": "docs/identity/STAFF-CONTROL06.md",
+      "target": "STAFF-CONTROL05.md"
+    },
+    {
+      "file": "docs/identity/STAFF-CONTROL06.md",
+      "target": "../evidence/staff-control06/qa.json"
+    },
+    {
+      "file": "docs/identity/STAFF-CONTROL06.md",
+      "target": "../evidence/staff-control06/supplement.json"
+    },
+    {
+      "file": "docs/identity/STAFF-CONTROL06.md",
+      "target": "../evidence/staff-control06/selection-states.json"
+    },
+    {
+      "file": "docs/identity/STAFF-CONTROL06.md",
+      "target": "../evidence/staff-control06/keyboard-final.json"
+    },
+    {
+      "file": "docs/identity/STAFF-CONTROL06.md",
+      "target": "../evidence/staff-control06/final-verification.json"
+    }
+  ],
+  "links": "PASS",
+  "preview": {
+    "url": "https://127.0.0.1:62103/internal/media-review/index.php?section=equipo",
+    "expires": 1792628471,
+    "owned": "/tmp/mxmed-ase-adm02imp01-7dfa0btm"
+  }
+}

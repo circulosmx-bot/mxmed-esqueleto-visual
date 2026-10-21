@@ -198,3 +198,7 @@ Los enlaces son candidatos de selección, no una lista obligatoria de ejecución
 ## STAFF-CONTROL05 — corrección contextual aislada
 
 [Contrato e inventario](identity/STAFF-CONTROL05.md). Entrada para situación de pendientes, edición frente a reemisión, selección de facultades realmente conectadas, progreso de simulación y comandos de ventanas independientes. Matriz de quince áreas y guía de revisión acotada; no nuevos módulos.
+
+## STAFF-CONTROL06 — selección staff y teclado geográfico
+
+Corrección dirigida actual: [STAFF-CONTROL06 — selección staff, autenticación y teclado geográfico](identity/STAFF-CONTROL06.md), panel derecho por caso/cuenta, actor canónico en reautenticación y typeahead sin nuevo catálogo; QA y guía owned en contrato.

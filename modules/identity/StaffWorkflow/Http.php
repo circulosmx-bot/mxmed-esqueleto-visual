@@ -24,7 +24,8 @@ final class Http
             if($action==='bootstrap'){
                 Service::keys($input,[]);
                 $q=$i->pdo()->prepare('SELECT governance_class,status FROM internal_staff WHERE account_id=?');$q->execute([$a->accountId()]);$staff=$q->fetch(\PDO::FETCH_ASSOC);
-                $r=['csrf_token'=>$i->csrf()->issueAuthenticated($a->session()->tokenDigest()),'director'=>$staff&&$staff['governance_class']==='DIRECTOR'&&$staff['status']==='ACTIVE','account_id'=>$a->accountId(),'synthetic'=>true,'staff_control04'=>getenv('MXMED_STAFF_CONTROL04')==='1'];
+                $account=$i->pdo()->prepare('SELECT email_address FROM auth_accounts WHERE account_id=?');$account->execute([$a->accountId()]);
+                $r=['csrf_token'=>$i->csrf()->issueAuthenticated($a->session()->tokenDigest()),'director'=>$staff&&$staff['governance_class']==='DIRECTOR'&&$staff['status']==='ACTIVE','account_id'=>$a->accountId(),'actor'=>['account_reference'=>$account->fetchColumn(),'class'=>$staff&&$staff['status']==='ACTIVE'?$staff['governance_class']:null],'synthetic'=>true,'staff_control04'=>getenv('MXMED_STAFF_CONTROL04')==='1'];
             }else{
                 if(!$i->csrf()->validAuthenticated($_SERVER['HTTP_X_CSRF_TOKEN']??'',$a->session()->tokenDigest()))throw new \RuntimeException('workflow_denied');
                 // This composition is exclusively synthetic. Validate before the canonical write,

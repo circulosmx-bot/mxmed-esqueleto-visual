@@ -1,0 +1,45 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "chromium 1440 no-results text actually visible inside constrained popup",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 no-results text actually visible inside constrained popup",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 no-results text actually visible inside constrained popup",
+      "pass": true
+    },
+    {
+      "name": "chromium stale pending response cannot replace the selected case",
+      "pass": true
+    },
+    {
+      "name": "chromium expired invitation has precise contextual copy and explicit reissue",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440 no-results text actually visible inside constrained popup",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 no-results text actually visible inside constrained popup",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 no-results text actually visible inside constrained popup",
+      "pass": true
+    },
+    {
+      "name": "webkit stale pending response cannot replace the selected case",
+      "pass": true
+    },
+    {
+      "name": "webkit expired invitation has precise contextual copy and explicit reissue",
+      "pass": true
+    }
+  ]
+}

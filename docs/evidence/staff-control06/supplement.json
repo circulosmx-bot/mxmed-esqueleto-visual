@@ -1,0 +1,182 @@
+{
+  "checks": [
+    {
+      "name": "Exact right panel selection Irene",
+      "pass": true
+    },
+    {
+      "name": "Exact right panel selection Martha",
+      "pass": true
+    },
+    {
+      "name": "Exact right panel selection Candela",
+      "pass": true
+    },
+    {
+      "name": "Exact right panel selection Irene",
+      "pass": true
+    },
+    {
+      "name": "Pending summary retains canonical invitation/binding/evidence/prepared and effective counts",
+      "pass": true
+    },
+    {
+      "name": "Expired invitation navigation never reissues it",
+      "pass": true
+    },
+    {
+      "name": "Six simulation stages do not grant staff or capabilities",
+      "pass": true
+    },
+    {
+      "name": "Reauthentication clearly names server-authenticated Director and exact candidate",
+      "pass": true
+    },
+    {
+      "name": "Invalid Director password cannot advance to MFA or expose documents",
+      "pass": true
+    },
+    {
+      "name": "Canonical password plus MFA reveals protected exact-case documents without approval",
+      "pass": true
+    },
+    {
+      "name": "Evidence dismissal clears document bytes and retains selected candidate",
+      "pass": true
+    },
+    {
+      "name": "Advisor denied exact-case protected review reader",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 pending right-panel responsive layout",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 closed prefix selects canonical Aguascalientes/Calvillo",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 accent-insensitive open/closed search preserves accented value and clears city",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 similarly prefixed municipalities remain arrow-selectable",
+      "pass": true
+    },
+    {
+      "name": "chromium 1440 no-match state and popup constrained to viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 pending right-panel responsive layout",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 closed prefix selects canonical Aguascalientes/Calvillo",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 accent-insensitive open/closed search preserves accented value and clears city",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 similarly prefixed municipalities remain arrow-selectable",
+      "pass": true
+    },
+    {
+      "name": "chromium 1366 no-match state and popup constrained to viewport",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 pending right-panel responsive layout",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 closed prefix selects canonical Aguascalientes/Calvillo",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 accent-insensitive open/closed search preserves accented value and clears city",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 similarly prefixed municipalities remain arrow-selectable",
+      "pass": true
+    },
+    {
+      "name": "chromium 390 no-match state and popup constrained to viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440 pending right-panel responsive layout",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440 closed prefix selects canonical Aguascalientes/Calvillo",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440 accent-insensitive open/closed search preserves accented value and clears city",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440 similarly prefixed municipalities remain arrow-selectable",
+      "pass": true
+    },
+    {
+      "name": "webkit 1440 no-match state and popup constrained to viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 pending right-panel responsive layout",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 closed prefix selects canonical Aguascalientes/Calvillo",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 accent-insensitive open/closed search preserves accented value and clears city",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 similarly prefixed municipalities remain arrow-selectable",
+      "pass": true
+    },
+    {
+      "name": "webkit 1366 no-match state and popup constrained to viewport",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 pending right-panel responsive layout",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 closed prefix selects canonical Aguascalientes/Calvillo",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 accent-insensitive open/closed search preserves accented value and clears city",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 similarly prefixed municipalities remain arrow-selectable",
+      "pass": true
+    },
+    {
+      "name": "webkit 390 no-match state and popup constrained to viewport",
+      "pass": true
+    },
+    {
+      "name": "Native viewport and selected pending detail remain coherent",
+      "pass": true
+    },
+    {
+      "name": "No JavaScript errors in targeted browser flows",
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "result": "PASS"
+}

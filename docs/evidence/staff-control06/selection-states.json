@@ -1,0 +1,38 @@
+{
+  "checks": [
+    {
+      "name": "Canonical SUSPENDED record selects exact right panel",
+      "pass": true
+    },
+    {
+      "name": "Canonical ACTIVE record selects exact right panel",
+      "pass": true
+    },
+    {
+      "name": "Master selection remains within existing authorized scope",
+      "pass": true
+    },
+    {
+      "name": "Admission refresh preserves exact candidate and highlights new active card",
+      "pass": true
+    },
+    {
+      "name": "Removed historical Advisor selection preserves identity and disables mutations",
+      "pass": true
+    },
+    {
+      "name": "Cancellation refresh keeps exact cancelled identity and no executable future controls",
+      "pass": true
+    },
+    {
+      "name": "Irene reactivated; Martha remains unadmitted for visual review",
+      "pass": true
+    },
+    {
+      "name": "No JavaScript errors across lifecycle selections",
+      "pass": true
+    }
+  ],
+  "page_errors": [],
+  "result": "PASS"
+}
