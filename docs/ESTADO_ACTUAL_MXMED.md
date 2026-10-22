@@ -276,3 +276,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## ADVISOR-OPERATOR-SUPPORT01 — diagnóstico contextual aislado
 
 Sobre `46f8960d`, [soporte de operadores](identity/ADVISOR-OPERATOR-SUPPORT01.md) conecta la pestaña existente con `physician_operator_support_read`, concedido por Director y restringido al ámbito Requests/Media ya autorizado. Fuentes canónicas de titular, relaciones, invitaciones, funciones, dos plazas y eventos; ninguna mutación owner-only delegada. 53 checks dirigidos; Chromium/WebKit, seis superficies conservadas, médico/operador comparados por fuente y overview, no por sus pantallas. Irene y su historia intactas; runtime nuevo sintético, sin producción/8091. Aceptación visual PENDING.
+
+## CROSS-SURFACE-LINK01 — fuente original localizada, conexión bloqueada
+
+Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verifica la referencia administrativa en la fuente local original mediante transacciones sólo lectura. La composición sintética actual no autoriza lectura federada ni descubrimiento de perfiles sin trabajo Requests/Media. No se copió el perfil, no se asignaron grants ni se alteró 8091. Resultado `BLOCKED_SOURCE_AUTHORITY_BOUNDARY`; no hay demostración Chromium ni integración completada.

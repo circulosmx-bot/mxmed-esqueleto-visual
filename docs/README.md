@@ -242,3 +242,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## ADVISOR-OPERATOR-SUPPORT01 — soporte desde el Asesor
 
 [Contrato, fuentes, evidencia y revisión](identity/ADVISOR-OPERATOR-SUPPORT01.md). Entrada para la pestaña Operadores y colaboradores: diagnóstico bajo grant explícito y ámbito médico existente. Complementa OP-01..03 y J07; no concede cambios de titularidad, invitaciones ni administración al staff. Comparación con overview canónico, sin pantallas médico/operador habilitadas en el ensayo.
+
+## CROSS-SURFACE-LINK01 — conexión con fuente original
+
+[Diagnóstico y límite de autoridad](identity/CROSS-SURFACE-LINK01.md). Referencia para distinguir la consulta administrativa local verificada de una conexión Advisor aún no implementada; no sustituye el contrato de soporte sintético.
