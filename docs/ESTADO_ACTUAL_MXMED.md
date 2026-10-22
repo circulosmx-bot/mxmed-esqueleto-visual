@@ -2,7 +2,7 @@
 
 ## Continuidad local — 2026-10-22
 
-[DEV-SESSION-PERSIST01](identity/DEV-SESSION-PERSIST01.md): hub57452 actualizado; cookie persistente opt-in probada sólo en contexto sintético nuevo. Límites 1h idle/12h absoluto intactos. Chromium/WebKit y reinicio de servicios propios pasan; no desplegado a Identity original ni staff54400. QA E2E staff/perfiles Safari pendiente. Seis cambios autorizados Consultorios conservados. Resultado parcial, no continuidad completa de todos los roles.
+[DEV-SESSION-PERSIST02](identity/DEV-SESSION-PERSIST02.md) sucede la QA pendiente de PERSIST01: 49 checks staff aislados PASS en Chromium/WebKit, cookies separadas, reinicio, revocación en vivo, MFA, caducidad y logout. Paquete mínimo de cinco archivos probado sobre copia del original con Consultorios intacto; sin despliegue. Recomendación A: 1h idle/12h absoluto con almacenamiento durable. Alternativa 8h/72h sólo propuesta. Autorización de activación y perfiles Safari físicos pendientes; hub57452 conservado.
 
 ## Ancla y alcance
 

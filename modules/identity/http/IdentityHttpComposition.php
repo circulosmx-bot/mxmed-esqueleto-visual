@@ -211,7 +211,8 @@ final class IdentityHttpComposition
         if (!$store->healthCheck()->healthy()) throw new \RuntimeException('normal_local_session_store_unavailable');
         return self::build($pdo, $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_PEPPER'),
             new PreviewIdentityNotificationAdapter($configuration->value('MXMED_NORMAL_LOCAL_NOTIFICATION_FILE')),
-            $store, 'local', $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN'), $clock);
+            $store, 'local', $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN'), $clock,
+            developmentCookie: \Identity\Contracts\DevelopmentSessionCookiePolicy::forNormalLocal($configuration));
     }
 
     public static function productive(ProductiveIdentityHttpConfiguration $configuration): self
@@ -292,7 +293,8 @@ final class IdentityHttpComposition
         ?CanonicalIdentityAuditProducer $identityAudit = null,
         ?CanonicalSessionAuditProducer $sessionAudit = null,
         ?RequestContextFactory $auditRequests = null,
-        ?ActorContextFactory $auditActors = null
+        ?ActorContextFactory $auditActors = null,
+        ?\Identity\Contracts\DevelopmentSessionCookiePolicy $developmentCookie = null
     ): self {
         $clock ??= new SystemClock();
         $accounts = new IdentityAccountRepository($pdo);
@@ -311,7 +313,7 @@ final class IdentityHttpComposition
         // receives the same non-touching validation for current-session GET.
         $observing = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
             && parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) === '/api/identity/index.php/current-session';
-        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing, developmentCookie:\Identity\Contracts\DevelopmentSessionCookiePolicy::fromEnvironment($environment, $allowedOrigin));
+        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing, developmentCookie:$developmentCookie ?? \Identity\Contracts\DevelopmentSessionCookiePolicy::fromEnvironment($environment, $allowedOrigin));
         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
         $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority, new MedicalGroupTypeRepository($pdo));
         return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $identityAudit, $sessionAudit, $auditRequests, $auditActors);

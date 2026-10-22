@@ -56,6 +56,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 
 ### Identity y acreditación profesional — CURRENT / IMPLEMENTED_BUT_INACTIVE
 
+- [QA staff y paquete de integración DEV-SESSION-PERSIST02](identity/DEV-SESSION-PERSIST02.md): cinco archivos preparados, política A/B/C y guía Safari; no desplegado.
 - [Continuidad local de sesiones DEV-SESSION-PERSIST01](identity/DEV-SESSION-PERSIST01.md): diagnóstico por rol, candidato aislado, límites canónicos y activación original pendiente.
 - UI: [acceso](../public/identity/acceso.php), [solicitante](../public/identity/perfil-medico.php), [staff original](../internal/media-review/index.php) (`section=acreditacion`).
 - Servicios: [PhysicianEvidenceService](../modules/identity/Accreditation/PhysicianEvidenceService.php), [ProfessionalAuthorityIssuer](../modules/identity/Accreditation/ProfessionalAuthorityIssuer.php).

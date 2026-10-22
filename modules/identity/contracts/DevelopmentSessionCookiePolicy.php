@@ -23,6 +23,11 @@ final class DevelopmentSessionCookiePolicy
         }
         return new self();
     }
+    /** Only the separately validated normal-local factory may opt in. */
+    public static function forNormalLocal(\Identity\Http\NormalLocalIdentityConfiguration $configuration): ?self
+    {
+        return $configuration->value('MXMED_NORMAL_LOCAL_PERSISTENT_COOKIE') === '1' ? new self() : null;
+    }
     public function remainingSeconds(SessionRecord $record, Clock $clock): int
     {
         return max(0, min(SessionPolicy::ABSOLUTE_TTL_SECONDS,

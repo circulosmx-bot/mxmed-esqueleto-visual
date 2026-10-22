@@ -1,5 +1,7 @@
 # DEV-SESSION-PERSIST01 — continuidad local y límites verificados
 
+> Sucesor verificado: [PERSIST02](DEV-SESSION-PERSIST02.md) completa QA staff y prepara integración original, sin desplegar. Los pendientes siguientes describen el cierre histórico PERSIST01.
+
 2026-10-22. SOURCE baseline `bde7476083ebd69385dbe6a8396d294845ada591`, rama `feature/mxmed-dev-session-persist01`. **OPERATIONAL_STATUS=PARTIAL_ISOLATED_VERIFIED**. Hub actualizado; cambio de cookies sólo probado en servicios propios. No desplegado a Identity original ni al preview staff existente. No constituye persistencia resuelta para todos los roles.
 
 ## Diagnóstico por contexto

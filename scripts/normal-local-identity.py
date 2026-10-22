@@ -149,7 +149,8 @@ def start(replace):
     if replace:
         subprocess.run(['bash','scripts/dev-servers.sh','stop'], cwd=ROOT, env=env, check=True)
     launch('valkey',[str(RUNTIME/'valkey-server'),'--bind','127.0.0.1','--protected-mode','yes',
-                    '--port',values['MXMED_NORMAL_LOCAL_VALKEY_PORT'],'--save','','--appendonly','no',
+                    '--port',values['MXMED_NORMAL_LOCAL_VALKEY_PORT'],'--save','','--appendonly',
+                    'yes' if values.get('MXMED_NORMAL_LOCAL_VALKEY_AOF')=='1' else 'no','--appendfsync','always',
                     '--dir',str(RUNTIME)],int(values['MXMED_NORMAL_LOCAL_VALKEY_PORT']),state,env)
     # Same PHP flags/ports as dev-servers.sh, with independently detached ownership.
     # This keeps the servers alive when the parent CLI/agent shell exits.

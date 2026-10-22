@@ -12,7 +12,8 @@ final class NormalLocalIdentityConfiguration
         $names = ['APP_ENV','MXMED_ENVIRONMENT','MXMED_PREVIEW_EXPLICIT','MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT',
             'MXMED_DB_HOST','MXMED_DB_PORT','MXMED_DB_NAME','MXMED_DB_USER','MXMED_DB_PASS',
             'MXMED_NORMAL_LOCAL_VALKEY_HOST','MXMED_NORMAL_LOCAL_VALKEY_PORT','MXMED_NORMAL_LOCAL_SESSION_PREFIX',
-            'MXMED_NORMAL_LOCAL_IDENTITY_PEPPER','MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN','MXMED_NORMAL_LOCAL_NOTIFICATION_FILE'];
+            'MXMED_NORMAL_LOCAL_IDENTITY_PEPPER','MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN','MXMED_NORMAL_LOCAL_NOTIFICATION_FILE',
+            'MXMED_NORMAL_LOCAL_PERSISTENT_COOKIE','MXMED_NORMAL_LOCAL_VALKEY_AOF'];
         $values = [];
         foreach ($names as $name) $values[$name] = (string)(getenv($name) ?: '');
         return self::fromValues($values);
@@ -56,6 +57,10 @@ final class NormalLocalIdentityConfiguration
             || is_link($file) || (fileperms($parent) & 0077) !== 0
             || (file_exists($file) && (!is_file($file) || (fileperms($file) & 0077) !== 0))) {
             throw new \RuntimeException('normal_local_notification_path_required');
+        }
+        foreach (['MXMED_NORMAL_LOCAL_PERSISTENT_COOKIE','MXMED_NORMAL_LOCAL_VALKEY_AOF'] as $key) {
+            if (!in_array($v[$key] ?? '', ['', '0', '1'], true)) throw new \RuntimeException('normal_local_persistence_flag_invalid');
+            $v[$key] = ($v[$key] ?? '') === '1' ? '1' : '0';
         }
         $v['MXMED_DB_PASS'] ??= '';
         return new self($v);

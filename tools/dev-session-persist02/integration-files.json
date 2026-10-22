@@ -1,0 +1,27 @@
+[
+  {
+    "file": "modules/identity/contracts/DevelopmentSessionCookiePolicy.php",
+    "before": null,
+    "after": "487571892f8fcbd332eb6e33d7d78e8fa59429dedfc64541ba6ea96b0c2c73a8"
+  },
+  {
+    "file": "modules/identity/services/SessionService.php",
+    "before": "62c8c1c8acab090406a86474ccebc363bc4bb134b58bc3562adbfca5e7fbd691",
+    "after": "97d62bc276e2cc4112cdd29fbd62e8c5e249aab8018d0ae8ea2b853ffb92966e"
+  },
+  {
+    "file": "modules/identity/http/IdentityHttpComposition.php",
+    "before": "f89f04948b37963dd2ca4d5beb166e44ca6a526e3afa01ae5499c12478e0c2ec",
+    "after": "32a944c512cc75b7c1050d3fbee853f463a11075a0ded9711978659b0a1fc649"
+  },
+  {
+    "file": "modules/identity/http/NormalLocalIdentityConfiguration.php",
+    "before": "26a36014783d58737bbc92ef78029b0ff13e1b7745d6862171c643a4c0288a6b",
+    "after": "af9cf6941c3dd72416b3b2946d6d2c00a826008b8ca94fb3a7f3776c4927f1d9"
+  },
+  {
+    "file": "scripts/normal-local-identity.py",
+    "before": "ff8a37dbbf2961c11e5552b3579c799584d11e9bc3e3252b1bdf225d1f1e2d16",
+    "after": "9c49c55a10a383ac28829d73a0ae0fc9349b9a56aa0f5746d2f69e4638f87bd0"
+  }
+]

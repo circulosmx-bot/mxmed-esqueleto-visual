@@ -1,0 +1,134 @@
+--- /dev/null
++++ b/modules/identity/contracts/DevelopmentSessionCookiePolicy.php
+@@ -0,0 +1,36 @@
++<?php
++declare(strict_types=1);
++namespace Identity\Contracts;
++
++/** Browser persistence only. Never changes server idle/absolute deadlines. */
++final class DevelopmentSessionCookiePolicy
++{
++    private function __construct() {}
++    public static function fromEnvironment(string $environment, string $origin): ?self
++    {
++        if (getenv('MXMED_DEV_PERSISTENT_COOKIE') !== '1') return null;
++        $url = parse_url($origin);
++        if (!in_array($environment, ['local', 'development'], true)
++            || in_array(getenv('APP_ENV'), ['production', 'staging'], true)
++            || getenv('MXMED_PREVIEW_EXPLICIT') !== '1'
++            || !in_array(getenv('MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT'), [false, '', '0'], true)
++            || getenv('MXMED_DB_HOST') !== '127.0.0.1'
++            || !str_starts_with((string)getenv('MXMED_DB_NAME'), 'mxmed_gate4d_preview_')
++            || (int)getenv('MXMED_DB_PORT') <= 1024 || (int)getenv('MXMED_DB_PORT') === 3306
++            || ($url['scheme'] ?? '') !== 'https' || ($url['host'] ?? '') !== '127.0.0.1'
++            || !isset($url['port']) || isset($url['user']) || isset($url['pass'])) {
++            throw new \RuntimeException('isolated_development_cookie_required');
++        }
++        return new self();
++    }
++    /** Only the separately validated normal-local factory may opt in. */
++    public static function forNormalLocal(\Identity\Http\NormalLocalIdentityConfiguration $configuration): ?self
++    {
++        return $configuration->value('MXMED_NORMAL_LOCAL_PERSISTENT_COOKIE') === '1' ? new self() : null;
++    }
++    public function remainingSeconds(SessionRecord $record, Clock $clock): int
++    {
++        return max(0, min(SessionPolicy::ABSOLUTE_TTL_SECONDS,
++            $record->absoluteExpiresAt()->getTimestamp() - $clock->now()->getTimestamp()));
++    }
++}
+--- a/modules/identity/services/SessionService.php
++++ b/modules/identity/services/SessionService.php
+@@ -46,7 +46,7 @@
+         } catch (\Throwable) { return false; }
+     }
+ 
+-    public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null, private bool $touchActivity = true) {}
++    public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null, private bool $touchActivity = true, private ?\Identity\Contracts\DevelopmentSessionCookiePolicy $developmentCookie = null) {}
+ 
+     public function create(AuthenticationPrincipalCandidate $candidate, array $metadata = []): SessionCreationDecision
+     {
+@@ -65,7 +65,7 @@
+             if ($this->store instanceof AtomicSessionStorePort) $this->lastSupersededSession = $this->store->createAuthoritatively($record, $this->policy->maximumActiveSessions());
+             else $this->store->create($record, $this->policy->maximumActiveSessions());
+         } catch (\Throwable) { return new SessionCreationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
+-        return new SessionCreationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token));
++        return new SessionCreationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token, $this->developmentCookie?->remainingSeconds($record, $this->clock)));
+     }
+ 
+     public function validate(?string $rawToken): SessionValidationDecision
+@@ -109,7 +109,7 @@
+         $validated = $this->validate($rawToken); if (!$validated->allowed() || $validated->record() === null) return new SessionRotationDecision(false, $validated->reasonCode());
+         $old = $validated->record(); $token = $this->tokens->issue(); $now = $this->clock->now(); $expires = $now->modify('+' . $this->policy->idleTtlSeconds() . ' seconds'); if ($expires > $old->absoluteExpiresAt()) $expires = $old->absoluteExpiresAt(); $record = new SessionRecord(\Identity\Contracts\SessionId::generate(), $this->tokens->digest($token), $old->principal(), $old->createdAt(), $now, $expires, $old->absoluteExpiresAt(), SessionState::ACTIVE, $old->deviceLabel(), $old->userAgentHash(), $old->ipDimensionHash());
+         try { if (!$this->store->rotate($old->tokenDigest(), $record)) return new SessionRotationDecision(false, ReasonCode::SESSION_INVALID); } catch (\Throwable) { return new SessionRotationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
+-        return new SessionRotationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token));
++        return new SessionRotationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token, $this->developmentCookie?->remainingSeconds($record, $this->clock)));
+     }
+ 
+     public function logout(?string $rawToken): SessionRevocationDecision
+--- a/modules/identity/http/IdentityHttpComposition.php
++++ b/modules/identity/http/IdentityHttpComposition.php
+@@ -211,7 +211,8 @@
+         if (!$store->healthCheck()->healthy()) throw new \RuntimeException('normal_local_session_store_unavailable');
+         return self::build($pdo, $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_PEPPER'),
+             new PreviewIdentityNotificationAdapter($configuration->value('MXMED_NORMAL_LOCAL_NOTIFICATION_FILE')),
+-            $store, 'local', $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN'), $clock);
++            $store, 'local', $configuration->value('MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN'), $clock,
++            developmentCookie: \Identity\Contracts\DevelopmentSessionCookiePolicy::forNormalLocal($configuration));
+     }
+ 
+     public static function productive(ProductiveIdentityHttpConfiguration $configuration): self
+@@ -292,7 +293,8 @@
+         ?CanonicalIdentityAuditProducer $identityAudit = null,
+         ?CanonicalSessionAuditProducer $sessionAudit = null,
+         ?RequestContextFactory $auditRequests = null,
+-        ?ActorContextFactory $auditActors = null
++        ?ActorContextFactory $auditActors = null,
++        ?\Identity\Contracts\DevelopmentSessionCookiePolicy $developmentCookie = null
+     ): self {
+         $clock ??= new SystemClock();
+         $accounts = new IdentityAccountRepository($pdo);
+@@ -311,7 +313,7 @@
+         // receives the same non-touching validation for current-session GET.
+         $observing = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
+             && parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) === '/api/identity/index.php/current-session';
+-        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing);
++        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing, developmentCookie:$developmentCookie ?? \Identity\Contracts\DevelopmentSessionCookiePolicy::fromEnvironment($environment, $allowedOrigin));
+         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
+         $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority, new MedicalGroupTypeRepository($pdo));
+         return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $identityAudit, $sessionAudit, $auditRequests, $auditActors);
+--- a/modules/identity/http/NormalLocalIdentityConfiguration.php
++++ b/modules/identity/http/NormalLocalIdentityConfiguration.php
+@@ -12,7 +12,8 @@
+         $names = ['APP_ENV','MXMED_ENVIRONMENT','MXMED_PREVIEW_EXPLICIT','MXMED_NORMAL_LOCAL_IDENTITY_EXPLICIT',
+             'MXMED_DB_HOST','MXMED_DB_PORT','MXMED_DB_NAME','MXMED_DB_USER','MXMED_DB_PASS',
+             'MXMED_NORMAL_LOCAL_VALKEY_HOST','MXMED_NORMAL_LOCAL_VALKEY_PORT','MXMED_NORMAL_LOCAL_SESSION_PREFIX',
+-            'MXMED_NORMAL_LOCAL_IDENTITY_PEPPER','MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN','MXMED_NORMAL_LOCAL_NOTIFICATION_FILE'];
++            'MXMED_NORMAL_LOCAL_IDENTITY_PEPPER','MXMED_NORMAL_LOCAL_IDENTITY_ORIGIN','MXMED_NORMAL_LOCAL_NOTIFICATION_FILE',
++            'MXMED_NORMAL_LOCAL_PERSISTENT_COOKIE','MXMED_NORMAL_LOCAL_VALKEY_AOF'];
+         $values = [];
+         foreach ($names as $name) $values[$name] = (string)(getenv($name) ?: '');
+         return self::fromValues($values);
+@@ -57,6 +58,10 @@
+             || (file_exists($file) && (!is_file($file) || (fileperms($file) & 0077) !== 0))) {
+             throw new \RuntimeException('normal_local_notification_path_required');
+         }
++        foreach (['MXMED_NORMAL_LOCAL_PERSISTENT_COOKIE','MXMED_NORMAL_LOCAL_VALKEY_AOF'] as $key) {
++            if (!in_array($v[$key] ?? '', ['', '0', '1'], true)) throw new \RuntimeException('normal_local_persistence_flag_invalid');
++            $v[$key] = ($v[$key] ?? '') === '1' ? '1' : '0';
++        }
+         $v['MXMED_DB_PASS'] ??= '';
+         return new self($v);
+     }
+--- a/scripts/normal-local-identity.py
++++ b/scripts/normal-local-identity.py
+@@ -149,7 +149,8 @@
+     if replace:
+         subprocess.run(['bash','scripts/dev-servers.sh','stop'], cwd=ROOT, env=env, check=True)
+     launch('valkey',[str(RUNTIME/'valkey-server'),'--bind','127.0.0.1','--protected-mode','yes',
+-                    '--port',values['MXMED_NORMAL_LOCAL_VALKEY_PORT'],'--save','','--appendonly','no',
++                    '--port',values['MXMED_NORMAL_LOCAL_VALKEY_PORT'],'--save','','--appendonly',
++                    'yes' if values.get('MXMED_NORMAL_LOCAL_VALKEY_AOF')=='1' else 'no','--appendfsync','always',
+                     '--dir',str(RUNTIME)],int(values['MXMED_NORMAL_LOCAL_VALKEY_PORT']),state,env)
+     # Same PHP flags/ports as dev-servers.sh, with independently detached ownership.
+     # This keeps the servers alive when the parent CLI/agent shell exits.
