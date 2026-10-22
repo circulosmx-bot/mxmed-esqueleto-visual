@@ -1,0 +1,31 @@
+{
+  "actor": "acct_0c55f28f59ab64c171c13da5",
+  "actions": {
+    "MEDIA_REVIEW_CORRECTED_UPLOADED": 1,
+    "MEDIA_REVIEW_SOURCE_DOWNLOADED": 3,
+    "MEDIA_LOGO_IMPROVEMENT_PROPOSED": 1,
+    "MEDIA_LOGO_IMPROVEMENT_ACCEPTED": 1,
+    "MEDIA_PROFILE_PHOTO_APPROVED": 1,
+    "MEDIA_REVIEW_REPLACEMENT_REQUESTED": 1,
+    "PHYSICIAN_PROFILE_REQUEST_CHANGED": 9,
+    "SENSITIVE_ADMIN_ACTION": 84,
+    "STAFF_ADMISSION_CASE_CHANGED": 3,
+    "STAFF_ADMISSION_CASE_READ": 9,
+    "STAFF_MEDIA_CHANGED": 2,
+    "INTERNAL_GOVERNANCE_CHANGED": 1
+  },
+  "request_operations": {
+    "EVIDENCE_READ": 4,
+    "REVIEW_CHALLENGE": 2,
+    "REQUEST_APPROVED": 2,
+    "PROFILE_MATERIALIZED": 1,
+    "invitation_accept": 1,
+    "confirm": 1,
+    "read": 9,
+    "write": 2,
+    "evidence_submit": 1,
+    "MFA_ENROLLMENT_ACTIVATED": 1
+  },
+  "consumed_mfa_proofs": 2,
+  "session_tokens_exported": false
+}

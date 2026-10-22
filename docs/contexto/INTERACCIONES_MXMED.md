@@ -308,3 +308,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## CROSS-SURFACE-UX05 — J04/J07/J09
 
 [Contrato](../identity/CROSS-SURFACE-UX05.md): mismo ámbito → proyección v2 → sedes; foto pública elegible → endpoint canónico público → transporte owned sin persistencia → revalidación de autoridad. No documentos privados, cuenta médica suplantada ni writer de ubicación/operador. Búsqueda versionada mantiene separación de contextos.
+
+## QA01 — verificación de grants en J01/J02/J07/J09
+
+[Resultado parcial](../identity/ADVISOR-FULL-GRANTS-QA01.md): dos admisiones sintéticas canónicas → Director concede14 por UI → Advisor consume Requests/Media/readers → retiros individuales sin reconcesión. Endpoint compartido de resumen reduce proyección200; 13 recursos protegidos deniegan403. Tres consumidores A fuera del workspace no activados. Preserva writers/IDs, sesión vigente por paso, MFA de decisiones, ámbitos originales y frontera comercial J08.

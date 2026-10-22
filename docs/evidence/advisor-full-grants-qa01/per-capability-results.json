@@ -1,0 +1,236 @@
+[
+  {
+    "capability": "media_review_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Imagen REVIEW renderizada; ámbito exacto",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "media_review_approve",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Derivado sintético aprobado/publicado",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "media_review_source_download",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Descarga SOURCE real auditada",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "media_review_corrected_upload",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "CORRECTED persistido, evento canónico",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "media_review_improve",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Propuesta geométrica generada y aceptada",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "media_review_request_replacement",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "NEEDS_WORK persistido",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_pending_summary_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Conteos y summary_authorized=true; retirada cambia flag, no 403 global",
+    "http_revocation": 200,
+    "literal_revocation_requirement": false,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_request_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Casos exactos leídos en UI",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_request_evidence_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "4 archivos protegidos renderizados/auditados",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_claim_resolve",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "APPROVED persistido con MFA consumido",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_new_profile_resolve",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "APPROVED y perfil oculto gratuito materializado con MFA",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "profile_create",
+    "classification": "C",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "profile_curate",
+    "classification": "C",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "profile_publication_manage",
+    "classification": "C",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "profile_support_assist",
+    "classification": "C",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "physician_locations_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "3 consultorios visibles; fuera de allowlist 403",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_administrative_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Contexto calificado leído; fuera de allowlist 403",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "physician_operator_support_read",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Relación autorizada visible; fuera de allowlist 403",
+    "http_revocation": 403,
+    "literal_revocation_requirement": true,
+    "coverage": "EXERCISED_CONNECTED"
+  },
+  {
+    "capability": "internal_advisors_manage",
+    "classification": "B",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "profile_initial_ownership_approve",
+    "classification": "B",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "provider_claim_review",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Consumidor canónico compatible existente, pero pestaña/router actual no conectado; no activar",
+    "http_revocation": null,
+    "literal_revocation_requirement": false,
+    "coverage": "NOT_EXERCISED_CONNECTIVITY_BLOCKER"
+  },
+  {
+    "capability": "professional_source_provision",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Consumidor canónico compatible existente, pero pestaña/router actual no conectado; no activar",
+    "http_revocation": null,
+    "literal_revocation_requirement": false,
+    "coverage": "NOT_EXERCISED_CONNECTIVITY_BLOCKER"
+  },
+  {
+    "capability": "physician_accreditation_review",
+    "classification": "A",
+    "expected": "Grant UI, consumidor real y revocación403 en sesión abierta",
+    "actual": "Consumidor canónico compatible existente, pero pestaña/router actual no conectado; no activar",
+    "http_revocation": null,
+    "literal_revocation_requirement": false,
+    "coverage": "NOT_EXERCISED_CONNECTIVITY_BLOCKER"
+  },
+  {
+    "capability": "public_profile_correction_review",
+    "classification": "B",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "public_profile_correction_apply",
+    "classification": "B",
+    "expected": "No otorgar en este ensayo",
+    "actual": "No otorgada",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  },
+  {
+    "capability": "provider_subscription_activate",
+    "classification": "D",
+    "expected": "No otorgar en este ensayo",
+    "actual": "Comercial explícitamente fuera del contrato de este ensayo; no legado ni falta de implementación",
+    "http_revocation": null,
+    "literal_revocation_requirement": null,
+    "coverage": "EXCLUDED"
+  }
+]

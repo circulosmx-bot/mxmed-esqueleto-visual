@@ -1,0 +1,305 @@
+[
+  {
+    "capability": "media_review_source_download",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "34aec1ffdede0b50506126b0d7a3663a2183f3aaf02aeac22c7406edd2194c74",
+    "remaining": [
+      "media_review_approve",
+      "media_review_corrected_upload",
+      "media_review_improve",
+      "media_review_read",
+      "media_review_request_replacement",
+      "physician_administrative_read",
+      "physician_claim_resolve",
+      "physician_locations_read",
+      "physician_new_profile_resolve",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ],
+    "audit_lookup_reconciled": true
+  },
+  {
+    "capability": "media_review_corrected_upload",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "fdaefc543d1860147af0f876d2217f09a1bf5a701c37d669b351a465e19c99f1",
+    "remaining": [
+      "media_review_approve",
+      "media_review_improve",
+      "media_review_read",
+      "media_review_request_replacement",
+      "physician_administrative_read",
+      "physician_claim_resolve",
+      "physician_locations_read",
+      "physician_new_profile_resolve",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "media_review_improve",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "0db2ed584f9c7a805877cd9ba1bc3c337482d979b6a7add9eefa2f7720b7f679",
+    "remaining": [
+      "media_review_approve",
+      "media_review_read",
+      "media_review_request_replacement",
+      "physician_administrative_read",
+      "physician_claim_resolve",
+      "physician_locations_read",
+      "physician_new_profile_resolve",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "media_review_request_replacement",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "a02621f8bd721bbc81bbd0e7266b30fd67015183cd9e3781b6ba5a3a5a6cf325",
+    "remaining": [
+      "media_review_approve",
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_claim_resolve",
+      "physician_locations_read",
+      "physician_new_profile_resolve",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "media_review_approve",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "3a156404c3a4417ba0988df1295877a858930b5d6057af9381131462c6d1e46a",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_claim_resolve",
+      "physician_locations_read",
+      "physician_new_profile_resolve",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "physician_claim_resolve",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "3804c5f4af1627144527c69b061c9f60fcc18569a09f418f07704141598ae6f3",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_locations_read",
+      "physician_new_profile_resolve",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "physician_new_profile_resolve",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "cb8e19f2c5ba9909611c9c962f2f0b02c2ad78deb7e13974ee9fc3d5fe095a7c",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_locations_read",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_evidence_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "physician_request_evidence_read",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "46ceb76662500e4e516177dfd9a119bf4d308b42dee833c59e36438f15b48842",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_locations_read",
+      "physician_operator_support_read",
+      "physician_pending_summary_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "physician_pending_summary_read",
+    "http_status": 200,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "admin_operators": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "1d35a4c9e7439ebdad6d9c66c3068f83fa372008329cfa67f07ed2ce0677b118",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_locations_read",
+      "physician_operator_support_read",
+      "physician_request_read"
+    ],
+    "semantic": "shared reader remains authorized by remaining grants; extended summary removed",
+    "literal_http_denial": false,
+    "ui_verification": "No exclusive UI control; server summary_authorized=false verified. Literal endpoint403 not satisfied."
+  },
+  {
+    "capability": "physician_operator_support_read",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "admin_locations": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "d2f3f0cc20393fac876710793ef817d54307ed96d4ed003600f5fe65c464b661",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_locations_read",
+      "physician_request_read"
+    ],
+    "ui_verification": "Restricted section, not disabled navigation tab; checked after harness resume"
+  },
+  {
+    "capability": "physician_locations_read",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "admin_summary": true,
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "4e54b6b553c8701214f47b7aa8cd222109326314dbcddc51ab7ac3279aa6a7a1",
+    "remaining": [
+      "media_review_read",
+      "physician_administrative_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "physician_administrative_read",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "media": true,
+      "requests": true
+    },
+    "audit_event": "85382ce35468281cb50758caba0bd511c5840e7d59a393565f43c637d9f3b409",
+    "remaining": [
+      "media_review_read",
+      "physician_request_read"
+    ]
+  },
+  {
+    "capability": "physician_request_read",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {
+      "media": true
+    },
+    "audit_event": "14b0fb90a93e604f7fb3dd19900c31968d625f37da9ae3d245d79cf81526a2d1",
+    "remaining": [
+      "media_review_read"
+    ]
+  },
+  {
+    "capability": "media_review_read",
+    "http_status": 403,
+    "ui_restricted": true,
+    "same_identity_session": true,
+    "unrelated": {},
+    "audit_event": "ae254cec67b5fa14490767304748a4078034ddaf2ff3e999ce69b6c607a2d9b0",
+    "remaining": []
+  }
+]

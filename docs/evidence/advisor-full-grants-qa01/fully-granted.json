@@ -1,0 +1,33 @@
+{
+  "test": {
+    "account": "acct_0c55f28f59ab64c171c13da5",
+    "email": "full_grants_test@example.test",
+    "case": "adm_1989d716eb7d8711f4e6ed114ea973c6"
+  },
+  "demo": {
+    "account": "acct_5cfb22b3bf5f54457eabe79b",
+    "email": "full_grants_demo@example.test",
+    "case": "adm_acf2b4bcb3c175925d2683aca011d307"
+  },
+  "grants": [
+    "media_review_read",
+    "media_review_approve",
+    "media_review_source_download",
+    "media_review_corrected_upload",
+    "media_review_improve",
+    "media_review_request_replacement",
+    "physician_pending_summary_read",
+    "physician_request_read",
+    "physician_request_evidence_read",
+    "physician_claim_resolve",
+    "physician_new_profile_resolve",
+    "physician_locations_read",
+    "physician_administrative_read",
+    "physician_operator_support_read"
+  ],
+  "not_connected": [
+    "provider_claim_review",
+    "professional_source_provision",
+    "physician_accreditation_review"
+  ]
+}

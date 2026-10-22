@@ -296,3 +296,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## CROSS-SURFACE-UX05 — foto pública y domicilio administrativo
 
 [Contrato UX05](identity/CROSS-SURFACE-UX05.md), baseline `cb12124b`: conecta referencia fotográfica pública elegible y domicilio/C.P. mediante proyecciones v2; versiona assets y verifica búsqueda con Chromium visible. Misma autoridad y grants SQL; sí cambia metadata de dos vistas, no registros originales. Cuatro contextos siguen bloqueados por sesión/composición/publicación. 56 checks de navegador/seguridad + 26 SQL PASS; aceptación visual PENDING, sin producción/8091.
+
+## ADVISOR-FULL-GRANTS-QA01 — QA canónica parcial
+
+[Contrato/evidencia](identity/ADVISOR-FULL-GRANTS-QA01.md), baseline `42d1e9e9`: 26 capacidades inventariadas, 17 A y 14 conectadas ejercitadas con dos admisiones sintéticas. 28 grants UI, 14 retiros acumulativos, 13 HTTP403; resumen compartido conserva200 sin autorización ampliada. Tres A sin conexión no activadas. Demostración separada conserva14, sin Irene/8091/registros originales. Sólo harness/docs; resultado PARTIAL, aceptación visual pendiente.

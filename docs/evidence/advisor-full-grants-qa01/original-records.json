@@ -1,0 +1,18 @@
+{
+  "profiles_doctors": {
+    "sha256": "997feb5a5d7526ce0df49996ed0abb5a755a8cd9c8ed30d056ed2b6f5ba6d850",
+    "matches_pre_UX05": true
+  },
+  "consultorios": {
+    "sha256": "d1b79d4cb17634687c6090a80247300693f72610a193e42b2b494cab4e00b473",
+    "matches_pre_UX05": true
+  },
+  "auth_account_memberships": {
+    "sha256": "6adc928e55f6d06dacd3f22b324353c347bd1e584eb55c35a2cb86cc25a0346b",
+    "matches_pre_UX05": true
+  },
+  "media_assets": {
+    "sha256": "e47edb83e3022378f582fdf1f5ad57e5568ee6e68e73ff4592b8daf4ae51cba7",
+    "matches_pre_UX05": true
+  }
+}

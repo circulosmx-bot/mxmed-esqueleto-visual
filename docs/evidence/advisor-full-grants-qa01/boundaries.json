@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Wrong physician approve",
+    "status": 404,
+    "expected": 404,
+    "passed": true
+  },
+  {
+    "name": "Wrong physician replacement",
+    "status": 404,
+    "expected": 404,
+    "passed": true
+  },
+  {
+    "name": "Wrong physician improve",
+    "status": 404,
+    "expected": 404,
+    "passed": true
+  },
+  {
+    "name": "Wrong physician corrected upload",
+    "status": 404,
+    "expected": 404,
+    "passed": true
+  },
+  {
+    "name": "Cross-case evidence file",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Own applicant request cannot be reviewed REQUEST_NEW_PROFILE",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Own applicant evidence cannot be reviewed REQUEST_NEW_PROFILE",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Own applicant decision cannot begin REQUEST_NEW_PROFILE",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Own applicant request cannot be reviewed CLAIM_EXISTING_PROFILE",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Own applicant evidence cannot be reviewed CLAIM_EXISTING_PROFILE",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Own applicant decision cannot begin CLAIM_EXISTING_PROFILE",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Invalid MFA cannot verify current challenge",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "No decision without valid MFA proof",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "name": "Demo legitimate logout and relogin",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  }
+]

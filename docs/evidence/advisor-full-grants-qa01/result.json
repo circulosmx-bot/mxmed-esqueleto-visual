@@ -1,0 +1,36 @@
+{
+  "result": "PARTIAL_ISOLATED_CANONICAL_QA",
+  "baseline": "42d1e9e97e01ba29ad213c2732aa5a0d81ed637b",
+  "catalog_total": 26,
+  "A": 17,
+  "B": 4,
+  "C": 4,
+  "D": 1,
+  "connected_exercised": 14,
+  "actual_canonical_grants": 28,
+  "individual_revokes": 14,
+  "protected_resource_http403": 13,
+  "shared_summary_http200_reduced_projection": 1,
+  "no_regrant_test_actor": true,
+  "advisor_session_unchanged_within_each_step": true,
+  "harness_resumed_between_segments": true,
+  "unrelated_readers_preserved": true,
+  "chromium": "14 connected consumers and progressive revocation, scoped negative probes, MFA and logout/relogin",
+  "webkit": "independent full-demo login, context search, 3 locations and operator read smoke; not 14 mutation/revocation replays",
+  "remaining_blockers": [
+    "3 canonical A consumers not connected; not activated/granted",
+    "summary uses authorized shared reader: no literal HTTP403 on its grant removal"
+  ],
+  "product_source_modified": false,
+  "original_record_hashes_match_prior_reference": true,
+  "original_runtime_unchanged": true,
+  "production_activation": false,
+  "clinical_data_exposed": false,
+  "preview": {
+    "origin": "https://127.0.0.1:52105",
+    "expiry_unix": 1792733637.9521449
+  },
+  "screenshots": "private owned only; contains restricted original administrative projection",
+  "synthetic_demo": "full_grants_demo@example.test",
+  "synthetic_revocation": "full_grants_test@example.test"
+}

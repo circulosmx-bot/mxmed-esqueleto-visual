@@ -262,3 +262,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## CROSS-SURFACE-UX05 — completar contexto y revisión
 
 [Diagnóstico de foto, proyección v2 y límites entre superficies](identity/CROSS-SURFACE-UX05.md). Sucesor acotado de UX04, sin nuevos grants SQL ni mutaciones de registros originales.
+
+## ADVISOR-FULL-GRANTS-QA01 — facultades y revocación
+
+[Inventario, evidencia canónica y límites](identity/ADVISOR-FULL-GRANTS-QA01.md): 14/17 A conectadas ejercitadas, concesión por UI y retiro acumulativo. Tres consumidores no conectados y contrato compartido de resumen impiden declarar COMPLETE. Sin cambios de producto ni activación.
