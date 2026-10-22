@@ -1,0 +1,15 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "engine": "chromium",
+      "keyboard_category_navigation": "PASS",
+      "logout_relogin": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "keyboard_category_navigation": "PASS",
+      "logout_relogin": "PASS"
+    }
+  ]
+}

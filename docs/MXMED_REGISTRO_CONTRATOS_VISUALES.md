@@ -203,3 +203,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-PANEL-UX09 — presentación aislada
 
 [STAFF-PANEL-UX09](identity/STAFF-PANEL-UX09.md): refinamiento UI-2/UI-3 aislado expresamente solicitado. Logo oficial existente, paleta/tokens y controles nativos; tres tamaños Chromium/WebKit. Aceptación visual PENDING, sin promoción a 8091.
+
+## STAFF-HEADER-UX10 — refinamiento visual aislado
+
+[Contrato y revisión](identity/STAFF-HEADER-UX10.md), padre `38354c74`: título único, avatar local no interactivo, cierre de sesión discreto y categorías en mayúsculas. Sucede sólo esta presentación UX09; flujos/autoridad/datos intactos. UI-3 expresamente solicitada; aceptación visual PENDING, sin producción/8091.

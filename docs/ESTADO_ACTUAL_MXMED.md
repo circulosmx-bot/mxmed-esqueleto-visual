@@ -264,3 +264,7 @@ Baseline WORKSPACE03 `8d0dfef72d45253fc9827e22a1f451f6abd3c981`; rama `feature/m
 ## STAFF-PANEL-UX09 — presentación aislada
 
 [STAFF-PANEL-UX09](identity/STAFF-PANEL-UX09.md), padre `464707ba1eb75c60eb9098962de3a74da399110b`: área documental única, historia cerrada, invitación concisa, Asesores primero y logo/paleta canónicos. Sólo presentación aislada; AUTH-UX08/backend/8091 preservados, aceptación visual PENDING.
+
+## STAFF-HEADER-UX10 — refinamiento visual aislado
+
+[Contrato y revisión](identity/STAFF-HEADER-UX10.md), padre `38354c74`: título único, avatar local no interactivo, cierre de sesión discreto y categorías en mayúsculas. Sucede sólo esta presentación UX09; flujos/autoridad/datos intactos. UI-3 expresamente solicitada; aceptación visual PENDING, sin producción/8091.

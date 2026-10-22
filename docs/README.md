@@ -230,3 +230,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-PANEL-UX09 — presentación aislada
 
 [Contrato y guía STAFF-PANEL-UX09](identity/STAFF-PANEL-UX09.md): refinamiento de presentación sobre AUTH-UX08, sin cambios de autorización o datos.
+
+## STAFF-HEADER-UX10 — refinamiento visual aislado
+
+[Contrato y revisión](identity/STAFF-HEADER-UX10.md), padre `38354c74`: título único, avatar local no interactivo, cierre de sesión discreto y categorías en mayúsculas. Sucede sólo esta presentación UX09; flujos/autoridad/datos intactos. UI-3 expresamente solicitada; aceptación visual PENDING, sin producción/8091.

@@ -50,3 +50,7 @@ python3 scripts/staff-panel-ux09-review.py /tmp/mxmed-ase-adm02imp01-mtcc5cnc st
 ```
 
 Las credenciales se copian localmente al portapapeles, no se documentan. `stop` solicita cierre al runner propietario. AUTH-UX08, original y puerto 8091 permanecen intactos.
+
+## STAFF-HEADER-UX10 — refinamiento visual aislado
+
+[Contrato y revisión](STAFF-HEADER-UX10.md), padre `38354c74`: título único, avatar local no interactivo, cierre de sesión discreto y categorías en mayúsculas. Sucede sólo esta presentación UX09; flujos/autoridad/datos intactos. UI-3 expresamente solicitada; aceptación visual PENDING, sin producción/8091.
