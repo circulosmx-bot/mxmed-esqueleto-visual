@@ -1,0 +1,17 @@
+{
+  "HTTP200 ": true,
+  "HTTP200 ?review=safari": true,
+  "HTTP200 index.html": true,
+  "HTTP200 development/interfaces.php": true,
+  "POST rejected": true,
+  "six HTML entries without JS": true,
+  "ordinary medical link": true,
+  "no popup": true,
+  "director canonical login via hub": true,
+  "director no medical cookies": true,
+  "advisor canonical login via hub": true,
+  "advisor no medical cookies": true,
+  "WebKit contexts distinct staff sessions": true,
+  "browser restart hub available": true,
+  "mobile no overflow": true
+}

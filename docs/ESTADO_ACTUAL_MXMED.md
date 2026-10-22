@@ -312,3 +312,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## IDENTITY-RECOVERY01 — Identity local recuperada, login manual pendiente
 
 [Sucesor del bloqueo503](identity/INTERFACE-HUB01.md#identity-recovery01--recuperación-local-autorizada-2026-10-22), baseline `3ebd8af4`: autorización expresa aplicada sólo al directorio privado de notificaciones ausente, creado con UID501/0700. Bootstrap Identity completo y login200 verificados; privado redirige a login y anónimo401. Sin cambios de código/configuración ni reinicios. Hub original abre ventana médica independiente; Director/Asesor conservados. Membresía colaborador de Leticia revalidada, autenticación interactiva y comparación de consultorios pendientes. Registros/listeners originales preservados; no producción.
+
+## INTERFACE-HUB02 — navegación Safari y puerto estable
+
+[Contrato/guía](identity/INTERFACE-HUB02.md), sobre3ebd8af4+e85d0bc2: reemplaza sólo el servicio hub57452 por HTML normal sin scripts/popups, catálogo de seis entradas reutilizado. Safari root verificado y sesión médica doctor1 existente observada sin modificarla. Staff sano54400 enlaza a login canónico; WebKit15 y reinicio PASS. Perfiles Safari separados documentados, aislamiento simultáneo físico pendiente;404 histórico exacto no reproducido. Original/DB de negocio preservados, producción inactiva.

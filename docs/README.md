@@ -274,3 +274,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## INTERFACE-HUB01 — navegación de revisión entre superficies
 
 [Hub, launcher, límites y recuperación](identity/INTERFACE-HUB01.md): abrir/enfocar ventanas independientes desde Chromium administrado; sin endpoint de shell ni cambios al runtime original. Incluye diagnóstico médico503, membresía verificada y requisitos de superficies no preparadas.
+
+## INTERFACE-HUB02 — hub usable en Safari
+
+[Servidor HTML, puerto estable, perfiles Safari y recuperación](identity/INTERFACE-HUB02.md). Sucesor operativo del hub01 para navegación ordinary-browser; conserva preview staff y sesión médica original, sin controlar Safari mediante un launcher de Chromium.

@@ -105,3 +105,7 @@ El Director debe usar su contraseña habitual exclusivamente en `https://localho
 - CONTEXT_SYNC_STATUS: PASS_UPDATED.
 - DOCUMENTATION_COMMIT: commit documental IDENTITY-RECOVERY01, consultar Git de este archivo.
 - REMAINING_CONTEXT_GAPS: autenticación interactiva y comparación médica pendientes; causa histórica de desaparición no determinada.
+
+## Sucesor INTERFACE-HUB02
+
+[HUB02](INTERFACE-HUB02.md) reemplaza el servidor de navegación del puerto57452 por HTML normal independiente de Chromium, conservando seis entradas y la sesión médica Safari existente. Los comandos de apertura del hub01 son históricos para esta instancia: utilizar ahora `scripts/interface-hub02.py open`. Staff/Identity originales no se reinician. Root404 histórico no reproducido; variantes con query y dependencia de inyección corregidas; perfiles Safari requieren verificación manual de aislamiento simultáneo.
