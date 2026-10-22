@@ -11,6 +11,7 @@ use Subscriptions\Services\CurrentSubscriptionReadModelService;
 
 require_once __DIR__ . '/IdentityHttpComposition.php';
 require_once __DIR__ . '/CanonicalClinicalIdentityResolver.php';
+require_once __DIR__ . '/../../profiles/services/PublicNamePresentation.php';
 
 final class PrivateApplicationAccessDecision
 {
@@ -62,7 +63,7 @@ final class PrivateApplicationAccessResolver
         $doctorId = trim((string)($membership['profile_doctor_id'] ?? ''));
         try {
             $profile = $this->identity->pdo()->prepare(
-                'SELECT doctor_id, display_name, professional_designation FROM profiles_doctors WHERE doctor_id = :doctor_id LIMIT 2'
+                'SELECT doctor_id, display_name, prefix, professional_designation FROM profiles_doctors WHERE doctor_id = :doctor_id LIMIT 2'
             );
             $profile->execute(['doctor_id' => $doctorId]);
             $profiles = $profile->fetchAll();
@@ -107,6 +108,9 @@ final class PrivateApplicationAccessResolver
             'professional' => [
                 'doctor_id' => $doctorId,
                 'display_name' => trim((string)($profiles[0]['display_name'] ?? '')),
+                'presentation_name' => in_array($profiles[0]['prefix'] ?? null, ['Dr.', 'Dra.'], true)
+                    ? \Profiles\Services\PublicNamePresentation::compose($profiles[0]['prefix'], $profiles[0]['display_name'] ?? null)
+                    : trim((string)($profiles[0]['display_name'] ?? '')),
                 'professional_designation' => trim((string)($profiles[0]['professional_designation'] ?? '')),
                 'role' => (string)($membership['role_code'] ?? ''),
                 'scope' => (string)($membership['scope_code'] ?? ''),

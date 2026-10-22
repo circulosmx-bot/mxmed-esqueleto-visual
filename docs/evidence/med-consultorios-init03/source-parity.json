@@ -1,0 +1,9 @@
+{
+  "header_markup_identical": true,
+  "header_sha256": "d761bb8c2bac86322d6ce6bb38efd645ad6b4110ea724d59d89e565a4016ff11",
+  "css_header_js_backend_api_identical": true,
+  "compared_files": 1880,
+  "original_baseline": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "live_original_authenticated_comparison": "observed; see original-header.json",
+  "phase": "before INIT03 prefix addition"
+}

@@ -74,6 +74,8 @@ La ausencia de evidencia específica deja `VERIFICATION=source-inspected` aun cu
 - **Resultado/gates:** confirmación sólo tras servidor, entrada inválida/no-success 403/errores. **S1**; ACT04 documenta 14 checks de módulo con red en memoria y pruebas DTO, no SQL live. No inventar editor global por handlers no montados; [retrieval](COBERTURA_Y_PENDIENTES_MXMED.md#preguntas-de-recuperación).
 
 ### PRF-02 — Nombre visible, tema y datos profesionales
+
+**INIT03 aislado:** [encabezado y referencia manual](../agenda/MED-CONSULTORIOS-INIT03.md): presentación Dr./Dra. desde prefix canónico, sin escribir display_name ni modificar estilos. Leticia continúa como referencia original; Aurora sólo QA. Sin integración normal-local.
 - **UI:** `mx-public-identity-card`, datos generales y formación; [datos-generales](../../assets/js/perfil/datos-generales.js), [professional-information](../../assets/js/perfil/professional-information.js), [credenciales](../../assets/js/perfil/credenciales.js).
 - **Ruta/service:** GET/PATCH `/api/profiles/private/doctor/{doctor}` y GET/PUT [professional-information.php](../../api/profiles/professional-information.php); [PrivateProfileController](../../modules/profiles/controllers/PrivateProfileController.php), [ProfessionalInformationService](../../modules/profiles/services/ProfessionalInformationService.php).
 - **Writer/read/datos:** PrivateProfileRepository y structured professional items; VID/CRD quedan bajo sus writers gobernados. [PublicDisplayNamePolicy](../../modules/profiles/services/PublicDisplayNamePolicy.php), [theme catalog](../../modules/profiles/services/ProfileThemeCatalog.php) y DTO público limitan presentación.

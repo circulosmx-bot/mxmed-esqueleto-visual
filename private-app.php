@@ -10716,7 +10716,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/agenda/agenda-workspace.js?v=op-imp07"></script>
 <script src="assets/js/agenda/operators-panel.js?v=op-act01"></script>
 <script src="assets/js/agenda/canonical-operators.js?v=op-act01"></script>
-<script src="assets/js/app.js?v=op-int04"></script>
+<script src="assets/js/app.js?v=med-consultorios-init03"></script>
 <script src="assets/js/clinical/rec-ux01.js?v=rec-vis02-r1"></script>
 <script src="assets/js/clinical/example-field-help.js?v=cons-help03"></script>
 <script src="assets/js/clinical/responsiva-field-help.js?v=doc-help02"></script>
@@ -10761,7 +10761,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>
 <script src="assets/js/billing/fiscal-profile.js?v=fiscux02"></script>
-<script src="assets/js/core/header-account.js"></script>
+<script src="assets/js/core/header-account.js?v=med-consultorios-init03"></script>
 <script src="assets/js/perfil/datos-generales.js?v=exp02"></script>
 <script src="assets/js/perfil/visibility-help.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>

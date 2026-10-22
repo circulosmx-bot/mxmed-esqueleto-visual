@@ -13,6 +13,8 @@
 
 - [MED-CONSULTORIOS-INIT02](agenda/MED-CONSULTORIOS-INIT02.md): estados explícitos de hidratación y reintento, sin persistencia de placeholders. Baseline original `f92f37f1`, rama aislada; sin promoción a 8091. Disparador histórico INIT01 no confirmado. QA sintética y límites en el contrato/evidencia.
 
+- [MED-CONSULTORIOS-INIT03](agenda/MED-CONSULTORIOS-INIT03.md): paridad CSS/markup de encabezado confirmada; prefijo canónico añadido sólo en rama aislada. Leticia sigue como referencia manual, Aurora sólo QA. Integración preparada y no ejecutada.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

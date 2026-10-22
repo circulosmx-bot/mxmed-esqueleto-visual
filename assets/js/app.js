@@ -2604,7 +2604,11 @@ console.info('app.js loaded :: 20251123a');
     }
     const headerName = document.querySelector('.mx-gh-identity-name-text, .user-id .name');
     if(headerName && displayName){
-      headerName.textContent = displayName;
+      // Canonical profile prefix is presentation only; never persist it into the name.
+      const bareHeaderName = /^(Dr\.|Dra\.)$/u.test(prefix || '')
+        ? displayName.replace(/^(?:Dr\.|Dra\.)\s+/iu, '') : displayName;
+      headerName.textContent = /^(Dr\.|Dra\.)$/u.test(prefix || '')
+        ? [prefix, bareHeaderName].join(' ') : displayName;
     }
     state.displayNameTouched = false;
     state.legacyNameTouched = false;

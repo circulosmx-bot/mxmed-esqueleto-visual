@@ -60,11 +60,17 @@ def run(d):
    try:p.wait(timeout=15)
    except subprocess.TimeoutExpired:p.kill();p.wait()
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('action',choices=['start','run','stop','status']);p.add_argument('instance',nargs='?');a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['start','run','stop','status','credentials-physician']);p.add_argument('instance',nargs='?');a=p.parse_args()
  if a.action=='start':
   d=pathlib.Path(tempfile.mkdtemp(prefix='mxmed-init02-',dir='/tmp'));log=(d/'runner.log').open('ab');subprocess.Popen([sys.executable,__file__,'run',str(d)],stdout=log,stderr=log,start_new_session=True);print(d)
  elif a.action=='run':run(a.instance)
  else:
   d=pathlib.Path(a.instance).resolve();assert d.name.startswith('mxmed-init02-') and d.stat().st_uid==os.getuid();s=json.loads((d/'state.json').read_text());assert s['source']==str(ROOT) and command(s['owner_pid'])==s['command']
-  if a.action=='stop':(d/'stop').touch()
+  if a.action=='credentials-physician':
+   assert time.time()<s['expires'], 'Preview expired; do not reuse credentials from an expired instance'
+   f=d/'credentials.json';assert not f.is_symlink() and f.stat().st_uid==os.getuid() and f.stat().st_mode & 0o077 == 0
+   c=json.loads(f.read_text())['owner'];assert c['email']=='qa05-owner@example.invalid'
+   subprocess.run(['pbcopy'],input=c['password'],text=True,check=True)
+   print('Cuenta sintética: '+c['email']+'\nContraseña sintética copiada al portapapeles.\nAcceso: '+s['origin']+'/public/identity/acceso.php\nDespués: Perfil → Consultorios. No usar credenciales del entorno original.')
+  elif a.action=='stop':(d/'stop').touch()
   else:print(json.dumps({'url':s['origin']+'/private-app.php','expires':s['expires']}))

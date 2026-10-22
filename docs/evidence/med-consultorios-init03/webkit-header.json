@@ -1,0 +1,109 @@
+{
+  "name": "Dra. Aurora Prueba Segura",
+  "fonts": [
+    {
+      "family": "bootstrap-icons",
+      "status": "loaded",
+      "weight": "normal"
+    },
+    {
+      "family": "Carlito",
+      "status": "loaded",
+      "weight": "400"
+    },
+    {
+      "family": "Carlito",
+      "status": "loaded",
+      "weight": "700"
+    },
+    {
+      "family": "Material Symbols Outlined",
+      "status": "loaded",
+      "weight": "400"
+    },
+    {
+      "family": "Material Symbols Rounded",
+      "status": "loaded",
+      "weight": "400"
+    },
+    {
+      "family": "Asap",
+      "status": "loaded",
+      "weight": "400 700"
+    }
+  ],
+  "elements": [
+    {
+      "selector": ".mx-global-header",
+      "font": "16px / 24px Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontFamily": "Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "width": 1694,
+      "height": 82,
+      "margin": "0px",
+      "padding": "0px"
+    },
+    {
+      "selector": ".mx-gh-identity-name",
+      "font": "800 29.76px / 29.76px Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontFamily": "Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontSize": "29.76px",
+      "fontWeight": "800",
+      "lineHeight": "29.76px",
+      "width": 413.65625,
+      "height": 29.75,
+      "margin": "0px",
+      "padding": "0px"
+    },
+    {
+      "selector": ".mx-gh-identity-name-text",
+      "font": "800 29.76px / 29.76px Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontFamily": "Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontSize": "29.76px",
+      "fontWeight": "800",
+      "lineHeight": "29.76px",
+      "width": 346.984375,
+      "height": 29.75,
+      "margin": "0px",
+      "padding": "0px"
+    },
+    {
+      "selector": ".mx-gh-user-avatar",
+      "font": "16px / 16px Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontFamily": "Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "16px",
+      "width": 53,
+      "height": 53,
+      "margin": "0px",
+      "padding": "0px"
+    }
+  ],
+  "failed": [
+    {
+      "url": "https://127.0.0.1:56121/api/agenda/index.php/appointments",
+      "reason": "cancelled"
+    },
+    {
+      "url": "https://www.google.com/maps",
+      "reason": "Frame load interrupted"
+    }
+  ],
+  "responsive": [
+    {
+      "width": 390,
+      "headerWidth": 390,
+      "nameFont": "800 13.12px / 13.12px Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "avatarWidth": 0
+    },
+    {
+      "width": 768,
+      "headerWidth": 768,
+      "nameFont": "800 20.351999px / 20.351999px Asap, Carlito, \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "avatarWidth": 48
+    }
+  ]
+}

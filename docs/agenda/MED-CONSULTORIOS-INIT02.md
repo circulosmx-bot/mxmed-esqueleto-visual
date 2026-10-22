@@ -63,3 +63,36 @@ REMAINING_CONTEXT_GAPS=disparador histórico no confirmado; aceptación visual d
 - Cuenta sintética: `qa05-owner@example.invalid`; credenciales en `credentials.json` dentro de esa instancia, fuera de Git. Copiar contraseña local: `python3 -c 'import json; print(json.load(open("/tmp/mxmed-init02-36clk43w/credentials.json"))["owner"]["password"])' | pbcopy`.
 - Cierre: `python3 scripts/med-consultorios-init02-runtime.py stop /tmp/mxmed-init02-36clk43w`.
 - La infraestructura tiene TLS de prueba propio. Ninguna confianza/cookie/sesión de Safari original se modifica.
+
+## INIT02-ACCESS01 — recuperación de acceso sintético
+
+El preview usa Identity canónico en `mxmed_gate4d_preview_adminqa_init02`, MySQL loopback 56119 y Valkey propio. Login y private-app comparten PHP/TLS y origen 56121. La cuenta médica original no existe en esa base (conteo 0); sólo hay tres cuentas QA05 activas. El servicio canónico deniega cuentas inexistentes con `INVALID_CREDENTIALS`; no hay evento histórico de fallo en la auditoría de esta instancia, por lo que no se atribuye el intento a una contraseña original incorrecta.
+
+Se reutiliza `qa05-owner@example.invalid`, membresía owner/profile activa exclusivamente de `qa05-doctor` (Dra. Aurora Prueba Segura), con Centro QA, Norte QA y Sur QA. No se crearon cuentas, membresías ni datos nuevos. No se modificaron políticas MFA ni autenticación.
+
+Recuperar la contraseña sintética directamente al portapapeles (sin imprimirla):
+
+```sh
+python3 /Users/circulodigital/Documents/GitHub/mxmed-med-consultorios-init02/scripts/med-consultorios-init02-runtime.py credentials-physician /tmp/mxmed-init02-36clk43w
+```
+
+Abrir https://127.0.0.1:56121/public/identity/acceso.php, introducir la cuenta anterior y pegar la contraseña; después Perfil → Consultorios. El comando verifica dueño, proceso, fuente, vigencia y permisos privados del archivo. Infraestructura vigente hasta **2026-10-23 09:21:26 -06:00**, sin extender sesiones Identity. Mantener el acceso original en localhost:8443 y no introducir su contraseña en el preview. La cookie de prueba tiene nombre propio.
+
+CTX-SYNC01 de ACCESS01:
+
+- CONTEXT_BASELINE=ac977e03cc64316c49a5c947994326987755fecc
+- AFFECTED_CAPABILITY_IDS=PRF-03,PRF-04,PRF-05 (verificación; contratos intactos)
+- AFFECTED_JOURNEY_IDS=J04 (acceso a revisión de consultorios)
+- AFFECTED_DATA_OBJECTS=credenciales sintéticas privadas existentes; sin cambios de esquema/datos médicos
+- AFFECTED_CONTEXT_FILES=docs/agenda/MED-CONSULTORIOS-INIT02.md
+- CONTEXT_CHANGES_IMPLEMENTED=guía de acceso y comando privado del launcher
+- CONTEXT_VERIFICATION=Identity y membresías aisladas contrastadas; preservación original comprobada por lectura
+- CONTEXT_SYNC_STATUS=PASS_UPDATED
+- DOCUMENTATION_COMMIT=incluido posteriormente en el cierre aislado INIT03
+- REMAINING_CONTEXT_GAPS=sesión original Safari no observable: no hay pestaña private-app abierta; no se reinició ni cerró sesión
+
+QA focalizada: siete comprobaciones PASS en Chromium — login canónico/tres sedes sin placeholders, error/reintento, denegación del médico original, denegación sin sesión, cero writes de hidratación (hash y contador SQL), cookie aislada y cuenta autenticada sin membresía denegada. [Evidencia](../evidence/med-consultorios-init02/access01.json). Dos intentos iniciales del harness con reload no abrieron el panel por navegación; la comprobación se completó con contexto nuevo autenticado y navegación normal, sin cambiar el producto. Original: hashes de médico/consultorios/membresías/media preservados, mismos PIDs 8091/8443, sin escrituras Identity originales.
+
+## Continuidad INIT03
+
+[Paridad del encabezado y gate de integración](MED-CONSULTORIOS-INIT03.md): Leticia es la referencia manual; Aurora sólo QA. Prefijo canónico de presentación sin rediseño. Integración normal-local aún no ejecutada. La sesión original que no estaba observable durante ACCESS01 fue comprobada autenticada en INIT03, sin intervenirla.
