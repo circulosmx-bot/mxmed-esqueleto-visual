@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Provider approve uses canonical decision and domain journal",
+    "pass": true
+  },
+  {
+    "name": "Provider reject uses canonical decision and domain journal",
+    "pass": true
+  },
+  {
+    "name": "Provider case outside composition denied",
+    "pass": true
+  },
+  {
+    "name": "Provider never changes physician owner",
+    "pass": true
+  },
+  {
+    "name": "Accreditation cross-physician request denied",
+    "pass": true
+  },
+  {
+    "name": "Accreditation wrong password denied",
+    "pass": true
+  },
+  {
+    "name": "Accreditation invalid MFA denied",
+    "pass": true
+  },
+  {
+    "name": "Accreditation original UI decision with exact documents and MFA",
+    "pass": true
+  },
+  {
+    "name": "Source provision uses original VID01/CRD02 writers",
+    "pass": false
+  }
+]

@@ -254,3 +254,7 @@ COM-10: [IMP02](../identity/ASE-INT03B-IMP02-master-ui-integration.md) conecta g
 ## STAFF-CONTROL05 — corrección contextual aislada
 
 [Contrato e inventario](../identity/STAFF-CONTROL05.md). COM-10 distingue facultad prevista de permiso activo con confirmación individual posterior. Cuatro dominios tienen cobertura operativa de soporte y once quedan pendientes; funciones comerciales existentes en otros contextos no se vuelven facultades de Asesor. COM-01..09, pagos, planes, ownership y D01–D08 sin cambios.
+
+## COM-10 — CLOSURE02, sin extensión comercial
+
+[Contrato](../identity/ADVISOR-CAPABILITY-CLOSURE02.md):17 capacidades de alcance conectadas por autoridad existente, incluidas fuentes/C4/claims de organizaciones. Estos claims no crean cartera, vendedor, médico owner, entitlement ni suscripción; `provider_subscription_activate` conserva su exclusión comercial aunque tenga implementación. Cuatro genéricas y cuatro reservadas siguen restringidas. Summary amplía sólo conteos en ámbito independiente y revocación retira esos campos. COM-01..09/D01..08 intactos; sólo QA owned.

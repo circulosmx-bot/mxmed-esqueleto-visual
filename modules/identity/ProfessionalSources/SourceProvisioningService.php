@@ -38,7 +38,11 @@ final class SourceProvisioningService
         if(!preg_match('/^[a-f0-9-]{36}$/D',$id))throw new \RuntimeException('source_application_denied');
         $o=$this->a->query('SELECT * FROM auth_physician_enrollment_origins WHERE origin_id=? FOR UPDATE',[$id])->fetch(PDO::FETCH_ASSOC);
         if(!is_array($o)||$o['origin_id']!==$id||$o['intake_state']!=='SUBMITTED'||$o['account_id']===null)throw new \RuntimeException('source_application_denied');
-        $this->a->scope?->workflow(self::WORKFLOW);$this->a->scope?->account($o['account_id']);$this->a->applicant($o['account_id']);return $o;
+        $this->a->scope?->workflow(self::WORKFLOW);$this->a->scope?->account($o['account_id']);
+        // Even NOT_REQUESTED status is private to the approved physician cohort.
+        // New-profile origins remain nullable; their resolved target is checked in context().
+        $this->a->scope?->profile($o['original_profile_doctor_id']);
+        $this->a->applicant($o['account_id']);return $o;
     }
     private function context(AuthenticatedAccessContext $actor,string $id):array
     {

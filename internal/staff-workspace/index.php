@@ -25,6 +25,7 @@ try {
 <link rel="stylesheet" href="/assets/css/staff-workspace.css?v=<?= substr(hash_file('sha256',__DIR__.'/../../assets/css/staff-workspace.css'),0,16) ?>">
 <link rel="stylesheet" href="/assets/css/staff-platform-header.css">
 <script src="/assets/js/staff-workspace.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../assets/js/staff-workspace.js'),0,16) ?>" defer></script>
+<script src="/assets/js/staff-capability-reviews.js" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#work-panel">Saltar al área de trabajo</a>
@@ -35,6 +36,8 @@ try {
 </header>
 <p id="workspace-feedback" class="feedback" role="status" aria-live="polite"></p>
 <section id="session-recovery" class="recovery" hidden><h2>La sesión necesita tu atención</h2><p id="session-message"></p><a class="button-link" href="/public/identity/acceso.php?next=%2Finternal%2Fstaff-workspace%2Findex.php">Iniciar sesión</a></section>
+<nav id="governed-reviews" class="action-row" aria-label="Revisiones autorizadas" hidden><a id="professional-reviews" href="/internal/media-review/index.php?section=acreditacion" hidden>Fuentes y acreditación profesional</a><button id="provider-reviews" type="button" hidden>Claims de organizaciones</button></nav>
+<section id="provider-review-panel" class="context-form" hidden><h2>Claims de organizaciones proveedoras</h2><p>Revisión del primer titular de una organización. No modifica la titularidad de médicos, su acreditación ni sus planes.</p><button id="close-provider-reviews" type="button">Volver a médicos</button><div id="provider-claims"></div><p id="provider-feedback" role="status"></p></section>
 <section id="utilities" class="utilities" aria-label="Buscar y consultar pendientes">
 <button id="search-toggle" type="button" aria-expanded="true" aria-controls="physician-search-form discovery" hidden>Buscar médico o solicitud</button>
 <form id="physician-search-form" role="search"><label for="physician-search">Buscar médico</label><div class="search-row"><input id="physician-search" name="query" type="search" autocomplete="off" placeholder="Nombre del médico" maxlength="100"><button type="submit">Buscar</button></div></form>

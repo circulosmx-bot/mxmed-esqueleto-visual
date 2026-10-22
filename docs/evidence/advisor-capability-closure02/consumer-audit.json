@@ -1,0 +1,397 @@
+{
+  "actor": "acct_2c9dcfdbb3c23b0dd3f548bf",
+  "events": [
+    {
+      "event_id": "b41d6f27e88c5f630ea2e1a7bc9941bc47a188f9b540fb1db2759c3e96e49434",
+      "action": "STAFF_ADMISSION_CASE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "invitation_accept"
+    },
+    {
+      "event_id": "f1eaa63b7db6d305ddfd661dd398f1c79aa4100ccff99cbf081da921c720731d",
+      "action": "STAFF_ADMISSION_CASE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "confirm"
+    },
+    {
+      "event_id": "7d70a60108227672e6ff8e1a6d1cb5375139f5dde544ee3418313605fe9e6a25",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "4640ef2c58c20aaff43e7a6c2cc93834276c243774c31e990da5be63e2db6585",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "6ed80fb79232460aeff45573f74713671f4877baa37591e22f505bcd3dd29313",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "c99ec1a0120467f474b0d8db78f9cc79c7a733d027d5cf287d9b28ef842410f6",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "557d8e92da8f7ce26533fd90c72a58671d18b8f3115dd0fccf230d1bc8e27fa3",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "c4b8ee433dc5872a708e8464a130865fa47c59014216d6dad009f6f2b3b3e016",
+      "action": "STAFF_MEDIA_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "write"
+    },
+    {
+      "event_id": "d38d6325e6d46a8ea8ce4d313bf8978adaed6f36b7b043a7205dde074dc66c37",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "7d2c875082cb4744336ae7c7cf17c4f33c0351dca8f16b5fbb89a68e819fd824",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "1aa51fe9ea6bacc5f07324aa4fdaf8890a1220cbfdc65e4038e426295d821456",
+      "action": "STAFF_MEDIA_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "write"
+    },
+    {
+      "event_id": "aa7cf4c5560fcb9c7d9ac31e1dc491dcdf58b9e642c04d0c972741dff14211b7",
+      "action": "STAFF_ADMISSION_CASE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "evidence_submit"
+    },
+    {
+      "event_id": "4b9d99a83d339228900fcbae16e75918b71b7c8b33cea5f9e7f6a52281e28ea9",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "7f9e3eff8279f7c9c3ecbd41ab4e63ddafbde2d7d1e0be8679d2cf23e3995297",
+      "action": "STAFF_ADMISSION_CASE_READ",
+      "outcome": "SUCCESS",
+      "operation": "read"
+    },
+    {
+      "event_id": "9c76ab521cd738c7be2b0bfc2cf07d57415e63a9aa63c25b7164a49b8157ad87",
+      "action": "INTERNAL_GOVERNANCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MFA_ENROLLMENT_ACTIVATED"
+    },
+    {
+      "event_id": "42687792d99f2328056f886d3037a108ea1ed38e9cda9bc25ccc909ce634c3b5",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "a0c3aea050a47ea75b2617744bcb23e70cb8cef771bc9a8db2d0f1b03ebcfbad",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "9e3ba10a9883f9ad8affc6c374afaa13b886becfe55245396cf606e8f5fd3c1b",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "e6e93c04d90bd92ec9f3063653194ef3de9991c5adfbd69df397af56c31889df",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "5f07b28ea43d12e05d4fce15eab1c6a34ec36439a8c3c630ce23d3ee113325a7",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "91edd19c37ebc6a96697f178751d7c96e7fdfe749a4e59a6477f4398b917069f",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "REVIEW_CHALLENGE"
+    },
+    {
+      "event_id": "c8b1448f04b60f6689238dd9f3dde998fb49d1bcac7841a024dad3f36f5e879a",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "8cf1a16326d18b34e446abfc80da48a7bc5e3c17385f1ae93b63ab32895d3c3b",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "FILE_READ"
+    },
+    {
+      "event_id": "0eee7f7258e602937417d8e0302060a2af41120a0a6e26d73b40bec9c19970a8",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "FILE_READ"
+    },
+    {
+      "event_id": "0a6fdedd46cea20c04eada339b25433af061745af6d4a0a0b44868cff0cc50ab",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "APPROVED"
+    },
+    {
+      "event_id": "1826737faa67182d00e462ca7ab38d16725fc273be47d681783e2c1ec562a509",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "c913c96d15fe2a5471ab2fea9a8f20ab2bcfdc35898f0323b8f53dcad199d330",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "cfaf64c3eecc71089a566eda00be7ab741380dd894adb130749b5eeef93bebd0",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "002dcb1af1c4b65b6d65b8c368261b8e8e057b2dac15b20817015de0bfd4f37e",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "b1962fc5da0f41e35b703bf248d02b66ff60e2cd789528688a5f26bccb618704",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "9b2ecf55a977dadebb40061d29ac04d9566b0f77a465131163e1c3f039820639",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "5ae1104e53b4aeeefe9cfdcc7d228e1e64ae0540ba34fc94df55dcb8969c35e0",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "7b8fb8d3fe6bf05fa41a6108261fcad04762483d5e64640dc868cd3b235e2d4f",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "CHALLENGE"
+    },
+    {
+      "event_id": "98660df8e9f1db2c8581cc7028ded934a00933d7d3b6fe8bca8ab5e35bfb81f0",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "COLLECTION_OPENED"
+    },
+    {
+      "event_id": "7c0e961fe5aa30b8ce567708a1b08c3dab0b25abb2781a4d969c120923116ba8",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "COLLECTION_OPENED"
+    },
+    {
+      "event_id": "d5f8410d75519f4d9e91e3135b21ee9fcf743b13d195f1d2f4970708a5f5443f",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "2509269d15f43b2c7e8175998dc6e46e8774a3f0fdd7cc4b21faba668860fdc4",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "a993524575f887513bcd5517309801f019e6d62dddaa188f3b7690655bfd0f35",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "bb2ac2230c22fca1a512a8c4e6924f8c95dc059e2fff1133f9bf34c494987af3",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "efb91bc34685ba4924edfeaf186178624ea4547e19fe317c369a6a0d3548ccfd",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "FILE_READ"
+    },
+    {
+      "event_id": "11040610f49bb0f4e0626c91a71a12f3dedfd18a193c7f77a2cfa4c387c2bc47",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "FILE_READ"
+    },
+    {
+      "event_id": "39b39e04f3b36a5967a2fad7f009ae1f574e0a8b1eaeeece53778f2755bfcd83",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "CHALLENGE"
+    },
+    {
+      "event_id": "fb7a6552cb24cfbb98ab8bc6d2eac1ae2d847b09fddfeebe679a600a83d6dae4",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "AUTHORIZED"
+    },
+    {
+      "event_id": "7be87495becc288af9efa31d49c1501916b446c018bc6720c1acf9132805d903",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "AUTHORIZED"
+    },
+    {
+      "event_id": "184e86bf3da1ed65f72274c957b985f39e08dc26141587dc6670569be1ea1cc5",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "VID01_RECORDED"
+    },
+    {
+      "event_id": "9b7706ad14e2413c0774d93e1d8039393661e5c72b5c9e27857dd95e5cbf843f",
+      "action": "PHYSICIAN_CREDENTIAL_PROVISIONED",
+      "outcome": "SUCCESS",
+      "operation": null
+    },
+    {
+      "event_id": "ad960a0cb266e159e3090f73efbdfe3226e7fc22d961dc84ebe1f6de290524e7",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "CRD02_RECORDED"
+    },
+    {
+      "event_id": "aa34badeeb5e336bbac420e3c6e34f5231b49cae1a2ce3ea78faa99989149c7e",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "COMPLETE"
+    },
+    {
+      "event_id": "b94417a6a2c4a10d17b66090e8125ff0603209df82feb5c1e4d79225db44a047",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "1d298c2d16e358c06f24af0f1b9307702d31c23feac2b6ec639923a47071174b",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "3b1d89a784852dbfa82ac165743f76cefb2b27e5c5f5c0a73d6952027b6006ee",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "1c56ce963ebda0823caaf8c76f3a4d8035a6b5e68f935b3f1e89344ca7ab12a6",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "MATCH_CANDIDATES_READ"
+    },
+    {
+      "event_id": "862da4b4bb124d228f7427710175e6f3d6de26f719bdf418de6745bdec9500d4",
+      "action": "PHYSICIAN_EVIDENCE_CHANGED",
+      "outcome": "SUCCESS",
+      "operation": "INTAKE_READ"
+    },
+    {
+      "event_id": "88fd76e14d199d6a1c0c6626d4f2a2f117d8f828c89e188425e30ddf4bc3b6d9",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "1ec97a6217deb5efb35c57ce9570364afc87d18979bc78ae2ccb7955becc7bc7",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "1790b3c445bd0199a4b0a646192aa1e3c6223fc05ccb71f0c33b6d22fda84e72",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "SUCCESS",
+      "operation": null
+    },
+    {
+      "event_id": "720f63e0c0723e9179235c20b252c67734bc1ee271c77984eb0fbe0b0d81b292",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "DENIED",
+      "operation": null
+    },
+    {
+      "event_id": "603d7e504a5560ad254d26e7e8125c815bdc7cd33c0d874067d86b6d98932e5d",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "SUCCESS",
+      "operation": null
+    },
+    {
+      "event_id": "bb9907ed57b95e55b071fef5ab373df5e816d666d7e92873e29c6ec2c19d46b2",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "SUCCESS",
+      "operation": null
+    },
+    {
+      "event_id": "5880829737e8cd41c3a33b415a092960434728ecdcf204f11ab611e3256efcf1",
+      "action": "SENSITIVE_ADMIN_ACTION",
+      "outcome": "SUCCESS",
+      "operation": null
+    }
+  ],
+  "mfa_proofs": [
+    [
+      "PHYSICIAN_EVIDENCE_REVIEW",
+      "CONSUMED",
+      1
+    ],
+    [
+      "PROFESSIONAL_SOURCE_PROVISION",
+      "CONSUMED",
+      2
+    ]
+  ],
+  "provider_journal": [
+    [
+      "4c1323c4-1717-41f6-aefd-fb9cd568777b",
+      "acct_2c9dcfdbb3c23b0dd3f548bf",
+      "APPROVED",
+      "PENDING",
+      "APPROVED",
+      "EVIDENCE_ACCEPTED",
+      null
+    ],
+    [
+      "13980a52-bd07-4173-8645-e58e7ba6326c",
+      "acct_2c9dcfdbb3c23b0dd3f548bf",
+      "REJECTED",
+      "PENDING",
+      "REJECTED",
+      "EVIDENCE_INSUFFICIENT",
+      null
+    ]
+  ]
+}

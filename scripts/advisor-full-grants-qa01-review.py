@@ -27,6 +27,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DIRECTOR = '/internal/media-review/index.php?section=equipo'
 ADVISOR = '/internal/staff-workspace/index.php'
 BRANCH = 'feature/mxmed-advisor-full-grants-qa01'
+ADVISOR_EMAIL = 'full_grants_demo@example.test'
+ADVISOR_RECORD = 'full-demo.json'
+LAUNCHER = pathlib.Path(__file__).resolve()
+REVIEW_PREFIX = 'advisor-full-grants-qa01'
 ACTIONS = ['status', 'stop', 'open', 'open-director', 'open-advisor',
            'credentials-director', 'credentials-advisor', 'mfa', 'mfa-director',
            'mfa-advisor', 'logout-director', 'logout-advisor',
@@ -89,7 +93,7 @@ def verified_preview(owned, approval):
     finally:
         connection.close()
     record = json.loads(private_file(owned, 'oper09-advisor.json').read_text())
-    require(record['email'] == 'full_grants_demo@example.test' and record == json.loads(private_file(owned, 'full-demo.json').read_text()), 'synthetic_advisor_required')
+    require(record['email'] == ADVISOR_EMAIL and record == json.loads(private_file(owned, ADVISOR_RECORD).read_text()), 'synthetic_advisor_required')
     return info, runtime['origin'], expiry, record
 
 
@@ -119,15 +123,15 @@ def browser(owned, origin, expiry, record, actor):
     spec = importlib.util.spec_from_file_location('workspace02_native', ROOT / 'scripts/ase-advisor-workspace-review.py')
     native = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(native)
-    lock = (owned / ('advisor-full-grants-qa01-' + actor + '-browser.lock')).open('a+')
+    lock = (owned / (REVIEW_PREFIX + '-' + actor + '-browser.lock')).open('a+')
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
-        (owned / ('focus-advisor-full-grants-qa01-' + actor)).touch(mode=0o600)
+        (owned / ('focus-' + REVIEW_PREFIX + '-' + actor)).touch(mode=0o600)
         print('La ventana aislada ya está abierta; se solicitó mostrarla.')
         lock.close()
         return
-    marker = owned / ('logout-advisor-full-grants-qa01-' + actor)
+    marker = owned / ('logout-' + REVIEW_PREFIX + '-' + actor)
     if marker.exists():
         require(not marker.is_symlink(), 'owned_marker_required')
         marker.unlink()  # Only this launcher's disposable logout request.
@@ -165,11 +169,11 @@ def browser(owned, origin, expiry, record, actor):
                 asset_proof[relative]=digest
         proof = page.evaluate('({width:innerWidth,height:innerHeight,outerWidth,outerHeight,availableHeight:screen.availHeight,scrollWidth:document.documentElement.scrollWidth})')
         require(proof['outerHeight'] <= proof['availableHeight'] and proof['scrollWidth'] <= proof['width'], 'native_viewport_out_of_bounds')
-        page.screenshot(path=str(owned / ('advisor-full-grants-qa01-' + actor + '-review.png')))
-        (owned / ('advisor-full-grants-qa01-' + actor + '-ready.json')).write_text(json.dumps({'opened_at': time.time(), 'url': origin + (ADVISOR if actor == 'advisor' else DIRECTOR), 'proof': proof, 'canonical_login': True, 'verified_assets':asset_proof, 'synthetic_account': record['email'] if actor == 'advisor' else 'qa_director@example.test'}))
+        page.screenshot(path=str(owned / (REVIEW_PREFIX + '-' + actor + '-review.png')))
+        (owned / (REVIEW_PREFIX + '-' + actor + '-ready.json')).write_text(json.dumps({'opened_at': time.time(), 'url': origin + (ADVISOR if actor == 'advisor' else DIRECTOR), 'proof': proof, 'canonical_login': True, 'verified_assets':asset_proof, 'synthetic_account': record['email'] if actor == 'advisor' else 'qa_director@example.test'}))
         while chromium.is_connected() and time.time() < expiry and not (owned / 'stop-review').exists():
             try:
-                focus = owned / ('focus-advisor-full-grants-qa01-' + actor)
+                focus = owned / ('focus-' + REVIEW_PREFIX + '-' + actor)
                 if focus.exists() and not focus.is_symlink():
                     page.bring_to_front(); focus.unlink()
                     if '/public/identity/acceso.php' in page.url:
@@ -215,12 +219,12 @@ def main():
         print('Código del autenticador sintético copiado para ' + actor + '. Usa un código vigente y distinto del último consumido; la clave privada no se muestra.')
     elif args.action in ['open', 'open-director', 'open-advisor']:
         for actor in (['director', 'advisor'] if args.action == 'open' else [args.action.removeprefix('open-')]):
-            with (owned / ('advisor-full-grants-qa01-' + actor + '-browser.log')).open('ab') as log:
-                subprocess.Popen([sys.executable, str(pathlib.Path(__file__).resolve()), str(owned), 'browser-' + actor],
+            with (owned / (REVIEW_PREFIX + '-' + actor + '-browser.log')).open('ab') as log:
+                subprocess.Popen([sys.executable, str(LAUNCHER), str(owned), 'browser-' + actor],
                                  stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
         print('Apertura solicitada para Chromium aislado con login Identity legítimo. La expiración original se conserva.')
     elif args.action.startswith('logout-'):
-        marker = owned / ('logout-advisor-full-grants-qa01-' + args.action.removeprefix('logout-'))
+        marker = owned / ('logout-' + REVIEW_PREFIX + '-' + args.action.removeprefix('logout-'))
         require(not marker.is_symlink(), 'owned_marker_required')
         marker.touch(mode=0o600)
         print('Cierre canónico solicitado a la ventana aislada de esta cuenta.')

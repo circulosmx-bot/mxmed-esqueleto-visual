@@ -1,5 +1,7 @@
 # ADVISOR-FULL-GRANTS-QA01 — facultades y revocación acumulativa
 
+**Sucesor:** [CLOSURE02](ADVISOR-CAPABILITY-CLOSURE02.md) resuelve las tres conexiones y la verificación de resumen por campos; esta evidencia y resultado históricos se conservan.
+
 ## Baseline y alcance
 
 Baseline `42d1e9e97e01ba29ad213c2732aa5a0d81ed637b`, rama de trabajo

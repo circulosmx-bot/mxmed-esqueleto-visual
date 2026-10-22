@@ -1,0 +1,170 @@
+[
+  {
+    "event_id": "6c085bd7df424a63904ba32b82ba128708ee29ea3441c641989d13856454e88b",
+    "actor": "account:qa_director",
+    "operation": "register",
+    "capability": null
+  },
+  {
+    "event_id": "fa11a976b5490ab82a4d54e007ab04e6a625c0111cd4e1134f9e6b58ed59d6f4",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_read"
+  },
+  {
+    "event_id": "3480e34dc5e72ba437ddd7c57301264d684f3f7a87274ccb8324afc6ce44acd3",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "provider_claim_review"
+  },
+  {
+    "event_id": "1eb169fdbc719922abf737e0c4e11ef6665e9acf847cf012e6f57d567e873e7e",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "professional_source_provision"
+  },
+  {
+    "event_id": "29956bfd62a5f2924e4a8b0cf6479de6fe94ea28b21620af025bb11a4e22b74b",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_accreditation_review"
+  },
+  {
+    "event_id": "b02005d25936a7c92a304892d9fe62ed15b94c3f26612170f90057231bd1b1cd",
+    "actor": "account:qa_director",
+    "operation": "revoke",
+    "capability": "physician_accreditation_review"
+  },
+  {
+    "event_id": "24ee8350bf02c2ab1153a42a8adaf7da45f762d6224e66d769932f9c67d9a733",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_accreditation_review"
+  },
+  {
+    "event_id": "adb79e93dd073258175c362108a55916f379c5c453fdc96e8a3fe3de34805e35",
+    "actor": "account:qa_director",
+    "operation": "revoke",
+    "capability": "professional_source_provision"
+  },
+  {
+    "event_id": "bcb8aa49ee7d5594abbce5c9c3a35c399af7e48719ba53382046dc112d7abf4e",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "professional_source_provision"
+  },
+  {
+    "event_id": "8cba50f04a36ff0aed0ec332458411029a85ef56ac43973a91bafc20470ad32e",
+    "actor": "account:qa_director",
+    "operation": "revoke",
+    "capability": "provider_claim_review"
+  },
+  {
+    "event_id": "405895b0908789496daf99473635ac6a29b7860512d0e16408a64ad8cc8d7ed9",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "provider_claim_review"
+  },
+  {
+    "event_id": "e0979158f52189b7a5927e8e41106acb103b52a4e49281cd96fbb620e578bf1b",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_approve"
+  },
+  {
+    "event_id": "400d0e96f7855baf7537de8840ad27e9ac8f68152477ba0b43998da0de115c7f",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_source_download"
+  },
+  {
+    "event_id": "59e14d6c125dc9eac35474bf2e1c7d87bb4afbcbf7b5cdb20d220d6cd8072b68",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_corrected_upload"
+  },
+  {
+    "event_id": "cc9056c7ab9812730b68cdeabdf943186672ffaf6f0cd23cee8ab63971ba0ca8",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_improve"
+  },
+  {
+    "event_id": "69fa3fc733b6365b4f6b622967580dcc881607a944e1e8cc3ca4ac3e2ebd73ca",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_request_replacement"
+  },
+  {
+    "event_id": "c188d09f431973c6c42d98d03f8dbfe168351a9ff82bd48c69fcb15d72870245",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_pending_summary_read"
+  },
+  {
+    "event_id": "8d5871cda438426032b13bf55a2d4f89f6e8387bad81f8bc41f9a0ed17ea5597",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_request_read"
+  },
+  {
+    "event_id": "9f2672c2d6e522c1e89a6531bb1d4e37a7ef38c751dd2e40e338920eab2c3125",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_request_evidence_read"
+  },
+  {
+    "event_id": "da14cb0b2fd03c8a9531dd702831ee958def6d4c703d5fccc158f9ef1a2fe9fa",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_claim_resolve"
+  },
+  {
+    "event_id": "8c04c6de0afb6c386445d785c9e0a967a8187945f715f38a914a16d7f12bc016",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_new_profile_resolve"
+  },
+  {
+    "event_id": "234640b87800eb7e8fe4ca316dc2b156ba870fc6bfa84237dc062d96279d466b",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_locations_read"
+  },
+  {
+    "event_id": "bd900ab4cdbb6eade11f795ad148f3699399b4cad18d38ab7e9e159b87e6c1d0",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_administrative_read"
+  },
+  {
+    "event_id": "6a803ae294cfaa47b60dee08ae6330e9e7e8afd386571433675d8e0d35b99e0f",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_operator_support_read"
+  },
+  {
+    "event_id": "231804aeb2f767b412046a7358206ead87b084164b80fec148956bb0d42b3510",
+    "actor": "account:qa_director",
+    "operation": "register",
+    "capability": null
+  },
+  {
+    "event_id": "2c86b6be45b7a8fda922a08e3f4a79e07f3eec56e58dddf0ccb41aa8065210d5",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "media_review_read"
+  },
+  {
+    "event_id": "ac5f521dc8a2c93b73331ab268d850f7525ed16f6b1656ce7b9a50494301dd47",
+    "actor": "account:qa_director",
+    "operation": "grant",
+    "capability": "physician_pending_summary_read"
+  },
+  {
+    "event_id": "2af4374d2d6c33b09707e9e9743bdaab8b6897a6e7225747ea514cc8ddfd0d0b",
+    "actor": "account:qa_director",
+    "operation": "revoke",
+    "capability": "physician_pending_summary_read"
+  }
+]

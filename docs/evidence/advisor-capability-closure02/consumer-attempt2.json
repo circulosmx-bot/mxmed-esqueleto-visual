@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Provider approve uses canonical decision and domain journal",
+    "pass": true
+  },
+  {
+    "name": "Provider reject uses canonical decision and domain journal",
+    "pass": true
+  },
+  {
+    "name": "Provider case outside composition denied",
+    "pass": true
+  },
+  {
+    "name": "Provider never changes physician owner",
+    "pass": true
+  },
+  {
+    "name": "Accreditation cross-physician request denied",
+    "pass": true
+  },
+  {
+    "name": "Accreditation original UI decision with exact documents and MFA",
+    "pass": true
+  },
+  {
+    "name": "Source invalid MFA denied",
+    "pass": true
+  }
+]

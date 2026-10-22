@@ -266,3 +266,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## ADVISOR-FULL-GRANTS-QA01 — facultades y revocación
 
 [Inventario, evidencia canónica y límites](identity/ADVISOR-FULL-GRANTS-QA01.md): 14/17 A conectadas ejercitadas, concesión por UI y retiro acumulativo. Tres consumidores no conectados y contrato compartido de resumen impiden declarar COMPLETE. Sin cambios de producto ni activación.
+
+## ADVISOR-CAPABILITY-CLOSURE02 — tres consumidores y límites
+
+[Contrato, matriz exclusiva, evidencia y comandos](identity/ADVISOR-CAPABILITY-CLOSURE02.md): sucesor de QA01 para fuentes, acreditación y claims organizacionales; revocación de resumen por campos con200 básico legítimo. Mantiene cuatro reservadas, cuatro sin consumidor y exclusión comercial. Sólo instancia aislada.

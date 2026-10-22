@@ -28,9 +28,13 @@ final class Http
                     if(array_diff(array_keys($_GET),$mode==='admin_search'?['mode','query','after','limit']:($mode==='admin_locations'?['mode','profile_ref','after','limit']:['mode','profile_ref'])))throw new \InvalidArgumentException('admin_request_invalid');
                     if(isset($_GET['limit'])&&!preg_match('/^(?:[1-9]|1[0-9]|20)$/D',$_GET['limit']))throw new \InvalidArgumentException('admin_request_invalid');
                 }
+                if($mode==='review_access')self::keys($_GET,['mode']);
+                if($mode==='provider_claims')self::keys($_GET,isset($_GET['request_id'])?['mode','request_id']:['mode']);
                 if($mode==='operators')self::keys($_GET,['mode','doctor_id']);
                 $result=match($mode){
                     'admin_search','admin_summary','admin_operators','admin_locations'=>($services['administration']??throw new \RuntimeException('admin_source_unavailable'))()->read($actor,$mode,$_GET['profile_ref']??'',$_GET['query']??'',$_GET['after']??'',(int)($_GET['limit']??20)),
+                    'review_access'=>self::reviewAccess($services,$actor),
+                    'provider_claims'=>($services['provider_claims']??throw new \RuntimeException('provider_runtime_unavailable'))->read($actor,$_GET['request_id']??null),
                     'operators'=>(new \Identity\Operators\AdvisorSupportReader($s->a))->read($actor,$_GET['doctor_id']),
                     'pending'=>(new PendingSummary($s->a,$services['enrollment']))->read($actor,$_GET['doctor_id']??null,$_GET['request_id']??null),
                     'read'=>$s->read($actor,$_GET['request_id']??null,$_GET['doctor_id']??null,$_GET['query']??''),
@@ -48,6 +52,7 @@ final class Http
                 preg_match_all('/"(?:[^"\\\\]|\\\\.)*"\s*:/s',$raw,$matches);$count=function($v)use(&$count){if(!is_array($v))return 0;$n=array_is_list($v)?0:count($v);foreach($v as $child)$n+=$count($child);return $n;};if(count($matches[0])!==$count($b))throw new \InvalidArgumentException('physician_request_invalid');
                 $v=$b['input'];$action=$b['action'];
                 $fields=match($action){
+                    'provider_decide'=>['request_id','decision','reason'],
                     'begin'=>['request_id','intake_version','review_version','revision_token','decision','reason','email','password'],
                     'verify'=>['case_id','challenge_id','challenge','code'],
                     'decide'=>['case_id','proof_id','proof','confirmed'],
@@ -61,6 +66,7 @@ final class Http
                     default=>throw new \InvalidArgumentException('physician_request_invalid')};self::keys($v,$fields);
                 foreach($v as $k=>$value){if(in_array($k,['intake_version','review_version'],true)){if(!is_int($value)||$value<0)throw new \InvalidArgumentException('physician_request_invalid');}elseif($k==='confirmed'){if(!is_bool($value))throw new \InvalidArgumentException('physician_request_invalid');}elseif(!is_string($value))throw new \InvalidArgumentException('physician_request_invalid');}
                 $result=match($action){
+                    'provider_decide'=>($services['provider_claims']??throw new \RuntimeException('provider_runtime_unavailable'))->decide($actor,$v['request_id'],$v['decision'],$v['reason']),
                     'begin'=>$s->begin($actor,$v['request_id'],$v['intake_version'],$v['review_version'],$v['revision_token'],$v['decision'],$v['reason'],$v['email'],$v['password']),
                     'verify'=>$s->verify($actor,$v['case_id'],$v['challenge_id'],$v['challenge'],$v['code']),
                     'decide'=>$s->decide($actor,$v['case_id'],$v['proof_id'],$v['proof'],$v['confirmed']),
@@ -77,12 +83,26 @@ final class Http
             }else{http_response_code(405);header('Allow: GET, POST');echo '{"ok":false,"error":"method_not_allowed"}';return;}
             echo json_encode(['ok'=>true,'data'=>$result],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);
         }catch(\Throwable $e){
-            $m=$e->getMessage();$status=$m==='physician_request_authentication_required'?401:($e instanceof \InvalidArgumentException||$e instanceof \JsonException?400:(str_contains($m,'not_found')?404:(str_contains($m,'conflict')||str_contains($m,'stale')?409:(str_contains($m,'denied')||str_contains($m,'required')?403:503))));
-            if($status===403&&isset($s,$actor)&&$actor!==null){try{if(str_starts_with($mode??'','admin_')){$s->a->transaction($actor,fn()=>(new \Identity\PhysicianAdministration\ReadAudit($s->a->pdo))->denied($actor));}else{$s->denial($actor);}}catch(\Throwable){$status=503;}}
+            $m=$e->getMessage();$status=$m==='physician_request_authentication_required'?401:($e instanceof \InvalidArgumentException||$e instanceof \JsonException?400:(str_contains($m,'not_found')?404:(str_contains($m,'conflict')||str_contains($m,'stale')||$m==='claim_terminal'?409:(str_contains($m,'denied')||str_contains($m,'required')||$m==='review_forbidden'?403:503))));
+            // Organization claims retain their domain journal; do not manufacture a physician-request denial event.
+            $providerRoute=($mode??'')==='provider_claims'||($action??'')==='provider_decide';
+            if($status===403&&!$providerRoute&&isset($s,$actor)&&$actor!==null){try{if(str_starts_with($mode??'','admin_')){$s->a->transaction($actor,fn()=>(new \Identity\PhysicianAdministration\ReadAudit($s->a->pdo))->denied($actor));}else{$s->denial($actor);}}catch(\Throwable){$status=503;}}
             if($status===503)error_log('physician_request_unavailable: '.get_class($e));
             elseif(in_array($status,[403,409],true)&&preg_match('/^[a-z_]{1,100}$/D',$m))error_log('physician_request_rejected: '.$m);
             http_response_code($status);echo json_encode(['ok'=>false,'error'=>match($status){401=>'authentication_required',400=>'invalid_request',404=>'not_found',409=>'conflict_refresh_required',403=>'access_denied',default=>'unavailable_reconcile_required'},'retry'=>false]);
         }
+    }
+    private static function reviewAccess(array $s,$actor):array
+    {
+        return $s['requests']->a->transaction($actor,function()use($s,$actor){
+            (new RequestAuthority($s['identity']->pdo()))->assertActiveStaff($actor,true);
+            $caps=(new \Identity\Repositories\InternalOperatorGrantRepository($s['identity']->pdo()))->activeCapabilities($actor->accountId(),true);
+            $allowed=[];
+            foreach(['professional_source_provision','physician_accreditation_review'] as $cap)
+                $allowed[$cap]=isset($s['onboarding'],$s['review_scope'])&&$caps->contains($cap)&&$s['review_scope']->allowsStaff($actor->accountId(),$cap);
+            $allowed['provider_claim_review']=isset($s['provider_claims'])&&$caps->contains('provider_claim_review');
+            return ['capabilities'=>$allowed];
+        });
     }
     private static function owner(array $s,string $id):RequestOwnershipService
     {return new RequestOwnershipService($s['identity'],$s['security'],$s['mfa'],$s['composition']->evidence,$id);}

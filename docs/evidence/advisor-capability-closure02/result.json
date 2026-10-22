@@ -1,0 +1,20 @@
+{
+  "result": "COMPLETE_SUPPORTED_CAPABILITIES_ISOLATED",
+  "start_head": "2ef08171641ea86c3069ab9e9c3eab0ff229fe7e",
+  "branch": "feature/mxmed-advisor-capability-closure02",
+  "new_consumers": 3,
+  "operational_in_scope": 17,
+  "reserved": 4,
+  "without_advisor_consumer": 4,
+  "commercial_excluded": 1,
+  "obsolete": 0,
+  "summary_protected_fields_removed": true,
+  "focused_named_checks": 33,
+  "additional_final_smoke": true,
+  "historical_14_exercise_repeated": false,
+  "original_runtime_unchanged": true,
+  "old_pointer_change_unattributed": true,
+  "original_physician_data_changed": false,
+  "production_activation": false,
+  "director_visual_acceptance": "PENDING"
+}

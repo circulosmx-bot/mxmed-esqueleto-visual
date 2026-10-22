@@ -278,3 +278,7 @@ custodia y proveedores. No se solicitó ni se produjo esa activación en ACT03.
 ## ACT03-CHECK-COMPAT01 — sucesor de compatibilidad SQL
 
 [COMPAT01](ACT03-CHECK-COMPAT01-historical-case-check.md) sucede la ruta del primer CHECK para instalaciones nuevas: 2026_10_18_02 conserva correcciones y 2026_10_18_03 mantiene idéntico el cuerpo de objetos/guards. ACT03 histórico y su resultado PARTIAL se preservan. Instalaciones completas/partiales requieren rutas verificadas distintas; no se habilita operación real.
+
+## CLOSURE02 — consumidor Advisor y ámbito de estado
+
+[CLOSURE02](ADVISOR-CAPABILITY-CLOSURE02.md) conecta esta pantalla/servicio existentes desde el workspace en composición owned, sin activación normal-local. `origin()` valida ahora el perfil inicial contra la cohorte incluso antes de devolver NOT_REQUESTED; preserva el chequeo del target resuelto. QA dirigida de COLLECT/lecturas/AUTHORIZE/EXECUTE con MFA y VID01/CRD02, y revocación del grant separada de C4. Contrato humano, journals y escritores anteriores sin sustitución.

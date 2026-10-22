@@ -1,0 +1,26 @@
+{
+  "actor": "acct_2c9dcfdbb3c23b0dd3f548bf",
+  "email": "full_grants_closure@example.test",
+  "grants": [
+    "media_review_approve",
+    "media_review_corrected_upload",
+    "media_review_improve",
+    "media_review_read",
+    "media_review_request_replacement",
+    "media_review_source_download",
+    "physician_accreditation_review",
+    "physician_administrative_read",
+    "physician_claim_resolve",
+    "physician_locations_read",
+    "physician_new_profile_resolve",
+    "physician_operator_support_read",
+    "physician_pending_summary_read",
+    "physician_request_evidence_read",
+    "physician_request_read",
+    "professional_source_provision",
+    "provider_claim_review"
+  ],
+  "canonical_admission": true,
+  "previous_14_capability_exercise_repeated": false,
+  "new_demo_grants_prepared_once": true
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "name": "Source grant cannot open C4 evidence",
+    "pass": true
+  },
+  {
+    "name": "Source-only canonical queue remains available",
+    "pass": true
+  },
+  {
+    "name": "Revocation keeps exact same Advisor session physician_accreditation_review",
+    "pass": true
+  },
+  {
+    "name": "Independent Media authority preserved physician_accreditation_review",
+    "pass": true
+  },
+  {
+    "name": "Accreditation grant cannot read protected source documents",
+    "pass": true
+  },
+  {
+    "name": "Revocation keeps exact same Advisor session professional_source_provision",
+    "pass": true
+  },
+  {
+    "name": "Independent Media authority preserved professional_source_provision",
+    "pass": true
+  },
+  {
+    "name": "Revoked provider grant direct read denied",
+    "pass": true
+  },
+  {
+    "name": "Revocation keeps exact same Advisor session provider_claim_review",
+    "pass": true
+  },
+  {
+    "name": "Independent Media authority preserved provider_claim_review",
+    "pass": true
+  },
+  {
+    "name": "Reserved internal_advisors_manage HTTP denied",
+    "pass": true
+  },
+  {
+    "name": "Mixed physician selector cannot be used in organization reader",
+    "pass": true
+  },
+  {
+    "name": "Provider mutation invalid CSRF denied",
+    "pass": true
+  },
+  {
+    "name": "Preserved unconsumed provider demonstration",
+    "pass": true
+  },
+  {
+    "name": "Original restricted reader remains read-only and exact-resource",
+    "pass": true
+  },
+  {
+    "name": "Existing Advisor navigation preserved",
+    "pass": true
+  }
+]

@@ -300,3 +300,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## ADVISOR-FULL-GRANTS-QA01 — QA canónica parcial
 
 [Contrato/evidencia](identity/ADVISOR-FULL-GRANTS-QA01.md), baseline `42d1e9e9`: 26 capacidades inventariadas, 17 A y 14 conectadas ejercitadas con dos admisiones sintéticas. 28 grants UI, 14 retiros acumulativos, 13 HTTP403; resumen compartido conserva200 sin autorización ampliada. Tres A sin conexión no activadas. Demostración separada conserva14, sin Irene/8091/registros originales. Sólo harness/docs; resultado PARTIAL, aceptación visual pendiente.
+
+## ADVISOR-CAPABILITY-CLOSURE02 — consumidores y revocación por campos
+
+[Contrato/evidencia](identity/ADVISOR-CAPABILITY-CLOSURE02.md), baseline `2ef08171`, verificado2026-10-22: conecta fuentes/C4 originales y claims de organizaciones al Advisor sólo en composición owned. 17 de alcance conectadas; 4 reservadas,4 sin consumidor,1 comercial excluida (no obsoleta). Corrige estado de fuentes fuera de cohorte; resumen pierde campos ampliados conservando200 básico. QA dirigida y auditoría, sin repetir14-capability exercise; demo nuevo17 y anterior14 preservados. COMPLETE_SUPPORTED_CAPABILITIES_ISOLATED; sin producción/8091 ni datos médicos originales modificados. Puntero viejo ASE-INT01 desaparecido, causa no atribuida; listeners/worktrees originales iguales. Visual PENDING.

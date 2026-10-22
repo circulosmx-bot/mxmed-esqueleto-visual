@@ -1,0 +1,18 @@
+{
+  "scripts/advisor-capability-closure02-fixture.php": "ce3907307e855b0edca852d997f41edcb5c1d64e533d61143e6ebcad56bc5079",
+  "scripts/advisor-capability-closure02-consumers.py": "a624110a4f1e4171bd393a6b001afeab88c6eeb7a8c9810e6f162fea1d9b3f49",
+  "scripts/advisor-capability-closure02.py": "cabbfbfec2036bc0c01c5a11619283161ccbd05ef4b1d936ede7e8b434e19236",
+  "scripts/advisor-capability-closure02-evidence.py": "2ff07ffdf33cc3774442c9bb999348cb602a45b24820d8820019dca1eceb353a",
+  "scripts/advisor-capability-closure02-reserved.php": "d36144efc9ef2954d8263a5db5b6ef451f54855f22673c5b767429b4928e3a24",
+  "scripts/advisor-capability-closure02-browser.py": "2a3394b73f95f3f8b85b66a57dfefc8e7bc85eed53836e836acb29f3f75540c1",
+  "scripts/advisor-capability-closure02-router.php": "c57acf2089d487e600cb935b7601a10e183c070b85ad9027329b95e5fd393f89",
+  "scripts/advisor-capability-closure02-review.py": "a4f263d1b75883435f20d3fd76958efcb28d84ece413d85de19eec07bbe43465",
+  "scripts/advisor-capability-closure02-runtime.php": "ed27b99b2deafed8f397fe2cf5835a6eaa15f51b43dfc35bbabf11efd29e6027",
+  "scripts/advisor-capability-closure02-security.py": "031f5575d946785c5a1216d2797b70ee109b524ddfc14155e5301d10cc394678",
+  "modules/identity/PhysicianRequests/ProviderClaimReview.php": "fb9c5dfa21cfffde3c4c7eef3c7b29ffcc2ba8de80c0322a2c65a6a40153e9c6",
+  "modules/identity/PhysicianRequests/Http.php": "fc62d179e51ac2bd6db309b440c1290b424c3f0c129bafc559a82aa48bc8fcff",
+  "modules/identity/ProfessionalSources/SourceProvisioningService.php": "043d01cb8fb745e1cccb494c166ff7c484562e54cbe48ea26576f2769617770f",
+  "assets/js/staff-capability-reviews.js": "c294fb80027af397d7716174575f03a0e22d474b81943d9d343bf01582b0208b",
+  "assets/js/staff-workspace.js": "7b3e9e790be3f74c77b78d521d3d583738d597759697de539d45fda883cd44c3",
+  "internal/staff-workspace/index.php": "5343d60ef6b019b5fde56164e0843783d8a54bc185aa9b6cf25d9c045960b004"
+}

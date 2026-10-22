@@ -441,3 +441,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## CROSS-SURFACE-UX05 — contexto administrativo completo autorizado
 
 [Contrato](../identity/CROSS-SURFACE-UX05.md). Capacidades existentes physician_administrative_read/physician_locations_read/physician_operator_support_read; sin autoridad nueva. Imagen pública exacta, dirección administrativa, assets versionados e índice con comandos independientes. OP-01..03 no cambian; invitaciones/grants originales siguen sin lector autorizado.
+
+## CLOSURE02 — ID-04/05/07, ORG-01 y COM-10
+
+[Sucesor acotado](../identity/ADVISOR-CAPABILITY-CLOSURE02.md): fuentes y C4 reutilizan pantalla original con Advisor/grant/cohorte; claims de organizaciones conectan el writer existente mediante adaptador exact-case, sin confundir ownership médico. Corrige lectura NOT_REQUESTED de fuentes fuera de perfil permitido. PendingSummary existente filtra campos ampliados tras revocación; las lecturas independientes conservan200. Matriz26 sin superposición,17 de alcance conectadas, cuatro genéricas sin consumidor, cuatro reservadas y una comercial excluida. QA aislada dirigida; no cambia estado operacional real ni catálogo.

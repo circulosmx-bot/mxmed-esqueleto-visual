@@ -312,3 +312,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## QA01 — verificación de grants en J01/J02/J07/J09
 
 [Resultado parcial](../identity/ADVISOR-FULL-GRANTS-QA01.md): dos admisiones sintéticas canónicas → Director concede14 por UI → Advisor consume Requests/Media/readers → retiros individuales sin reconcesión. Endpoint compartido de resumen reduce proyección200; 13 recursos protegidos deniegan403. Tres consumidores A fuera del workspace no activados. Preserva writers/IDs, sesión vigente por paso, MFA de decisiones, ámbitos originales y frontera comercial J08.
+
+## CLOSURE02 — J01/J02 y revisión staff
+
+[Conexión aislada](../identity/ADVISOR-CAPABILITY-CLOSURE02.md): Advisor autorizado abre la cola profesional original para fuentes/C4, con expedientes, versión, reauth/MFA y auditoría propios. La selección de médico en workspace no sustituye la selección protegida de expediente. Claims organizacionales usan otra entrada/domain y no amplían J01/J02 ni titularidad/firma médica. La revocación del resumen retira agregados protegidos, sin bloquear campos básicos independientemente autorizados.

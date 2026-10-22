@@ -1,0 +1,192 @@
+{
+  "before": {
+    "count_meaning": "ACTIONABLE_WORK_ITEMS",
+    "actionable_count": 0,
+    "group_count": 0,
+    "visible_unresolved_count": 9,
+    "groups": [],
+    "has_more": false,
+    "awareness_groups": [
+      {
+        "key": "physician:workspace_aurora",
+        "doctor_id": "workspace_aurora",
+        "application_id": null,
+        "name": "Aurora Ejemplo del Valle",
+        "sections": {
+          "images": {
+            "visible_count": 4,
+            "actionable_count": 0,
+            "summary_only": false
+          },
+          "requests": {
+            "visible_count": 1,
+            "actionable_count": 0,
+            "summary_only": true
+          }
+        },
+        "city": "Ciudad Ficticia Norte",
+        "state": "Estado de Ensayo",
+        "specialty": "Medicina general",
+        "status": "active",
+        "permissions": {
+          "requests": false,
+          "images": true,
+          "history": true,
+          "operators": false
+        },
+        "visible_count": 5,
+        "actionable_count": 0
+      },
+      {
+        "key": "physician:workspace_bruno",
+        "doctor_id": "workspace_bruno",
+        "application_id": null,
+        "name": "Bruno Ejemplo del Río",
+        "sections": {
+          "images": {
+            "visible_count": 4,
+            "actionable_count": 0,
+            "summary_only": false
+          },
+          "requests": {
+            "visible_count": 0,
+            "actionable_count": 0,
+            "summary_only": true
+          }
+        },
+        "city": "Ciudad Ficticia Sur",
+        "state": "Estado de Ensayo",
+        "specialty": "Pediatría",
+        "status": "hidden",
+        "permissions": {
+          "requests": false,
+          "images": true,
+          "history": true,
+          "operators": false
+        },
+        "visible_count": 4,
+        "actionable_count": 0
+      }
+    ],
+    "awareness_group_count": 2,
+    "context": {
+      "key": "physician:workspace_aurora",
+      "doctor_id": "workspace_aurora",
+      "application_id": null,
+      "name": "Aurora Ejemplo del Valle",
+      "sections": {
+        "images": {
+          "visible_count": 4,
+          "actionable_count": 0,
+          "summary_only": false
+        },
+        "requests": {
+          "visible_count": 1,
+          "actionable_count": 0,
+          "summary_only": true
+        }
+      },
+      "city": "Ciudad Ficticia Norte",
+      "state": "Estado de Ensayo",
+      "specialty": "Medicina general",
+      "status": "active",
+      "permissions": {
+        "requests": false,
+        "images": true,
+        "history": true,
+        "operators": false
+      },
+      "visible_count": 5,
+      "actionable_count": 0
+    },
+    "summary_authorized": true
+  },
+  "after": {
+    "count_meaning": "ACTIONABLE_WORK_ITEMS",
+    "actionable_count": 0,
+    "group_count": 0,
+    "visible_unresolved_count": 8,
+    "groups": [],
+    "has_more": false,
+    "awareness_groups": [
+      {
+        "key": "physician:workspace_aurora",
+        "doctor_id": "workspace_aurora",
+        "application_id": null,
+        "name": "Aurora Ejemplo del Valle",
+        "sections": {
+          "images": {
+            "visible_count": 4,
+            "actionable_count": 0,
+            "summary_only": false
+          }
+        },
+        "city": "Ciudad Ficticia Norte",
+        "state": "Estado de Ensayo",
+        "specialty": "Medicina general",
+        "status": "active",
+        "permissions": {
+          "requests": false,
+          "images": true,
+          "history": true,
+          "operators": false
+        },
+        "visible_count": 4,
+        "actionable_count": 0
+      },
+      {
+        "key": "physician:workspace_bruno",
+        "doctor_id": "workspace_bruno",
+        "application_id": null,
+        "name": "Bruno Ejemplo del Río",
+        "sections": {
+          "images": {
+            "visible_count": 4,
+            "actionable_count": 0,
+            "summary_only": false
+          }
+        },
+        "city": "Ciudad Ficticia Sur",
+        "state": "Estado de Ensayo",
+        "specialty": "Pediatría",
+        "status": "hidden",
+        "permissions": {
+          "requests": false,
+          "images": true,
+          "history": true,
+          "operators": false
+        },
+        "visible_count": 4,
+        "actionable_count": 0
+      }
+    ],
+    "awareness_group_count": 2,
+    "context": {
+      "key": "physician:workspace_aurora",
+      "doctor_id": "workspace_aurora",
+      "application_id": null,
+      "name": "Aurora Ejemplo del Valle",
+      "sections": {
+        "images": {
+          "visible_count": 4,
+          "actionable_count": 0,
+          "summary_only": false
+        }
+      },
+      "city": "Ciudad Ficticia Norte",
+      "state": "Estado de Ensayo",
+      "specialty": "Medicina general",
+      "status": "active",
+      "permissions": {
+        "requests": false,
+        "images": true,
+        "history": true,
+        "operators": false
+      },
+      "visible_count": 4,
+      "actionable_count": 0
+    },
+    "summary_authorized": false
+  },
+  "same_session": true
+}
