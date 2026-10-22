@@ -1,0 +1,16 @@
+{
+  "start_head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "branch": "feature/mxmed-med-consultorios-init02",
+  "source_sha256": {
+    "private-app.php": "e865910b8a5aca5134c4c231682968de5cd07ba9bbe40d170e55c01bfe7c2881",
+    "assets/js/perfil/consultorio/multisede.js": "060e2526ee0c1548f50008773d50c6f6d0292f3a9e74ecd42b37c50867233c91",
+    "assets/js/perfil/consultorio/consultorio-ordering.js": "3600f4ef2c74e6f078f61daab9ab695d6a32359383a6bfeb560ecf46b4a8df0c"
+  },
+  "matrix_checks": 36,
+  "matrix_result": "PASS",
+  "followup": "states.json validates final map rendering and explicit lookup in both engines after matrix",
+  "preview_url": "https://127.0.0.1:56121/private-app.php",
+  "expiry": "2026-10-23T09:21:26.907150-06:00",
+  "unexpected_application_writes_during_reads": 0,
+  "historical_trigger_confirmed": false
+}

@@ -1,0 +1,447 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "engine": "chromium",
+      "test": "canonical_login_first_three",
+      "result": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "test": "success",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "delayed",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "http_error",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "network",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "timeout",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "invalid_json",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "invalid_shape",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "wrong_doctor",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "duplicate_ids",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "missing_scope",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "empty",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "retry",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "rapid_navigation",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "stale_context",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      },
+      "after": {
+        "hash": "91fde382c2f7ca44e8a91fd3d33eb5ad3a3a53924e692ac5bec8b2687d2e7272",
+        "writes": 57
+      }
+    },
+    {
+      "engine": "chromium",
+      "test": "collaborator_read_cross_physician_denial",
+      "result": "PASS",
+      "http": 403
+    },
+    {
+      "engine": "chromium",
+      "test": "independent_account_same_slot_different_doctor",
+      "result": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "test": "genuine_edit_persisted_dirty_navigation_preserved",
+      "result": "PASS",
+      "expected_puts": 2
+    },
+    {
+      "engine": "webkit",
+      "test": "canonical_login_first_three",
+      "result": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "test": "success",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "delayed",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "http_error",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "network",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "timeout",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "invalid_json",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "invalid_shape",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "wrong_doctor",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "duplicate_ids",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "missing_scope",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "empty",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "retry",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "rapid_navigation",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "stale_context",
+      "result": "PASS",
+      "unexpected_writes": 0,
+      "before": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      },
+      "after": {
+        "hash": "e0dba58854d728f5a1af84ebb16e5213495a3d7f88f2d31565b02eeae75632f9",
+        "writes": 61
+      }
+    },
+    {
+      "engine": "webkit",
+      "test": "collaborator_read_cross_physician_denial",
+      "result": "PASS",
+      "http": 403
+    },
+    {
+      "engine": "webkit",
+      "test": "independent_account_same_slot_different_doctor",
+      "result": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "test": "genuine_edit_persisted_dirty_navigation_preserved",
+      "result": "PASS",
+      "expected_puts": 2
+    }
+  ],
+  "final_snapshot": {
+    "hash": "82d46ab98fe5213589955ba31c57be540054c026b30f7d7890f788da3fd029cc",
+    "writes": 65
+  },
+  "unexpected_write_count": 0,
+  "authority_limit": "Uses unchanged normal preview Identity/scope path; prepared QA05 role gate is not enabled. No new collaborator write authority claimed."
+}

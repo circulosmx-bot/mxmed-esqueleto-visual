@@ -1594,6 +1594,12 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
           </header>
 
           <div class="body">
+            <div data-cons-load-status role="status" aria-live="polite">
+              <p data-cons-load-message>Cargando consultorios…</p>
+              <button type="button" class="btn btn-outline-primary" data-cons-load-retry hidden>Reintentar</button>
+              <button type="button" class="btn btn-outline-primary" data-cons-add-first hidden>Agregar consultorio</button>
+            </div>
+            <div data-cons-records hidden inert>
 
             <ul class="nav nav-pills mm-tabs mm-tabs-embed mb-3" role="tablist" data-exp-tabs>
 
@@ -1966,6 +1972,7 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 
           </div>
 
+          </div>
         </section>
 
 
@@ -10760,8 +10767,8 @@ html.mxmed-auth-checking body { visibility: hidden !important; }
 <script src="assets/js/perfil/formacion.js"></script>
 
 <script src="assets/js/perfil/consultorio/administrative-feedback.js?v=identity-gov03a"></script>
-<script src="assets/js/perfil/consultorio/consultorio-ordering.js?v=cons-vis01"></script>
-<script src="assets/js/perfil/consultorio/multisede.js?v=cons-imp02b"></script>
+<script src="assets/js/perfil/consultorio/consultorio-ordering.js?v=med-consultorios-init02"></script>
+<script src="assets/js/perfil/consultorio/multisede.js?v=med-consultorios-init02"></script>
 
 <script src="assets/js/title-fix.js"></script>
 

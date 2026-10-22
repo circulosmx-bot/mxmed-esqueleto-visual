@@ -23,7 +23,7 @@
     const idFromButton=button=>clean(button?.getAttribute('data-bs-target')||'').replace(/^#sede/,'');
     const itemFromId=id=>nav.querySelector(`[data-bs-target="#sede${CSS.escape(clean(id))}"]`)?.closest('.nav-item')||null;
     const officeItems=()=>Array.from(nav.querySelectorAll('.nav-item')).filter(item=>
-      !!item.querySelector('.nav-link[data-bs-target^="#sede"]'));
+      !item.hidden && !!item.querySelector('.nav-link[data-bs-target^="#sede"]'));
     const currentOrder=()=>officeItems().map(item=>idFromButton(item.querySelector('.nav-link'))).filter(Boolean);
     const addItem=()=>root.querySelector('#btn-consul-add')?.closest('.nav-item')||null;
 
@@ -90,6 +90,7 @@
 
     const persist=async ids=>{
       ids=Array.from(ids||[]).map(clean).filter(Boolean);
+      if(root.dataset.consLoadState !== 'READY') return false;
       if(busy||!doctorId||!fingerprint||ids.length!==officeItems().length)return false;
       const previous=serverOrder.slice();
       busy=true;saveButton.disabled=true;showMessage('Guardando orden…');
@@ -149,7 +150,10 @@
       arrange(serverOrder);
       showMessage('');
     });
-    root.addEventListener('mx:consultorio-pane-created',()=>window.setTimeout(()=>{configured=false;decorate();updatePresentation();},0));
+    root.addEventListener('mx:consultorio-pane-created',()=>{
+      if(root.dataset.consLoadState !== 'READY') return;
+      window.setTimeout(()=>{configured=false;decorate();updatePresentation();},0);
+    });
     saveButton.addEventListener('click',()=>persist(currentOrder()));
 
     nav.addEventListener('pointerdown',event=>{

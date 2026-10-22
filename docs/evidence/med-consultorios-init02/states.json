@@ -1,0 +1,38 @@
+[
+  {
+    "engine": "chromium",
+    "loading_visible": true,
+    "retrying_visible": true,
+    "keyboard_retry": true,
+    "primary_presentation_unchanged": true,
+    "explicit_map_lookup_preserved": true,
+    "map_lookup_count": 7,
+    "unexpected_writes": 0,
+    "before": {
+      "hash": "82d46ab98fe5213589955ba31c57be540054c026b30f7d7890f788da3fd029cc",
+      "writes": 65
+    },
+    "after": {
+      "hash": "82d46ab98fe5213589955ba31c57be540054c026b30f7d7890f788da3fd029cc",
+      "writes": 65
+    }
+  },
+  {
+    "engine": "webkit",
+    "loading_visible": true,
+    "retrying_visible": true,
+    "keyboard_retry": true,
+    "primary_presentation_unchanged": true,
+    "explicit_map_lookup_preserved": true,
+    "map_lookup_count": 7,
+    "unexpected_writes": 0,
+    "before": {
+      "hash": "82d46ab98fe5213589955ba31c57be540054c026b30f7d7890f788da3fd029cc",
+      "writes": 65
+    },
+    "after": {
+      "hash": "82d46ab98fe5213589955ba31c57be540054c026b30f7d7890f788da3fd029cc",
+      "writes": 65
+    }
+  }
+]

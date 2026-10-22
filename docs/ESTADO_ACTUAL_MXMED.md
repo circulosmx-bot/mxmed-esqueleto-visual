@@ -9,6 +9,10 @@
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
 - ASE-ALIGN01 V2 alinea capacidades individuales de asesores con tres operaciones rutinarias de acreditación; no activa normal-local. El ancla es el HEAD fuente inspeccionado, no el hash futuro del cierre.
 
+## Corrección aislada posterior — 2026-10-22
+
+- [MED-CONSULTORIOS-INIT02](agenda/MED-CONSULTORIOS-INIT02.md): estados explícitos de hidratación y reintento, sin persistencia de placeholders. Baseline original `f92f37f1`, rama aislada; sin promoción a 8091. Disparador histórico INIT01 no confirmado. QA sintética y límites en el contrato/evidencia.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

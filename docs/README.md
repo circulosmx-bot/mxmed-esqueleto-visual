@@ -82,6 +82,8 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 - Límite: override local de revisión no es suscripción real; preservar opt-in, entitlements y gates de cobro/mapping.
 
 ### Agenda y Consultorio / Google Maps — CURRENT
+
+- Hidratación/reintento aislado: [MED-CONSULTORIOS-INIT02](agenda/MED-CONSULTORIOS-INIT02.md), preservación de dirty y cero writes de inicialización; no activado en original.
 - UI: [shell](../private-app.php) (`p-consultorio`), [multisede y selector Maps](../assets/js/perfil/consultorio/multisede.js), [API Agenda](../api/agenda/index.php).
 - Controller/writer: [ConsultoriosController](../modules/agenda/controllers/ConsultoriosController.php) → [ConsultoriosRepository](../modules/agenda/repositories/ConsultoriosRepository.php); geocoding [GoogleGeocodeController](../modules/agenda/controllers/GoogleGeocodeController.php).
 - Lectura: el mismo controller publica consultorios y coordenadas; `mxPersistMapCoordsNow` conecta confirmación del marcador con persistencia.
