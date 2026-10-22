@@ -47,3 +47,7 @@ python3 scripts/staff-header-ux10-review.py /tmp/mxmed-ase-adm02imp01-wsl852j0 s
 ```
 
 Credenciales sólo al portapapeles local. Detención por marcador validado para el runner propietario. UX09 sigue intacto como retorno. `DIRECTOR_VISUAL_ACCEPTANCE=PENDING`, `PRODUCTION_ACTIVATION=false`.
+
+## STAFF-WORKSPACE-VIS01 — cabecera compartida
+
+[Contrato y revisión](STAFF-WORKSPACE-VIS01.md), padre `f69af160`: paridad visual Director/Asesor, nombre y rol de fuente autorizada, avatar neutral y cierre discreto. Quince áreas y consumidores intactos; sin nuevos permisos, producción ni 8091. Aceptación visual PENDING.

@@ -1,0 +1,13 @@
+/* Shared presentation from STAFF-HEADER-UX10; no account controls or authority. */
+.workspace-header.staff-platform-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.team-brand{display:flex;align-items:center;gap:16px;min-width:0}.team-brand>img{width:112px;height:48px;object-fit:contain;flex-shrink:0}.team-brand>div{min-width:0}
+.staff-platform-header .team-brand h1{font-size:1.65rem;font-weight:700;letter-spacing:-.025em;line-height:1.2;color:var(--ink);margin:0}
+.staff-platform-header .team-session{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.team-identity{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.8rem;white-space:nowrap}
+.team-avatar{display:block;width:36px;height:36px;flex:none;border-radius:50%;overflow:hidden}
+.team-identity-copy{min-width:0;white-space:normal;max-width:220px}.team-identity-copy strong{display:block;font-size:.8rem;font-weight:600;overflow-wrap:anywhere}.team-identity-copy span{display:block;font-size:.76rem}
+.staff-platform-header #team-logout,.staff-platform-header #staff-logout{background:transparent;border-color:transparent;color:var(--muted);font-size:.78rem;font-weight:400;padding:8px;min-height:44px;flex-shrink:0;border-radius:8px;line-height:1.4;transition:background .12s}
+.staff-platform-header #team-logout:hover,.staff-platform-header #staff-logout:hover{background:var(--soft);border-color:transparent;color:var(--ink);text-decoration:underline}
+.staff-platform-header button:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+@media(max-width:1000px){.team-identity-copy{max-width:160px}}
+@media(max-width:640px){.workspace-header.staff-platform-header{flex-direction:column;align-items:flex-start;gap:8px}.staff-platform-header .team-session{align-self:flex-end;max-width:100%}.team-brand{gap:10px}.team-brand>img{width:72px;height:40px}.staff-platform-header .team-brand h1{font-size:1.08rem}.team-identity{font-size:.76rem;min-width:0}.team-avatar{width:32px;height:32px}.team-identity-copy{max-width:180px}}

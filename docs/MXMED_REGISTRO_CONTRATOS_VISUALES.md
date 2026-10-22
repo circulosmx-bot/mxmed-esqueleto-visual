@@ -207,3 +207,7 @@ La corrección dirigida de WORKSPACE02 alinea el indicador del encabezado contex
 ## STAFF-HEADER-UX10 — refinamiento visual aislado
 
 [Contrato y revisión](identity/STAFF-HEADER-UX10.md), padre `38354c74`: título único, avatar local no interactivo, cierre de sesión discreto y categorías en mayúsculas. Sucede sólo esta presentación UX09; flujos/autoridad/datos intactos. UI-3 expresamente solicitada; aceptación visual PENDING, sin producción/8091.
+
+## STAFF-WORKSPACE-VIS01 — cabecera compartida
+
+[Contrato y revisión](identity/STAFF-WORKSPACE-VIS01.md), padre `f69af160`: paridad visual Director/Asesor, nombre y rol de fuente autorizada, avatar neutral y cierre discreto. Quince áreas y consumidores intactos; sin nuevos permisos, producción ni 8091. Aceptación visual PENDING.

@@ -23,14 +23,15 @@ try {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestión de perfiles médicos · México Médico</title>
 <link rel="stylesheet" href="/assets/css/staff-workspace.css">
+<link rel="stylesheet" href="/assets/css/staff-platform-header.css">
 <script src="/assets/js/staff-workspace.js" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#work-panel">Saltar al área de trabajo</a>
 <main class="workspace">
-<header class="workspace-header">
-<div><p class="eyebrow">MÉXICO MÉDICO · EQUIPO INTERNO</p><h1>GESTIÓN DE PERFILES MÉDICOS</h1><p class="subtitle">Consulta los perfiles y atiende el trabajo disponible para tu cuenta.</p></div>
-<div class="staff-session"><div><strong id="staff-name">Cargando sesión…</strong><span id="staff-role"></span></div><button id="staff-logout" type="button">Cerrar sesión</button></div>
+<header class="workspace-header staff-platform-header">
+<div class="team-brand"><img src="/assets/mexico-medico.svg" alt="México Médico" width="112" height="48"><div><h1>GESTIÓN DE PERFILES MÉDICOS</h1></div></div>
+<div class="team-session"><div class="team-identity"><svg class="team-avatar" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><rect width="72" height="72" rx="8" fill="#edf4f4"/><circle cx="36" cy="27" r="12" fill="#88a4aa"/><path d="M13 66v-7a23 23 0 0146 0v7" fill="#436b76"/></svg><div class="team-identity-copy"><strong id="staff-name">Cargando sesión…</strong><span id="staff-role"></span></div></div><button id="staff-logout" type="button">Cerrar sesión</button></div>
 </header>
 <p id="workspace-feedback" class="feedback" role="status" aria-live="polite"></p>
 <section id="session-recovery" class="recovery" hidden><h2>La sesión necesita tu atención</h2><p id="session-message"></p><a class="button-link" href="/public/identity/acceso.php?next=%2Finternal%2Fstaff-workspace%2Findex.php">Iniciar sesión</a></section>

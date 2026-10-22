@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "engine": "chromium",
+      "hover_focus_parity": "PASS",
+      "touch_targets": "PASS",
+      "noninteractive_identity": "PASS",
+      "director_logout_relogin": "PASS",
+      "independent_advisor_session": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "hover_focus_parity": "PASS",
+      "touch_targets": "PASS",
+      "noninteractive_identity": "PASS",
+      "director_logout_relogin": "PASS",
+      "independent_advisor_session": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "result": "PASS",
+  "unchanged_sources": 887,
+  "workspace_below_header_unchanged": true,
+  "server_gate_unchanged": true,
+  "baseline": "f69af160699afe7af1aac24eb0166e9f238c3c8e"
+}

@@ -1,0 +1,7 @@
+{
+  "result": "PASS",
+  "martha_case": "adm_9af707c7567777b28f44e78766bbfde2",
+  "javascript_errors": [],
+  "source_baseline": "f69af160699afe7af1aac24eb0166e9f238c3c8e",
+  "advisor_permissions": "Preserved zero grants; positive workspace navigation tested with original read-only QA target fixture, no grant added."
+}
