@@ -1,0 +1,48 @@
+[
+  {
+    "file": "private-app.php",
+    "baseline_sha256": "9773a30c67d5126a37b51b1607423585e995f101691a7ced7be795bf61119a80",
+    "candidate_sha256": "e3e7c582bd730044f56f78e6c9679255ef1d265c88e46959e003747909eb315f",
+    "original_matches_baseline": true,
+    "conflicts": false
+  },
+  {
+    "file": "assets/js/perfil/consultorio/multisede.js",
+    "baseline_sha256": "f65cf1b6765d2cae2c2c495a1196216e67ea209d9889da989add5ada0e0ed655",
+    "candidate_sha256": "060e2526ee0c1548f50008773d50c6f6d0292f3a9e74ecd42b37c50867233c91",
+    "original_matches_baseline": true,
+    "conflicts": false,
+    "original_https_served_bytes_match": true
+  },
+  {
+    "file": "assets/js/perfil/consultorio/consultorio-ordering.js",
+    "baseline_sha256": "99f5f64f27ecd0c1c49a655ce743cff4245c823e58d625a97c4bf6ff6d4e1a79",
+    "candidate_sha256": "3600f4ef2c74e6f078f61daab9ab695d6a32359383a6bfeb560ecf46b4a8df0c",
+    "original_matches_baseline": true,
+    "conflicts": false,
+    "original_https_served_bytes_match": true
+  },
+  {
+    "file": "assets/js/app.js",
+    "baseline_sha256": "bee2308795d5f2031200efc81e93cabe63273b89118377d7d91ea62166107565",
+    "candidate_sha256": "2b71f0f1754e9723f3614a809d46b6343132d2a8b703cef5600d801b8925ce87",
+    "original_matches_baseline": true,
+    "conflicts": false,
+    "original_https_served_bytes_match": true
+  },
+  {
+    "file": "assets/js/core/header-account.js",
+    "baseline_sha256": "35f3c17a480eed21bcc1d451e7fd7ae7fbd2783c454db08182e9bdc1442e9034",
+    "candidate_sha256": "3d5c269ed80d69636cdadbc4e08e964f0fa59c8977f7cc626498e6acfa8d5881",
+    "original_matches_baseline": true,
+    "conflicts": false,
+    "original_https_served_bytes_match": true
+  },
+  {
+    "file": "modules/identity/http/PrivateApplicationAccessResolver.php",
+    "baseline_sha256": "c32929da7184782f1b05073158ea2036ec49f927c4ff00174f2bfba92858e3b1",
+    "candidate_sha256": "dad7ba5b8244c78bca97cdb395a03965987f8ecba12d0b7a5408356d470eddda",
+    "original_matches_baseline": true,
+    "conflicts": false
+  }
+]

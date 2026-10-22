@@ -9,6 +9,10 @@
 - Aplicación original: `https://localhost:8443/private-app.php`; [shell](../private-app.php), [router documental](README.md).
 - ASE-ALIGN01 V2 alinea capacidades individuales de asesores con tres operaciones rutinarias de acreditación; no activa normal-local. El ancla es el HEAD fuente inspeccionado, no el hash futuro del cierre.
 
+## Preflight aislado — 2026-10-22
+
+- [MED-CONSULTORIOS-INTEGRATION01](agenda/MED-CONSULTORIOS-INTEGRATION01.md): candidato independiente de seis archivos sobre original actual f92f37f1, a partir de 615d4655. Loader/prefijo probados con infraestructura propia; compatibilidad y rollback verificados. Original protegido sin despliegue; siguiente paso requiere autorización explícita.
+
 ## Producto existente
 
 - Sistema sustancialmente desarrollado en integración/refinamiento; no se está reconstruyendo.

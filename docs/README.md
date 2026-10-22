@@ -42,6 +42,7 @@ CTX-MAP03 amplía casos concretos sobre `0bea8195ce75c309a54cba35acb4605ba290ee0
 ## Componentes y contratos
 
 ### Aplicación privada original — CURRENT
+- Preflight aislado: [MED-CONSULTORIOS-INTEGRATION01](agenda/MED-CONSULTORIOS-INTEGRATION01.md), diff de seis archivos, QA y rollback. No despliegue autorizado.
 - UI y gate: [private-app.php](../private-app.php), [PrivateApplicationAccessResolver](../modules/identity/http/PrivateApplicationAccessResolver.php).
 - Composición/sesiones: [IdentityHttpComposition](../modules/identity/http/IdentityHttpComposition.php), [SessionService](../modules/identity/services/SessionService.php); datos y writers siguen perteneciendo a cada dominio.
 - Contrato: [autenticación](product-completion/authentication-productization-contract-v1.md). QA: [sesión privada](../modules/identity/tests/PrivateSession02ContractTest.php).

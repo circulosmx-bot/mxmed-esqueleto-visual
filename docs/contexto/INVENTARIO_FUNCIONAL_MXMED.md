@@ -74,12 +74,16 @@ La ausencia de evidencia específica deja `VERIFICATION=source-inspected` aun cu
 - **Resultado/gates:** confirmación sólo tras servidor, entrada inválida/no-success 403/errores. **S1**; ACT04 documenta 14 checks de módulo con red en memoria y pruebas DTO, no SQL live. No inventar editor global por handlers no montados; [retrieval](COBERTURA_Y_PENDIENTES_MXMED.md#preguntas-de-recuperación).
 
 ### PRF-02 — Nombre visible, tema y datos profesionales
+
+- **Candidato aislado INTEGRATION01:** [paridad/prefijo y gate](../agenda/MED-CONSULTORIOS-INTEGRATION01.md), presentación Dr./Dra. canónica sin cambios de nombre persistido ni CSS; no desplegado.
 - **UI:** `mx-public-identity-card`, datos generales y formación; [datos-generales](../../assets/js/perfil/datos-generales.js), [professional-information](../../assets/js/perfil/professional-information.js), [credenciales](../../assets/js/perfil/credenciales.js).
 - **Ruta/service:** GET/PATCH `/api/profiles/private/doctor/{doctor}` y GET/PUT [professional-information.php](../../api/profiles/professional-information.php); [PrivateProfileController](../../modules/profiles/controllers/PrivateProfileController.php), [ProfessionalInformationService](../../modules/profiles/services/ProfessionalInformationService.php).
 - **Writer/read/datos:** PrivateProfileRepository y structured professional items; VID/CRD quedan bajo sus writers gobernados. [PublicDisplayNamePolicy](../../modules/profiles/services/PublicDisplayNamePolicy.php), [theme catalog](../../modules/profiles/services/ProfileThemeCatalog.php) y DTO público limitan presentación.
 - **Resultado/gates:** save explícito, dirty-state, permisos/CSRF, campos verificados readonly y solicitud de revisión. **S1**; [UX-ALIGN01](../identity/UX-ALIGN01-product-experience.md), [registro visual](../MXMED_REGISTRO_CONTRATOS_VISUALES.md). Formulario no da autoridad profesional nueva.
 
 ### PRF-03 — Sedes, teléfonos de consulta y urgencias
+
+- **Candidato aislado INTEGRATION01:** [loader y compatibilidad](../agenda/MED-CONSULTORIOS-INTEGRATION01.md), estados explícitos, retry, cero autosave de hidratación, orden/edición sintética verificados. No cambia APIs ni roles, no desplegado.
 - **UI:** `p-consultorio`, `cons-tel1..3`, `cons-wa`, `cons-urg1/2`; [multisede.js](../../assets/js/perfil/consultorio/multisede.js), `collectPanePayload`/autosave.
 - **Ruta/autoridad:** GET/PUT `/api/agenda/index.php/consultorios`; PUT `/consultorios/emergency-contacts` y publicación separada; gate actual PrivateApplicationAccessResolver + scope médico; [PrivateAgendaRoutePolicy](../../modules/agenda/security/PrivateAgendaRoutePolicy.php) prepara restricción owner/administrator, sin enforcement por rol acreditado en el dispatch/controller ordinario actual. No interpretarlo como nueva autorización de producto para collaborator.
 - **Writer/read:** [ConsultoriosController](../../modules/agenda/controllers/ConsultoriosController.php) → [ConsultoriosRepository](../../modules/agenda/repositories/ConsultoriosRepository.php), `consultorios.telefonos_json/whatsapp`; [PhysicianEmergencyContactsService](../../modules/profiles/services/PhysicianEmergencyContactsService.php) → DCP emergency compartido, fingerprint/CAS.

@@ -1,0 +1,11 @@
+{
+  "classification": "OBSOLETE_UI_TARGET",
+  "historical_test_exit": 255,
+  "failure": "Missing mxpi-prefix in neutral index.html; undefined capture followed by TypeError",
+  "baseline_test_and_index_identical": true,
+  "entry_migration_commit": "24fa4a7f",
+  "actual_shell": "private-app.php",
+  "current_catalog_matches_canonical": true,
+  "empty_option": "intentional Selecciona placeholder, not a professional prefix",
+  "test_modified": false
+}

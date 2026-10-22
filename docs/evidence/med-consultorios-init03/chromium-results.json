@@ -1,0 +1,9 @@
+{
+  "canonical_prefix_and_no_duplicate": "PASS",
+  "synthetic_login_first_three": "PASS",
+  "error_retry": "PASS",
+  "real_physician_denied": "PASS",
+  "unauthenticated_denied": "PASS",
+  "no_hydration_writes": "PASS",
+  "isolated_cookie": "PASS"
+}

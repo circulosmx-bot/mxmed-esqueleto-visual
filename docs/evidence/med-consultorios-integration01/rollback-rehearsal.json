@@ -1,0 +1,8 @@
+{
+  "apply_check": "PASS",
+  "exact_six_candidate_hashes": "PASS",
+  "reverse_check": "PASS",
+  "six_original_hashes_restored": "PASS",
+  "target": "owned temporary directory only",
+  "six_file_backup_restore": "PASS"
+}

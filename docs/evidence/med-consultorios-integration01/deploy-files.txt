@@ -1,0 +1,6 @@
+private-app.php
+assets/js/perfil/consultorio/multisede.js
+assets/js/perfil/consultorio/consultorio-ordering.js
+assets/js/app.js
+assets/js/core/header-account.js
+modules/identity/http/PrivateApplicationAccessResolver.php

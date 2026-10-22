@@ -44,6 +44,18 @@ function mxClearHorarioInputs(inputs){
 
 (function(){
   const CONSULTORIO_MAP_DEBUG = false;
+  // Hydration renders saved points; only a real address edit/search may geocode.
+  const mapReadIntent = new Set();
+  const officeRoot = document.getElementById('p-consultorio');
+  ['input','click'].forEach(type=>officeRoot?.addEventListener(type,event=>{
+    if(!event.isTrusted || officeRoot.dataset.consLoadState !== 'READY') return;
+    const target = event.target;
+    if(!(target instanceof Element)) return;
+    if(type === 'input' && !target.matches('[id^="cp"],[id^="colonia"],[id^="municipio"],[id^="estado"],[id^="cons-calle"],[id^="cons-num"]')) return;
+    if(type === 'click' && !target.closest('[data-map-recalc-for]')) return;
+    const id = /^sede([123])$/.exec(target.closest('.tab-pane')?.id || '')?.[1];
+    if(id) mapReadIntent.add(`${resolveActiveDoctorId()}|${id}`);
+  },true));
   const administrativeDeniedMessage = 'No tienes permisos para modificar este consultorio. Esta acción requiere acceso de propietario o administrador.';
   const showAdministrativeDenied = ()=>{
     const feedback = document.querySelector('[data-cons-admin-feedback]');
@@ -67,7 +79,9 @@ function mxClearHorarioInputs(inputs){
     });
   }catch(_){ }
   const resolveActiveDoctorId = ()=>{
+    if(document.body?.hasAttribute('data-doctor-id')) return String(document.body.dataset.doctorId || '').trim();
     const candidates = [
+      document.body?.dataset?.doctorId,
       (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
       window.mxmedStore?.doctorId,
       window.mxmedStore?.doctor_id,
@@ -257,6 +271,7 @@ function mxClearHorarioInputs(inputs){
       const tpl = document.getElementById('sede1'); if(!tpl) return null;
       pane = tpl.cloneNode(true);
       pane.id = 'sede'+n;
+      pane.hidden = false; pane.dataset.consulPlaceholder = 'false';
       pane.classList.remove('show','active');
       pane.dataset.consulClone = 'true';
       // limpiar inputs solo al clonar
@@ -436,6 +451,7 @@ function mxClearHorarioInputs(inputs){
     return null;
   }
   document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
+    if(document.getElementById('p-consultorio')?.dataset.consLoadState !== 'READY') return;
     try{ false && console.warn('MXM CONSULTORIO DEBUG:', { event: 'click_add_consultorio_confirm' }); }catch(_){ }
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
@@ -1356,6 +1372,8 @@ function mxClearHorarioInputs(inputs){
   }
 
   async function geocodeConsultorioAddress(address, ids = {}){
+    const scope = resolveActiveDoctorId();
+    if(officeRoot?.dataset.consLoadState !== 'READY' || !mapReadIntent.has(`${scope}|${Number(ids.index || 1)}`)) return null;
     const qPrimary = String(address || '').trim();
     const queryList = buildGeocodeQueriesByIds(ids);
     if(qPrimary && !queryList.includes(qPrimary)){
@@ -1393,12 +1411,8 @@ function mxClearHorarioInputs(inputs){
       };
     };
     const requestGoogleGeocode = async (query)=>{
-      const doctorIdEffective = String(
-        (typeof resolveDoctorId === 'function' ? resolveDoctorId() : '')
-        || (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
-        || document.body?.dataset?.doctorId
-        || ''
-      ).trim();
+      if(scope !== resolveActiveDoctorId()) return {ok:false};
+      const doctorIdEffective = scope;
       const payload = {
         query,
         doctor_id: doctorIdEffective,
@@ -1477,6 +1491,7 @@ function mxClearHorarioInputs(inputs){
     };
     for(const query of queryList){
       const googleResult = await requestGoogleGeocode(query);
+      if(scope !== resolveActiveDoctorId()) return null;
       if(!googleResult.ok){
         continue;
       }
@@ -2721,6 +2736,16 @@ function mxClearHorarioInputs(inputs){
     const resolveAndUpdate = async ({ force = false } = {})=>{
       const address = buildConsultorioAddressByIds(ids);
       const current = getConsultorioGeoState(ids.index);
+      if(officeRoot?.dataset.consLoadState !== 'READY'
+        || !mapReadIntent.has(`${resolveActiveDoctorId()}|${ids.index}`)){
+        // An intentionally skipped lookup is not a failed lookup.
+        if(Number.isFinite(current.lat) && Number.isFinite(current.lng)){
+          applyMapPoint(Number(current.lat), Number(current.lng), 17, 'saved');
+        }
+        showStatus('', 'info');
+        refreshActionButtons();
+        return;
+      }
       logAddressDebug('resolve_start', address);
       logMapSourceDebug('resolve_enter', {
         address,
@@ -3538,7 +3563,37 @@ function mxClearHorarioInputs(inputs){
     let groupSuggestKeyHandler = null;
     let groupSuggestCloseHandler = null;
     let groupSuggestPaneKey = '';
-    const deferredSaveQueue = new Map();
+    const dirtyPanes = new Map();
+    const savedPayloads = new Map();
+    let editSequence = 0;
+    let loadState = 'LOADING';
+    let loadedScope = '';
+    let generation = 0;
+    let readController = null;
+    const scopeKey = ()=> `${window.location.origin}|${resolveActiveDoctorId()}`;
+    const writable = ()=> loadState === 'READY' && !hydrateInProgress && loadedScope === scopeKey();
+    const notice = root.querySelector('[data-cons-load-status]');
+    const message = root.querySelector('[data-cons-load-message]');
+    const retryButton = root.querySelector('[data-cons-load-retry]');
+    const content = root.querySelector('[data-cons-records]');
+    const setLoadState = (state)=>{
+      loadState = state;
+      root.dataset.consLoadState = state;
+      root.setAttribute('aria-busy', String(state === 'LOADING' || state === 'RETRYING'));
+      if(content){ content.hidden = state !== 'READY'; content.inert = state !== 'READY'; }
+      if(notice) notice.hidden = state === 'READY';
+      if(message) message.textContent = ({LOADING:'Cargando consultorios…', RETRYING:'Volviendo a cargar los consultorios…', EMPTY:'No hay consultorios registrados.', ERROR:'No se pudieron cargar los consultorios. Intenta nuevamente.'})[state] || '';
+      if(retryButton) retryButton.hidden = state !== 'ERROR';
+      const addFirst = root.querySelector('[data-cons-add-first]');
+      if(addFirst) addFirst.hidden = state !== 'EMPTY';
+    };
+    const cancelPendingSaves = ()=>{
+      saveTimers.forEach(timer=>window.clearTimeout(timer)); saveTimers.clear();
+      window.clearTimeout(emergencySaveTimer);
+      groupSearchTimers.forEach(timer=>window.clearTimeout(timer)); groupSearchTimers.clear();
+      pendingHydratedRows.clear();
+    };
+    setLoadState('LOADING');
     let consultorioHydratedOnce = false;
     let restorePrimaryOnNormalOpen = false;
     let emergencyContacts = [];
@@ -3586,7 +3641,7 @@ function mxClearHorarioInputs(inputs){
       return getPaneByIndex(idx);
     };
     const restorePrimaryConsultorioPaneAfterHydration = ()=>{
-      const tabBtn = root.querySelector('.mm-tabs-embed [data-consultorio-tab-item]:first-child .nav-link[data-bs-target^="#sede"]')
+      const tabBtn = root.querySelector('.mm-tabs-embed [data-consultorio-tab-item]:not([hidden]) .nav-link[data-bs-target^="#sede"]')
         || root.querySelector('[data-bs-target="#sede1"]');
       const target = clean(tabBtn?.getAttribute('data-bs-target') || '#sede1');
       const pane = root.querySelector(target);
@@ -3743,9 +3798,10 @@ function mxClearHorarioInputs(inputs){
       return active.matches('input, textarea, select');
     };
     const flushPendingHydrationForPane = (pane)=>{
-      if(!pane || paneHasActiveEditor(pane)) return;
+      if(!writable() || !pane || paneHasActiveEditor(pane)) return;
       const idx = parsePaneIndex(pane);
       const key = String(idx || 1);
+      if(dirtyPanes.has(key)) return;
       const pending = pendingHydratedRows.get(key);
       if(!pending || typeof pending !== 'object') return;
       pendingHydratedRows.delete(key);
@@ -3794,8 +3850,13 @@ function mxClearHorarioInputs(inputs){
     };
     const applyPreview = (pane, selector, srcValue)=>{
       const src = clean(srcValue);
-      if(!src) return;
       const img = pane?.querySelector(selector);
+      if(!src){
+        img?.removeAttribute('src');
+        const input = pane?.querySelector(selector.includes('logo') ? 'input[id^=cons-logo]' : 'input[id^=cons-foto]');
+        input?.removeAttribute('data-upload-src');
+        return;
+      }
       if(!img) return;
       img.src = src;
       try{
@@ -4121,31 +4182,27 @@ function mxClearHorarioInputs(inputs){
       );
     };
 
-    const apiGetConsultorios = async (doctorId)=>{
+    const apiGetConsultorios = async (doctorId, controller = new AbortController())=>{
+      const timeout = window.setTimeout(()=>controller.abort(), 12000);
       try{
-        false && console.warn('MXM CONSULTORIO DEBUG:', {
-          event: 'api_get_consultorios_request',
-          method: 'GET',
-          endpoint: '/api/agenda/index.php/consultorios',
-          doctor_id: doctorId
+        const resp = await fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`, {
+          method:'GET', headers:{'Accept':'application/json'}, credentials:'same-origin',
+          cache:'no-store', signal:controller.signal
         });
-      }catch(_){ }
-      const resp = await fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin'
-      });
-      const json = await resp.json().catch(()=> null);
-      try{
-        false && console.warn('MXM CONSULTORIO DEBUG:', {
-          event: 'api_get_consultorios_response',
-          status: resp.status,
-          ok: resp.ok,
-          total_rows: Array.isArray(json?.data) ? json.data.length : null,
-          consultorio_ids: Array.isArray(json?.data) ? json.data.map((row)=> String(row?.consultorio_id || row?.id || '')) : []
-        });
-      }catch(_){ }
-      return json;
+        if(!resp.ok) throw new Error('consultorios_read_failed');
+        const json = await resp.json();
+        if(json?.ok !== true || !Array.isArray(json.data)
+          || String(json.meta?.doctor_id_effective || '') !== doctorId) throw new Error('consultorios_invalid_response');
+        const ids = new Set();
+        for(const row of json.data){
+          const id = String(row?.consultorio_id || '');
+          // The existing multisede contract has three stable numbered slots.
+          if(!/^[123]$/.test(id) || ids.has(id) || String(row?.doctor_id || '') !== doctorId)
+            throw new Error('consultorios_invalid_scope_or_id');
+          ids.add(id);
+        }
+        return json;
+      }finally{ window.clearTimeout(timeout); }
     };
     const dispatchConsultorioOrderState = (json, doctorId, rows = [])=>{
       root.dispatchEvent(new CustomEvent('mx:consultorios-hydrated',{detail:{
@@ -4156,6 +4213,8 @@ function mxClearHorarioInputs(inputs){
       }}));
     };
     const apiSaveConsultorio = async (payload)=>{
+      if(!writable() || String(payload?.doctor_id || '') !== resolveDoctorId()) return {ok:false,status:0};
+      const requestGeneration = generation;
       try{
         false && console.warn('MXM CONSULTORIO DEBUG:', {
           event: 'api_save_consultorio_request',
@@ -4180,6 +4239,7 @@ function mxClearHorarioInputs(inputs){
         body: JSON.stringify(payload || {})
       });
       const json = await resp.json().catch(()=> null);
+      if(requestGeneration !== generation || !writable()) return {ok:false,status:0};
       if(resp.status === 403) showAdministrativeDenied();
       else if(resp.ok && json?.ok === true) clearAdministrativeDenied();
       try{
@@ -4200,7 +4260,9 @@ function mxClearHorarioInputs(inputs){
       };
     };
     const saveEmergencyContacts = async ()=>{
+      if(!writable()) return;
       const doctorId = resolveDoctorId();
+      const requestGeneration = generation;
       if(!doctorId || !emergencyContactsFingerprint) return;
       const resp = await fetch('/api/agenda/index.php/consultorios/emergency-contacts', {
         method: 'PUT',
@@ -4213,6 +4275,7 @@ function mxClearHorarioInputs(inputs){
         })
       });
       const json = await resp.json().catch(()=> null);
+      if(requestGeneration !== generation || !writable()) return;
       if(resp.ok && json?.ok){
         clearAdministrativeDenied();
         emergencyContactsFingerprint = clean(json?.data?.emergency_contacts_fingerprint || '');
@@ -4225,11 +4288,13 @@ function mxClearHorarioInputs(inputs){
       }
       if(resp.status === 409 || json?.error === 'conflict'){
         const fresh = await apiGetConsultorios(doctorId);
+        if(requestGeneration !== generation || !writable()) return;
         emergencyContactsFingerprint = clean(fresh?.meta?.emergency_contacts_fingerprint || '');
         syncEmergencyFields(fresh?.meta?.emergency_contacts || []);
       }
     };
     const queueEmergencySave = ()=>{
+      if(!writable()) return;
       if(emergencySaveTimer) window.clearTimeout(emergencySaveTimer);
       emergencySaveTimer = window.setTimeout(()=> saveEmergencyContacts().catch(()=> null), 420);
     };
@@ -4291,63 +4356,6 @@ function mxClearHorarioInputs(inputs){
       return result;
     };
     window.mxPersistMapCoordsNow = persistMapCoordsNow;
-    const materializeConsultorioRow = async (idx, reason = 'pane_created')=>{
-      const consultorioId = String(Number(idx || 0) || '');
-      if(!consultorioId) return null;
-      const doctorId = clean(resolveDoctorId()) || clean(document.body?.dataset?.doctorId || '');
-      const payload = {
-        doctor_id: doctorId,
-        consultorio_id: consultorioId,
-        titulo: '',
-        nombre_visible: '',
-      };
-      const pane = ensurePane(Number(consultorioId));
-      const recalcBtn = pane?.querySelector(`[data-map-recalc-for="cons-map-frame${consultorioId === '1' ? '' : consultorioId}"]`);
-      if(!payload.doctor_id){
-        try{
-          false && console.warn('MXM CONSULTORIO DEBUG:', {
-            event: 'consultorio2_creation_runtime_audit',
-            paneIndex: Number(consultorioId),
-            consultorio_id: consultorioId,
-            paneId: String(pane?.id || ''),
-            recalcButtonExists: !!recalcBtn,
-            mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
-            put_triggered: false,
-            put_ok: false,
-            put_status: 0,
-            backend_consultorio_id: '',
-            backend_error: 'doctor_id_missing_before_put',
-            reason,
-          });
-        }catch(_){ }
-        return null;
-      }
-      const result = await apiSaveConsultorio(payload);
-      try{
-        false && console.warn('MXM CONSULTORIO DEBUG:', {
-          event: 'consultorio2_creation_runtime_audit',
-          paneIndex: Number(consultorioId),
-          consultorio_id: consultorioId,
-          paneId: String(pane?.id || ''),
-          recalcButtonExists: !!recalcBtn,
-          mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
-          put_triggered: true,
-          put_ok: !!(result?.ok && result?.json?.ok),
-          put_status: Number(result?.status || 0),
-          backend_consultorio_id: String(result?.json?.data?.consultorio_id || ''),
-          backend_error: clean(result?.json?.error || result?.json?.message || ''),
-          reason,
-        });
-      }catch(_){ }
-      if(result?.ok && result?.json?.ok){
-        hydratedRows.add(consultorioId);
-        const refreshed=await apiGetConsultorios(doctorId).catch(()=>null);
-        if(refreshed?.ok===true){
-          dispatchConsultorioOrderState(refreshed,doctorId,Array.isArray(refreshed.data)?refreshed.data:[]);
-        }
-      }
-      return result;
-    };
     const apiSearchMedicalGroups = async ({ doctorId, q, cp, colonia, limit = 8 } = {})=>{
       const params = new URLSearchParams();
       if(clean(doctorId)) params.set('doctor_id', clean(doctorId));
@@ -4367,30 +4375,38 @@ function mxClearHorarioInputs(inputs){
       };
     };
     const apiJoinMedicalGroup = async (groupId, payload = {})=>{
+      if(!writable() || String(payload?.doctor_id || '') !== resolveDoctorId()) return {ok:false,status:0};
       const safeGroupId = encodeURIComponent(clean(groupId));
+      const requestGeneration = generation;
       const resp = await fetch(`/api/agenda/index.php/medical-groups/${safeGroupId}/join`, {
         method: 'POST',
         headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify(payload || {})
       });
+      const json = await resp.json().catch(()=>null);
+      if(requestGeneration !== generation || !writable()) return {ok:false,status:0};
       return {
         ok: resp.ok,
         status: resp.status,
-        json: await resp.json().catch(()=> null)
+        json
       };
     };
     const apiCreateMedicalGroup = async (payload = {})=>{
+      if(!writable() || String(payload?.doctor_id || '') !== resolveDoctorId()) return {ok:false,status:0};
+      const requestGeneration = generation;
       const resp = await fetch('/api/agenda/index.php/medical-groups', {
         method: 'POST',
         headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify(payload || {})
       });
+      const json = await resp.json().catch(()=>null);
+      if(requestGeneration !== generation || !writable()) return {ok:false,status:0};
       return {
         ok: resp.ok,
         status: resp.status,
-        json: await resp.json().catch(()=> null)
+        json
       };
     };
     const requestMedicalGroupsSuggestions = async (pane, query = '')=>{
@@ -4635,6 +4651,7 @@ function mxClearHorarioInputs(inputs){
       setValue(getField(pane, '[id^="municipio"]'), row?.municipio || '');
       setValue(getField(pane, '[id^="estado"]'), row?.estado || '');
       const coloniaEl = getField(pane, '[id^="colonia"]');
+      if(coloniaEl && !clean(row?.colonia || '')) coloniaEl.value = '';
       if(coloniaEl && clean(row?.colonia || '')){
         if(coloniaEl.tagName === 'SELECT'){
           const val = clean(row.colonia);
@@ -4720,7 +4737,12 @@ function mxClearHorarioInputs(inputs){
     };
 
     const savePaneNow = async (idx)=>{
+      const key = String(idx);
+      if(!writable() || !dirtyPanes.has(key)) return;
+      const editRevision = dirtyPanes.get(key);
+      const saveGeneration = generation;
       const payload = collectPanePayload(idx);
+      if(payload && savedPayloads.get(key) === JSON.stringify(payload)){ dirtyPanes.delete(key); return; }
       if(!payload || !payload.doctor_id){
         try{
           if(idx === 2){
@@ -4769,9 +4791,12 @@ function mxClearHorarioInputs(inputs){
       }else{
         await ensurePendingGroupForPane(idx, payload);
       }
-      if(!hasMeaningfulData(payload) && hydratedRows.has(String(idx))) return;
+      if(!writable() || saveGeneration !== generation || !hasMeaningfulData(payload)) return;
       const result = await apiSaveConsultorio(payload);
-      if(result?.ok && result?.json?.ok){
+      if(saveGeneration !== generation || !writable()) return;
+      if(result?.ok && result?.json?.ok && dirtyPanes.get(key) === editRevision){
+        dirtyPanes.delete(key);
+        savedPayloads.set(key, JSON.stringify(payload));
         hydratedRows.add(String(idx));
         const row = result?.json?.data;
         if(row && typeof row === 'object'){
@@ -4826,14 +4851,7 @@ function mxClearHorarioInputs(inputs){
     };
     const queueSavePane = (idx, delay = 420, reason = 'generic')=>{
       const key = String(idx || 1);
-      if(hydrateInProgress && reason !== 'pane_created'){
-        deferredSaveQueue.set(key, {
-          idx: Number(key) || 1,
-          delay: Number(delay) || 420,
-          reason: clean(reason || 'generic') || 'generic',
-        });
-        return;
-      }
+      if(!writable() || !dirtyPanes.has(key)) return;
       saveReasons.set(key, clean(reason || 'generic') || 'generic');
       try{
         false && console.warn('MXM CONSULTORIO DEBUG:', {
@@ -4853,77 +4871,104 @@ function mxClearHorarioInputs(inputs){
     };
     window.mxQueueSaveConsultorioPane = queueSavePane;
 
-    const hydrateFromBackend = async ()=>{
+    const hydrateFromBackend = async (retry = false)=>{
       const doctorId = resolveDoctorId();
-      if(!doctorId) return;
+      const scope = scopeKey();
+      if(readController && loadedScope === scope) return; // coalesce navigation
+      readController?.abort();
+      const controller = new AbortController(); readController = controller;
+      const current = ++generation;
+      cancelPendingSaves();
+      if(loadedScope !== scope){ savedPayloads.clear(); dirtyPanes.clear(); groupStateByPane.clear(); hydratedRows.clear(); mapReadIntent.clear(); }
+      loadedScope = scope;
       hydrateInProgress = true;
+      consultorioHydratedOnce = false;
+      setLoadState(retry ? 'RETRYING' : 'LOADING');
       try{
-        const json = await apiGetConsultorios(doctorId);
-        const rows = Array.isArray(json?.data) ? json.data : [];
-        emergencyContactsFingerprint = clean(json?.meta?.emergency_contacts_fingerprint || '');
-        syncEmergencyFields(json?.meta?.emergency_contacts || []);
-        const selectedTarget = clean(root.querySelector('.mm-tabs-embed .nav-link.active[data-bs-target^="#sede"]')?.getAttribute('data-bs-target') || '#sede1');
-        try{
-          false && console.warn('MXM CONSULTORIO DEBUG:', {
-            event: 'hydrate_rows_received',
-            doctor_id: doctorId,
-            total_rows: rows.length,
-            consultorio_ids: rows.map((row)=> String(row?.consultorio_id || row?.id || '')),
-            rows_summary: rows.map((row)=>({
-              consultorio_id: String(row?.consultorio_id || row?.id || ''),
-              titulo: clean(row?.titulo || row?.nombre_visible || ''),
-              calle: clean(row?.calle || ''),
-              cp: clean(row?.cp || ''),
-              colonia: clean(row?.colonia || ''),
-              lat: toFiniteNumber(row?.lat),
-              lng: toFiniteNumber(row?.lng),
-              updated_at: clean(row?.updated_at || ''),
-            }))
-          });
-        }catch(_){ }
-        rows.forEach((row)=>{
-          const cid = clean(row?.consultorio_id || row?.id || '');
-          if(cid) hydratedRows.add(cid);
-          applyRowToPane(row);
-        });
-        dispatchConsultorioOrderState(json,doctorId,rows);
-        const selectedButton=root.querySelector(`.mm-tabs-embed .nav-link[data-bs-target="${selectedTarget}"]`);
-        if(selectedButton){
-          try{window.bootstrap?.Tab?.getOrCreateInstance(selectedButton)?.show();}catch(_){selectedButton.click();}
-        }
-        const paneIds = getConsultorioSlots();
-        paneIds.forEach((idx)=>{
-          const key = String(idx);
-          if(hydratedRows.has(key)) return;
-          const draft = collectPanePayload(idx);
-          if(hasMeaningfulData(draft)){
-            queueSavePane(idx, 80);
+        if(!doctorId) throw new Error('consultorios_scope_unavailable');
+        const json = await apiGetConsultorios(doctorId, controller);
+        if(current !== generation || scope !== scopeKey()) return;
+        const rows = json.data;
+        const ids = new Set(rows.map(row=>String(row.consultorio_id)));
+        // Keep the original sede1 template/listeners, but never expose it as a record.
+        root.querySelectorAll('.tab-pane[id^="sede"]').forEach(pane=>{
+          const id = /^sede([123])$/.exec(pane.id)?.[1];
+          if(!id) return;
+          pane.hidden = !ids.has(id);
+          if(!ids.has(id)) pane.dataset.consulPlaceholder = 'true';
+          root.querySelector(`[data-bs-target="#sede${id}"]`)?.closest('li')?.toggleAttribute('hidden', !ids.has(id));
+          if(!ids.has(id) && id !== '1'){
+            pane.remove(); root.querySelector(`[data-bs-target="#sede${id}"]`)?.closest('li')?.remove();
           }
         });
-      }catch(_){
-        // Mantener UX operativa aunque backend no responda.
-      }finally{
-        hydrateInProgress = false;
-        if(deferredSaveQueue.size){
-          const queued = Array.from(deferredSaveQueue.values());
-          deferredSaveQueue.clear();
-          queued.forEach((entry)=>{
-            if(!entry || !Number.isFinite(entry.idx) || entry.idx <= 0) return;
-            queueSavePane(entry.idx, entry.delay, entry.reason);
+        hydratedRows.clear();
+        emergencyContactsFingerprint = clean(json.meta?.emergency_contacts_fingerprint || '');
+        syncEmergencyFields(json.meta?.emergency_contacts || []);
+        for(const row of rows){
+          const id = String(row.consultorio_id);
+          if(!dirtyPanes.has(id)) applyRowToPane(row);
+          const pane = getPaneByIndex(Number(id));
+          if(!pane) throw new Error('consultorios_render_failed');
+          pane.hidden = false; pane.dataset.consulPlaceholder = 'false';
+          root.querySelector(`[data-bs-target="#sede${id}"]`)?.closest('li')?.removeAttribute('hidden');
+          hydratedRows.add(id);
+          if(!dirtyPanes.has(id)) savedPayloads.set(id, JSON.stringify(collectPanePayload(Number(id))));
+        }
+        dispatchConsultorioOrderState(json, doctorId, rows);
+        syncAddTabVisibility();
+        // Restore the canonical first tab visually; never persist primary/order here.
+        const firstId = String(rows[0]?.consultorio_id || '');
+        if(firstId){
+          root.querySelectorAll('.tab-pane[id^="sede"]').forEach(p=>p.classList.toggle('active', p.id === 'sede'+firstId));
+          root.querySelectorAll('.tab-pane[id^="sede"]').forEach(p=>p.classList.toggle('show', p.id === 'sede'+firstId));
+          root.querySelectorAll('.nav-link[data-bs-target^="#sede"]').forEach(btn=>{
+            const selected = btn.getAttribute('data-bs-target') === '#sede'+firstId;
+            btn.classList.toggle('active',selected); btn.setAttribute('aria-selected',String(selected));
           });
         }
         consultorioHydratedOnce = true;
-        if(restorePrimaryOnNormalOpen){
-          queuePrimaryConsultorioRestore();
-        }
+        setLoadState(rows.length ? 'READY' : 'EMPTY');
+      }catch(_){
+        if(current === generation && scope === scopeKey()) setLoadState('ERROR');
+      }finally{
+        if(current === generation){ hydrateInProgress = false; readController = null; }
       }
     };
+    retryButton?.addEventListener('click',()=>hydrateFromBackend(true));
+    root.querySelector('[data-cons-add-first]')?.addEventListener('click',()=>{
+      if(loadState !== 'EMPTY' || loadedScope !== scopeKey()) return;
+      const pane = getPaneByIndex(1);
+      // Explicit draft only: persistence still requires a genuine meaningful edit.
+      pane.querySelectorAll('input,select,textarea').forEach(el=>{
+        if(el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+        else el.value = '';
+      });
+      applyRowToPane({doctor_id:resolveDoctorId(),consultorio_id:'1',titulo:''});
+      pane.hidden = false; pane.dataset.consulPlaceholder = 'false';
+      pane.classList.add('active','show');
+      root.querySelector('[data-bs-target="#sede1"]')?.closest('li')?.removeAttribute('hidden');
+      setLoadState('READY'); syncAddTabVisibility();
+      getField(pane,'[id^="cons-titulo"]')?.focus();
+    });
+    new MutationObserver(()=>{
+      if(loadedScope !== scopeKey()) hydrateFromBackend();
+    }).observe(document.body,{attributes:true,attributeFilter:['data-doctor-id']});
+    // Trusted edits establish dirty state; programmatic hydration events do not.
+    ['input','change','click'].forEach(type=>root.addEventListener(type,event=>{
+      if(!event.isTrusted || !writable()) return;
+      const pane = event.target?.closest?.('.tab-pane[id^="sede"]');
+      if(!pane || (type === 'click' && !event.target.closest('.foto-x, [data-map-confirm-for]'))) return;
+      const id = String(parsePaneIndex(pane));
+      dirtyPanes.set(id, ++editSequence);
+      pendingHydratedRows.delete(id);
+    },true));
 
     document.addEventListener('click', (event)=>{
       const target = event.target instanceof Element
         ? event.target.closest('.menu-sub-btn[data-panel="p-consultorio"], [data-profile-panel="p-consultorio"]')
         : null;
       if(!target) return;
+      if(loadedScope !== scopeKey()){ hydrateFromBackend(); return; }
       restorePrimaryOnNormalOpen = true;
       if(consultorioHydratedOnce){
         queuePrimaryConsultorioRestore();
@@ -4931,6 +4976,7 @@ function mxClearHorarioInputs(inputs){
     }, true);
 
     root.addEventListener('input', (event)=>{
+      if(!writable()) return;
       const target = event.target;
       if(!(target instanceof HTMLElement)) return;
       const pane = target.closest('.tab-pane[id^="sede"]');
@@ -4976,6 +5022,7 @@ function mxClearHorarioInputs(inputs){
     }, true);
 
     root.addEventListener('change', (event)=>{
+      if(!writable()) return;
       const target = event.target;
       if(!(target instanceof HTMLElement)) return;
       const pane = target.closest('.tab-pane[id^="sede"]');
@@ -5108,15 +5155,8 @@ function mxClearHorarioInputs(inputs){
           consultorio_index: idx
         });
       }catch(_){ }
-      if(hydrateInProgress){
-        refreshScheduleHeaders();
-        return;
-      }
-      window.setTimeout(()=>{
-        materializeConsultorioRow(idx, 'pane_created_immediate').catch(()=> null);
-        queueSavePane(idx, 140, 'pane_created');
-        refreshScheduleHeaders();
-      }, 60);
+      // A new pane is a draft. Only a subsequent genuine edit may persist it.
+      refreshScheduleHeaders();
     });
 
     root.querySelector('.mm-tabs-embed')?.addEventListener('shown.bs.tab', (event)=>{

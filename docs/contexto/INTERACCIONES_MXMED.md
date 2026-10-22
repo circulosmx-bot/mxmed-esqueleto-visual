@@ -44,6 +44,8 @@ Estos once recorridos reconstruyen conexiones de fuente y evidencia previa. No s
 
 ## J04 — Consultorio, disponibilidad y cita
 
+[INTEGRATION01](../agenda/MED-CONSULTORIOS-INTEGRATION01.md) prepara el diff de seis archivos del loader y prefijo sobre el original actual. QA de lectura/edición/orden aislada y rollback por hashes; sin alterar reserva, identidad o datos originales. Leticia permanece como referencia manual; integración sujeta a autorización separada.
+
 **Canal original verificado en fuente CTX-MAP03.** La reserva integrada del [perfil público](../../profiles/doctor.php) usa `submitInlineBooking` → `/public/appointments/reserve` → `requestBookingOtp` → `/public/otp/request` → `verifyBookingOtp` → `/public/appointments/confirm`. [AGENDA-PUB01](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-pub01) identifica médico/sede, solicitante distinto del paciente, campos persistidos y fallos; las páginas legacy no son su prueba de conexión. La [matriz por acción](AGENDA_CANALES_Y_PERMISOS_MXMED.md#agenda-matriz) separa médico, operador, Call Center y sistema/IA.
 
 **Edición de sede/horario.** Consultorio original `#p-consultorio` → [multisede.js](../../assets/js/perfil/consultorio/multisede.js) (`collectPanePayload`, confirmación de coordenadas) / [Agenda UI](../../assets/js/agenda/) → PUT ramas de consultorio/horarios en [gateway Agenda](../../api/agenda/index.php) → gate actual [PrivateApplicationAccessResolver](../../modules/identity/http/PrivateApplicationAccessResolver.php) del gateway + contexto perfil → [ConsultoriosController](../../modules/agenda/controllers/ConsultoriosController.php) / [ScheduleController](../../modules/agenda/controllers/ScheduleController.php) → repositorios y tablas `consultorios/consultorio_schedule`.

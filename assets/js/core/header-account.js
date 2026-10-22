@@ -9,7 +9,7 @@
       // Bounded Agenda operators have their own canonical personal identity renderer.
       if (context.workspace === 'agenda_operators' || document.body.dataset.operatorComposition === 'canonical') return;
       const professional = context.professional || {};
-      header.querySelector('.mx-gh-identity-name-text').textContent = professional.display_name || '';
+      header.querySelector('.mx-gh-identity-name-text').textContent = professional.presentation_name || professional.display_name || '';
       header.querySelector('.mx-gh-identity-role').textContent = professional.professional_designation?.trim() || 'Perfil profesional';
     };
     syncIdentity();
