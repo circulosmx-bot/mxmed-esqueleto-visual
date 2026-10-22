@@ -246,3 +246,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## CROSS-SURFACE-LINK01 — conexión con fuente original
 
 [Diagnóstico y límite de autoridad](identity/CROSS-SURFACE-LINK01.md). Referencia para distinguir la consulta administrativa local verificada de una conexión Advisor aún no implementada; no sustituye el contrato de soporte sintético.
+
+## CROSS-SURFACE-LINK02 — preflight del puente autorizado
+
+[Prerrequisito de conexión y evidencia](identity/CROSS-SURFACE-LINK02.md). Sucede LINK01 en autorización funcional; distingue el acceso administrativo de diagnóstico de una conexión restringida apta para el preview, todavía pendiente.

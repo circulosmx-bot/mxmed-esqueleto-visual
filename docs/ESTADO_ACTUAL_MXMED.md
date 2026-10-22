@@ -280,3 +280,7 @@ Sobre `46f8960d`, [soporte de operadores](identity/ADVISOR-OPERATOR-SUPPORT01.md
 ## CROSS-SURFACE-LINK01 — fuente original localizada, conexión bloqueada
 
 Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verifica la referencia administrativa en la fuente local original mediante transacciones sólo lectura. La composición sintética actual no autoriza lectura federada ni descubrimiento de perfiles sin trabajo Requests/Media. No se copió el perfil, no se asignaron grants ni se alteró 8091. Resultado `BLOCKED_SOURCE_AUTHORITY_BOUNDARY`; no hay demostración Chromium ni integración completada.
+
+## CROSS-SURFACE-LINK02 — conexión restringida pendiente
+
+[Preflight LINK02](identity/CROSS-SURFACE-LINK02.md), baseline `b775f21a`: autorización funcional explícita recibida; fuente local y perfil revalidados. Inventario de privilegios confirma que las cuentas disponibles para leer perfiles tienen acceso amplio; el lector de auditoría sólo tiene USAGE. No se pasan credenciales administrativas al preview ni se cambian usuarios/grants originales. `BLOCKED_SOURCE_CONNECTION_PREREQUISITE`; sólo documentación, sin puente ni QA de navegador.
