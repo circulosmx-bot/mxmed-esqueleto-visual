@@ -292,3 +292,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## CROSS-SURFACE-UX04 — búsqueda exclusiva y Consultorios
 
 [Contrato UX04](identity/CROSS-SURFACE-UX04.md), baseline `6ad0a0fb`: separación explícita búsqueda/trabajo, avatar elegible o neutral y lector paginado de sedes con `physician_locations_read`/ámbito independiente. Reutiliza vistas LINK03 sin DDL/DML original. Índice distingue dos superficies ejercitables y cuatro contextos bloqueados; no suplantación ni publicación inferida. 51 verificaciones dirigidas PASS (Chromium/WebKit, revocación y aislamiento); aceptación visual pendiente, sin producción/8091.
+
+## CROSS-SURFACE-UX05 — foto pública y domicilio administrativo
+
+[Contrato UX05](identity/CROSS-SURFACE-UX05.md), baseline `cb12124b`: conecta referencia fotográfica pública elegible y domicilio/C.P. mediante proyecciones v2; versiona assets y verifica búsqueda con Chromium visible. Misma autoridad y grants SQL; sí cambia metadata de dos vistas, no registros originales. Cuatro contextos siguen bloqueados por sesión/composición/publicación. 56 checks de navegador/seguridad + 26 SQL PASS; aceptación visual PENDING, sin producción/8091.

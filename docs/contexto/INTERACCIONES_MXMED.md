@@ -304,3 +304,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## CROSS-SURFACE-UX04 — fronteras J04/J07/J09
 
 [Contrato](../identity/CROSS-SURFACE-UX04.md): Director concede grant → Advisor con ámbito explícito → admin_locations → vista administrativa de consultorios. J04 conserva escritor original; no Agenda/pacientes. J07 conserva autoridad owner/operador; J09 conserva Requests/Media y confirma borradores antes de limpiar contexto. Ninguna sesión staff se transforma en sesión médica/proveedor.
+
+## CROSS-SURFACE-UX05 — J04/J07/J09
+
+[Contrato](../identity/CROSS-SURFACE-UX05.md): mismo ámbito → proyección v2 → sedes; foto pública elegible → endpoint canónico público → transporte owned sin persistencia → revalidación de autoridad. No documentos privados, cuenta médica suplantada ni writer de ubicación/operador. Búsqueda versionada mantiene separación de contextos.

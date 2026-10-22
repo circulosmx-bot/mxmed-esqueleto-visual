@@ -2,6 +2,7 @@
 declare(strict_types=1);
 // Transport adapter only for this task's owned disposable composition.
 $path=parse_url($_SERVER['REQUEST_URI']??'',PHP_URL_PATH);
+if(getenv('MXMED_UX05_REVIEW')==='1'&&$path==='/api/internal/workspace/requests.php'&&($_GET['mode']??'')==='admin_portrait'){require __DIR__.'/cross-surface-ux05-portrait.php';return true;}
 if(getenv('MXMED_ADVISOR_WORKSPACE02_REVIEW')==='1' && ($path==='/public/identity/perfil-medico.php'&&isset($_GET['application'])
     ||$path==='/assets/js/identity/physician-request-continuation.js')){
     try{

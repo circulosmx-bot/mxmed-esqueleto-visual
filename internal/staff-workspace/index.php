@@ -22,9 +22,9 @@ try {
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestión de perfiles médicos · México Médico</title>
-<link rel="stylesheet" href="/assets/css/staff-workspace.css">
+<link rel="stylesheet" href="/assets/css/staff-workspace.css?v=<?= substr(hash_file('sha256',__DIR__.'/../../assets/css/staff-workspace.css'),0,16) ?>">
 <link rel="stylesheet" href="/assets/css/staff-platform-header.css">
-<script src="/assets/js/staff-workspace.js" defer></script>
+<script src="/assets/js/staff-workspace.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../assets/js/staff-workspace.js'),0,16) ?>" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#work-panel">Saltar al área de trabajo</a>

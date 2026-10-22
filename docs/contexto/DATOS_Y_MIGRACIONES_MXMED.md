@@ -238,3 +238,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## CROSS-SURFACE-UX04 — consumo de locations v1
 
 [Contrato](../identity/CROSS-SURFACE-UX04.md). Reutiliza exactamente la vista locations y credencial limitada LINK03; sin ALTER/GRANT/DDL/DML original ni copias de sedes. Nuevo grant lógico individual en catálogo canónico, audit de consultas en base staff sintética; no nueva tabla ni migración.
+
+## CROSS-SURFACE-UX05 — metadata de proyección v2
+
+[Contrato](../identity/CROSS-SURFACE-UX05.md): reemplaza explícitamente views profiles/locations restringidas, conserva grants/IDs y registros base. Añade referencia de retrato público vigente y domicilio/C.P./flag documental; no teléfonos sin elegibilidad. Recibo privado conserva definiciones previas y hashes. Es cambio de metadata original, no DML ni migración histórica; consumidores v1 permanecen compatibles.

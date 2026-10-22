@@ -258,3 +258,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## CROSS-SURFACE-UX04 — workspace y sedes autorizadas
 
 [Contrato, comparación y límites UX04](identity/CROSS-SURFACE-UX04.md): sucesor UX de LINK03, búsqueda exclusiva, avatar y Consultorios con grant/ámbito independientes; índice veraz sin trasladar autoridad entre superficies.
+
+## CROSS-SURFACE-UX05 — completar contexto y revisión
+
+[Diagnóstico de foto, proyección v2 y límites entre superficies](identity/CROSS-SURFACE-UX05.md). Sucesor acotado de UX04, sin nuevos grants SQL ni mutaciones de registros originales.

@@ -13,5 +13,5 @@ function link03Administration(array $services):\Identity\PhysicianAdministration
         if($pdo->query('SELECT @@server_uuid')->fetchColumn()!==$secret['server_uuid'])throw new RuntimeException('admin_source_unavailable');return $pdo;
     };
     $scope=static function(string $actor,string $origin)use($read,$owned):array{$v=$read($owned.'/administration-source.json');if(($v['expires']??0)<=time()||$v['origin']!==$origin)throw new RuntimeException('admin_scope_denied');return $v['staff'][$actor]??[];};
-    return new \Identity\PhysicianAdministration\Reader($services['authority'],new \Identity\PhysicianAdministration\SqlSource($connect,$secret['prefix']),$config['origin'],$scope);
+    return new \Identity\PhysicianAdministration\Reader($services['authority'],new \Identity\PhysicianAdministration\SqlSource($connect,$secret['prefix'],false,(int)($secret['projection_version']??1)),$config['origin'],$scope);
 }

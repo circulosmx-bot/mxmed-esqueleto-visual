@@ -437,3 +437,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## CROSS-SURFACE-UX04 — consulta administrativa de sedes
 
 [Contrato](../identity/CROSS-SURFACE-UX04.md). Mantiene OP-01..03 y sus writers; añade `physician_locations_read` sobre el catálogo/matriz existentes. Consulta paginada por origen/recurso, sin Agenda ni mutación. Búsqueda exclusiva/imagen pública elegible o neutral. Conectividad sólo owned; cuatro superficies sin sesión/contexto legítimo permanecen bloqueadas.
+
+## CROSS-SURFACE-UX05 — contexto administrativo completo autorizado
+
+[Contrato](../identity/CROSS-SURFACE-UX05.md). Capacidades existentes physician_administrative_read/physician_locations_read/physician_operator_support_read; sin autoridad nueva. Imagen pública exacta, dirección administrativa, assets versionados e índice con comandos independientes. OP-01..03 no cambian; invitaciones/grants originales siguen sin lector autorizado.

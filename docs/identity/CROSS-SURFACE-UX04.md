@@ -57,3 +57,5 @@ La comparación ejercida es fuente administrativa → Asesor y gobierno Director
 Sólo review loopback desechable, sin merge, producción ni cambios de 8091. Launcher `scripts/cross-surface-ux04-review.py <owned> open|open-director|open-advisor|credentials-director|credentials-advisor|mfa-director|stop`; verifica propietario, pins, HEAD, listener y expiración. Reabrir hace login canónico; no extiende TTL de Identity/MFA. Infraestructura hasta 24 horas, según el runner seguro existente.
 
 Preview `https://127.0.0.1:50186`, owned `/tmp/mxmed-ase-adm02imp01-_jyenrjw`; vence **2026-10-22 22:07:42 -06:00 (CDMX)**. Cuentas de revisión `qa_director@example.test` y `qa_target@example.test`, contraseñas sólo por launcher/portapapeles. No se amplían TTLs.
+
+[UX05](CROSS-SURFACE-UX05.md) sucede el límite de retrato/domicilio: verifica foto pública existente y amplía las dos proyecciones de lectura. El avatar UX04 no acreditaba ausencia de imagen.
