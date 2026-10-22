@@ -77,6 +77,7 @@ try {
 <section id="correction-section" class="context-form" hidden><h4>Versión corregida</h4><label for="corrected-file">Selecciona una imagen corregida</label><input id="corrected-file" type="file" accept="image/jpeg,image/png,image/webp"><button id="save-corrected" type="button" hidden>Guardar versión corregida</button></section>
 <section id="improvement-section" class="context-form" hidden><h4>Mejora de logotipo</h4><div class="action-row"><button id="generate-improvement" type="button">Generar propuesta de mejora</button><button id="accept-improvement" type="button" hidden>Usar versión mejorada</button><button id="discard-improvement" type="button" hidden>Descartar propuesta</button></div></section>
 </article></div></section>
+<section id="operators-panel" hidden aria-labelledby="operators-title"><div class="section-heading"><h2 id="operators-title">Operadores y colaboradores</h2><button id="refresh-operators" type="button">Actualizar</button></div><p id="operators-message" class="muted" role="status"></p><div id="operators-content" class="history-list"></div></section>
 <section id="history-panel" hidden aria-labelledby="history-title"><div class="section-heading"><div><h2 id="history-title">Historial</h2><p class="muted">Decisiones de solicitudes y acciones de imágenes registradas para este contexto.</p></div><button id="refresh-history" type="button">Actualizar</button></div><p id="history-message" class="muted" role="status"></p><div id="history-list" class="history-list"></div></section>
 </div>
 </section>

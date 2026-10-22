@@ -31,7 +31,7 @@
   function resetDraft() {$('replacement-form').reset();$('replacement-form').hidden=true;$('replacement-count').textContent='0 / 400 caracteres';$('corrected-file').value='';$('save-corrected').hidden=true;resetDecision();}
   function releaseImages() {for(const url of [reviewUrl,proposalUrl])if(url)URL.revokeObjectURL(url);reviewUrl=null;proposalUrl=null;reviewLoaded=false;proposalLoaded=false;if(!$('review-image'))return;$('review-image').removeAttribute('src');$('review-image').hidden=true;$('proposal-image').removeAttribute('src');$('proposal-panel').hidden=true;$('accept-improvement').hidden=true;$('discard-improvement').hidden=true;}
   function clearItem() {itemEpoch++;itemController?.abort();item=null;options={};releaseImages();resetDraft();$('media-detail').hidden=true;$('media-items').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));}
-  function clearContext() {contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
+  function clearContext() {operatorEpoch++;$('operators-content').replaceChildren();contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
   function sessionFailure(status) {
     expired=true;directoryEpoch++;directoryController?.abort();clearContext();state=null;$('discovery-list').replaceChildren();$('discovery').hidden=true;$('utilities').hidden=true;$('no-selection').hidden=true;$('pending-count').textContent='0';$('session-recovery').hidden=false;
     $('session-message').textContent=status===401?'Tu sesión terminó. Inicia sesión nuevamente para continuar.':'Tu acceso al equipo interno cambió. Vuelve a iniciar sesión o consulta al Director.';
@@ -146,9 +146,9 @@
   }
   function showSection() {
     const entry=workspaceSections().find(v=>v.id===section),restricted=entry?.restricted;
-    for(const id of ['summary','requests','images','history'])$(id+'-panel').hidden=restricted||section!==id;
+    for(const id of ['summary','requests','images','history','operators'])$(id+'-panel').hidden=restricted||section!==id;
     $('restricted-panel').hidden=!restricted;
-    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=['requests','images','history'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'Pendiente de integración para el Asesor. Esta área aún no permite consultar ni modificar información desde este panel. Las funciones de médico, operador y proveedor conservan sus accesos independientes.';
+    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=['requests','images','history','operators'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'Pendiente de integración para el Asesor. Esta área aún no permite consultar ni modificar información desde este panel. Las funciones de médico, operador y proveedor conservan sus accesos independientes.';
       const n=sectionCount(section);$('restricted-summary').textContent=n>0?`${n} ${n===1?'pendiente visible':'pendientes visibles'} bajo tu permiso de resumen. Solicita atención a una persona autorizada mediante los canales habituales.`:'No hay un resumen de pendientes disponible para tu cuenta en esta sección.';
     }
     $('work-panel').setAttribute('aria-labelledby','tab-'+section);$('work-panel').dataset.doctorId=doctor||'';$('work-panel').dataset.requestId=selectedRequestId||'';$('work-panel').dataset.section=section;
@@ -174,7 +174,7 @@
     tabs.scrollLeft=scroll;$('more-sections').hidden=false;showSection();
   }
 
-  function switchSection(id) {if(busy||id===section){closeMore();return;}if(!leaveDraft())return;resetDraft();section=id;renderTabs();showSection();if(!workspaceSections().find(v=>v.id===id)?.restricted){if(id==='history')loadHistory();if(id==='requests'&&selectedRequestId)refreshRequest();}const tab=$('tab-'+id);(tab&&!tab.hidden?tab:$('more-toggle')).focus({preventScroll:true});if(tab){const tabs=$('section-tabs');if(tab.offsetLeft<tabs.scrollLeft)tabs.scrollLeft=tab.offsetLeft;else if(tab.offsetLeft+tab.offsetWidth>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=tab.offsetLeft+tab.offsetWidth-tabs.clientWidth;}}
+  function switchSection(id) {if(busy||id===section){closeMore();return;}if(!leaveDraft())return;resetDraft();section=id;renderTabs();showSection();if(!workspaceSections().find(v=>v.id===id)?.restricted){if(id==='history')loadHistory();if(id==='operators')loadOperators();if(id==='requests'&&selectedRequestId)refreshRequest();}const tab=$('tab-'+id);(tab&&!tab.hidden?tab:$('more-toggle')).focus({preventScroll:true});if(tab){const tabs=$('section-tabs');if(tab.offsetLeft<tabs.scrollLeft)tabs.scrollLeft=tab.offsetLeft;else if(tab.offsetLeft+tab.offsetWidth>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=tab.offsetLeft+tab.offsetWidth-tabs.clientWidth;}}
   function requestType(type) {return /CLAIM/.test(type||'')?'Reclamo de perfil existente':'Solicitud de perfil nuevo';}
   function contextRequests() {return (requestState.requests||[]).filter(r=>doctor?r.doctor_id===doctor:r.request_id===selectedRequestId);}
   function contextPendingCount() {return pendingContext?.visible_count??null;}
@@ -279,6 +279,33 @@
     $('evidence-title').textContent=evidence.label||'Evidencia de la solicitud';$('evidence-context').textContent=`${$('physician-name').textContent} · Solicitud ${id}`;$('evidence-message').textContent='Cargando evidencia protegida…';$('evidence-dialog').showModal();
     try {const response=await request(url.href,{signal:evidenceController.signal});if(!response.ok)throw new Error('evidence');const mime=(response.headers.get('Content-Type')||'').split(';')[0];if(!['image/jpeg','image/png','image/webp'].includes(mime))throw new Error('type');const blob=await response.blob();if(epoch!==contextEpoch||revision!==evidenceEpoch||id!==selectedRequestId||blob.size>15*1024*1024)return;evidenceUrl=URL.createObjectURL(blob);$('evidence-image').src=evidenceUrl;$('evidence-image').hidden=false;$('evidence-message').textContent='';}
     catch(error){if(error.name!=='AbortError'&&revision===evidenceEpoch)$('evidence-message').textContent='No fue posible consultar esta evidencia. Actualiza la solicitud y comprueba tu acceso.';}
+  }
+  let operatorEpoch=0;
+  const operatorLabels={active:'Activo',pending:'Pendiente',suspended:'Suspendido',revoked:'Baja',accepted:'Aceptada',cancelled:'Revocada',rejected:'Rechazada',expired:'Vencida',review_required:'Revisión del titular pendiente',superseded:'Sustituida',missing:'Sin delegación',owner:'Titular',administrator:'Administrador',collaborator:'Colaborador',invite:'Invitación registrada',accept:'Invitación aceptada',grants:'Permisos actualizados',suspend:'Suspensión',reactivate:'Reactivación',revoke:'Baja',review:'Revisión del titular',rename:'Alias actualizado',owner_review_required:'Cambio de titular: revisión requerida'};
+  const operatorDate=value=>{if(!value)return 'Fecha no disponible';const d=new Date(value.replace(' ','T')+'Z');return Number.isNaN(d.getTime())?'Fecha no disponible':new Intl.DateTimeFormat('es-MX',{timeZone:'America/Mexico_City',dateStyle:'short',timeStyle:'short'}).format(d)+' (CDMX)';};
+  const operatorFunctions={'agenda.appointments.read':'Consultar citas','agenda.appointments.create':'Crear citas','agenda.appointments.reschedule':'Reprogramar citas','agenda.appointments.cancel':'Cancelar citas','agenda.availability.read':'Consultar disponibilidad'};
+  async function loadOperators() {
+    const epoch=++operatorEpoch,context=contextEpoch,d=doctor,host=$('operators-content');host.replaceChildren();
+    if(!d){$('operators-message').textContent='Selecciona un perfil médico autorizado.';return;}
+    $('operators-message').textContent='Consultando relaciones y permisos…';
+    try {
+      const {data}=await json(requestsPath('operators',{doctor_id:d}));
+      if(epoch!==operatorEpoch||context!==contextEpoch||doctor!==d||section!=='operators')return;
+      if(data.doctor_id!==d)throw new Error('context');
+      $('operators-message').textContent=data.access_note;
+      const card=(title,lines)=>{const el=node('article','history-entry');el.append(node('h3','',title));for(const line of lines)el.append(node('p','',line));host.append(el);};
+      const label=x=>operatorLabels[x]||'Estado no reconocido';
+      const functions=x=>(x||[]).map(v=>operatorFunctions[v]||'Función fuera del catálogo inicial').join(', ')||'Ninguna';
+      card('Titular del perfil',[data.owner?`Cuenta: ${data.owner.account_id}`:'No hay un titular único disponible.',data.owner_state==='confirmed'?'Relación de titular activa y cuenta verificada.':'La titularidad requiere revisión por su flujo gobernado.']);
+      card('Dos plazas de colaboradores',[`${data.seats.occupied} ocupadas · ${data.seats.reserved} reservadas · ${data.seats.available} disponibles`,data.seats.consistent?'Administrador es un nivel de permisos dentro de estas dos plazas. El titular y el asesor no consumen una plaza.':'Existe una inconsistencia de cupo; no se habilitan plazas adicionales.']);
+      const members=data.members.filter(v=>v.role_code!=='owner');
+      if(!members.length)card('Colaboradores',['No hay relaciones de colaboradores registradas para este perfil.']);
+      for(const m of members)card(m.alias||'Colaborador sin alias',[`${label(m.role_code)} · ${label(m.status)} · ${m.seat_position?'Posición '+m.seat_position:'Sin posición de presentación'}`,`Cuenta vinculada: ${m.account_id} · ${m.contact_verified?'Contacto verificado':'Verificación pendiente'}`,`Delegación: ${label(m.grant_status)}${m.grant_revision?' · Versión '+m.grant_revision:''}`,`Funciones delegadas: ${functions(m.delegated_functions)}`,m.delegation_current?'Delegación vigente; el acceso final se valida en el módulo correspondiente.':'Esta relación no acredita una delegación actualmente utilizable.',m.next_action]);
+      if(!data.invitations.length)card('Invitaciones',['No hay invitaciones registradas para este perfil.']);
+      for(const i of data.invitations)card(`Invitación · ${label(i.display_status)}`,[i.alias||'Sin alias registrado',`${label(i.role_code)} · ${i.account_linked?'Cuenta vinculada por aceptación':'Sin vinculación por aceptación'}`,`Registrada: ${operatorDate(i.created_at)} · Vencimiento: ${operatorDate(i.expires_at)}`,...(i.status==='accepted'?[`Aceptada: ${operatorDate(i.closed_at)}`]:[]),`Funciones ofrecidas: ${functions(i.offered_functions)}`,i.next_action]);
+      if(data.invitations_has_more)card('Más invitaciones',['Se muestran las 100 invitaciones más recientes.']);
+      card('Historial administrativo · hasta 100 eventos recientes',data.events.length?data.events.map(e=>`${operatorDate(e.occurred_at_utc)} · ${label(e.operation)} · ${e.event_id}`):['No hay eventos canónicos de operadores registrados para este perfil.']);
+    }catch(error){if(epoch!==operatorEpoch||context!==contextEpoch||doctor!==d)return;host.replaceChildren();$('operators-message').textContent=error.status===403?'Tu permiso o el ámbito del perfil cambió. La consulta ya no está autorizada.':error.status===401?'La sesión terminó. Inicia sesión nuevamente.':'No fue posible consultar las fuentes de operadores. No se interpreta como una lista vacía.';}
   }
   async function loadHistory() {
     if(!contextSelected()||busy||expired)return;const d=doctor,id=selectedRequestId,epoch=contextEpoch,revision=++historyEpoch;historyController?.abort();historyController=new AbortController();$('history-message').textContent='Cargando historial…';$('history-list').replaceChildren();
@@ -416,7 +443,7 @@
       const [data,requests,counts]=await Promise.all([mediaContext(d),loadRequestDirectory(),loadPending(d,selectedRequestId)]);if(epoch!==contextEpoch||d!==doctor||expired)return;requestState=requests;acceptPending(counts,d,selectedRequestId);contextProfile(data);actor(data);
       if(d&&!data.physician&&selectedRequestId&&requestDetail&&contextRequests().length)data.physician=requestPhysician(requestDetail);
       if(d&&!data.physician){clearContext();state=data;say('Tu acceso o el perfil disponible cambió. La vista se actualizó.');showDiscovery('pending');return;}
-      state=data;if(!$('discovery').hidden)discovery(data);if(contextSelected()){$('physician-workspace').hidden=false;renderPanels();renderTabs();if(item){const current=data.pending_items.find(v=>v.submission_id===item.submission_id);if(!current){clearItem();say('El pendiente ya fue atendido o dejó de estar disponible.');}else{const selectedEpoch=itemEpoch;const next=await freshOptions(d);if(epoch!==contextEpoch||doctor!==d||selectedEpoch!==itemEpoch)return;const lostDraft=dirty()&&((options.can_request_replacement&&!next.can_request_replacement)||(options.can_upload_corrected&&!next.can_upload_corrected));options=next;if(lostDraft){resetDraft();mediaSay('Tus permisos cambiaron. Se descartaron los cambios que ya no puedes guardar.');}controls();}}if(selectedRequestId)await refreshRequest();if(section==='history')await loadHistory();}
+      state=data;if(!$('discovery').hidden)discovery(data);if(contextSelected()){$('physician-workspace').hidden=false;renderPanels();renderTabs();if(item){const current=data.pending_items.find(v=>v.submission_id===item.submission_id);if(!current){clearItem();say('El pendiente ya fue atendido o dejó de estar disponible.');}else{const selectedEpoch=itemEpoch;const next=await freshOptions(d);if(epoch!==contextEpoch||doctor!==d||selectedEpoch!==itemEpoch)return;const lostDraft=dirty()&&((options.can_request_replacement&&!next.can_request_replacement)||(options.can_upload_corrected&&!next.can_upload_corrected));options=next;if(lostDraft){resetDraft();mediaSay('Tus permisos cambiaron. Se descartaron los cambios que ya no puedes guardar.');}controls();}}if(selectedRequestId)await refreshRequest();if(section==='history')await loadHistory();if(section==='operators')await loadOperators();}
     }catch(error){if(epoch!==contextEpoch)return;if(error.status===403){sessionFailure(403);return;}if(error.status!==401)say('No fue posible actualizar el acceso. Actualiza antes de continuar.');if(item){options={};controls();}}
     finally{pollBusy=false;}
   }
@@ -441,6 +468,7 @@
   $('pending-toggle').onclick=()=>{if(busy)return;if(contextSelected()&&!$('discovery').hidden&&directoryMode==='pending'){collapseDiscovery();return;}showDiscovery('pending');};
   $('close-discovery').onclick=()=>{collapseDiscovery();$('physician-name').focus({preventScroll:true});};
   $('change-physician').onclick=()=>{if(busy)return;showDiscovery('search');$('physician-search').focus();};
+  $('refresh-operators').onclick=()=>loadOperators();
   $('refresh-images').onclick=()=>refresh();
   $('refresh-requests').onclick=()=>refresh();$('refresh-history').onclick=()=>loadHistory();
   $('approve-request').onclick=()=>chooseDecision('APPROVED');$('request-information').onclick=()=>chooseDecision('NEEDS_INFORMATION');$('reject-request').onclick=()=>chooseDecision('REJECTED');

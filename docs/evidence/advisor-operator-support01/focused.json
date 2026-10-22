@@ -1,0 +1,242 @@
+{
+  "baseline": "46f8960d7e567d9a90bbba3a1d836926e9caabd8",
+  "environment": "owned disposable synthetic; loopback only",
+  "checks": [
+    {
+      "name": "Canonical owner-only writer denials",
+      "pass": true
+    },
+    {
+      "name": "Canonical third collaborator position denied",
+      "pass": true
+    },
+    {
+      "name": "Independent Advisor authenticated",
+      "pass": true
+    },
+    {
+      "name": "Director UI revoke",
+      "pass": true
+    },
+    {
+      "name": "Support denied without explicit capability",
+      "pass": true
+    },
+    {
+      "name": "Director UI grant",
+      "pass": true
+    },
+    {
+      "name": "Authorized support HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "Exact selected physician binding",
+      "pass": true
+    },
+    {
+      "name": "Canonical owner reference",
+      "pass": true
+    },
+    {
+      "name": "Pending accepted revoked invitations",
+      "pass": true
+    },
+    {
+      "name": "Canonical alias and delegated functions",
+      "pass": true
+    },
+    {
+      "name": "Canonical two-position count",
+      "pass": true
+    },
+    {
+      "name": "Advisor matches canonical owner overview",
+      "pass": true
+    },
+    {
+      "name": "No support mutation actions",
+      "pass": true
+    },
+    {
+      "name": "Canonical operator event references",
+      "pass": true
+    },
+    {
+      "name": "No secrets or clinical payload",
+      "pass": true
+    },
+    {
+      "name": "Out-of-scope physician denied",
+      "pass": true
+    },
+    {
+      "name": "Cross-context injected resource rejected",
+      "pass": true
+    },
+    {
+      "name": "Accurate empty relationships",
+      "pass": true
+    },
+    {
+      "name": "Suspended and revoked memberships",
+      "pass": true
+    },
+    {
+      "name": "Accepted not relabeled expired; pending expiry derived",
+      "pass": true
+    },
+    {
+      "name": "Owner mutation unavailable through support HTTP",
+      "pass": true
+    },
+    {
+      "name": "Director UI revoke",
+      "pass": true
+    },
+    {
+      "name": "Live revocation direct request denied",
+      "pass": true
+    },
+    {
+      "name": "Open view clears revoked data",
+      "pass": true
+    },
+    {
+      "name": "Existing Media read survives support revocation",
+      "pass": true
+    },
+    {
+      "name": "Director UI grant",
+      "pass": true
+    },
+    {
+      "name": "Prior canonical operator history immutable",
+      "pass": true
+    },
+    {
+      "name": "Grant and revoke canonical audit present",
+      "pass": true
+    },
+    {
+      "name": "Chromium contained 1366",
+      "pass": true
+    },
+    {
+      "name": "Chromium contained 820",
+      "pass": true
+    },
+    {
+      "name": "Chromium contained 390",
+      "pass": true
+    },
+    {
+      "name": "Chromium JavaScript errors absent",
+      "pass": true
+    },
+    {
+      "name": "Advisor logout/login support preserved",
+      "pass": true
+    },
+    {
+      "name": "Development index remains available",
+      "pass": true
+    },
+    {
+      "name": "WebKit independent authorized read",
+      "pass": true
+    },
+    {
+      "name": "WebKit scope denial",
+      "pass": true
+    },
+    {
+      "name": "WebKit mobile containment",
+      "pass": true
+    },
+    {
+      "name": "Authenticated CSRF cannot invoke operator mutation",
+      "pass": true
+    },
+    {
+      "name": "Requests consumer hides ungranted requests",
+      "pass": true
+    },
+    {
+      "name": "History consumer remains available in authorized profile",
+      "pass": true
+    },
+    {
+      "name": "Support reads leave pending counters unchanged",
+      "pass": true
+    },
+    {
+      "name": "Support grant alone cannot create physician scope",
+      "pass": true
+    },
+    {
+      "name": "Explicit Director restoration of original scope",
+      "pass": true
+    },
+    {
+      "name": "Six development surfaces preserved",
+      "pass": true
+    },
+    {
+      "name": "Current review commands shown in index",
+      "pass": true
+    },
+    {
+      "name": "Keyboard refresh preserves exact context",
+      "pass": true
+    },
+    {
+      "name": "Denied response clears previous operator details",
+      "pass": true
+    },
+    {
+      "name": "Active Advisor cannot invite through owner writer",
+      "pass": true
+    },
+    {
+      "name": "Active Advisor cannot grants through owner writer",
+      "pass": true
+    },
+    {
+      "name": "Active Advisor cannot suspend through owner writer",
+      "pass": true
+    },
+    {
+      "name": "Active Advisor cannot revoke through owner writer",
+      "pass": true
+    },
+    {
+      "name": "Active Advisor cannot review through owner writer",
+      "pass": true
+    }
+  ],
+  "total_pass": 53,
+  "irene_grants_preserved": [
+    "media_review_read",
+    "physician_request_read"
+  ],
+  "irene_audit_preserved": true,
+  "baseline_source_unchanged": true,
+  "physician_operator_browser_contexts": "NOT_ENABLED; canonical owner overview compared",
+  "visual_acceptance": "PENDING",
+  "historical_suites_rerun": false,
+  "final_view_checks": {
+    "chromium_cdmx_dates": true,
+    "webkit_cdmx_dates": true
+  },
+  "source_sha256": {
+    "modules/identity/operators/AdvisorSupportReader.php": "1f6ddc6a6849886d3008f6fbc515426060054f7461549b2ef03b5c7c719d1f5e",
+    "modules/identity/PhysicianRequests/Http.php": "0c2cd6889e71786eeb17bdd933dc0c3f677d3b65f875adca282d6535b0053f54",
+    "modules/identity/PhysicianRequests/PendingSummary.php": "717d4792631dfb55646018960ee1fe1e3caa050d847bf841f39b4ca017a05099",
+    "modules/identity/services/InternalCapabilityCatalog.php": "32358d87bb53878cad05eea70c0a9cf9b65491e4e8c27fd1a08359760e1257b7",
+    "modules/identity/Team/ReadService.php": "bd4932925c4edecd7d6a2031778f01f9943719189554349cf4f4bc8a6b01db29",
+    "assets/js/staff-workspace.js": "fbd6c883be7b72ec0cb5de9aebff641cba3e5c8728ffee6ccb08aa6c9d011b8b",
+    "assets/js/internal-team.js": "b1c6b50cafa7c03e78374fad6a2fc8ba19eeabace233056f62a3a456cc9115e5",
+    "internal/staff-workspace/index.php": "1fcf78161c05df75bb96ba87ca0a7ed928e3a86b78dd9ef5e92ad6599befbf43"
+  }
+}

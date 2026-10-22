@@ -238,3 +238,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## STAFF-WORKSPACE-VIS01 — cabecera compartida
 
 [Contrato y revisión](identity/STAFF-WORKSPACE-VIS01.md), padre `f69af160`: paridad visual Director/Asesor, nombre y rol de fuente autorizada, avatar neutral y cierre discreto. Quince áreas y consumidores intactos; sin nuevos permisos, producción ni 8091. Aceptación visual PENDING.
+
+## ADVISOR-OPERATOR-SUPPORT01 — soporte desde el Asesor
+
+[Contrato, fuentes, evidencia y revisión](identity/ADVISOR-OPERATOR-SUPPORT01.md). Entrada para la pestaña Operadores y colaboradores: diagnóstico bajo grant explícito y ámbito médico existente. Complementa OP-01..03 y J07; no concede cambios de titularidad, invitaciones ni administración al staff. Comparación con overview canónico, sin pantallas médico/operador habilitadas en el ensayo.

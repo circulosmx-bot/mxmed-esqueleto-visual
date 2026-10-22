@@ -226,3 +226,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## STAFF-AUTH-UX08 — snapshot de intención de sesión
 
 [Contrato](../identity/STAFF-AUTH-UX08.md) y [migración aditiva](../../modules/identity/db/migrations/2026_10_21_02_staff_session_review.sql). Dos columnas nullable session_case_version/session_review_id en auth_staff_review_intents; trigger conserva inmutabilidad. Historia MFA preservada; filas sin snapshot no admiten consumo bajo nueva política. Sin escrituras nuevas de grants/media/Identity ni instalación real.
+
+## ADVISOR-OPERATOR-SUPPORT01 — proyección sin schema nuevo
+
+[Contrato y fuentes](../identity/ADVISOR-OPERATOR-SUPPORT01.md). Reutiliza membresías, cuentas, invitaciones de operador, revisiones/grants, presentación y auditoría; `internal_operator_grants` almacena la nueva clave explícita de consulta. Sin nueva tabla, migración de producto ni modificación de ownership. Lectura no expira ni cancela invitaciones; accepted histórico conserva su estado, pending vencida se deriva por fecha. Setup aplica esquema existente exclusivamente a datadir nuevo verificado; factory OP01 genera escenarios y eventos canónicos, transferidos exactamente dentro de ese servidor sintético. No DDL persistente ni datos reales; el censo previo permanece histórico.

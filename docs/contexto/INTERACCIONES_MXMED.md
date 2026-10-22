@@ -292,3 +292,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## STAFF-PANEL-UX09 — presentación aislada
 
 [Contrato](../identity/STAFF-PANEL-UX09.md). J09: selección → documentación vigente → consulta/decisiones separadas; histórico sólo al expandir. Invitación resumida → Más detalles. Orden Asesores/Master en DOM. Se conserva la autoridad y el ciclo documental AUTH-UX08.
+
+## Extensión acotada de J07 — ADVISOR-OPERATOR-SUPPORT01
+
+[Contrato](../identity/ADVISOR-OPERATOR-SUPPORT01.md): Director → grant canónico `physician_operator_support_read` → sesión independiente Advisor → médico en ámbito Requests/Media → pestaña de operadores → lectura de membresías/invitaciones/revisiones/eventos. La consulta muestra diagnóstico y siguiente paso legítimo; no llama comandos del owner. Revocación se revalida en servidor y limpia el panel al actualizar. El índice de seis interfaces conserva identidades y accesos independientes. 53 checks aislados; los contextos médico/operador se compararon por fuente/overview, sin afirmar navegación browser entre esas superficies.

@@ -23,7 +23,9 @@ final class Http
                 if($mode==='evidence'){
                     self::keys($_GET,['mode','request_id','file_id']);$r=$s->readEvidence($actor,$_GET['request_id'],$_GET['file_id']);header('Content-Type: '.$r['mime']);header('Content-Security-Policy: sandbox');header('Content-Disposition: inline; filename="documento-solicitud"');echo $r['bytes'];return;
                 }
+                if($mode==='operators')self::keys($_GET,['mode','doctor_id']);
                 $result=match($mode){
+                    'operators'=>(new \Identity\Operators\AdvisorSupportReader($s->a))->read($actor,$_GET['doctor_id']),
                     'pending'=>(new PendingSummary($s->a,$services['enrollment']))->read($actor,$_GET['doctor_id']??null,$_GET['request_id']??null),
                     'read'=>$s->read($actor,$_GET['request_id']??null,$_GET['doctor_id']??null,$_GET['query']??''),
                     'applicant'=>$s->applicantRead($actor,$_GET['request_id']??''),

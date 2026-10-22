@@ -425,3 +425,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## STAFF-PANEL-UX09 — presentación aislada
 
 [Contrato](../identity/STAFF-PANEL-UX09.md). ID-02/03/07 y COM-10: P=refinamiento expresamente solicitado; S=presenter/template/CSS existentes; C=mismos endpoints y sesiones; V=QA dirigida en contrato; O=owned sintético, sin producción. Sin capacidades nuevas.
+
+## ADVISOR-OPERATOR-SUPPORT01 — consumidor staff de OP-01..03
+
+[Contrato y evidencia](../identity/ADVISOR-OPERATOR-SUPPORT01.md). PRODUCT_POLICY: soporte no consume plaza ni confiere autoridad del titular. SOURCE_IMPLEMENTATION: `physician_operator_support_read`, `AdvisorSupportReader`, catálogo y matriz canónicos. CONNECTIVITY: pestaña existente → Requests HTTP `mode=operators` → proyección exacta del perfil ya autorizado por Requests/Media. OP-01..03 conservan sus writers; no invitación ni grants de operador desde staff. VERIFICATION: 53 checks dirigidos, UI Director, revocación abierta, Chromium/WebKit y fuentes/overview. OPERATIONAL_STATUS: sólo owned sintético; sin activación ni validación browser de superficies médico/operador. Sucede únicamente la carencia de consulta de soporte descrita en STAFF-CONTROL04.

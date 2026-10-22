@@ -51,7 +51,7 @@ final class PendingSummary
                 $loc=$this->a->query('SELECT municipio,estado FROM consultorios WHERE doctor_id=? ORDER BY consultorio_id LIMIT 1',[$id])->fetch(PDO::FETCH_ASSOC);
                 $groups[$key]['city']=$loc['municipio']??null;$groups[$key]['state']=$loc['estado']??null;
                 $groups[$key]['specialty']=$p['specialty_primary'];$groups[$key]['status']=$p['profile_status'];
-                $groups[$key]['permissions']=['requests'=>$requestRead,'images'=>$mediaRead&&array_key_exists($id,$media),'history'=>true];
+                $groups[$key]['permissions']=['requests'=>$requestRead,'images'=>$mediaRead&&array_key_exists($id,$media),'history'=>true,'operators'=>$caps->contains('physician_operator_support_read')&&($this->a->scope===null||$this->a->scope->allowsStaff($actor->accountId(),'physician_operator_support_read'))];
                 if($mediaRead||$summary)$groups[$key]['sections']['images']=$this->counts($media[$id]??0,$mediaActions[$id]??0,!$mediaRead);
                 if($requestRead||$summary)$groups[$key]['sections']['requests']=$this->counts(0,0,!$requestRead);
             }
@@ -62,7 +62,7 @@ final class PendingSummary
                 if($id===null){
                     $d=$this->enrollment->requestIntakeInTransaction($actor,$row['origin_id'],(int)$row['intake_version'])['intake'];
                     $groups[$key]=$this->group($key,null,$row['origin_id'],trim($d['given_names'].' '.$d['first_surname'].' '.$d['second_surname']));
-                    $groups[$key]['state']=$row['state'];$groups[$key]['permissions']=['requests'=>true,'images'=>false,'history'=>true];
+                    $groups[$key]['state']=$row['state'];$groups[$key]['permissions']=['requests'=>true,'images'=>false,'history'=>true,'operators'=>false];
                 }
                 if($requestRead)$applicationKeys[$row['origin_id']]=$key;
                 if(!isset($groups[$key]['sections']['requests']))$groups[$key]['sections']['requests']=$this->counts(0,0,!$requestRead);

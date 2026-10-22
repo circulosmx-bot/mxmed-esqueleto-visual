@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "source_baseline": "46f8960d7e567d9a90bbba3a1d836926e9caabd8",
+  "protected_unchanged": true,
+  "protected_snapshot_count": 42,
+  "protected_before_sha256": "8f38e3783286dac36cec9b9a4b3897248c7a710a4a3be6092a6d487da84f9618",
+  "protected_after_sha256": "8f38e3783286dac36cec9b9a4b3897248c7a710a4a3be6092a6d487da84f9618",
+  "preview": {
+    "url": "https://127.0.0.1:60907/internal/media-review/index.php?section=equipo",
+    "expiry_unix": 1792720669.659858,
+    "owned_directory": "/tmp/mxmed-ase-adm02imp01-6rfw0b87",
+    "status": "HEALTHY_OWNED_EXPIRING"
+  },
+  "ui_changed": true,
+  "real_personal_data_used": false,
+  "operational_activation": false,
+  "focused_evidence": "focused.json",
+  "full_private_evidence": "/tmp/mxmed-ase-adm02imp01-6rfw0b87/support-evidence/runner-full.json"
+}
