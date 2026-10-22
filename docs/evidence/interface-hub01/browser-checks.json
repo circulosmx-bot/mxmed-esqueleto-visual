@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Director actual team UI",
+    "pass": true
+  },
+  {
+    "name": "Advisor exact original physician",
+    "pass": true
+  },
+  {
+    "name": "Six entries present",
+    "pass": true
+  },
+  {
+    "name": "Open/focus reuses same Advisor page",
+    "pass": true
+  },
+  {
+    "name": "Selection preserved on focus",
+    "pass": true
+  },
+  {
+    "name": "Canonical sessions present and distinct",
+    "pass": true
+  },
+  {
+    "name": "Unavailable original medical context not launched",
+    "pass": true
+  },
+  {
+    "name": "Denied unavailable/arbitrary action operator",
+    "pass": true
+  },
+  {
+    "name": "Denied unavailable/arbitrary action public",
+    "pass": true
+  },
+  {
+    "name": "Denied unavailable/arbitrary action provider",
+    "pass": true
+  },
+  {
+    "name": "Denied unavailable/arbitrary action rm -rf /",
+    "pass": true
+  },
+  {
+    "name": "Denied unavailable/arbitrary action https://example.com",
+    "pass": true
+  },
+  {
+    "name": "Denied unavailable/arbitrary action {'action': 'director'}",
+    "pass": true
+  },
+  {
+    "name": "Unmanaged page cannot invoke controller",
+    "pass": true
+  },
+  {
+    "name": "HTTP cannot launch processes",
+    "pass": true
+  },
+  {
+    "name": "No HTTP command route",
+    "pass": true
+  },
+  {
+    "name": "Unavailable buttons disabled",
+    "pass": true
+  },
+  {
+    "name": "Responsive hub 1366",
+    "pass": true
+  },
+  {
+    "name": "Responsive hub 390",
+    "pass": true
+  },
+  {
+    "name": "Persistent navigation survives reload director",
+    "pass": true
+  },
+  {
+    "name": "Persistent navigation survives reload advisor",
+    "pass": true
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "interfaces": [
+    {
+      "id": "director",
+      "title": "PANEL DIRECTOR",
+      "enabled": true,
+      "open": true,
+      "status": "Disponible y abierta; Identity autenticada",
+      "reason": "Gobierno del staff sintético."
+    },
+    {
+      "id": "advisor",
+      "title": "PANEL ASESOR",
+      "enabled": true,
+      "open": true,
+      "status": "Disponible y abierta; Identity autenticada",
+      "reason": "Fuente administrativa original restringida; no concede autoridad médica."
+    },
+    {
+      "id": "physician",
+      "title": "PANEL USUARIO MÉDICO",
+      "enabled": false,
+      "open": false,
+      "status": "No disponible funcionalmente; Identity original HTTP 503",
+      "reason": "Identity original no disponible. Diagnóstico: falta su directorio privado de notificaciones; no se modifica el runtime original."
+    },
+    {
+      "id": "operator",
+      "title": "PANEL OPERADOR DE USUARIO MÉDICO",
+      "enabled": false,
+      "open": false,
+      "status": "Existe; sin contexto preparado",
+      "reason": "Faltan cuenta de prueba y contexto operador granular verificados."
+    },
+    {
+      "id": "public",
+      "title": "PERFIL PÚBLICO USUARIO MÉDICO",
+      "enabled": false,
+      "open": false,
+      "status": "No disponible funcionalmente; publicación deshabilitada",
+      "reason": "Ruta original candidate: route_enabled=0 y canonical_enabled=0."
+    },
+    {
+      "id": "provider",
+      "title": "PANEL PROVEEDOR",
+      "enabled": false,
+      "open": false,
+      "status": "Existe; sin contexto preparado",
+      "reason": "Faltan sesión y relación organizacional verificadas para este contexto."
+    }
+  ],
+  "hub_url": "https://127.0.0.1:57452/",
+  "director_url": "https://127.0.0.1:54400/internal/media-review/index.php?section=equipo",
+  "advisor_url": "https://127.0.0.1:54400/internal/staff-workspace/index.php",
+  "physician_url": "https://localhost:8443/private-app.php",
+  "expiry": 1792734979.0,
+  "source_head": "4fc81b61b51b940e0c6c102a9f2ba2355c11790c",
+  "checked_at": 1792650472.177855
+}

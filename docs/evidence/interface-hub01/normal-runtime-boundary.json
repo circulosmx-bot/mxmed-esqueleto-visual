@@ -1,0 +1,32 @@
+{
+  "original_login": {
+    "status": 503,
+    "development_binding_absent": true,
+    "navigation_component_absent": true,
+    "canonical_login_fields": false
+  },
+  "original_physician": {
+    "status": 503,
+    "development_binding_absent": true,
+    "navigation_component_absent": true,
+    "canonical_login_fields": false
+  },
+  "original_http": {
+    "status": 503,
+    "development_binding_absent": true,
+    "navigation_component_absent": true,
+    "canonical_login_fields": false
+  },
+  "baseline_login": {
+    "status": 200,
+    "development_binding_absent": true,
+    "navigation_component_absent": true,
+    "canonical_login_fields": true
+  },
+  "original_failure": {
+    "configuration_reason": "normal_local_notification_path_required",
+    "notification_parent_exists": false,
+    "valkey_listening": true,
+    "restoration_attempted": false
+  }
+}

@@ -316,3 +316,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## CLOSURE02 — J01/J02 y revisión staff
 
 [Conexión aislada](../identity/ADVISOR-CAPABILITY-CLOSURE02.md): Advisor autorizado abre la cola profesional original para fuentes/C4, con expedientes, versión, reauth/MFA y auditoría propios. La selección de médico en workspace no sustituye la selección protegida de expediente. Claims organizacionales usan otra entrada/domain y no amplían J01/J02 ni titularidad/firma médica. La revocación del resumen retira agregados protegidos, sin bloquear campos básicos independientemente autorizados.
+
+## INTERFACE-HUB01 — navegación J09, frontera J07
+
+[Contrato](../identity/INTERFACE-HUB01.md): hub → ventana independiente → login Identity propio → panel autorizado; enfocar no cambia identidad, grants ni selección. Director/Asesor verificados con Chromium; médico pendiente por503 original aunque existe membresía legítima. J07 no se habilita por ser staff; operador/proveedor sin contexto y perfil público no publicado permanecen cerrados. Sin writers nuevos ni sesiones trasplantadas.

@@ -304,3 +304,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## ADVISOR-CAPABILITY-CLOSURE02 — consumidores y revocación por campos
 
 [Contrato/evidencia](identity/ADVISOR-CAPABILITY-CLOSURE02.md), baseline `2ef08171`, verificado2026-10-22: conecta fuentes/C4 originales y claims de organizaciones al Advisor sólo en composición owned. 17 de alcance conectadas; 4 reservadas,4 sin consumidor,1 comercial excluida (no obsoleta). Corrige estado de fuentes fuera de cohorte; resumen pierde campos ampliados conservando200 básico. QA dirigida y auditoría, sin repetir14-capability exercise; demo nuevo17 y anterior14 preservados. COMPLETE_SUPPORTED_CAPABILITIES_ISOLATED; sin producción/8091 ni datos médicos originales modificados. Puntero viejo ASE-INT01 desaparecido, causa no atribuida; listeners/worktrees originales iguales. Visual PENDING.
+
+## INTERFACE-HUB01 — navegación funcional; Identity médica bloqueada
+
+[Contrato y guía](identity/INTERFACE-HUB01.md), baseline `4fc81b61`: hub propietario loopback, barra sólo en Chromium administrado, apertura/enfoque Director/Asesor con sesiones independientes y selección Leticia conservada. No cambia routers ni grants CLOSURE02/UX05. Cuenta preferida con membresía médica legítima; login original503 por directorio privado de notificaciones ausente, no restaurado. Médico/operador/público/proveedor quedan restringidos según sus requisitos; sin autenticación médica ni comparación completa declaradas. QA dirigida, sin14-grant exercise; original intacto, producción inactiva, visual PENDING.

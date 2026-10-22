@@ -445,3 +445,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## CLOSURE02 — ID-04/05/07, ORG-01 y COM-10
 
 [Sucesor acotado](../identity/ADVISOR-CAPABILITY-CLOSURE02.md): fuentes y C4 reutilizan pantalla original con Advisor/grant/cohorte; claims de organizaciones conectan el writer existente mediante adaptador exact-case, sin confundir ownership médico. Corrige lectura NOT_REQUESTED de fuentes fuera de perfil permitido. PendingSummary existente filtra campos ampliados tras revocación; las lecturas independientes conservan200. Matriz26 sin superposición,17 de alcance conectadas, cuatro genéricas sin consumidor, cuatro reservadas y una comercial excluida. QA aislada dirigida; no cambia estado operacional real ni catálogo.
+
+## INTERFACE-HUB01 — navegación de desarrollo, sin capacidades nuevas
+
+[Contrato](../identity/INTERFACE-HUB01.md): ID-02/03 y COM-10 reutilizados en sesiones independientes; componente sólo en navegador de revisión y controlador de enums, no API de producto. Director/Asesor operativos; Médico con membresía legítima pero Identity original503. PUB-02/OP-01/ORG-01 conservan gates y contextos faltantes. QA dirigida no acredita operación clínica ni publicación; fuentes/grants originales intactos.
