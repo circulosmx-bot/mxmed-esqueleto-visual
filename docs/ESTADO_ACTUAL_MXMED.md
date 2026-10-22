@@ -308,3 +308,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## INTERFACE-HUB01 — navegación funcional; Identity médica bloqueada
 
 [Contrato y guía](identity/INTERFACE-HUB01.md), baseline `4fc81b61`: hub propietario loopback, barra sólo en Chromium administrado, apertura/enfoque Director/Asesor con sesiones independientes y selección Leticia conservada. No cambia routers ni grants CLOSURE02/UX05. Cuenta preferida con membresía médica legítima; login original503 por directorio privado de notificaciones ausente, no restaurado. Médico/operador/público/proveedor quedan restringidos según sus requisitos; sin autenticación médica ni comparación completa declaradas. QA dirigida, sin14-grant exercise; original intacto, producción inactiva, visual PENDING.
+
+## IDENTITY-RECOVERY01 — Identity local recuperada, login manual pendiente
+
+[Sucesor del bloqueo503](identity/INTERFACE-HUB01.md#identity-recovery01--recuperación-local-autorizada-2026-10-22), baseline `3ebd8af4`: autorización expresa aplicada sólo al directorio privado de notificaciones ausente, creado con UID501/0700. Bootstrap Identity completo y login200 verificados; privado redirige a login y anónimo401. Sin cambios de código/configuración ni reinicios. Hub original abre ventana médica independiente; Director/Asesor conservados. Membresía colaborador de Leticia revalidada, autenticación interactiva y comparación de consultorios pendientes. Registros/listeners originales preservados; no producción.

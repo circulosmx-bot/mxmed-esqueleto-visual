@@ -1,0 +1,23 @@
+{
+  "pid_unchanged": true,
+  "hub_url": "https://127.0.0.1:57452/",
+  "windows": [
+    {
+      "id": "director",
+      "open": true,
+      "enabled": true
+    },
+    {
+      "id": "advisor",
+      "open": true,
+      "enabled": true
+    },
+    {
+      "id": "physician",
+      "open": true,
+      "enabled": true
+    }
+  ],
+  "medical_authentication_claimed": false,
+  "staff_token_validity_retested": false
+}

@@ -1,0 +1,41 @@
+{
+  "preferred_account_membership": {
+    "account_active": true,
+    "email_verified": true,
+    "role": "collaborator",
+    "scope": "profile",
+    "membership_active": true,
+    "assignment_source": "manual_review",
+    "profile_ref": "mxmed-local-development:1",
+    "credential_inspected": false
+  },
+  "unique_medical_membership": true,
+  "publication_gates": [
+    [
+      "candidate",
+      0,
+      0
+    ]
+  ],
+  "original_records": {
+    "profiles_doctors": {
+      "sha256": "997feb5a5d7526ce0df49996ed0abb5a755a8cd9c8ed30d056ed2b6f5ba6d850",
+      "matches_pre_UX05": true
+    },
+    "consultorios": {
+      "sha256": "d1b79d4cb17634687c6090a80247300693f72610a193e42b2b494cab4e00b473",
+      "matches_pre_UX05": true
+    },
+    "auth_account_memberships": {
+      "sha256": "6adc928e55f6d06dacd3f22b324353c347bd1e584eb55c35a2cb86cc25a0346b",
+      "matches_pre_UX05": true
+    },
+    "media_assets": {
+      "sha256": "e47edb83e3022378f582fdf1f5ad57e5568ee6e68e73ff4592b8daf4ae51cba7",
+      "matches_pre_UX05": true
+    }
+  },
+  "original_head": "f92f37f1958af5140a96c04cb52c5c1ce7af8e01",
+  "original_worktree_clean": true,
+  "listeners": "COMMAND   PID           USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nphp     90106 circulodigital    5u  IPv4 0x21faabd412b2e6b1      0t0  TCP 127.0.0.1:8091 (LISTEN)\nPython  93582 circulodigital    4u  IPv4 0xa7fe1378e9529dcf      0t0  TCP 127.0.0.1:8443 (LISTEN)\n"
+}

@@ -1,0 +1,9 @@
+{
+  "private_redirect_to_canonical_login": true,
+  "http_200": true,
+  "email_field_visible": true,
+  "password_field_visible": true,
+  "no_authenticated_medical_bootstrap": true,
+  "anonymous_current_session_denied": true,
+  "medical_context_has_no_staff_cookies": true
+}

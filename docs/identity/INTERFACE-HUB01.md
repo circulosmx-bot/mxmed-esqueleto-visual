@@ -74,3 +74,34 @@ python3 /Users/circulodigital/Documents/GitHub/mxmed-advisor-capability-closure0
 - CONTEXT_SYNC_STATUS: PASS_UPDATED.
 - DOCUMENTATION_COMMIT: incluido en el commit de INTERFACE-HUB01; consultar Git de este archivo.
 - REMAINING_CONTEXT_GAPS: login/comparación médica pendiente por503; operador/proveedor sin contexto preparado; publicación deshabilitada; aceptación visual PENDING.
+
+## IDENTITY-RECOVERY01 — recuperación local autorizada, 2026-10-22
+
+**Sucesor del bloqueo503 anterior.** Baseline `3ebd8af4f21dc323451796ba7f1e2acf597b97b4`; rama documental `feature/mxmed-identity-recovery01`. El Director autorizó exclusivamente reparar el prerrequisito local verificado, sin cambiar cuentas, membresías, reglas de autenticación ni servicios originales.
+
+PRODUCT_POLICY: autorización expresa para restaurar directorio/configuración local mínima; login médico exclusivamente interactivo. SOURCE_IMPLEMENTATION: **sin cambios de código ni configuración**. Se comprobó el path canónico configurado `/tmp/mxmed-normal-local-identity-501`, ausente y sin symlink; se creó sólo ese directorio con propietario UID501 y modo0700, fuera del document root. No existían archivos en ese directorio ausente; no se borraron, reemplazaron ni recuperaron notificaciones históricas. El fallo canónico era `normal_local_notification_path_required`; log reciente registraba503 sin fatal. Después de crear el directorio, la composición Identity completa devuelve `IDENTITY_READY`, incluyendo verificaciones de schema/conexión y store. No hubo reinicios, migraciones, DDL, nuevas credenciales ni cambios de configuración.
+
+CONNECTIVITY: login original200 y `/private-app.php` redirige al formulario canónico. El hub existente, mismo PID92727 y URL `https://127.0.0.1:57452/`, detectó la recuperación mediante su probe periódico y abrió la ventana médica independiente. No fue necesario modificarlo ni cerrar/recrear las ventanas Director/Asesor. Sus sesiones no se reautenticaron ni se amplió su vigencia; el status visual heredado no se usa como prueba nueva de vigencia del token. La sesión médica queda **PENDING_MANUAL_LOGIN**, no autenticada por Codex. La membresía única activa de colaborador de la cuenta preferida para doctor1 se revalidó por lectura; no implica facultades owner-only.
+
+VERIFICATION: [Chromium dirigido](../evidence/identity-recovery01/browser.json), siete checks:200, campos email/password visibles, redirección privada al login, bootstrap médico ausente sin autenticación, current-session anónimo401 y contexto sin cookies staff. [Preservación](../evidence/identity-recovery01/preservation.json): fingerprints originales iguales a UX05, membresía/gates y HEAD/listeners originales intactos. [Estado del hub](../evidence/identity-recovery01/hub-status.json): ventanas previas conservadas y ventana médica abierta. MFA, CSRF, reglas de membresía y TTL conservan exactamente su código original; no se ejecutó un reto MFA real ni se probaron credenciales reales. No se repitieron suites históricas.
+
+OPERATIONAL_STATUS: Identity normal-local recuperada mediante reparación autorizada del filesystem, **no activación productiva**. Login manual y comparación posterior (nombre/especialidad/retrato/tres consultorios/domicilios/C.P./rol) pendientes. La existencia de datos en la proyección administrativa no acredita haberlos comparado contra una sesión médica autenticada. Ningún registro médico, clínico, relación o grant modificado. La causa de la desaparición previa del directorio no se ha establecido; no se instala un daemon ni mecanismo de recreación automática.
+
+Reabrir/enfocar la ventana preparada:
+```sh
+python3 /Users/circulodigital/Documents/GitHub/mxmed-interface-hub01/scripts/interface-hub01.py /tmp/mxmed-ase-adm02imp01-83vg864p open-physician
+```
+El Director debe usar su contraseña habitual exclusivamente en `https://localhost:8443/public/identity/acceso.php`, con continuación hacia `/private-app.php`. No compartirla por chat. La infraestructura staff/hub conserva su expiración2026-10-22T23:56:19-06:00; no extiende Identity.
+
+### CTX-SYNC01 — recuperación
+
+- CONTEXT_BASELINE: `3ebd8af4f21dc323451796ba7f1e2acf597b97b4`.
+- AFFECTED_CAPABILITY_IDS: ID-02, ID-03; sin facultades nuevas.
+- AFFECTED_JOURNEY_IDS: J07 frontera médica y navegación J09.
+- AFFECTED_DATA_OBJECTS: directorio privado de notificaciones local; ninguna mutación de negocio.
+- AFFECTED_CONTEXT_FILES: este contrato/guía, estado actual y evidencia acotada.
+- CONTEXT_CHANGES_IMPLEMENTED: bloqueo503 sucedido por recuperación verificada; autenticación manual pendiente explícita.
+- CONTEXT_VERIFICATION: bootstrap completo, HTTP, Chromium, membresía/fingerprints y listeners originales.
+- CONTEXT_SYNC_STATUS: PASS_UPDATED.
+- DOCUMENTATION_COMMIT: commit documental IDENTITY-RECOVERY01, consultar Git de este archivo.
+- REMAINING_CONTEXT_GAPS: autenticación interactiva y comparación médica pendientes; causa histórica de desaparición no determinada.
