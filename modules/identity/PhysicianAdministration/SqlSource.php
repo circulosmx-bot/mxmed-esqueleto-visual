@@ -25,6 +25,11 @@ final class SqlSource implements Source
         $r=$this->read(false,function($p)use($id){$r=$this->rows($p,'SELECT doctor_id,display_name,specialty_primary,profile_status FROM '.$this->prefix.'_profiles WHERE doctor_id=?',[$id]);if(!$r)return [];
             $r[0]['consultorios']=$this->rows($p,'SELECT consultorio_id,titulo,municipio,estado FROM '.$this->prefix.'_locations WHERE doctor_id=? ORDER BY consultorio_id LIMIT 21',[$id]);return $r;});return $r[0]??null;
     }
+    public function locations(string $id,string $after,int $limit):array
+    {
+        if($limit<1||$limit>20)throw new \InvalidArgumentException('admin_request_invalid');
+        return $this->read(false,fn($p)=>$this->rows($p,'SELECT consultorio_id,titulo,municipio,estado FROM '.$this->prefix.'_locations WHERE doctor_id=? AND consultorio_id>? ORDER BY consultorio_id LIMIT '.($limit+1),[$id,$after]));
+    }
     public function operators(string $id):array
     {
         return $this->read(true,function($p)use($id){

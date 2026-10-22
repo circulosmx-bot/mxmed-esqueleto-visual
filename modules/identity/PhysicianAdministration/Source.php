@@ -6,5 +6,6 @@ interface Source
 {
     public function search(array $ids,string $query,string $after,int $limit):array;
     public function summary(string $id):?array;
+    public function locations(string $id,string $after,int $limit):array;
     public function operators(string $id):array;
 }

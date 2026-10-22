@@ -288,3 +288,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## CROSS-SURFACE-LINK03 — lector administrativo con fuente local restringida
 
 [Contrato y evidencia LINK03](identity/CROSS-SURFACE-LINK03.md), baseline `7b3675d1`: sustituye el bloqueo LINK02 mediante provisión explícitamente autorizada de dos lectores/ tres vistas locales. Reader/Source reutilizable, `physician_administrative_read`, ámbito exacto y soporte de relaciones independiente; búsqueda paginada, origen calificado, auditoría y revocación. 90 verificaciones dirigidas; preview staff sintético con datos administrativos originales restringidos (no exclusivamente sintético). Original 8091 y registros intactos. No producción; publicación/invitaciones/delegaciones originales no integradas, aceptación visual pendiente.
+
+## CROSS-SURFACE-UX04 — búsqueda exclusiva y Consultorios
+
+[Contrato UX04](identity/CROSS-SURFACE-UX04.md), baseline `6ad0a0fb`: separación explícita búsqueda/trabajo, avatar elegible o neutral y lector paginado de sedes con `physician_locations_read`/ámbito independiente. Reutiliza vistas LINK03 sin DDL/DML original. Índice distingue dos superficies ejercitables y cuatro contextos bloqueados; no suplantación ni publicación inferida. 51 verificaciones dirigidas PASS (Chromium/WebKit, revocación y aislamiento); aceptación visual pendiente, sin producción/8091.

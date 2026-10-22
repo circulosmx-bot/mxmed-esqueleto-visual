@@ -433,3 +433,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## CROSS-SURFACE-LINK03 — descubrimiento administrativo y lectura de relaciones
 
 [Contrato](../identity/CROSS-SURFACE-LINK03.md). PRODUCT_POLICY: nueva capacidad `physician_administrative_read` no concede operadores, evidencia ni clínica. SOURCE_IMPLEMENTATION: Reader/Source/SqlSource, catálogo/matriz, búsqueda paginada; OP-01..03 conservan writers y límites. CONNECTIVITY: adapter local restringido por origen/recurso, nunca normal automático. VERIFICATION: 90 checks acotados, Chromium y SQL. OPERATIONAL_STATUS: revisión aislada con lecturas administrativas originales; no producción ni publicación pública acreditada.
+
+## CROSS-SURFACE-UX04 — consulta administrativa de sedes
+
+[Contrato](../identity/CROSS-SURFACE-UX04.md). Mantiene OP-01..03 y sus writers; añade `physician_locations_read` sobre el catálogo/matriz existentes. Consulta paginada por origen/recurso, sin Agenda ni mutación. Búsqueda exclusiva/imagen pública elegible o neutral. Conectividad sólo owned; cuatro superficies sin sesión/contexto legítimo permanecen bloqueadas.

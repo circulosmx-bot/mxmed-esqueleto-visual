@@ -254,3 +254,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## CROSS-SURFACE-LINK03 — lector administrativo y adapter temporal
 
 [Contrato, provisión v1, límites, pruebas y revocación](identity/CROSS-SURFACE-LINK03.md). Sucesor funcional de LINK01/02: descubrimiento independiente de pendientes, grant explícito y fuente calificada; composición canónica reutilizable, adapter local sólo owned.
+
+## CROSS-SURFACE-UX04 — workspace y sedes autorizadas
+
+[Contrato, comparación y límites UX04](identity/CROSS-SURFACE-UX04.md): sucesor UX de LINK03, búsqueda exclusiva, avatar y Consultorios con grant/ámbito independientes; índice veraz sin trasladar autoridad entre superficies.

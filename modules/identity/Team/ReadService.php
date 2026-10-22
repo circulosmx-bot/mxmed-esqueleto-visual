@@ -105,7 +105,7 @@ final class ReadService
     {
         if(!$authority['mutations_enabled']||$row['account_id']===$viewer||$row['governance_class']!=='ADVISOR'||$row['status']!=='ACTIVE'||$row['account_status']!=='active')return [];
         return array_keys(array_filter(InternalCapabilityCatalog::all(),static fn($c)=>$c['kind']==='operational'&&$c['delegable']
-            &&(in_array($c['domain'],['media_review','physician_requests','physician_operator_support','physician_accreditation','professional_sources','provider_claim','provider_commercial'],true)||$c['key']==='physician_administrative_read')
+            &&(in_array($c['domain'],['media_review','physician_requests','physician_operator_support','physician_accreditation','professional_sources','provider_claim','provider_commercial'],true)||in_array($c['key'],['physician_administrative_read','physician_locations_read'],true))
             &&($authority['can_read_masters']||in_array($c['key'],$authority['delegations'],true))));
     }
 

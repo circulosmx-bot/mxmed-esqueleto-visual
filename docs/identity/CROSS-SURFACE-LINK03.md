@@ -59,3 +59,5 @@ El comando verifica el UUID/recibo y bloquea ambos principales propios. Nuevas c
 ## OPERATIONAL_STATUS / pendientes de producción
 
 Integración local disponible para revisión; no despliegue ni merge. Médico/Operador/Público/Proveedor no se presentan como cuatro contextos browser integrados. Pendientes: aceptación visual, composición de producción explícita con ámbito canónico operativo, política/retención/volumen de auditoría de consultas, medición multiusuario real, provisión y recuperación por entorno, publicación pública y proyecciones adicionales separadas si se autorizan. No se afirma readiness ni carga de miles de usuarios.
+
+Sucesor de UX y lectura de sedes: [CROSS-SURFACE-UX04](CROSS-SURFACE-UX04.md). Separa la lista detallada del resumen general mediante permiso/ámbito propio; conserva esta provisión v1 sin ampliarla.

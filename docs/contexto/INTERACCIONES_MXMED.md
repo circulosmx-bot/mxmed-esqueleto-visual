@@ -300,3 +300,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## CROSS-SURFACE-LINK03 — extensión de consulta en la frontera J07
 
 [Contrato](../identity/CROSS-SURFACE-LINK03.md): Director → writer canónico grant Advisor → Identity/staff/grant/ámbito → fuente administrativa por origen → workspace. Soporte de relaciones requiere permiso separado; no ocupa plaza ni activa OP-01..03. Auditoría en fuente staff; lectura local independiente, sin atomicidad entre bases. Fallo de origen no cae a un ID sintético; revocación/reselección limpian contexto. Sin cambios a writers J07 ni conexión clínica.
+
+## CROSS-SURFACE-UX04 — fronteras J04/J07/J09
+
+[Contrato](../identity/CROSS-SURFACE-UX04.md): Director concede grant → Advisor con ámbito explícito → admin_locations → vista administrativa de consultorios. J04 conserva escritor original; no Agenda/pacientes. J07 conserva autoridad owner/operador; J09 conserva Requests/Media y confirma borradores antes de limpiar contexto. Ninguna sesión staff se transforma en sesión médica/proveedor.

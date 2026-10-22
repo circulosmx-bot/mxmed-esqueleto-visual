@@ -234,3 +234,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## CROSS-SURFACE-LINK03 — proyecciones locales v1
 
 [Contrato y revocación](../identity/CROSS-SURFACE-LINK03.md). Dos principales loopback/ tres vistas administrativas no actualizables sobre perfiles, consultorios y relaciones: configuración de entorno versionada, separada de migraciones de aplicación. Sin tablas nuevas en origen ni copias materializadas persistentes; sin DML médico. Recibo privado permite recuperación/repetición. Los tests de paginación crean únicamente tablas QA sintéticas en la base desechable. El censo histórico de este mapa no se regenera.
+
+## CROSS-SURFACE-UX04 — consumo de locations v1
+
+[Contrato](../identity/CROSS-SURFACE-UX04.md). Reutiliza exactamente la vista locations y credencial limitada LINK03; sin ALTER/GRANT/DDL/DML original ni copias de sedes. Nuevo grant lógico individual en catálogo canónico, audit de consultas en base staff sintética; no nueva tabla ni migración.

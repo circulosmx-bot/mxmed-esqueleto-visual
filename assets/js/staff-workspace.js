@@ -5,6 +5,7 @@
   const labels = {DOCTOR_PROFILE_PHOTO:'Foto de perfil',PHYSICIAN_PERSONAL_LOGO:'Logotipo profesional',DOCTOR_GALLERY:'Foto de galería'};
   const statuses = {draft:'Borrador',published:'Publicado',active:'Activo',inactive:'Inactivo',archived:'Archivado',hidden:'No publicado',pending_review:'En revisión',suspended:'Suspendido',removed:'Retirado',DRAFT:'Borrador',PUBLISHED:'Publicado',ACTIVE:'Activo',INACTIVE:'Inactivo',ARCHIVED:'Archivado',HIDDEN:'No publicado',PENDING_REVIEW:'En revisión',SUSPENDED:'Suspendido',REMOVED:'Retirado'};
   let state = null, doctor = null, section = 'summary', item = null, options = {}, busy = false, expired = false;
+  let workspaceMode='none', locationsEpoch=0;
   let administrative=false, administrativePage={physicians:[],next_after:null};
   const externalRef=id=>typeof id==='string'&&id.includes(':');
   let directoryMode = 'pending', directoryEpoch = 0, contextEpoch = 0, itemEpoch = 0;
@@ -33,7 +34,7 @@
   function resetDraft() {$('replacement-form').reset();$('replacement-form').hidden=true;$('replacement-count').textContent='0 / 400 caracteres';$('corrected-file').value='';$('save-corrected').hidden=true;resetDecision();}
   function releaseImages() {for(const url of [reviewUrl,proposalUrl])if(url)URL.revokeObjectURL(url);reviewUrl=null;proposalUrl=null;reviewLoaded=false;proposalLoaded=false;if(!$('review-image'))return;$('review-image').removeAttribute('src');$('review-image').hidden=true;$('proposal-image').removeAttribute('src');$('proposal-panel').hidden=true;$('accept-improvement').hidden=true;$('discard-improvement').hidden=true;}
   function clearItem() {itemEpoch++;itemController?.abort();item=null;options={};releaseImages();resetDraft();$('media-detail').hidden=true;$('media-items').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));}
-  function clearContext() {administrative=false;operatorEpoch++;$('operators-content').replaceChildren();contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('physician-description').textContent='';$('physician-statuses').replaceChildren();$('summary-facts').replaceChildren();$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
+  function clearContext() {if($('development-physician-context'))$('development-physician-context').textContent='Sin perfil médico seleccionado.';$('physician-portrait').onload=null;$('physician-portrait').removeAttribute('src');$('physician-portrait').hidden=true;$('physician-avatar').hidden=false;workspaceMode='none';locationsEpoch++;$('offices-content').replaceChildren();administrative=false;operatorEpoch++;$('operators-content').replaceChildren();contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('physician-description').textContent='';$('physician-statuses').replaceChildren();$('summary-facts').replaceChildren();$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
   function sessionFailure(status) {
     expired=true;directoryEpoch++;directoryController?.abort();clearContext();state=null;$('discovery-list').replaceChildren();$('discovery').hidden=true;$('utilities').hidden=true;$('no-selection').hidden=true;$('pending-count').textContent='0';$('session-recovery').hidden=false;
     $('session-message').textContent=status===401?'Tu sesión terminó. Inicia sesión nuevamente para continuar.':'Tu acceso al equipo interno cambió. Vuelve a iniciar sesión o consulta al Director.';
@@ -128,8 +129,8 @@
       }}
     catch(error){if(error.name==='AbortError'||epoch!==directoryEpoch)return;if(error.status===403){sessionFailure(403);return;}$('discovery-message').textContent='No fue posible actualizar la lista. Intenta nuevamente.';$('discovery-list').setAttribute('aria-busy','false');}
   }
-  function collapseDiscovery() {directoryPositions[directoryMode]=$('discovery-list').scrollTop;$('discovery').hidden=true;$('pending-toggle').setAttribute('aria-expanded','false');$('search-toggle').setAttribute('aria-expanded','false');$('search-toggle').hidden=!contextSelected();$('physician-search-form').hidden=contextSelected();$('utilities').classList.toggle('has-selection',contextSelected());}
-  function showDiscovery(mode) {directoryPositions[directoryMode]=$('discovery-list').scrollTop;directoryMode=mode;$('discovery').hidden=false;$('pending-toggle').setAttribute('aria-expanded',mode==='pending'?'true':'false');$('search-toggle').setAttribute('aria-expanded',mode==='search'?'true':'false');$('physician-search-form').hidden=contextSelected()&&mode!=='search';$('close-discovery').hidden=!contextSelected();loadDirectory(mode==='search'?lastQuery:'');}
+  function collapseDiscovery() {workspaceMode=contextSelected()?'work':'none';$('physician-workspace').hidden=workspaceMode!=='work';directoryPositions[directoryMode]=$('discovery-list').scrollTop;$('discovery').hidden=true;$('pending-toggle').setAttribute('aria-expanded','false');$('search-toggle').setAttribute('aria-expanded','false');$('search-toggle').hidden=!contextSelected();$('physician-search-form').hidden=contextSelected();$('utilities').classList.toggle('has-selection',contextSelected());}
+  function showDiscovery(mode) {if(busy||!leaveDraft())return;clearContext();workspaceMode='search';$('no-selection').hidden=true;directoryPositions[directoryMode]=$('discovery-list').scrollTop;directoryMode=mode;$('discovery').hidden=false;$('pending-toggle').setAttribute('aria-expanded',mode==='pending'?'true':'false');$('search-toggle').setAttribute('aria-expanded',mode==='search'?'true':'false');$('physician-search-form').hidden=contextSelected()&&mode!=='search';$('close-discovery').hidden=!contextSelected();loadDirectory(mode==='search'?lastQuery:'');}
   async function selectPhysician(id, submission=null) {
     if(busy||!leaveDraft())return;clearContext();doctor=id;const epoch=++contextEpoch;contextController=new AbortController();$('no-selection').hidden=true;say('Cargando perfil…');
     try {
@@ -148,14 +149,17 @@
   }
   async function refreshAdministrative(){
     const ref=doctor,epoch=contextEpoch;if(!administrative)return;
-    try{const [response,counts]=await Promise.all([json(requestsPath('admin_summary',{profile_ref:ref})),loadPending(null)]);const data=response.data;if(epoch!==contextEpoch||doctor!==ref)return;pendingState=counts;pendingContext=null;updatePendingBadge();if(data.physician.doctor_id!==ref)throw new Error('context');state=data;renderPanels();renderTabs();if(section==='operators')loadOperators();}
+    try{const [response,counts]=await Promise.all([json(requestsPath('admin_summary',{profile_ref:ref})),loadPending(null)]);const data=response.data;if(epoch!==contextEpoch||doctor!==ref)return;pendingState=counts;pendingContext=null;updatePendingBadge();if(data.physician.doctor_id!==ref)throw new Error('context');state=data;renderPanels();renderTabs();if(section==='operators')loadOperators();if(section==='offices')loadLocations();}
     catch(e){if(epoch!==contextEpoch)return;clearContext();say('La fuente o tu autorización ya no están disponibles. Vuelve a buscar un perfil autorizado.');}
   }
   function pendingButton(record) {const button=node('button','task-row');button.type='button';button.dataset.submissionId=record.submission_id;button.dataset.doctorId=doctor;button.append(node('span','',labels[record.purpose]||record.label||'Imagen pendiente'),node('span','','Revisar imagen →'));button.onclick=async()=>{if(busy||!leaveDraft())return;resetDraft();section='images';renderTabs();showSection();await selectItem(record,false);};return button;}
   function renderPanels() {
-    updateContext(state);const p=state.physician,facts=$('summary-facts');facts.replaceChildren();const requests=contextRequests();
+    updateContext(state);const portrait=$('physician-portrait');portrait.hidden=true;portrait.removeAttribute('src');$('physician-avatar').hidden=false;
+    const publishedPortrait=(state.published_assets||[]).find(v=>v.purpose==='DOCTOR_PROFILE_PHOTO'&&v.public_url);
+    if(!administrative&&publishedPortrait){try{const url=new URL(publishedPortrait.public_url,location.origin);if(url.origin===location.origin){const portraitContext=contextEpoch,portraitDoctor=doctor;portrait.onload=()=>{if(contextEpoch!==portraitContext||doctor!==portraitDoctor||workspaceMode!=='work')return;portrait.hidden=false;$('physician-avatar').hidden=true;};portrait.onerror=()=>{portrait.hidden=true;$('physician-avatar').hidden=false;};portrait.src=url.href;}}catch{}}
+    const p=state.physician,facts=$('summary-facts');facts.replaceChildren();const requests=contextRequests();
     for(const [label,value] of [['Estado del perfil',p?(statuses[p.status]||p.status||'Sin estado registrado'):'Sin perfil operativo'],['Pendientes visibles',contextPendingCount()===null?'Sin verificar':String(contextPendingCount())]]){const fact=node('div','fact');fact.append(node('span','',label),node('strong','',value));facts.append(fact);}
-    if(administrative){for(const [label,value] of [['Origen',p.origin],['Identificador canónico',p.canonical_id],['Publicación','No verificada por esta proyección'],['Consultorios',p.consultorios.length+(p.consultorios_has_more?' o más':'')]]){const f=node('div','fact');f.append(node('span','',label),node('strong','',String(value)));facts.append(f);}for(const c of p.consultorios)facts.append(node('p','',`${c.titulo||'Consultorio'} · ${[c.municipio,c.estado].filter(Boolean).join(', ')}`));}
+    if(administrative){for(const [label,value] of [['Origen',p.origin],['Identificador canónico',p.canonical_id],['Publicación','No verificada por esta proyección'],['Consultorios',p.consultorios_count+(p.consultorios_has_more?' o más':'')]]){const f=node('div','fact');f.append(node('span','',label),node('strong','',String(value)));facts.append(f);}}
     const tasks=$('summary-pending');tasks.replaceChildren();for(const record of state.pending_items)tasks.append(pendingButton(record));for(const record of requests.filter(r=>r.actionable))tasks.append(requestButton(record));if(!tasks.childElementCount)tasks.append(node('p','muted',administrative?'Consulta administrativa independiente. Los pendientes de esta fuente no están integrados.':'No hay pendientes de revisión para este contexto.'));
     const activity=$('activity-list');activity.replaceChildren();$('recorded-activity').hidden=!state.activity?.length;for(const record of state.activity||[])activity.append(node('p','',`${record.label||labels[record.purpose]||'Imagen'} · ${({APPROVED:'Aprobada',NEEDS_WORK:'Otra imagen solicitada',REJECTED:'Rechazada',WITHDRAWN:'Retirada'}[record.status]||record.status)} · ${dateLabel(record.recorded_at)}`));
     const media=$('media-items');media.replaceChildren();$('images-empty').hidden=state.pending_items.length>0;
@@ -164,9 +168,20 @@
     for(const record of state.published_assets||[]){const card=node('div','published-item');if(typeof record.public_url==='string'&&record.public_url){try{const url=new URL(record.public_url,location.origin);if(url.origin===location.origin){const image=node('img');image.src=url.href;image.alt=record.alt_text||labels[record.purpose]||'Imagen publicada';image.loading='lazy';card.append(image);}}catch{/* Invalid public projections are not requested. */}}card.append(node('span','',labels[record.purpose]||'Imagen publicada'));published.append(card);}
     renderRequestList();showSection();
   }
+  async function loadLocations(after='') {
+    if(workspaceMode!=='work'||!administrative||section!=='offices')return;
+    const epoch=++locationsEpoch,context=contextEpoch,ref=doctor,host=$('offices-content');host.replaceChildren();$('offices-message').textContent='Consultando sedes autorizadas…';
+    try{const data=(await json(requestsPath('admin_locations',{profile_ref:ref,after}))).data;
+      if(epoch!==locationsEpoch||context!==contextEpoch||doctor!==ref||workspaceMode!=='work'||section!=='offices')return;
+      if(data.doctor_id!==ref)throw new Error('context');
+      for(const c of data.locations){const card=node('article','fact');card.append(node('strong','',c.titulo||'Sede sin nombre registrado'),node('p','',[c.municipio,c.estado].filter(Boolean).join(', ')));host.append(card);}
+      $('offices-message').textContent=data.locations.length?'Sedes de la fuente administrativa autorizada. Dirección, contacto y estado operativo no disponibles en esta proyección.':'No hay sedes en esta página de la fuente autorizada.';
+      if(data.next_after){const next=node('button','','Ver siguientes sedes');next.type='button';next.onclick=()=>loadLocations(data.next_after);host.append(next);}
+    }catch(e){if(epoch!==locationsEpoch||context!==contextEpoch)return;host.replaceChildren();$('offices-message').textContent=e.status===403?'Tu permiso o ámbito ya no autoriza consultar estas sedes.':'No fue posible consultar las sedes. No se interpreta como una lista vacía.';}
+  }
   function showSection() {
     const entry=workspaceSections().find(v=>v.id===section),restricted=entry?.restricted;
-    for(const id of ['summary','requests','images','history','operators'])$(id+'-panel').hidden=restricted||section!==id;
+    for(const id of ['summary','requests','images','history','operators','offices'])$(id+'-panel').hidden=restricted||section!==id;
     $('restricted-panel').hidden=!restricted;
     if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=administrative?'Esta sección no tiene un lector autorizado para el origen seleccionado. No se consulta otro perfil.':['requests','images','history','operators'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'Pendiente de integración para el Asesor. Esta área aún no permite consultar ni modificar información desde este panel. Las funciones de médico, operador y proveedor conservan sus accesos independientes.';
       const n=sectionCount(section);$('restricted-summary').textContent=n>0?`${n} ${n===1?'pendiente visible':'pendientes visibles'} bajo tu permiso de resumen. Solicita atención a una persona autorizada mediante los canales habituales.`:'No hay un resumen de pendientes disponible para tu cuenta en esta sección.';
@@ -176,7 +191,7 @@
   const tabCatalog=[['summary','Resumen'],['requests','Solicitudes'],['profile','Perfil'],['accreditation','Acreditación'],['offices','Consultorios'],['services','Servicios y atención'],['images','Imágenes'],['agenda','Agenda'],['operators','Operadores y colaboradores'],['plan','Plan y servicios contratados'],['billing','Facturación y pagos'],['reviews','Opiniones'],['seo','SEO'],['account','Soporte de cuenta'],['history','Historial']];
   function workspaceSections() {
     if(!contextSelected())return [];
-    if(administrative)return tabCatalog.map(([id,label])=>({id,label,restricted:id!=='summary'&&!(id==='operators'&&state?.permissions?.operators)}));
+    if(administrative)return tabCatalog.map(([id,label])=>({id,label,restricted:id!=='summary'&&!(id==='operators'&&state?.permissions?.operators)&&!(id==='offices'&&state?.permissions?.offices)}));
     return tabCatalog.map(([id,label])=>({id,label,restricted:id!=='summary'&&!(pendingContext?.permissions?.[id]??(id==='images'?doctor&&state?.sections?.some(t=>t.id==='images'):id==='requests'?contextRequests().length||selectedRequestId:id==='history'?contextRequests().length||state?.sections?.some(t=>t.id==='images'):false))}));
   }
   function sectionCount(id){return pendingContext?.sections?.[id]?.visible_count||0;}
@@ -195,7 +210,7 @@
     tabs.scrollLeft=scroll;$('more-sections').hidden=false;showSection();
   }
 
-  function switchSection(id) {if(busy||id===section){closeMore();return;}if(!leaveDraft())return;resetDraft();section=id;renderTabs();showSection();if(!workspaceSections().find(v=>v.id===id)?.restricted){if(id==='history')loadHistory();if(id==='operators')loadOperators();if(id==='requests'&&selectedRequestId)refreshRequest();}const tab=$('tab-'+id);(tab&&!tab.hidden?tab:$('more-toggle')).focus({preventScroll:true});if(tab){const tabs=$('section-tabs');if(tab.offsetLeft<tabs.scrollLeft)tabs.scrollLeft=tab.offsetLeft;else if(tab.offsetLeft+tab.offsetWidth>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=tab.offsetLeft+tab.offsetWidth-tabs.clientWidth;}}
+  function switchSection(id) {if(workspaceMode!=='work'||busy||id===section){closeMore();return;}if(!leaveDraft())return;resetDraft();section=id;renderTabs();showSection();if(!workspaceSections().find(v=>v.id===id)?.restricted){if(id==='history')loadHistory();if(id==='operators')loadOperators();if(id==='offices')loadLocations();if(id==='requests'&&selectedRequestId)refreshRequest();}const tab=$('tab-'+id);(tab&&!tab.hidden?tab:$('more-toggle')).focus({preventScroll:true});if(tab){const tabs=$('section-tabs');if(tab.offsetLeft<tabs.scrollLeft)tabs.scrollLeft=tab.offsetLeft;else if(tab.offsetLeft+tab.offsetWidth>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=tab.offsetLeft+tab.offsetWidth-tabs.clientWidth;}}
   function requestType(type) {return /CLAIM/.test(type||'')?'Reclamo de perfil existente':'Solicitud de perfil nuevo';}
   function contextRequests() {return (requestState.requests||[]).filter(r=>doctor?r.doctor_id===doctor:r.request_id===selectedRequestId);}
   function contextPendingCount() {return pendingContext?.visible_count??null;}
@@ -295,7 +310,7 @@
     }catch(error){if(error.name==='AbortError'||epoch!==contextEpoch||revision!==requestEpoch)return;resetDecision();closeEvidence();requestDetail=null;$('request-detail').hidden=true;if(error.status===403||error.status===404){clearContext();showDiscovery('pending');}say('No fue posible revalidar el acceso a la solicitud. Actualiza tus pendientes.');}
   }
   async function openEvidence(evidence) {
-    if(busy||!requestDetail)return;let url;try{url=new URL(evidence.url,location.origin);if(url.origin!==location.origin||url.pathname!==ROOT+'requests.php')throw new Error('evidence');}catch{return;}
+    if(workspaceMode!=='work'||busy||!requestDetail)return;let url;try{url=new URL(evidence.url,location.origin);if(url.origin!==location.origin||url.pathname!==ROOT+'requests.php')throw new Error('evidence');}catch{return;}
     closeEvidence();const revision=++evidenceEpoch,id=selectedRequestId,epoch=contextEpoch;evidenceController=new AbortController();
     $('evidence-title').textContent=evidence.label||'Evidencia de la solicitud';$('evidence-context').textContent=`${$('physician-name').textContent} · Solicitud ${id}`;$('evidence-message').textContent='Cargando evidencia protegida…';$('evidence-dialog').showModal();
     try {const response=await request(url.href,{signal:evidenceController.signal});if(!response.ok)throw new Error('evidence');const mime=(response.headers.get('Content-Type')||'').split(';')[0];if(!['image/jpeg','image/png','image/webp'].includes(mime))throw new Error('type');const blob=await response.blob();if(epoch!==contextEpoch||revision!==evidenceEpoch||id!==selectedRequestId||blob.size>15*1024*1024)return;evidenceUrl=URL.createObjectURL(blob);$('evidence-image').src=evidenceUrl;$('evidence-image').hidden=false;$('evidence-message').textContent='';}
@@ -344,7 +359,7 @@
     }catch(error){if(error.name==='AbortError'||epoch!==contextEpoch||revision!==historyEpoch)return;$('history-message').textContent=error.status===403?'Tu cuenta no tiene permiso para consultar este historial.':'No fue posible cargar el historial. Intenta actualizarlo.';}
   }
   function chooseDecision(value) {
-    if(busy||!requestDetail||!requestActions().has(value)||uncertainDecisions.has(selectedRequestId)||!leaveDraft())return;
+    if(workspaceMode!=='work'||busy||!requestDetail||!requestActions().has(value)||uncertainDecisions.has(selectedRequestId)||!leaveDraft())return;
     resetDraft();decision=value;$('request-decision-form').hidden=false;$('request-reauth').hidden=false;
     $('request-password').required=true;$('request-mfa').required=true;
     $('request-reason').hidden=false;$('request-reason-label').hidden=false;
@@ -370,7 +385,7 @@
     catch(error){if(id!==selectedRequestId||epoch!==contextEpoch||revision!==ownershipEpoch)return;ownershipState=null;$('continue-ownership').hidden=true;$('ownership-message').textContent='No fue posible confirmar el estado de titularidad. Consulta el estado antes de continuar.';}
   }
   function chooseOwnership() {
-    if(busy||!requestDetail||uncertainDecisions.has(selectedRequestId)||!(ownershipState?.can_begin||ownershipState?.can_challenge)||!leaveDraft())return;
+    if(workspaceMode!=='work'||busy||!requestDetail||uncertainDecisions.has(selectedRequestId)||!(ownershipState?.can_begin||ownershipState?.can_challenge)||!leaveDraft())return;
     resetDraft();decision='OWNERSHIP';$('request-decision-form').hidden=false;$('request-reauth').hidden=false;
     $('request-password').required=true;$('request-mfa').required=true;$('request-reason').required=false;$('request-reason').hidden=true;$('request-reason-label').hidden=true;
     $('request-decision-title').textContent='Autorizar titularidad para la persona solicitante';$('request-decision-explanation').textContent='Confirma la autorización del perfil exacto para la cuenta solicitante. La persona solicitante completará su propia aceptación; no se activa publicación ni plan.';
@@ -378,7 +393,7 @@
     $('confirm-request-decision').textContent='Autorizar titularidad';$('request-password').focus();requestControls();
   }
   async function saveOwnership() {
-    if(busy||decision!=='OWNERSHIP'||!selectedRequestId||!$('request-decision-form').reportValidity())return;
+    if(workspaceMode!=='work'||busy||decision!=='OWNERSHIP'||!selectedRequestId||!$('request-decision-form').reportValidity())return;
     const id=selectedRequestId,epoch=contextEpoch,password=$('request-password').value,code=$('request-mfa').value;busy=true;controls();$('request-feedback').textContent='Comprobando los requisitos de titularidad…';let sent=false;
     try {
       let status=await ownershipSnapshot(id);if(epoch!==contextEpoch||selectedRequestId!==id)return;
@@ -396,7 +411,7 @@
   }
   async function saveRequestDecision() {
     if(decision==='OWNERSHIP'){await saveOwnership();return;}
-    if(busy||!requestDetail||!decision||uncertainDecisions.has(selectedRequestId)||!$('request-decision-form').reportValidity())return;
+    if(workspaceMode!=='work'||busy||!requestDetail||!decision||uncertainDecisions.has(selectedRequestId)||!$('request-decision-form').reportValidity())return;
     const id=selectedRequestId,epoch=contextEpoch,version=requestDetail.revision_token,chosen=decision;
     const reason=$('request-reason').value.trim(),password=$('request-password').value,code=$('request-mfa').value;
     if(chosen!=='APPROVED'&&reason.length<8)return;busy=true;controls();$('request-feedback').textContent='Validando la confirmación…';let caseId=null,commitSent=false;
@@ -466,12 +481,12 @@
       const [data,requests,counts]=await Promise.all([mediaContext(d),loadRequestDirectory(),loadPending(d,selectedRequestId)]);if(epoch!==contextEpoch||d!==doctor||expired)return;requestState=requests;acceptPending(counts,d,selectedRequestId);contextProfile(data);actor(data);
       if(d&&!data.physician&&selectedRequestId&&requestDetail&&contextRequests().length)data.physician=requestPhysician(requestDetail);
       if(d&&!data.physician){clearContext();state=data;say('Tu acceso o el perfil disponible cambió. La vista se actualizó.');showDiscovery('pending');return;}
-      state=data;if(!$('discovery').hidden)discovery(data);if(contextSelected()){$('physician-workspace').hidden=false;renderPanels();renderTabs();if(item){const current=data.pending_items.find(v=>v.submission_id===item.submission_id);if(!current){clearItem();say('El pendiente ya fue atendido o dejó de estar disponible.');}else{const selectedEpoch=itemEpoch;const next=await freshOptions(d);if(epoch!==contextEpoch||doctor!==d||selectedEpoch!==itemEpoch)return;const lostDraft=dirty()&&((options.can_request_replacement&&!next.can_request_replacement)||(options.can_upload_corrected&&!next.can_upload_corrected));options=next;if(lostDraft){resetDraft();mediaSay('Tus permisos cambiaron. Se descartaron los cambios que ya no puedes guardar.');}controls();}}if(selectedRequestId)await refreshRequest();if(section==='history')await loadHistory();if(section==='operators')await loadOperators();}
+      state=data;if(!$('discovery').hidden)discovery(data);if(contextSelected()&&workspaceMode==='work'){$('physician-workspace').hidden=false;renderPanels();renderTabs();if(item){const current=data.pending_items.find(v=>v.submission_id===item.submission_id);if(!current){clearItem();say('El pendiente ya fue atendido o dejó de estar disponible.');}else{const selectedEpoch=itemEpoch;const next=await freshOptions(d);if(epoch!==contextEpoch||doctor!==d||selectedEpoch!==itemEpoch)return;const lostDraft=dirty()&&((options.can_request_replacement&&!next.can_request_replacement)||(options.can_upload_corrected&&!next.can_upload_corrected));options=next;if(lostDraft){resetDraft();mediaSay('Tus permisos cambiaron. Se descartaron los cambios que ya no puedes guardar.');}controls();}}if(selectedRequestId)await refreshRequest();if(section==='history')await loadHistory();if(section==='operators')await loadOperators();}
     }catch(error){if(epoch!==contextEpoch)return;if(error.status===403){sessionFailure(403);return;}if(error.status!==401)say('No fue posible actualizar el acceso. Actualiza antes de continuar.');if(item){options={};controls();}}
     finally{pollBusy=false;}
   }
   async function mutate(mode, capability, payload={}) {
-    if(busy||!item)return;const d=doctor,s=item.submission_id,epoch=itemEpoch;busy=true;controls();mediaSay('Guardando…');
+    if(workspaceMode!=='work'||busy||!item)return;const d=doctor,s=item.submission_id,epoch=itemEpoch;busy=true;controls();mediaSay('Guardando…');
     try {
       const current=await freshOptions(d);if(!current[capability]||!current.csrf)throw Object.assign(new Error('denied'),{status:403});
       let body,headers;if(payload instanceof FormData){body=payload;body.set('submission_id',s);body.set('csrf',current.csrf);}else{body=JSON.stringify({submission_id:s,csrf:current.csrf,...payload});headers={'Content-Type':'application/json'};}
@@ -517,7 +532,7 @@
   $('proposal-image').addEventListener('load',()=>{if(proposalUrl&&$('proposal-image').currentSrc===proposalUrl){proposalLoaded=true;controls();}});
   $('proposal-image').addEventListener('error',()=>{proposalLoaded=false;mediaSay('No fue posible mostrar la propuesta. No puede aceptarse sin revisarla.');controls();});
   $('download-original').onclick=async()=>{
-    if(busy||!item)return;const d=doctor,s=item.submission_id,epoch=itemEpoch;busy=true;controls();mediaSay('Preparando original…');
+    if(workspaceMode!=='work'||busy||!item)return;const d=doctor,s=item.submission_id,epoch=itemEpoch;busy=true;controls();mediaSay('Preparando original…');
     try{const response=await request(mediaPath('source',d,s));if(!response.ok)throw Object.assign(new Error('download'),{status:response.status});const file=/filename="([A-Za-z0-9_.-]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1];if(!file)throw new Error('download');const blob=await response.blob();if(epoch!==itemEpoch||d!==doctor)return;const url=URL.createObjectURL(blob),link=node('a');link.href=url;link.download=file;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);mediaSay('Original listo para descargar.');}catch(error){if(epoch===itemEpoch)mediaSay(error.status===403?'No tienes permiso para descargar este original.':'No fue posible descargar el original.');}finally{busy=false;controls();await refresh();}
   };
   $('staff-logout').onclick=async()=>{

@@ -17,6 +17,15 @@ $items=[
 $owned=realpath((string)getenv('ASE_INT02A_OWNED'));
 $control=getenv('MXMED_STAFF_DOC_VIS01')==='1'?'staff-doc-vis01':(getenv('MXMED_STAFF_CONTROL07')==='1'?'staff-control07':(getenv('MXMED_STAFF_CONTROL06_R2')==='1'?'staff-control06-r2':(getenv('MXMED_STAFF_CONTROL06')==='1'?'staff-control06':(getenv('MXMED_STAFF_CONTROL05')==='1'?'staff-control05':'staff-control04'))));
 if(preg_match('/^mxmed_op01_[a-f0-9]{10}$/D',(string)getenv('SUPPORT_FIXTURE_DB')))$control=getenv('MXMED_LINK03_REVIEW')==='1'?'cross-surface-link03':'advisor-operator-support01';
+if(getenv('MXMED_UX04_REVIEW')==='1')$control='cross-surface-ux04';
+$surfaceDetails=[
+ ['Ámbito: gobierno del staff sintético; grants del Asesor. Comparación: permisos, no ficha médica.','Acceso: login Director en su ventana independiente.'],
+ ['Ámbito: origen y médicos asignados por capacidad; selección exacta visible arriba. Comparación: nombre, especialidad, localidad, sedes y relaciones autorizadas.','Acceso: login Asesor en su ventana independiente.'],
+ ['Comparación bloqueada: falta sesión médica legítima y composición de su fuente original.','No se dispone de credenciales autorizadas de prueba; ser staff no concede este contexto.'],
+ ['Comparación bloqueada: relación canónica observada no sustituye sesión propia de operador.','Falta una sesión legítima del operador y composición del recurso original; no se importan cuentas ni cookies.'],
+ ['Comparación bloqueada: la proyección administrativa no acredita publicación ni ruta pública canónica.','Falta lector de elegibilidad/ruta autorizada; active no equivale a publicado. No se abre una ruta supuesta.'],
+ ['Comparación bloqueada: no hay relación organizacional acreditada para el médico seleccionado en esta composición.','Falta fuente/relación proveedor verificada y sesión propia; no se fabrica una organización.'],
+];
 $launcher=realpath(__DIR__.'/../../scripts/'.$control.'-review.py');
 $windows=[];
 foreach(['director','advisor'] as $actor){
@@ -31,6 +40,7 @@ foreach(['director','advisor'] as $actor){
  <p id="development-physician-context">Selecciona un perfil en el panel Asesor para identificar el contexto autorizado. El índice no transfiere permisos entre sesiones.</p>
  <ul><?php foreach($items as $index=>[$name,$route,$required,$allowed,$status]): ?>
  <li><strong><?= htmlspecialchars($name) ?></strong><p><?= $index<2?'Disponible en esta prueba':'Interfaz existente; contexto de prueba todavía no habilitado.' ?> · Requiere: <?= htmlspecialchars($required) ?>.</p><code><?= htmlspecialchars($route) ?></code>
+ <p><?= htmlspecialchars($surfaceDetails[$index][0]) ?></p><p><?= htmlspecialchars($surfaceDetails[$index][1]) ?></p>
  <?php if($index<2): $actor=$index===0?'director':'advisor'; ?>
  <p><?= $windows[$actor]?'Ventana independiente abierta; el acceso se valida con su propia sesión.':'Ventana independiente todavía no abierta.' ?></p>
  <p>Para abrir o mostrar su ventana correcta, ejecuta en Terminal:</p>

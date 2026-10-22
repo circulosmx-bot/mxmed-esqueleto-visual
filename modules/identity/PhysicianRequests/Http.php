@@ -25,12 +25,12 @@ final class Http
                     self::keys($_GET,['mode','request_id','file_id']);$r=$s->readEvidence($actor,$_GET['request_id'],$_GET['file_id']);header('Content-Type: '.$r['mime']);header('Content-Security-Policy: sandbox');header('Content-Disposition: inline; filename="documento-solicitud"');echo $r['bytes'];return;
                 }
                 if(str_starts_with($mode,'admin_')){
-                    if(array_diff(array_keys($_GET),$mode==='admin_search'?['mode','query','after','limit']:['mode','profile_ref']))throw new \InvalidArgumentException('admin_request_invalid');
+                    if(array_diff(array_keys($_GET),$mode==='admin_search'?['mode','query','after','limit']:($mode==='admin_locations'?['mode','profile_ref','after','limit']:['mode','profile_ref'])))throw new \InvalidArgumentException('admin_request_invalid');
                     if(isset($_GET['limit'])&&!preg_match('/^(?:[1-9]|1[0-9]|20)$/D',$_GET['limit']))throw new \InvalidArgumentException('admin_request_invalid');
                 }
                 if($mode==='operators')self::keys($_GET,['mode','doctor_id']);
                 $result=match($mode){
-                    'admin_search','admin_summary','admin_operators'=>($services['administration']??throw new \RuntimeException('admin_source_unavailable'))()->read($actor,$mode,$_GET['profile_ref']??'',$_GET['query']??'',$_GET['after']??'',(int)($_GET['limit']??20)),
+                    'admin_search','admin_summary','admin_operators','admin_locations'=>($services['administration']??throw new \RuntimeException('admin_source_unavailable'))()->read($actor,$mode,$_GET['profile_ref']??'',$_GET['query']??'',$_GET['after']??'',(int)($_GET['limit']??20)),
                     'operators'=>(new \Identity\Operators\AdvisorSupportReader($s->a))->read($actor,$_GET['doctor_id']),
                     'pending'=>(new PendingSummary($s->a,$services['enrollment']))->read($actor,$_GET['doctor_id']??null,$_GET['request_id']??null),
                     'read'=>$s->read($actor,$_GET['request_id']??null,$_GET['doctor_id']??null,$_GET['query']??''),
