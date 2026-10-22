@@ -296,3 +296,7 @@ Después, fuentes/PUB-ENR03/C4 independientes → solicitante prepara membresía
 ## Extensión acotada de J07 — ADVISOR-OPERATOR-SUPPORT01
 
 [Contrato](../identity/ADVISOR-OPERATOR-SUPPORT01.md): Director → grant canónico `physician_operator_support_read` → sesión independiente Advisor → médico en ámbito Requests/Media → pestaña de operadores → lectura de membresías/invitaciones/revisiones/eventos. La consulta muestra diagnóstico y siguiente paso legítimo; no llama comandos del owner. Revocación se revalida en servidor y limpia el panel al actualizar. El índice de seis interfaces conserva identidades y accesos independientes. 53 checks aislados; los contextos médico/operador se compararon por fuente/overview, sin afirmar navegación browser entre esas superficies.
+
+## CROSS-SURFACE-LINK03 — extensión de consulta en la frontera J07
+
+[Contrato](../identity/CROSS-SURFACE-LINK03.md): Director → writer canónico grant Advisor → Identity/staff/grant/ámbito → fuente administrativa por origen → workspace. Soporte de relaciones requiere permiso separado; no ocupa plaza ni activa OP-01..03. Auditoría en fuente staff; lectura local independiente, sin atomicidad entre bases. Fallo de origen no cae a un ID sintético; revocación/reselección limpian contexto. Sin cambios a writers J07 ni conexión clínica.

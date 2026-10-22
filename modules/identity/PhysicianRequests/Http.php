@@ -17,14 +17,20 @@ final class Http
             $method=$_SERVER['REQUEST_METHOD']??'';$raw=$method==='POST'?file_get_contents('php://input',false,null,0,16001):'';
             if(!is_string($raw)||strlen($raw)>16000||!GovernanceTransport::secure($_SERVER,$raw,(string)getenv('MXMED_GOVERNANCE_PROXY_KEY')))throw new \RuntimeException('physician_request_transport_denied');
             if($method==='GET'){
-                if(array_diff(array_keys($_GET),['mode','request_id','doctor_id','query','case_id','file_id'])||$_POST||$_FILES)throw new \InvalidArgumentException('physician_request_invalid');
+                if(array_diff(array_keys($_GET),['mode','request_id','doctor_id','query','case_id','file_id','profile_ref','after','limit'])||$_POST||$_FILES)throw new \InvalidArgumentException('physician_request_invalid');
                 foreach($_GET as $value)if(!is_string($value))throw new \InvalidArgumentException('physician_request_invalid');
                 $mode=$_GET['mode']??'read';
+                if(!str_starts_with($mode,'admin_')&&array_intersect(array_keys($_GET),['profile_ref','after','limit']))throw new \InvalidArgumentException('physician_request_invalid');
                 if($mode==='evidence'){
                     self::keys($_GET,['mode','request_id','file_id']);$r=$s->readEvidence($actor,$_GET['request_id'],$_GET['file_id']);header('Content-Type: '.$r['mime']);header('Content-Security-Policy: sandbox');header('Content-Disposition: inline; filename="documento-solicitud"');echo $r['bytes'];return;
                 }
+                if(str_starts_with($mode,'admin_')){
+                    if(array_diff(array_keys($_GET),$mode==='admin_search'?['mode','query','after','limit']:['mode','profile_ref']))throw new \InvalidArgumentException('admin_request_invalid');
+                    if(isset($_GET['limit'])&&!preg_match('/^(?:[1-9]|1[0-9]|20)$/D',$_GET['limit']))throw new \InvalidArgumentException('admin_request_invalid');
+                }
                 if($mode==='operators')self::keys($_GET,['mode','doctor_id']);
                 $result=match($mode){
+                    'admin_search','admin_summary','admin_operators'=>($services['administration']??throw new \RuntimeException('admin_source_unavailable'))()->read($actor,$mode,$_GET['profile_ref']??'',$_GET['query']??'',$_GET['after']??'',(int)($_GET['limit']??20)),
                     'operators'=>(new \Identity\Operators\AdvisorSupportReader($s->a))->read($actor,$_GET['doctor_id']),
                     'pending'=>(new PendingSummary($s->a,$services['enrollment']))->read($actor,$_GET['doctor_id']??null,$_GET['request_id']??null),
                     'read'=>$s->read($actor,$_GET['request_id']??null,$_GET['doctor_id']??null,$_GET['query']??''),
@@ -72,8 +78,8 @@ final class Http
             echo json_encode(['ok'=>true,'data'=>$result],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);
         }catch(\Throwable $e){
             $m=$e->getMessage();$status=$m==='physician_request_authentication_required'?401:($e instanceof \InvalidArgumentException||$e instanceof \JsonException?400:(str_contains($m,'not_found')?404:(str_contains($m,'conflict')||str_contains($m,'stale')?409:(str_contains($m,'denied')||str_contains($m,'required')?403:503))));
-            if($status===403&&isset($s,$actor)&&$actor!==null){try{$s->denial($actor);}catch(\Throwable){$status=503;}}
-            if($status===503)error_log('physician_request_unavailable: '.get_class($e).' '.$m);
+            if($status===403&&isset($s,$actor)&&$actor!==null){try{if(str_starts_with($mode??'','admin_')){$s->a->transaction($actor,fn()=>(new \Identity\PhysicianAdministration\ReadAudit($s->a->pdo))->denied($actor));}else{$s->denial($actor);}}catch(\Throwable){$status=503;}}
+            if($status===503)error_log('physician_request_unavailable: '.get_class($e));
             elseif(in_array($status,[403,409],true)&&preg_match('/^[a-z_]{1,100}$/D',$m))error_log('physician_request_rejected: '.$m);
             http_response_code($status);echo json_encode(['ok'=>false,'error'=>match($status){401=>'authentication_required',400=>'invalid_request',404=>'not_found',409=>'conflict_refresh_required',403=>'access_denied',default=>'unavailable_reconcile_required'},'retry'=>false]);
         }

@@ -230,3 +230,7 @@ Writer RequestService consume proof, audita y materializa mediante PrivateProfil
 ## ADVISOR-OPERATOR-SUPPORT01 — proyección sin schema nuevo
 
 [Contrato y fuentes](../identity/ADVISOR-OPERATOR-SUPPORT01.md). Reutiliza membresías, cuentas, invitaciones de operador, revisiones/grants, presentación y auditoría; `internal_operator_grants` almacena la nueva clave explícita de consulta. Sin nueva tabla, migración de producto ni modificación de ownership. Lectura no expira ni cancela invitaciones; accepted histórico conserva su estado, pending vencida se deriva por fecha. Setup aplica esquema existente exclusivamente a datadir nuevo verificado; factory OP01 genera escenarios y eventos canónicos, transferidos exactamente dentro de ese servidor sintético. No DDL persistente ni datos reales; el censo previo permanece histórico.
+
+## CROSS-SURFACE-LINK03 — proyecciones locales v1
+
+[Contrato y revocación](../identity/CROSS-SURFACE-LINK03.md). Dos principales loopback/ tres vistas administrativas no actualizables sobre perfiles, consultorios y relaciones: configuración de entorno versionada, separada de migraciones de aplicación. Sin tablas nuevas en origen ni copias materializadas persistentes; sin DML médico. Recibo privado permite recuperación/repetición. Los tests de paginación crean únicamente tablas QA sintéticas en la base desechable. El censo histórico de este mapa no se regenera.

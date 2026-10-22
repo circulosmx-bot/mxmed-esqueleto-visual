@@ -16,7 +16,7 @@ $items=[
 ];
 $owned=realpath((string)getenv('ASE_INT02A_OWNED'));
 $control=getenv('MXMED_STAFF_DOC_VIS01')==='1'?'staff-doc-vis01':(getenv('MXMED_STAFF_CONTROL07')==='1'?'staff-control07':(getenv('MXMED_STAFF_CONTROL06_R2')==='1'?'staff-control06-r2':(getenv('MXMED_STAFF_CONTROL06')==='1'?'staff-control06':(getenv('MXMED_STAFF_CONTROL05')==='1'?'staff-control05':'staff-control04'))));
-if(preg_match('/^mxmed_op01_[a-f0-9]{10}$/D',(string)getenv('SUPPORT_FIXTURE_DB')))$control='advisor-operator-support01';
+if(preg_match('/^mxmed_op01_[a-f0-9]{10}$/D',(string)getenv('SUPPORT_FIXTURE_DB')))$control=getenv('MXMED_LINK03_REVIEW')==='1'?'cross-surface-link03':'advisor-operator-support01';
 $launcher=realpath(__DIR__.'/../../scripts/'.$control.'-review.py');
 $windows=[];
 foreach(['director','advisor'] as $actor){
@@ -26,7 +26,7 @@ foreach(['director','advisor'] as $actor){
 }
 ?>
 <details class="development-index" id="development-interface-index">
- <summary>Índice de interfaces · México Médico <small>Revisión sintética</small></summary>
+ <summary>Índice de interfaces · México Médico <small><?= getenv('MXMED_LINK03_REVIEW')==='1'?'Staff sintético · fuente local de sólo lectura':'Revisión sintética' ?></small></summary>
  <p>Sesión actual: <?= htmlspecialchars($role?:'Sin rol staff activo',ENT_QUOTES,'UTF-8') ?>. Navegar no cambia tu identidad ni concede permisos.</p>
  <p id="development-physician-context">Selecciona un perfil en el panel Asesor para identificar el contexto autorizado. El índice no transfiere permisos entre sesiones.</p>
  <ul><?php foreach($items as $index=>[$name,$route,$required,$allowed,$status]): ?>

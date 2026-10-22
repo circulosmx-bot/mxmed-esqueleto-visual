@@ -5,6 +5,8 @@
   const labels = {DOCTOR_PROFILE_PHOTO:'Foto de perfil',PHYSICIAN_PERSONAL_LOGO:'Logotipo profesional',DOCTOR_GALLERY:'Foto de galería'};
   const statuses = {draft:'Borrador',published:'Publicado',active:'Activo',inactive:'Inactivo',archived:'Archivado',hidden:'No publicado',pending_review:'En revisión',suspended:'Suspendido',removed:'Retirado',DRAFT:'Borrador',PUBLISHED:'Publicado',ACTIVE:'Activo',INACTIVE:'Inactivo',ARCHIVED:'Archivado',HIDDEN:'No publicado',PENDING_REVIEW:'En revisión',SUSPENDED:'Suspendido',REMOVED:'Retirado'};
   let state = null, doctor = null, section = 'summary', item = null, options = {}, busy = false, expired = false;
+  let administrative=false, administrativePage={physicians:[],next_after:null};
+  const externalRef=id=>typeof id==='string'&&id.includes(':');
   let directoryMode = 'pending', directoryEpoch = 0, contextEpoch = 0, itemEpoch = 0;
   let directoryController = null, contextController = null, itemController = null;
   let reviewUrl = null, proposalUrl = null, reviewLoaded = false, proposalLoaded = false, pollBusy = false, lastQuery = '';
@@ -31,7 +33,7 @@
   function resetDraft() {$('replacement-form').reset();$('replacement-form').hidden=true;$('replacement-count').textContent='0 / 400 caracteres';$('corrected-file').value='';$('save-corrected').hidden=true;resetDecision();}
   function releaseImages() {for(const url of [reviewUrl,proposalUrl])if(url)URL.revokeObjectURL(url);reviewUrl=null;proposalUrl=null;reviewLoaded=false;proposalLoaded=false;if(!$('review-image'))return;$('review-image').removeAttribute('src');$('review-image').hidden=true;$('proposal-image').removeAttribute('src');$('proposal-panel').hidden=true;$('accept-improvement').hidden=true;$('discard-improvement').hidden=true;}
   function clearItem() {itemEpoch++;itemController?.abort();item=null;options={};releaseImages();resetDraft();$('media-detail').hidden=true;$('media-items').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));}
-  function clearContext() {operatorEpoch++;$('operators-content').replaceChildren();contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
+  function clearContext() {administrative=false;operatorEpoch++;$('operators-content').replaceChildren();contextEpoch++;contextController?.abort();clearItem();clearRequest();doctor=null;pendingContext=null;section='summary';$('physician-workspace').hidden=true;$('no-selection').hidden=false;$('close-discovery').hidden=true;$('physician-name').textContent='';$('physician-description').textContent='';$('physician-statuses').replaceChildren();$('summary-facts').replaceChildren();$('media-items').replaceChildren();$('summary-pending').replaceChildren();$('section-tabs').replaceChildren();$('utilities').classList.remove('has-selection');$('search-toggle').hidden=true;$('physician-search-form').hidden=false;closeMore();}
   function sessionFailure(status) {
     expired=true;directoryEpoch++;directoryController?.abort();clearContext();state=null;$('discovery-list').replaceChildren();$('discovery').hidden=true;$('utilities').hidden=true;$('no-selection').hidden=true;$('pending-count').textContent='0';$('session-recovery').hidden=false;
     $('session-message').textContent=status===401?'Tu sesión terminó. Inicia sesión nuevamente para continuar.':'Tu acceso al equipo interno cambió. Vuelve a iniciar sesión o consulta al Director.';
@@ -46,6 +48,9 @@
   function actor(data) {
     $('staff-name').textContent=data.actor.display_name||data.actor.email||'Cuenta del equipo interno';
     $('staff-role').textContent=({DIRECTOR:'Director',MASTER_ADMIN:'Administrador Master',ADVISOR:'Asesor'}[data.actor.access_level]||data.actor.access_level);
+    updatePendingBadge();
+  }
+  function updatePendingBadge(){
     const count=pendingState?.actionable_count;$('pending-count').textContent=count===undefined?'—':String(count);$('pending-count').setAttribute('aria-label',count===undefined?'Conteo no disponible':`${count} tareas pendientes en tu ámbito de actuación`);
   }
   function updateContext(data) {
@@ -65,7 +70,7 @@
     const accessible=requestState.requests||[];
     let entries;
     if(directoryMode==='search'){
-      const query=lastQuery.toLocaleLowerCase('es-MX');const profiles=new Map((data.physicians||[]).map(p=>[p.doctor_id,p]));const applications=[];
+      const query=lastQuery.toLocaleLowerCase('es-MX');const profiles=new Map([...(data.physicians||[]),...administrativePage.physicians].map(p=>[p.doctor_id,p]));const applications=[];
       for(const entry of accessible){const name=entry.label||entry.physician_name||entry.proposed_profile?.display_name||'Solicitud de perfil nuevo';if(query&&!name.toLocaleLowerCase('es-MX').includes(query))continue;if(entry.doctor_id){if(!profiles.has(entry.doctor_id))profiles.set(entry.doctor_id,{...entry,name});}else applications.push({...entry,name});}
       entries=[...profiles.values(),...applications];
     }else entries=pendingState?.groups||[];
@@ -83,7 +88,7 @@
       }else if(entry.state)copy.append(node('span','card-meta',requestStates[entry.state]||entry.state));
       if(awareness)copy.append(node('span','card-meta','Seguimiento: requiere otra intervención o respuesta.'));
       button.append(copy,node('span','card-action',entry.doctor_id?'Abrir perfil →':'Abrir solicitud →'));
-      button.onclick=()=>{directoryPositions[directoryMode]=list.scrollTop;entry.doctor_id?selectPhysician(entry.doctor_id):selectRequest(application);};list.append(button);
+      button.onclick=()=>{directoryPositions[directoryMode]=list.scrollTop;entry.doctor_id?(externalRef(entry.doctor_id)?selectAdministrative(entry.doctor_id):selectPhysician(entry.doctor_id)):selectRequest(application);};list.append(button);
     };
     for(const entry of entries||[])appendCard(entry);
     if(directoryMode==='pending'&&pendingState?.awareness_groups?.length){
@@ -91,6 +96,8 @@
       for(const entry of pendingState.awareness_groups)appendCard(entry,true);
     }
     $('discovery-message').textContent=directoryMode==='search'?`${entries.length} resultados disponibles`:pendingState?`${pendingState.actionable_count} tareas por atender en ${pendingState.group_count} perfiles o solicitudes. El círculo rojo cuenta tareas que puedes atender.${pendingState.has_more?' Se muestran los primeros 100 grupos; utiliza la búsqueda para los demás.':''}`:'No fue posible verificar los conteos. Las secciones autorizadas siguen disponibles mediante la búsqueda.';
+    if(directoryMode==='search'&&administrativePage.unavailable)$('discovery-message').textContent+=' · La fuente administrativa no está disponible; sus resultados no se muestran.';
+    if(directoryMode==='search'&&administrativePage.next_after){const more=node('button','task-row','Más perfiles de la fuente administrativa');more.onclick=async()=>{const epoch=directoryEpoch;try{const r=(await json(requestsPath('admin_search',{query:lastQuery,after:administrativePage.next_after}))).data;if(epoch!==directoryEpoch)return;administrativePage=r;discovery(data);}catch{administrativePage={physicians:[],next_after:null};say('No fue posible consultar la siguiente página.');discovery(data);}};list.append(more);}
     list.setAttribute('aria-busy','false');list.scrollTop=directoryPositions[directoryMode];
   }
   async function loadRequestDirectory(signal) {
@@ -111,8 +118,9 @@
     return data;
   }
   async function loadDirectory(query=lastQuery) {
+    if(administrative)await refreshAdministrative();
     const epoch=++directoryEpoch;directoryController?.abort();directoryController=new AbortController();$('discovery-list').setAttribute('aria-busy','true');
-    try {const selectedEpoch=contextEpoch;const [{data},requests,counts,current]=await Promise.all([json(readPath(null,query),{signal:directoryController.signal}),loadRequestDirectory(directoryController.signal),loadPending(doctor,selectedRequestId,directoryController.signal),contextSelected()?mediaContext(doctor,directoryController.signal):Promise.resolve(null)]);if(epoch!==directoryEpoch||selectedEpoch!==contextEpoch||expired)return;requestState=requests;acceptPending(counts);actor(data);if(!data.sections.length&&!requests.requests?.length&&contextSelected()){clearContext();state=data;say('Tus permisos cambiaron. Ya no hay trabajo accesible en este espacio.');}if(requests.unavailable)say(data.sections.length?'No fue posible consultar solicitudes. Puedes continuar con las imágenes disponibles para tu cuenta.':'No fue posible consultar solicitudes. Intenta actualizar en unos momentos.');discovery(data);if(!state)state=data;else if(contextSelected()&&current){
+    try {administrativePage={physicians:[],next_after:null};if(directoryMode==='search'){try{administrativePage=(await json(requestsPath('admin_search',{query}),{signal:directoryController.signal})).data;}catch(e){if(e.name==='AbortError'||e.status===401)throw e;if(e.status!==403)administrativePage.unavailable=true;}}const selectedEpoch=contextEpoch;const [{data},requests,counts,current]=await Promise.all([json(readPath(null,query),{signal:directoryController.signal}),loadRequestDirectory(directoryController.signal),loadPending(administrative?null:doctor,selectedRequestId,directoryController.signal),contextSelected()&&!administrative?mediaContext(doctor,directoryController.signal):Promise.resolve(null)]);if(epoch!==directoryEpoch||selectedEpoch!==contextEpoch||expired)return;requestState=requests;acceptPending(counts);actor(data);if(!data.sections.length&&!requests.requests?.length&&contextSelected()&&!administrative){clearContext();state=data;say('Tus permisos cambiaron. Ya no hay trabajo accesible en este espacio.');}if(requests.unavailable)say(data.sections.length?'No fue posible consultar solicitudes. Puedes continuar con las imágenes disponibles para tu cuenta.':'No fue posible consultar solicitudes. Intenta actualizar en unos momentos.');discovery(data);if(!state)state=data;else if(contextSelected()&&current){
         contextProfile(current);
         if(doctor&&!current.physician&&contextRequests().length)current.physician=state.physician;
         if(doctor&&!current.physician){clearContext();state=data;say('Tu acceso al contexto cambió. Selecciona un perfil disponible.');return;}
@@ -132,11 +140,23 @@
       $('physician-name').focus({preventScroll:true});$('physician-workspace').scrollIntoView({block:'start',behavior:'instant'});
     }catch(error){if(error.name==='AbortError'||epoch!==contextEpoch)return;clearContext();say(error.status===403?'Este perfil ya no está disponible para tu cuenta.':'No fue posible abrir el perfil. Intenta nuevamente.');showDiscovery('pending');}
   }
+  async function selectAdministrative(ref) {
+    if(busy||!leaveDraft())return;clearContext();doctor=ref;administrative=true;const epoch=++contextEpoch;
+    try {const data=(await json(requestsPath('admin_summary',{profile_ref:ref}))).data;if(epoch!==contextEpoch||doctor!==ref||expired)return;
+      if(data.physician.doctor_id!==ref)throw new Error('context');state=data;section='summary';pendingContext=null;$('no-selection').hidden=true;$('physician-workspace').hidden=false;collapseDiscovery();renderPanels();renderTabs();say('Consulta administrativa de la fuente original.');
+    }catch(e){if(epoch!==contextEpoch)return;clearContext();say('No fue posible confirmar el acceso al perfil de origen.');}
+  }
+  async function refreshAdministrative(){
+    const ref=doctor,epoch=contextEpoch;if(!administrative)return;
+    try{const [response,counts]=await Promise.all([json(requestsPath('admin_summary',{profile_ref:ref})),loadPending(null)]);const data=response.data;if(epoch!==contextEpoch||doctor!==ref)return;pendingState=counts;pendingContext=null;updatePendingBadge();if(data.physician.doctor_id!==ref)throw new Error('context');state=data;renderPanels();renderTabs();if(section==='operators')loadOperators();}
+    catch(e){if(epoch!==contextEpoch)return;clearContext();say('La fuente o tu autorización ya no están disponibles. Vuelve a buscar un perfil autorizado.');}
+  }
   function pendingButton(record) {const button=node('button','task-row');button.type='button';button.dataset.submissionId=record.submission_id;button.dataset.doctorId=doctor;button.append(node('span','',labels[record.purpose]||record.label||'Imagen pendiente'),node('span','','Revisar imagen →'));button.onclick=async()=>{if(busy||!leaveDraft())return;resetDraft();section='images';renderTabs();showSection();await selectItem(record,false);};return button;}
   function renderPanels() {
     updateContext(state);const p=state.physician,facts=$('summary-facts');facts.replaceChildren();const requests=contextRequests();
     for(const [label,value] of [['Estado del perfil',p?(statuses[p.status]||p.status||'Sin estado registrado'):'Sin perfil operativo'],['Pendientes visibles',contextPendingCount()===null?'Sin verificar':String(contextPendingCount())]]){const fact=node('div','fact');fact.append(node('span','',label),node('strong','',value));facts.append(fact);}
-    const tasks=$('summary-pending');tasks.replaceChildren();for(const record of state.pending_items)tasks.append(pendingButton(record));for(const record of requests.filter(r=>r.actionable))tasks.append(requestButton(record));if(!tasks.childElementCount)tasks.append(node('p','muted','No hay pendientes de revisión para este contexto.'));
+    if(administrative){for(const [label,value] of [['Origen',p.origin],['Identificador canónico',p.canonical_id],['Publicación','No verificada por esta proyección'],['Consultorios',p.consultorios.length+(p.consultorios_has_more?' o más':'')]]){const f=node('div','fact');f.append(node('span','',label),node('strong','',String(value)));facts.append(f);}for(const c of p.consultorios)facts.append(node('p','',`${c.titulo||'Consultorio'} · ${[c.municipio,c.estado].filter(Boolean).join(', ')}`));}
+    const tasks=$('summary-pending');tasks.replaceChildren();for(const record of state.pending_items)tasks.append(pendingButton(record));for(const record of requests.filter(r=>r.actionable))tasks.append(requestButton(record));if(!tasks.childElementCount)tasks.append(node('p','muted',administrative?'Consulta administrativa independiente. Los pendientes de esta fuente no están integrados.':'No hay pendientes de revisión para este contexto.'));
     const activity=$('activity-list');activity.replaceChildren();$('recorded-activity').hidden=!state.activity?.length;for(const record of state.activity||[])activity.append(node('p','',`${record.label||labels[record.purpose]||'Imagen'} · ${({APPROVED:'Aprobada',NEEDS_WORK:'Otra imagen solicitada',REJECTED:'Rechazada',WITHDRAWN:'Retirada'}[record.status]||record.status)} · ${dateLabel(record.recorded_at)}`));
     const media=$('media-items');media.replaceChildren();$('images-empty').hidden=state.pending_items.length>0;
     for(const record of state.pending_items){const button=node('button','media-item');button.type='button';button.dataset.submissionId=record.submission_id;button.setAttribute('aria-pressed',String(item?.submission_id===record.submission_id));button.append(node('strong','',labels[record.purpose]||'Imagen'),node('span','',dateLabel(record.created_at)));button.onclick=()=>selectItem(record);media.append(button);}
@@ -148,7 +168,7 @@
     const entry=workspaceSections().find(v=>v.id===section),restricted=entry?.restricted;
     for(const id of ['summary','requests','images','history','operators'])$(id+'-panel').hidden=restricted||section!==id;
     $('restricted-panel').hidden=!restricted;
-    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=['requests','images','history','operators'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'Pendiente de integración para el Asesor. Esta área aún no permite consultar ni modificar información desde este panel. Las funciones de médico, operador y proveedor conservan sus accesos independientes.';
+    if(restricted){$('restricted-title').textContent=entry.label;$('restricted-message').textContent=administrative?'Esta sección no tiene un lector autorizado para el origen seleccionado. No se consulta otro perfil.':['requests','images','history','operators'].includes(section)?'Esta sección requiere autorización para realizar operaciones.':'Pendiente de integración para el Asesor. Esta área aún no permite consultar ni modificar información desde este panel. Las funciones de médico, operador y proveedor conservan sus accesos independientes.';
       const n=sectionCount(section);$('restricted-summary').textContent=n>0?`${n} ${n===1?'pendiente visible':'pendientes visibles'} bajo tu permiso de resumen. Solicita atención a una persona autorizada mediante los canales habituales.`:'No hay un resumen de pendientes disponible para tu cuenta en esta sección.';
     }
     $('work-panel').setAttribute('aria-labelledby','tab-'+section);$('work-panel').dataset.doctorId=doctor||'';$('work-panel').dataset.requestId=selectedRequestId||'';$('work-panel').dataset.section=section;
@@ -156,6 +176,7 @@
   const tabCatalog=[['summary','Resumen'],['requests','Solicitudes'],['profile','Perfil'],['accreditation','Acreditación'],['offices','Consultorios'],['services','Servicios y atención'],['images','Imágenes'],['agenda','Agenda'],['operators','Operadores y colaboradores'],['plan','Plan y servicios contratados'],['billing','Facturación y pagos'],['reviews','Opiniones'],['seo','SEO'],['account','Soporte de cuenta'],['history','Historial']];
   function workspaceSections() {
     if(!contextSelected())return [];
+    if(administrative)return tabCatalog.map(([id,label])=>({id,label,restricted:id!=='summary'&&!(id==='operators'&&state?.permissions?.operators)}));
     return tabCatalog.map(([id,label])=>({id,label,restricted:id!=='summary'&&!(pendingContext?.permissions?.[id]??(id==='images'?doctor&&state?.sections?.some(t=>t.id==='images'):id==='requests'?contextRequests().length||selectedRequestId:id==='history'?contextRequests().length||state?.sections?.some(t=>t.id==='images'):false))}));
   }
   function sectionCount(id){return pendingContext?.sections?.[id]?.visible_count||0;}
@@ -289,9 +310,10 @@
     if(!d){$('operators-message').textContent='Selecciona un perfil médico autorizado.';return;}
     $('operators-message').textContent='Consultando relaciones y permisos…';
     try {
-      const {data}=await json(requestsPath('operators',{doctor_id:d}));
+      const {data}=await json(administrative?requestsPath('admin_operators',{profile_ref:d}):requestsPath('operators',{doctor_id:d}));
       if(epoch!==operatorEpoch||context!==contextEpoch||doctor!==d||section!=='operators')return;
       if(data.doctor_id!==d)throw new Error('context');
+      if(administrative){$('operators-message').textContent='Relaciones canónicas · consulta administrativa. Invitaciones y delegaciones no integradas en esta proyección.';host.append(node('p','',data.owner_state==='confirmed'?'Titular activo confirmado.':'Titular activo no confirmado.'));for(const m of data.members)host.append(node('p','',`${valueLabel(m.role_code)} · ${valueLabel(m.status)} · Cuenta ${valueLabel(m.account_status)} · ${m.contact_verified?'Contacto verificado':'Verificación pendiente'}`));if(!data.members.length)host.append(node('p','','Sin relaciones registradas.'));return;}
       $('operators-message').textContent=data.access_note;
       const card=(title,lines)=>{const el=node('article','history-entry');el.append(node('h3','',title));for(const line of lines)el.append(node('p','',line));host.append(el);};
       const label=x=>operatorLabels[x]||'Estado no reconocido';
@@ -440,6 +462,7 @@
   async function refresh() {
     if(expired||busy||pollBusy)return;pollBusy=true;const epoch=contextEpoch,d=doctor;
     try {
+      if(administrative){await refreshAdministrative();return;}
       const [data,requests,counts]=await Promise.all([mediaContext(d),loadRequestDirectory(),loadPending(d,selectedRequestId)]);if(epoch!==contextEpoch||d!==doctor||expired)return;requestState=requests;acceptPending(counts,d,selectedRequestId);contextProfile(data);actor(data);
       if(d&&!data.physician&&selectedRequestId&&requestDetail&&contextRequests().length)data.physician=requestPhysician(requestDetail);
       if(d&&!data.physician){clearContext();state=data;say('Tu acceso o el perfil disponible cambió. La vista se actualizó.');showDiscovery('pending');return;}

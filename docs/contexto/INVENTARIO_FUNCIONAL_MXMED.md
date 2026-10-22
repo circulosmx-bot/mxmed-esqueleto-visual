@@ -429,3 +429,7 @@ PUB-05 sucede la ausencia de materialización sólo para esta aplicación nueva 
 ## ADVISOR-OPERATOR-SUPPORT01 — consumidor staff de OP-01..03
 
 [Contrato y evidencia](../identity/ADVISOR-OPERATOR-SUPPORT01.md). PRODUCT_POLICY: soporte no consume plaza ni confiere autoridad del titular. SOURCE_IMPLEMENTATION: `physician_operator_support_read`, `AdvisorSupportReader`, catálogo y matriz canónicos. CONNECTIVITY: pestaña existente → Requests HTTP `mode=operators` → proyección exacta del perfil ya autorizado por Requests/Media. OP-01..03 conservan sus writers; no invitación ni grants de operador desde staff. VERIFICATION: 53 checks dirigidos, UI Director, revocación abierta, Chromium/WebKit y fuentes/overview. OPERATIONAL_STATUS: sólo owned sintético; sin activación ni validación browser de superficies médico/operador. Sucede únicamente la carencia de consulta de soporte descrita en STAFF-CONTROL04.
+
+## CROSS-SURFACE-LINK03 — descubrimiento administrativo y lectura de relaciones
+
+[Contrato](../identity/CROSS-SURFACE-LINK03.md). PRODUCT_POLICY: nueva capacidad `physician_administrative_read` no concede operadores, evidencia ni clínica. SOURCE_IMPLEMENTATION: Reader/Source/SqlSource, catálogo/matriz, búsqueda paginada; OP-01..03 conservan writers y límites. CONNECTIVITY: adapter local restringido por origen/recurso, nunca normal automático. VERIFICATION: 90 checks acotados, Chromium y SQL. OPERATIONAL_STATUS: revisión aislada con lecturas administrativas originales; no producción ni publicación pública acreditada.

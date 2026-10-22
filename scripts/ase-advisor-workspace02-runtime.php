@@ -17,5 +17,6 @@ function workspace02OwnedServices():array
     $composition=new Identity\Accreditation\PhysicianAdmissionComposition($p,$security,$cipher,$storage,$mfa);
     $enrollment=new Identity\Accreditation\PublicEnrollmentService($authority,$cipher,file_get_contents($owned.'/workspace02-proof-key'));
     $requests=new Identity\PhysicianRequests\RequestService($authority,$enrollment,$cipher,$mfa,$storage);
-    return compact('identity','security','mfa','authority','cipher','storage','composition','enrollment','requests');
+    $administration=null;if(getenv('MXMED_LINK03_REVIEW')==='1'){require_once __DIR__.'/cross-surface-link03-runtime.php';$administration=fn()=>link03Administration(['authority'=>$authority]); }
+    return compact('administration','identity','security','mfa','authority','cipher','storage','composition','enrollment','requests');
 }

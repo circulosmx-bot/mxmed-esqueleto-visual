@@ -39,3 +39,7 @@ Después: implementar grant staff delegable, alcance explícito, adapter de cons
 - Sólo diagnóstico de conexión PASS; objetivo funcional BLOCKED, no COMPLETE.
 
 Relacionado: [LINK01](CROSS-SURFACE-LINK01.md), [soporte existente](ADVISOR-OPERATOR-SUPPORT01.md). OP-01/02/03, J07 y `physician_operator_support_read` no cambian de contrato efectivo.
+
+## Sucesor autorizado
+
+[LINK03](CROSS-SURFACE-LINK03.md) recibe autorización adicional para principales/vistas locales y conecta el lector acotado. El bloqueo de esta entrega queda sucedido únicamente en ese entorno; no implica producción ni permisos generales.

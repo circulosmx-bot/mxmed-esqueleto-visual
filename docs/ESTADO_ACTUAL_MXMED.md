@@ -284,3 +284,7 @@ Sobre `1e01b139`, [diagnóstico acotado](identity/CROSS-SURFACE-LINK01.md) verif
 ## CROSS-SURFACE-LINK02 — conexión restringida pendiente
 
 [Preflight LINK02](identity/CROSS-SURFACE-LINK02.md), baseline `b775f21a`: autorización funcional explícita recibida; fuente local y perfil revalidados. Inventario de privilegios confirma que las cuentas disponibles para leer perfiles tienen acceso amplio; el lector de auditoría sólo tiene USAGE. No se pasan credenciales administrativas al preview ni se cambian usuarios/grants originales. `BLOCKED_SOURCE_CONNECTION_PREREQUISITE`; sólo documentación, sin puente ni QA de navegador.
+
+## CROSS-SURFACE-LINK03 — lector administrativo con fuente local restringida
+
+[Contrato y evidencia LINK03](identity/CROSS-SURFACE-LINK03.md), baseline `7b3675d1`: sustituye el bloqueo LINK02 mediante provisión explícitamente autorizada de dos lectores/ tres vistas locales. Reader/Source reutilizable, `physician_administrative_read`, ámbito exacto y soporte de relaciones independiente; búsqueda paginada, origen calificado, auditoría y revocación. 90 verificaciones dirigidas; preview staff sintético con datos administrativos originales restringidos (no exclusivamente sintético). Original 8091 y registros intactos. No producción; publicación/invitaciones/delegaciones originales no integradas, aceptación visual pendiente.

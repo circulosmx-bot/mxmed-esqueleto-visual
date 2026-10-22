@@ -250,3 +250,7 @@ Sucesor visual dirigido de STAFF-CONTROL06: [contrato, evidencia y controles loc
 ## CROSS-SURFACE-LINK02 — preflight del puente autorizado
 
 [Prerrequisito de conexión y evidencia](identity/CROSS-SURFACE-LINK02.md). Sucede LINK01 en autorización funcional; distingue el acceso administrativo de diagnóstico de una conexión restringida apta para el preview, todavía pendiente.
+
+## CROSS-SURFACE-LINK03 — lector administrativo y adapter temporal
+
+[Contrato, provisión v1, límites, pruebas y revocación](identity/CROSS-SURFACE-LINK03.md). Sucesor funcional de LINK01/02: descubrimiento independiente de pendientes, grant explícito y fuente calificada; composición canónica reutilizable, adapter local sólo owned.

@@ -12,7 +12,7 @@ try{
   $workspace02=getenv('MXMED_ADVISOR_WORKSPACE02_REVIEW')==='1';
   $workspace03=$workspace02&&is_file(__DIR__.'/ase-advisor-workspace03-review.py');
   $control=getenv('MXMED_STAFF_CONTROL05')==='1'?'/staff-control05-review.py':(getenv('MXMED_STAFF_CONTROL04')==='1'?'/staff-control04-review.py':($workspace03?'/ase-advisor-workspace03-review.py':($workspace02?'/ase-advisor-workspace02-review.py':($workspace?'/ase-advisor-workspace-review.py':(getenv('MXMED_OPER09_MEDIA_REVIEW')==='1'?'/ase-adm02-oper09-review.py':'/ase-adm02-panel08-review.py')))));
-  if(preg_match('/^mxmed_op01_[a-f0-9]{10}$/D',(string)getenv('SUPPORT_FIXTURE_DB')))$control='/advisor-operator-support01-review.py';
+  if(preg_match('/^mxmed_op01_[a-f0-9]{10}$/D',(string)getenv('SUPPORT_FIXTURE_DB')))$control=(getenv('MXMED_LINK03_REVIEW')==='1'?'/cross-surface-link03-review.py':'/advisor-operator-support01-review.py');
   $owned=realpath(getenv('ASE_INT02A_OWNED'));$command='python3 '.realpath(__DIR__.$control).' '.$owned;
   $staffSyntheticLoginGuide=['credentials'=>$command.($workspace02?' credentials-director':' credentials'),'mfa'=>$command.($workspace02?' mfa-director':' mfa')];
   if($workspace&&($_GET['next']??'')==='/internal/staff-workspace/index.php'){
