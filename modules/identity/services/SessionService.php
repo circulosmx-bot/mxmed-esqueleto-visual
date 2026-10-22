@@ -46,7 +46,7 @@ final class SessionService
         } catch (\Throwable) { return false; }
     }
 
-    public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null, private bool $touchActivity = true) {}
+    public function __construct(private \Identity\Contracts\SessionStorePort $store, private SessionTokenCodec $tokens, private Clock $clock, private SessionPolicy $policy = new SessionPolicy(), private ?\Identity\Contracts\SessionAccountStatePort $accounts = null, private bool $touchActivity = true, private ?\Identity\Contracts\DevelopmentSessionCookiePolicy $developmentCookie = null) {}
 
     public function create(AuthenticationPrincipalCandidate $candidate, array $metadata = []): SessionCreationDecision
     {
@@ -65,7 +65,7 @@ final class SessionService
             if ($this->store instanceof AtomicSessionStorePort) $this->lastSupersededSession = $this->store->createAuthoritatively($record, $this->policy->maximumActiveSessions());
             else $this->store->create($record, $this->policy->maximumActiveSessions());
         } catch (\Throwable) { return new SessionCreationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
-        return new SessionCreationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token));
+        return new SessionCreationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token, $this->developmentCookie?->remainingSeconds($record, $this->clock)));
     }
 
     public function validate(?string $rawToken,bool $observeOnly=false): SessionValidationDecision
@@ -109,7 +109,7 @@ final class SessionService
         $validated = $this->validate($rawToken); if (!$validated->allowed() || $validated->record() === null) return new SessionRotationDecision(false, $validated->reasonCode());
         $old = $validated->record(); $token = $this->tokens->issue(); $now = $this->clock->now(); $expires = $now->modify('+' . $this->policy->idleTtlSeconds() . ' seconds'); if ($expires > $old->absoluteExpiresAt()) $expires = $old->absoluteExpiresAt(); $record = new SessionRecord(\Identity\Contracts\SessionId::generate(), $this->tokens->digest($token), $old->principal(), $old->createdAt(), $now, $expires, $old->absoluteExpiresAt(), SessionState::ACTIVE, $old->deviceLabel(), $old->userAgentHash(), $old->ipDimensionHash());
         try { if (!$this->store->rotate($old->tokenDigest(), $record)) return new SessionRotationDecision(false, ReasonCode::SESSION_INVALID); } catch (\Throwable) { return new SessionRotationDecision(false, ReasonCode::SESSION_STORE_UNAVAILABLE); }
-        return new SessionRotationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token));
+        return new SessionRotationDecision(true, ReasonCode::ALLOWED, $record, $token, SessionCookieDescriptor::forToken($token, $this->developmentCookie?->remainingSeconds($record, $this->clock)));
     }
 
     public function logout(?string $rawToken): SessionRevocationDecision

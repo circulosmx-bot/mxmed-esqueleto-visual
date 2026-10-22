@@ -1,5 +1,9 @@
 # Estado actual — México Médico
 
+## Continuidad local — 2026-10-22
+
+[DEV-SESSION-PERSIST01](identity/DEV-SESSION-PERSIST01.md): hub57452 actualizado; cookie persistente opt-in probada sólo en contexto sintético nuevo. Límites 1h idle/12h absoluto intactos. Chromium/WebKit y reinicio de servicios propios pasan; no desplegado a Identity original ni staff54400. QA E2E staff/perfiles Safari pendiente. Seis cambios autorizados Consultorios conservados. Resultado parcial, no continuidad completa de todos los roles.
+
 ## Ancla y alcance
 
 - Fecha de verificación documental: **2026-10-21**.

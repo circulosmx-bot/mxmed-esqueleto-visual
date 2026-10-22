@@ -311,7 +311,7 @@ final class IdentityHttpComposition
         // receives the same non-touching validation for current-session GET.
         $observing = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
             && parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) === '/api/identity/index.php/current-session';
-        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing);
+        $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials), touchActivity:!$observing, developmentCookie:\Identity\Contracts\DevelopmentSessionCookiePolicy::fromEnvironment($environment, $allowedOrigin));
         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
         $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority, new MedicalGroupTypeRepository($pdo));
         return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $identityAudit, $sessionAudit, $auditRequests, $auditActors);
